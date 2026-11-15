@@ -56,7 +56,10 @@ export async function renderSettingsTab(ctx) {
   );
 
   // 기본 설정은 먼저 보여 주고, 고급 설정 데이터는 뒤에서 불러와요.
-  const shell = h("div", { class: "rb-scroll rb-mem2", "data-page": "settings" },
+  // 2.2.0(5번 A): 왼쪽 목차(모바일은 위 칩 줄) — 카드는 모두 그대로 두고, 목차를 누르면 그 카드로 이동·강조
+  const toc = h("nav", { class: "rb-settoc", "aria-label": "설정 목차" });
+  const shell = h("div", { class: "rb-scroll rb-mem2 rb-set2", "data-page": "settings" },
+    toc,
     h("div", { class: ["rb-mem2-grid", adv && "has-adv"] },
       main,
       adv ? h("div", { class: "rb-mem2-side" }, h("div", { class: "rb-card bordered" }, h("span", { class: "h" }, "고급 설정"), h("span", { class: "rb-muted" }, "불러오는 중…"))) : null
@@ -64,6 +67,7 @@ export async function renderSettingsTab(ctx) {
   );
   const advSide = shell.querySelector(".rb-mem2-side");
   replace(ctx.main, shell);
+  paintToc(shell, toc);
 
 
   // ── 고급 영역 ──
@@ -141,13 +145,32 @@ export async function renderSettingsTab(ctx) {
   }
   // 고급은 점선 '고급' 칸 없이 묶음 카드를 그대로 오른쪽 열에 둔다
   if (advSide) replace(advSide, ...(adv ? advBlocks : [advFold(ctx, "settings", true)]));
+  paintToc(shell, toc);
+}
+
+var TOC_ICON = { "화면": "eye", "서버": "network", "애드온": "plugin", "백업": "download", "도움말": "info", "이야기 도우미": "sparkle", "로어북 · 채팅 메뉴": "book", "정리 · 기록": "refresh" };
+function paintToc(shell, toc) {
+  if (!toc.isConnected) return;
+  const cards = [...shell.querySelectorAll(".rb-mem2-grid .rb-scard")].filter((c) => c.querySelector(":scope > .h")?.textContent?.trim());
+  const items = cards.map((c, i) => {
+    const t = c.querySelector(":scope > .h").textContent.trim();
+    c.dataset.toc = String(i);
+    return h("button", { type: "button", class: "rb-settoc-i", dataset: { toc: String(i) }, onClick: () => {
+      toc.querySelectorAll(".on").forEach((x) => x.classList.remove("on"));
+      toc.querySelector(`[data-toc="${i}"]`)?.classList.add("on");
+      c.scrollIntoView({ block: "start", behavior: "smooth" });
+      c.classList.remove("rb-toc-hit"); void c.offsetWidth; c.classList.add("rb-toc-hit");
+    } }, h("span", { class: "ico", "aria-hidden": "true" }, icon(TOC_ICON[t] ?? "sliders", 16)), h("span", null, t));
+  });
+  replace(toc, ...items);
+  items[0]?.classList.add("on");
 }
 
 // ── Dusk Cellar (선택 서버) ── 줄 하나: 오른쪽에 상태(확인 중 → 연결됨 vX / 없음). 누르면 상태·주소·다시 확인.
 const cellarText = (st, newV) => (!st ? "확인 중…" : st.ok ? `연결됨 v${st.version}${newV ? ` · 새 버전 v${newV}` : ""}` : st.off ? "꺼짐" : "없음");
 function cellarCard(ctx, linkRow, card) {
   const cel = (ctx.cellar ??= ctx.memory?.cellar ?? createCellar(ctx.api));
-  const row = linkRow("Dusk Cellar", "리스 서버 옆에서 도는 선택 서버예요. 없어도 모든 기능이 그대로 돼요.", () => openCellar(ctx, cel, paint), "rb-set-cellar", cellarText(cel.peek(), ctx.cellarNew));
+  const row = linkRow("Dusk Cellar", "리스와 따로 늘 켜져 있는 선택 서버예요. 없어도 모든 기능이 그대로 돼요.", () => openCellar(ctx, cel, paint), "rb-set-cellar", cellarText(cel.peek(), ctx.cellarNew));
   const paint = (st) => { const v = row.querySelector(".val"); if (v) v.textContent = cellarText(st, ctx.cellarNew); };
   cel.status().then(paint).catch(() => paint({ ok: false }));
   return card("서버", row);
@@ -171,7 +194,7 @@ async function openCellar(ctx, cel, paint) {
         if (!ok) { replace(stEl, "업데이트를 취소했어요"); return; }
         replace(stEl, "업데이트 중…");
         const r = await up.apply({ onWait: (i) => replace(stEl, `Cellar를 다시 켜는 중… (${Math.round((i + 1) * 1.5)}초)`) });
-        replace(stEl, !r.back ? "업데이트했지만 Cellar가 아직 응답하지 않아요. 잠시 뒤 '다시 확인'을 눌러 주세요." : r.fullRestart ? `v${r.back.version}로 업데이트했어요. 실행기도 바뀌어서 서버에서 pm2 restart(또는 리스 재시작)를 한 번 해야 모두 적용돼요.` : `v${r.back.version}로 업데이트했어요.`);
+        replace(stEl, !r.back ? "업데이트했지만 Cellar가 아직 응답하지 않아요. 잠시 뒤 '다시 확인'을 눌러 주세요." : r.fullRestart ? `v${r.back.version}로 업데이트했어요. 실행기도 바뀌어서 서버의 Dusk-Cellar 폴더에서 'node setup.cjs restart'를 한 번 해야 모두 적용돼요(리스는 다시 켤 필요 없어요).` : `v${r.back.version}로 업데이트했어요.`);
         cel.forget(); await check();
       } catch (e) { replace(stEl, String(e?.message ?? e)); } finally { upBtn.disabled = false; }
     } });
@@ -240,22 +263,32 @@ async function openCellarBackup(ctx, st) {
       btn("복원", { size: "sm", onClick: () => doRestore(it) }));
     async function doRestore(it) {
       if (busy) return;
-      const ok = await confirmDialog(ctx.win, { title: "이 백업으로 되돌릴까요?", body: `${bkWhen(it)} 상태로 리스 세이브 전체와 서버 기억을 되돌려요.\n· 리스가 잠깐 꺼졌다 다시 켜져요.\n· 지금 상태는 '복원 전 자동' 백업으로 남겨요.\n· 끝나면 리스를 열어 둔 화면(다른 기기 포함)을 모두 새로고침해 주세요. 새로고침 전 화면이 옛 데이터를 다시 저장할 수 있어요.`, ok: "복원", danger: true });
+      const ok = await confirmDialog(ctx.win, { title: "이 백업으로 되돌릴까요?", body: `${bkWhen(it)} 상태로 리스 세이브 전체와 서버 기억을 되돌려요.\n· 리스가 켜져 있으면 복원을 예약해요. 리스를 끄면(앱 종료·pm2 stop 등) Cellar가 바로 복원하고, 끝나면 리스를 다시 켜면 돼요.\n· 지금 상태는 '복원 전 자동' 백업으로 남겨요.\n· 끝나면 리스를 열어 둔 화면(다른 기기 포함)을 모두 새로고침해 주세요. 새로고침 전 화면이 옛 데이터를 다시 저장할 수 있어요.`, ok: "복원", danger: true });
       if (!ok) return;
       busy = true; clearTimeout(timer); nowBtn.disabled = true;
-      replace(stEl, "복원 중… 리스를 다시 켜는 중이에요");
+      replace(stEl, "복원 요청 중…");
       try {
         const back = await bk.restore(it.id, { onWait: (i) => replace(stEl, `복원 중… 리스를 다시 켜는 중이에요 (${(i + 1) * 2}초)`) });
+        if (back === "waiting") { busy = false; nowBtn.disabled = false; return load(); }
         replace(stEl, back ? "복원했어요. 지금 리스를 새로고침해 주세요(F5 또는 앱 다시 시작)." : "리스가 아직 응답하지 않아요. 잠시 뒤 새로고침해 주세요.");
       } catch (e) { replace(stEl, `복원 실패 · ${String(e?.message ?? e)}`); busy = false; nowBtn.disabled = false; }
     }
     async function load() {
       if (closed || busy) return;
       try {
-        const { items, job } = await bk.list();
+        const { items, job, restore } = await bk.list();
         const running = job && !job.finishedAt;
         nowBtn.disabled = !!running;
-        replace(stEl, running ? `백업 중… ${job.done.toLocaleString()} / ${job.total.toLocaleString()}개` : job?.error ? `마지막 백업 실패 · ${job.error}` : `백업 ${items.length}개 · 바뀐 파일만 복사해서 두 번째부터는 빨라요`);
+        // 예약 복원(리스가 꺼지면 복원) · 지난 복원 결과(리스를 다시 켠 뒤 처음 열 때 보인다)
+        const waitIt = restore?.phase === "waiting" ? items.find((x) => x.id === restore.id) : null;
+        const recent = restore && Date.now() - (restore.updatedAt ?? 0) < 6 * 3600e3;
+        const resNote = restore?.phase === "waiting"
+          ? h("div", { class: "rb-p", id: "rb-bk-wait" }, `복원 예약됨: ${waitIt ? bkWhen(waitIt) : restore.id} — 리스를 끄면 바로 복원돼요. 끝나면 리스를 다시 켜 주세요. `,
+              btn("예약 취소", { size: "sm", id: "rb-bk-cancel", onClick: async () => { try { await bk.cancel(); } catch (e) { replace(stEl, String(e?.message ?? e)); } load(); } }))
+          : recent && restore.phase === "done" ? h("div", { class: "rb-muted", id: "rb-bk-last" }, "지난 복원이 끝났어요.")
+          : recent && restore.phase === "failed" ? h("div", { class: "rb-muted", id: "rb-bk-last", style: "color:var(--rb-warn,#c97a00)" }, `지난 복원 실패 · ${restore.error ?? ""}`) : null;
+        const line = running ? `백업 중… ${job.done.toLocaleString()} / ${job.total.toLocaleString()}개` : job?.error ? `마지막 백업 실패 · ${job.error}` : `백업 ${items.length}개 · 바뀐 파일만 복사해서 두 번째부터는 빨라요`;
+        replace(stEl, ...(resNote ? [line, resNote] : [line]));
         replace(listEl, ...(items.length ? items.map(row) : [h("p", { class: "rb-muted" }, "아직 백업이 없어요.")]));
         if (running) timer = setTimeout(load, 1000);
       } catch (e) { replace(stEl, String(e?.message ?? e)); }

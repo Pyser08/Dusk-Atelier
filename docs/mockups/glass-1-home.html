@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>글래스 홈 목업</title>
+<style>
+:root{
+  --rb-bg:#160f2b;--rb-blob1:rgba(255,110,180,.55);--rb-blob2:rgba(100,120,255,.6);--rb-blob3:rgba(255,180,100,.4);--rb-blob4:rgba(150,90,255,.45);
+  --rb-acc:#ff8ec6;--rb-acc2:#8a7bff;--rb-acc3:#ffb36b;--rb-tint:#ffd0ea;--rb-glow:rgba(255,142,198,.55);
+  --rb-acc-grad:linear-gradient(90deg,var(--rb-acc),var(--rb-acc2));
+  --rb-glass:rgba(255,255,255,.10);--rb-glass-2:rgba(255,255,255,.14);--rb-glass-line:rgba(255,255,255,.22);
+  --rb-glass-hi:inset 0 1px 0 rgba(255,255,255,.25);--rb-glass-shadow:0 8px 30px rgba(0,0,0,.25);--rb-glass-blur:blur(22px) saturate(140%);
+  --rb-text:#f2f0fa;--rb-sub:rgba(255,255,255,.65);--rb-mute:rgba(255,255,255,.55);--rb-line:rgba(255,255,255,.10);
+  --rb-r2:15px;--rb-r3:20px;--rb-r4:22px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0816;color:var(--rb-text);font:14px/1.5 "Pretendard",system-ui,sans-serif;padding:24px 16px}
+.cap{color:#aaa;font-size:13px;margin:0 0 8px}
+.wrap{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.frame{border-radius:var(--rb-r4);overflow:hidden;border:1px solid #333}
+.pc{width:1280px;max-width:100%}.mo{width:390px}
+/* 배경(stage) */
+.stage{background:
+  radial-gradient(40% 50% at 12% 18%,var(--rb-blob1),transparent 70%),
+  radial-gradient(45% 55% at 88% 78%,var(--rb-blob2),transparent 70%),
+  radial-gradient(35% 40% at 70% 8%,var(--rb-blob3),transparent 70%),
+  radial-gradient(40% 45% at 30% 95%,var(--rb-blob4),transparent 70%),var(--rb-bg);padding:22px;min-height:100%}
+/* 탭 틀 */
+.top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.logo{font-weight:800;font-size:18px;background:linear-gradient(90deg,var(--rb-acc3),var(--rb-acc));-webkit-background-clip:text;color:transparent}
+.tabs{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--rb-glass);border:1px solid var(--rb-glass-line);backdrop-filter:var(--rb-glass-blur)}
+.tabs span{padding:6px 14px;border-radius:999px;color:var(--rb-sub);font-size:13px}
+.tabs span.on{background:var(--rb-acc-grad);color:#fff;box-shadow:0 0 12px var(--rb-glow)}
+.search{flex:1;max-width:260px;margin-left:auto;padding:8px 14px;border-radius:999px;background:var(--rb-glass);border:1px solid var(--rb-glass-line);color:var(--rb-mute);font-size:13px}
+.ib{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--rb-glass);border:1px solid var(--rb-glass-line);color:var(--rb-sub);font-size:14px;flex:none}
+/* 유리 카드 */
+.glass{background:var(--rb-glass);-webkit-backdrop-filter:var(--rb-glass-blur);backdrop-filter:var(--rb-glass-blur);border:1px solid var(--rb-glass-line);border-radius:var(--rb-r3);box-shadow:var(--rb-glass-shadow),var(--rb-glass-hi);padding:18px 20px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ch b{font-size:15px}.link{color:var(--rb-sub);font-size:12px}
+.body{display:grid;grid-template-columns:1fr 340px;gap:16px}
+.col{display:flex;flex-direction:column;gap:16px}
+.head small{color:var(--rb-sub);font-size:12px}.head h1{margin:2px 0 0;font-size:22px}
+/* 스위치 */
+.sw{width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.22);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.sw.on{background:var(--rb-acc-grad);box-shadow:0 0 12px var(--rb-glow)}.sw.on::after{left:21px}
+.stat{display:flex;align-items:center;gap:10px;color:var(--rb-sub);font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--rb-acc);box-shadow:0 0 8px var(--rb-glow);flex:none}
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.num{background:var(--rb-glass-2);border-radius:var(--rb-r2);padding:12px 14px}
+.num b{display:block;font-size:24px;background:linear-gradient(180deg,#fff,var(--rb-tint));-webkit-background-clip:text;color:transparent}
+.num small{font-size:12px;color:var(--rb-sub)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{background:var(--rb-glass-2);border-radius:var(--rb-r2);padding:14px;display:flex;gap:10px;align-items:center}
+.ico{width:36px;height:36px;border-radius:11px;flex:none;display:grid;place-items:center;color:#fff;font-weight:700}
+.g1{background:linear-gradient(135deg,#ffb36b,#ff7a59)}.g2{background:linear-gradient(135deg,#ff8ec6,#8a7bff)}.g3{background:linear-gradient(135deg,#7fd4ff,#5b8cff)}.g4{background:linear-gradient(135deg,#6ff0c4,#38b6a0)}
+.tile b{display:block;font-size:14px}.tile small{color:var(--rb-mute);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:5px 12px;border-radius:20px;background:var(--rb-glass-2);font-size:13px}
+.chip.new{background:var(--rb-acc-grad);font-size:11px;padding:2px 8px;margin-right:6px}
+.disc{display:flex;align-items:center;gap:12px}
+.disc .t{flex:1}.disc small{color:var(--rb-sub);display:block;font-size:12px}
+.btn{padding:6px 14px;border-radius:999px;background:var(--rb-acc-grad);color:#fff;font-size:13px;border:0}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rb-line)}
+.row:last-child{border-bottom:0}.row .t{flex:1}.row small{display:block;color:var(--rb-mute);font-size:12px}
+.time{color:var(--rb-mute);font-size:12px}
+.ghost{border:1px dashed rgba(255,255,255,.3);border-radius:999px;padding:7px 14px;color:var(--rb-sub);font-size:13px;display:inline-block}
+.foot{display:flex;gap:8px;flex-wrap:wrap}
+.addon{display:flex;gap:10px;align-items:center}.addon .t{flex:1}
+/* 모바일 */
+.mo .stage{padding:16px}.mo .glass{padding:16px}
+.mo .body{grid-template-columns:1fr}
+.mo .tabs span{padding:6px 9px;font-size:12px}.mo .search{display:none}
+.mo .nums{grid-template-columns:repeat(3,1fr)}.mo .only-pc{display:none}
+.mo .tiles{grid-template-columns:repeat(4,1fr);gap:8px}.mo .tile{flex-direction:column;padding:10px 4px;text-align:center}.mo .tile small{display:none}.mo .tile b{font-size:12px}
+.mo .head h1{font-size:18px}
+</style></head><body>
+<p class="cap">PC 1280 · 모바일 390 — 더스크(기본) 테마. 기능은 지금 홈과 같고 배치·모양만 바뀜.</p>
+<div class="wrap" id="wrap"></div>
+<template id="home">
+<div class="stage">
+  <div class="top">
+    <span class="logo">Dusk</span>
+    <div class="tabs"><span class="on">홈</span><span>기억</span><span>작업실</span><span>관리</span><span>설정</span></div>
+    <div class="search">기능 찾기…</div>
+    <span class="ib">?</span><span class="ib">✕</span>
+  </div>
+  <div class="head" style="margin-bottom:16px"><small>지금 열린 채팅</small><h1>레이나 · 비 오는 밤의 카페</h1></div>
+  <div class="body">
+    <div class="col">
+      <section class="glass">
+        <div class="ch"><b>장기 기억 ›</b><span class="sw on" title="모든 채팅"></span></div>
+        <div class="stat"><span class="dot"></span>21:42에 기억 12개를 넣었어요</div>
+        <div class="nums"><div class="num"><b>184</b><small>저장된 기억</small></div><div class="num"><b>12</b><small>이번에 넣음</small></div><div class="num"><b>6</b><small>인물</small></div><div class="num only-pc"><b>3</b><small>확인할 것</small></div></div>
+      </section>
+      <section class="glass disc"><div class="t"><span class="chip new">추천</span><b>관계도로 인물 사이 보기</b><small>기억이 쌓였어요. 인물 관계를 한눈에 볼 수 있어요.</small></div><button class="btn">열기</button></section>
+      <section class="glass">
+        <div class="ch"><b>바로가기</b></div>
+        <div class="tiles">
+          <div class="tile"><span class="ico g1">↑</span><div><b>가져오기</b><small>봇·모듈·파일</small></div></div>
+          <div class="tile"><span class="ico g2">◎</span><div><b>기억</b><small>장기 기억·카드</small></div></div>
+          <div class="tile"><span class="ico g3">▦</span><div><b>관리</b><small>캐릭터·모듈</small></div></div>
+          <div class="tile"><span class="ico g4">✦</span><div><b>작업실</b><small>프로바이더·도구</small></div></div>
+        </div>
+      </section>
+      <section class="glass">
+        <div class="ch"><b>이어서 하기</b></div>
+        <div class="chips"><span class="chip">레이나 인물 위키</span><span class="chip">민준 인물 위키</span><span class="chip">지난 대화 분석</span><span class="chip">봇·모듈 가져오기</span></div>
+      </section>
+      <section class="glass">
+        <div class="ch"><b>애드온</b><span class="link">관리 ›</span></div>
+        <div class="row addon"><div class="t">장기기억 0.2.9<small>최신이에요</small></div><span class="sw on"></span></div>
+        <div class="row addon"><div class="t">Erosync 0.1.3<small>최신이에요</small></div><span class="sw"></span></div>
+      </section>
+    </div>
+    <div class="col">
+      <section class="glass">
+        <div class="ch"><b>최근 기록</b><span class="link">전체 보기</span></div>
+        <div class="row"><span class="dot"></span><div class="t"><b>레이나</b> <span style="color:var(--rb-mute)">우산을 같이 썼다</span></div><span class="time">21:40</span></div>
+        <div class="row"><span class="dot"></span><div class="t"><b>민준</b> <span style="color:var(--rb-mute)">카페 문을 닫았다</span></div><span class="time">21:31</span></div>
+        <div class="row"><span class="dot"></span><div class="t"><b>레이나</b> <span style="color:var(--rb-mute)">비밀을 털어놓았다</span></div><span class="time">21:12</span></div>
+      </section>
+      <section class="glass">
+        <div class="ch"><b>빠른 설정</b></div>
+        <div class="row"><div class="t">이 채팅 장기 기억<small>응답마다 기록하고 불러와요</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="t">인물 게이지<small>호감도를 채팅 위에 보여요</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="t">스토리 타임<small>장면 시간을 따라가요</small></div><span class="sw"></span></div>
+        <div class="row"><div class="t">기억 카드<small>새 기억을 카드로 알려요</small></div><span class="sw on"></span></div>
+        <div class="row"><div class="t">스텔스<small>Dusk 흔적을 숨겨요</small></div><span class="sw"></span></div>
+      </section>
+      <div class="foot"><span class="ghost">처음 둘러보기</span><span class="ghost">설정</span><span class="ghost">v2.2.0 · 새로 바뀐 점</span></div>
+    </div>
+  </div>
+</div>
+</template>
+<template id="homeB">
+<div class="stage">
+  <div class="top">
+    <span class="logo">Dusk</span>
+    <div class="tabs"><span class="on">홈</span><span>기억</span><span>작업실</span><span>관리</span><span>설정</span></div>
+    <div class="search">기능 찾기…</div>
+    <span class="ib">?</span><span class="ib">✕</span>
+  </div>
+  <section class="glass hero">
+    <div class="hl">
+      <small style="color:var(--rb-sub);font-size:12px">지금 열린 채팅</small>
+      <h1>레이나 · 비 오는 밤의 카페</h1>
+      <div class="stat" style="margin-top:8px"><span class="dot"></span>21:42에 기억 12개를 넣었어요 · <b style="color:var(--rb-text)">장기 기억 ›</b></div>
+    </div>
+    <div class="hr"><span style="font-size:12px;color:var(--rb-sub)">모든 채팅</span><span class="sw on"></span></div>
+    <div class="nums"><div class="num"><b>184</b><small>저장된 기억</small></div><div class="num"><b>12</b><small>이번에 넣음</small></div><div class="num"><b>6</b><small>인물</small></div><div class="num only-pc"><b>3</b><small>확인할 것</small></div></div>
+  </section>
+  <div class="b3">
+    <section class="glass">
+      <div class="ch"><b>바로가기</b></div>
+      <div class="tiles t2">
+        <div class="tile"><span class="ico g1">↑</span><div><b>가져오기</b><small>봇·모듈·파일</small></div></div>
+        <div class="tile"><span class="ico g2">◎</span><div><b>기억</b><small>장기 기억·카드</small></div></div>
+        <div class="tile"><span class="ico g3">▦</span><div><b>관리</b><small>캐릭터·모듈</small></div></div>
+        <div class="tile"><span class="ico g4">✦</span><div><b>작업실</b><small>프로바이더·도구</small></div></div>
+      </div>
+      <div class="ch" style="margin:16px 0 10px"><b>이어서 하기</b></div>
+      <div class="chips"><span class="chip">레이나 인물 위키</span><span class="chip">민준 인물 위키</span><span class="chip">지난 대화 분석</span><span class="chip">봇·모듈 가져오기</span></div>
+    </section>
+    <section class="glass">
+      <div class="ch"><b>최근 기록</b><span class="link">전체 보기</span></div>
+      <div class="row"><span class="dot"></span><div class="t"><b>레이나</b> <span style="color:var(--rb-mute)">우산을 같이 썼다</span></div><span class="time">21:40</span></div>
+      <div class="row"><span class="dot"></span><div class="t"><b>민준</b> <span style="color:var(--rb-mute)">카페 문을 닫았다</span></div><span class="time">21:31</span></div>
+      <div class="row"><span class="dot"></span><div class="t"><b>레이나</b> <span style="color:var(--rb-mute)">비밀을 털어놓았다</span></div><span class="time">21:12</span></div>
+      <div class="disc" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--rb-line)"><div class="t"><span class="chip new">추천</span><b>관계도</b><small>인물 관계를 한눈에</small></div><button class="btn">열기</button></div>
+    </section>
+    <section class="glass">
+      <div class="ch"><b>빠른 설정</b></div>
+      <div class="row"><div class="t">이 채팅 장기 기억<small>응답마다 기록·불러오기</small></div><span class="sw on"></span></div>
+      <div class="row"><div class="t">인물 게이지<small>호감도를 채팅 위에</small></div><span class="sw on"></span></div>
+      <div class="row"><div class="t">스토리 타임<small>장면 시간 따라가기</small></div><span class="sw"></span></div>
+      <div class="row"><div class="t">기억 카드<small>새 기억을 카드로</small></div><span class="sw on"></span></div>
+      <div class="row"><div class="t">스텔스<small>Dusk 흔적 숨기기</small></div><span class="sw"></span></div>
+    </section>
+  </div>
+  <div class="b2">
+    <section class="glass"><div class="ch"><b>애드온</b><span class="link">관리 ›</span></div><div class="chips"><span class="chip">장기기억 0.2.9 · 켬</span><span class="chip">Erosync 0.1.3 · 끔</span></div></section>
+    <div class="foot" style="align-self:center"><span class="ghost">처음 둘러보기</span><span class="ghost">설정</span><span class="ghost">v2.2.0 · 새로 바뀐 점</span></div>
+  </div>
+</div>
+</template>
+<template id="homeC">
+<div class="stage rail-wrap">
+  <nav class="rail glass">
+    <span class="logo" style="margin-bottom:14px">Dusk</span>
+    <span class="ri on"><i class="ico g2 s">⌂</i><em>홈</em></span>
+    <span class="ri"><i class="ico s">◎</i><em>기억</em></span>
+    <span class="ri"><i class="ico s">✦</i><em>작업실</em></span>
+    <span class="ri"><i class="ico s">▦</i><em>관리</em></span>
+    <span class="ri"><i class="ico s">⚙</i><em>설정</em></span>
+    <span class="ri sp"><i class="ico s">?</i><em>도움말</em></span>
+  </nav>
+  <div class="rmain">
+    <div class="top"><div class="head"><small>지금 열린 채팅</small><h1>레이나 · 비 오는 밤의 카페</h1></div><div class="search">기능 찾기…</div><span class="ib">✕</span></div>
+    <div class="tiles big">
+      <div class="tile"><span class="ico g1">↑</span><div><b>가져오기</b><small>봇·모듈·파일</small></div></div>
+      <div class="tile"><span class="ico g2">◎</span><div><b>기억</b><small>장기 기억·카드</small></div></div>
+      <div class="tile"><span class="ico g3">▦</span><div><b>관리</b><small>캐릭터·모듈</small></div></div>
+      <div class="tile"><span class="ico g4">✦</span><div><b>작업실</b><small>프로바이더·도구</small></div></div>
+    </div>
+    <div class="body" style="margin-top:16px">
+      <div class="col">
+        <section class="glass">
+          <div class="ch"><b>장기 기억 ›</b><span class="sw on"></span></div>
+          <div class="stat"><span class="dot"></span>21:42에 기억 12개를 넣었어요</div>
+          <div class="nums"><div class="num"><b>184</b><small>저장된 기억</small></div><div class="num"><b>12</b><small>이번에 넣음</small></div><div class="num"><b>6</b><small>인물</small></div><div class="num only-pc"><b>3</b><small>확인할 것</small></div></div>
+          <div class="ch" style="margin:16px 0 8px"><b style="font-size:13px;color:var(--rb-sub)">최근 기록</b><span class="link">전체 보기</span></div>
+          <div class="row"><span class="dot"></span><div class="t"><b>레이나</b> <span style="color:var(--rb-mute)">우산을 같이 썼다</span></div><span class="time">21:40</span></div>
+          <div class="row"><span class="dot"></span><div class="t"><b>민준</b> <span style="color:var(--rb-mute)">카페 문을 닫았다</span></div><span class="time">21:31</span></div>
+          <div class="ch" style="margin:14px 0 8px"><b style="font-size:13px;color:var(--rb-sub)">이어서 하기</b></div>
+          <div class="chips"><span class="chip">레이나 인물 위키</span><span class="chip">지난 대화 분석</span><span class="chip">봇·모듈 가져오기</span></div>
+        </section>
+        <section class="glass disc"><div class="t"><span class="chip new">추천</span><b>관계도로 인물 사이 보기</b><small>기억이 쌓였어요.</small></div><button class="btn">열기</button></section>
+      </div>
+      <div class="col">
+        <section class="glass">
+          <div class="ch"><b>빠른 설정</b></div>
+          <div class="row"><div class="t">이 채팅 장기 기억</div><span class="sw on"></span></div>
+          <div class="row"><div class="t">인물 게이지</div><span class="sw on"></span></div>
+          <div class="row"><div class="t">스토리 타임</div><span class="sw"></span></div>
+          <div class="row"><div class="t">기억 카드</div><span class="sw on"></span></div>
+          <div class="row"><div class="t">스텔스</div><span class="sw"></span></div>
+        </section>
+        <section class="glass"><div class="ch"><b>애드온</b><span class="link">관리 ›</span></div><div class="chips"><span class="chip">장기기억 · 켬</span><span class="chip">Erosync · 끔</span></div></section>
+        <div class="foot"><span class="ghost">처음 둘러보기</span><span class="ghost">v2.2.0 · 새로 바뀐 점</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+<style>
+.vbar{display:flex;gap:8px;justify-content:center;margin:0 0 16px}
+.vbar button{padding:8px 16px;border-radius:999px;border:1px solid #444;background:#1a1528;color:#ddd;font:inherit;cursor:pointer}
+.vbar button.on{background:var(--rb-acc-grad);color:#fff;border-color:transparent}
+.hero{display:grid;grid-template-columns:1fr auto;gap:4px 16px;margin-bottom:16px}
+.hero h1{margin:2px 0 0;font-size:24px}.hero .hr{display:flex;gap:8px;align-items:flex-start}.hero .nums{grid-column:1/-1}
+.b3{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:16px}
+.b2{display:grid;grid-template-columns:1fr auto;gap:16px;margin-top:16px}
+.tiles.t2{grid-template-columns:1fr 1fr}
+.rail-wrap{display:flex;gap:16px}
+.rail{width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding:16px 12px}
+.ri{display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;color:var(--rb-sub);font-size:14px}
+.ri em{font-style:normal}.ri.on{background:var(--rb-glass-2);color:var(--rb-text)}.ri.sp{margin-top:auto}
+.ico.s{width:28px;height:28px;border-radius:9px;background:var(--rb-glass-2);font-style:normal;font-size:13px}
+.ri.on .ico.s{background:var(--rb-acc-grad);box-shadow:0 0 12px var(--rb-glow)}
+.rmain{flex:1;min-width:0}.rmain .top{align-items:flex-end}
+.tiles.big .tile{padding:18px;background:var(--rb-glass);border:1px solid var(--rb-glass-line);backdrop-filter:var(--rb-glass-blur)}
+.mo .hero{grid-template-columns:1fr auto}.mo .hero h1{font-size:18px}
+.mo .b3,.mo .b2{grid-template-columns:1fr}
+.mo .tiles.t2{grid-template-columns:repeat(4,1fr)}
+.mo .rail-wrap{flex-direction:column-reverse;padding-bottom:0}
+.mo .rail{width:auto;flex-direction:row;justify-content:space-around;position:sticky;bottom:0;border-radius:var(--rb-r3) var(--rb-r3) 0 0;padding:8px}
+.mo .rail .logo,.mo .ri.sp{display:none}.mo .ri{flex-direction:column;gap:2px;font-size:11px;padding:4px 6px}
+.mo .rmain .top .search{display:none}
+</style>
+<template id="homeD">
+<div class="stage">
+  <div class="top"><span class="logo">Dusk</span><div class="tabs"><span class="on">홈</span><span>기억</span><span>작업실</span><span>관리</span><span>설정</span></div><div class="search">기능 찾기…</div><span class="ib">?</span><span class="ib">✕</span></div>
+  <div class="bento">
+    <section class="glass bx-hero"><small style="color:var(--rb-sub);font-size:12px">지금 열린 채팅</small><h1 style="margin:2px 0 10px;font-size:22px">레이나 · 비 오는 밤의 카페</h1><div class="stat"><span class="dot"></span>21:42에 기억 12개를 넣었어요</div><div class="ch" style="margin:14px 0 0"><b>장기 기억 ›</b><span class="sw on"></span></div></section>
+    <section class="glass bx-n"><div class="num big"><b>184</b><small>저장된 기억</small></div></section>
+    <section class="glass bx-n"><div class="num big"><b>12</b><small>이번에 넣음</small></div></section>
+    <section class="glass bx-t"><span class="ico g1">↑</span><b>가져오기</b><small>봇·모듈·파일</small></section>
+    <section class="glass bx-t"><span class="ico g2">◎</span><b>기억</b><small>장기 기억·카드</small></section>
+    <section class="glass bx-rec"><div class="ch"><b>최근 기록</b><span class="link">전체 보기</span></div>
+      <div class="row"><span class="dot"></span><div class="t"><b>레이나</b> <span style="color:var(--rb-mute)">우산을 같이 썼다</span></div><span class="time">21:40</span></div>
+      <div class="row"><span class="dot"></span><div class="t"><b>민준</b> <span style="color:var(--rb-mute)">카페 문을 닫았다</span></div><span class="time">21:31</span></div>
+      <div class="row"><span class="dot"></span><div class="t"><b>레이나</b> <span style="color:var(--rb-mute)">비밀을 털어놓았다</span></div><span class="time">21:12</span></div></section>
+    <section class="glass bx-n"><div class="num big"><b>6</b><small>인물</small></div></section>
+    <section class="glass bx-n only-pc"><div class="num big"><b>3</b><small>확인할 것</small></div></section>
+    <section class="glass bx-t"><span class="ico g3">▦</span><b>관리</b><small>캐릭터·모듈</small></section>
+    <section class="glass bx-t"><span class="ico g4">✦</span><b>작업실</b><small>프로바이더·도구</small></section>
+    <section class="glass bx-qs"><div class="ch"><b>빠른 설정</b></div><div class="qgrid"><span>이 채팅 기억<i class="sw on"></i></span><span>인물 게이지<i class="sw on"></i></span><span>스토리 타임<i class="sw"></i></span><span>기억 카드<i class="sw on"></i></span><span>스텔스<i class="sw"></i></span></div></section>
+    <section class="glass bx-wide disc"><div class="t"><span class="chip new">추천</span><b>관계도로 인물 사이 보기</b><small>이어서: 레이나 인물 위키 · 지난 대화 분석 · 봇·모듈 가져오기</small></div><button class="btn">열기</button></section>
+    <section class="glass bx-add"><div class="ch"><b>애드온</b><span class="link">관리 ›</span></div><div class="chips"><span class="chip">장기기억 · 켬</span><span class="chip">Erosync · 끔</span></div></section>
+  </div>
+  <div class="foot" style="margin-top:16px;justify-content:center"><span class="ghost">처음 둘러보기</span><span class="ghost">설정</span><span class="ghost">v2.2.0 · 새로 바뀐 점</span></div>
+</div>
+</template>
+<template id="homeE">
+<div class="stage focus">
+  <div class="top"><span class="logo">Dusk</span><div class="tabs"><span class="on">홈</span><span>기억</span><span>작업실</span><span>관리</span><span>설정</span></div><span class="ib" style="margin-left:auto">?</span><span class="ib">✕</span></div>
+  <div class="fx">
+    <small style="color:var(--rb-sub)">지금 열린 채팅</small>
+    <h1 class="fh">레이나 · 비 오는 밤의 카페</h1>
+    <div class="pills"><span class="pill on"><span class="dot"></span>장기 기억 켜짐 · 21:42에 12개 넣음 <i class="sw on"></i></span><span class="pill">기억 184</span><span class="pill">인물 6</span><span class="pill only-pc">확인할 것 3</span></div>
+    <div class="cmd glass">⌕ 무엇을 할까요? 기능·인물·봇 찾기…</div>
+    <div class="chips" style="justify-content:center"><span class="chip">레이나 인물 위키</span><span class="chip">민준 인물 위키</span><span class="chip">지난 대화 분석</span><span class="chip">봇·모듈 가져오기</span></div>
+    <div class="tiles ft">
+      <div class="tile"><span class="ico g1">↑</span><b>가져오기</b></div><div class="tile"><span class="ico g2">◎</span><b>기억</b></div><div class="tile"><span class="ico g3">▦</span><b>관리</b></div><div class="tile"><span class="ico g4">✦</span><b>작업실</b></div>
+    </div>
+    <details class="glass fd" open><summary><b>최근 기록</b><span class="link">전체 보기</span></summary>
+      <div class="row"><span class="dot"></span><div class="t"><b>레이나</b> <span style="color:var(--rb-mute)">우산을 같이 썼다</span></div><span class="time">21:40</span></div>
+      <div class="row"><span class="dot"></span><div class="t"><b>민준</b> <span style="color:var(--rb-mute)">카페 문을 닫았다</span></div><span class="time">21:31</span></div></details>
+    <details class="glass fd"><summary><b>빠른 설정</b><span class="link">5개 중 3개 켜짐</span></summary></details>
+    <details class="glass fd"><summary><b>애드온</b><span class="link">2개</span></summary></details>
+    <details class="glass fd"><summary><b><span class="chip new">추천</span>관계도로 인물 사이 보기</b><span class="link">열기</span></summary></details>
+    <div class="foot" style="justify-content:center"><span class="ghost">처음 둘러보기</span><span class="ghost">설정</span><span class="ghost">v2.2.0 · 새로 바뀐 점</span></div>
+  </div>
+</div>
+</template>
+<style>
+.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;grid-auto-flow:dense}
+.bx-hero{grid-column:span 2;grid-row:span 2}.bx-rec{grid-column:span 2;grid-row:span 2}.bx-qs{grid-column:span 2;grid-row:span 2}
+.bx-wide{grid-column:span 4}.bx-add{grid-column:span 2}
+.bx-n .num.big{background:none;padding:0}.bx-n .num.big b{font-size:34px}
+.bx-t{display:flex;flex-direction:column;gap:6px}.bx-t small{color:var(--rb-mute);font-size:12px}
+.qgrid{display:flex;flex-direction:column}.qgrid span{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--rb-line);font-size:13px}.qgrid span:last-child{border:0}
+.qgrid .sw,.pill .sw{display:inline-block}
+.fx{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:16px;text-align:center;padding-top:10px}
+.fh{margin:0;font-size:30px;background:linear-gradient(90deg,#fff,var(--rb-tint));-webkit-background-clip:text;color:transparent}
+.pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--rb-glass-2);font-size:13px}
+.pill .sw{transform:scale(.8)}
+.cmd{text-align:left;color:var(--rb-mute);padding:16px 20px;font-size:15px;border-radius:999px}
+.tiles.ft .tile{flex-direction:column;justify-content:center}
+.fd{text-align:left;padding:14px 20px}.fd summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;list-style:none}
+.fd[open] summary{margin-bottom:8px}
+.mo .bento{grid-template-columns:1fr 1fr}.mo .bento>*{grid-column:span 1;grid-row:auto}
+.mo .bx-hero,.mo .bx-rec,.mo .bx-qs,.mo .bx-wide,.mo .bx-add{grid-column:span 2}
+.mo .bx-n .num.big b{font-size:26px}
+.mo .fh{font-size:22px}.mo .tiles.ft{grid-template-columns:repeat(4,1fr)}.mo .tiles.ft .tile{padding:10px 4px}.mo .tiles.ft b{font-size:12px}
+</style>
+<div class="vbar" id="vbar"><button data-v="home" class="on">A · 2열 카드</button><button data-v="homeB">B · 대시보드</button><button data-v="homeC">C · 사이드 레일</button><button data-v="homeD">D · 벤토</button><button data-v="homeE">E · 포커스</button></div>
+<script>
+const w=document.getElementById('wrap');
+const show=(id)=>{const t=document.getElementById(id).innerHTML;
+w.innerHTML=`<div><p class="cap">PC 1280</p><div class="frame pc">${t}</div></div><div><p class="cap">모바일 390</p><div class="frame mo">${t}</div></div>`;
+document.querySelectorAll('#vbar button').forEach(b=>b.classList.toggle('on',b.dataset.v===id));};
+document.getElementById('vbar').onclick=(e)=>{if(e.target.dataset.v)show(e.target.dataset.v)};
+document.getElementById('wrap').before(document.getElementById('vbar'));
+show('home');
+</script>
+</body></html>

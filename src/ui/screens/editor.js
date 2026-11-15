@@ -7,7 +7,8 @@ import { newId, stableJson } from '../../engine/util.js';
 import { createStore } from '../../engine/store.js';
 import { copyText, h, replace } from '../dom.js';
 import { icon } from '../icons.js';
-import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, loading, note, openMenu, promptDialog, segmented, switchEl } from '../kit.js';
+import { openModuleLinks } from './modlinks.js';
+import { badge, btn, confirmDialog, folderDialog, folderPickPrefs, iconBtn, loading, note, openMenu, promptDialog, segmented, switchEl, setSwitch } from '../kit.js';
 import { gripDrag } from '../sortable.js';
 import { entryPicker } from '../entrypicker.js';
 import { sortLoreByName } from '../../engine/lorelist.js';
@@ -192,6 +193,15 @@ export async function openEditor(ctx, id) {
     kindLabel: "모듈 편집",
     idKey: "id",
     target: { kind: "module", id: entry2.module.id },
+    // 2.2.0(편집 B안): 머리 줄 이름 옆에 켜짐 스위치 · 연결 설정(목록에서 하던 것과 같은 동작)
+    headExtra: () => {
+      const sw = switchEl(entry2.enabled, { label: `${entry2.module.name} 켜기`, onChange: async (on) => {
+        setSwitch(sw, on);
+        try { await ctx.svc.run("setEnabled", entry2.module.id, on); entry2.enabled = on; ctx.toast(on ? "모듈을 켰어요" : "모듈을 껐어요"); }
+        catch (err) { setSwitch(sw, !on); ctx.toast(err?.message ?? String(err), { error: true }); }
+      } });
+      return h("span", { class: "rb-edhead-mod" }, sw, btn("연결 설정", { size: "sm", icon: "link", id: "rb-edit-links", onClick: (ev) => openModuleLinks(ctx, entry2, ev.currentTarget, { refresh: () => ctx.svc.load({ fresh: true }).catch(() => {}) }) }));
+    },
     openAssets: () => ctx.openAssets(entry2.module.id),
     validate: validateModule,
     // 봇 편집기와 같은 모양: 위 요약 카드 + 접는 카드(기본 / 고급)
@@ -359,14 +369,15 @@ export async function openEditorCore(ctx, cfg) {
   helpBtn.classList.add("rb-helpbtn");
   helpBtn.setAttribute("aria-pressed", "false");
   const statusEl = h("div", { class: "rb-statusbar" }, h("span", { class: "dot", "aria-hidden": "true" }, "●"), saveState, h("span", { class: "rb-autosave-note" }, cfg.unsavedDraft?.() ? "아직 만들어지지 않았어요 · [저장]하면 봇이 생겨요" : "자동 저장 2분"));
+  // 2.2.0(편집 B안): 바뀐 곳·검증 결과는 아래 상태 줄 오른쪽으로(머리 줄은 CBS 사전·?·적용만)
+  statusEl.append(h("span", { class: "rb-spacer", style: "flex:1" }), chgChip, issuesBtn);
   const helpEl = h("aside", { class: "rb-help", "aria-label": "도움말" });
   const head = h(
     "div",
     { class: "rb-full-head" },
     iconBtn("back", "닫기", { onClick: () => close() }),
     h("div", { class: "ttl" }, h("small", null, cfg.kindLabel), titleB),
-    chgChip,
-    issuesBtn,
+    cfg.headExtra?.() ?? null,
     btn("CBS 사전", { size: "sm", onClick: () => cbsPanel() }),
     helpBtn,
     applyBtn
@@ -482,12 +493,19 @@ export async function openEditorCore(ctx, cfg) {
   }
   // 정보 탭 안에서 인사말 칸에 있는지 아닌지를 AI 창이 알 수 있게 (작업 종류 자동 선택)
   panel.addEventListener("da-area", (ev) => panel.querySelector("#rb-ai-popup")?.syncTab?.(ev.detail));
+  // 2.2.0(편집 B안): 탭마다 경고 수(검증 결과의 tab/kind로 나눔, 모르면 세지 않음)
+  let tabIss = {};
+  const tabIssues = (k) => tabIss[k] ?? 0;
   function paintTabs() {
+    tabIss = {};
+    try { for (const i of splitIssues(cfg.validate(draft), ignoredList()).active) if (i.tab) tabIss[i.tab] = (tabIss[i.tab] ?? 0) + 1; } catch { /* 경고 수 없이 */ }
     replace(tabsEl, TABS2.map(([k, label]) => h(
       "button",
       { type: "button", role: "tab", "aria-selected": es.tab === k ? "true" : "false", onClick: () => goTab(k) },
       label,
-      ["lorebook", "regex", "trigger"].includes(k) ? h("small", null, String(draft[k].length)) : k === "ai" && build?.pendingCount() ? h("small", null, String(build.pendingCount())) : null
+      ["lorebook", "regex", "trigger"].includes(k) ? h("small", { class: draft[k].length ? null : "zero" }, String(draft[k].length)) : null,
+      tabIssues(k) ? h("small", { class: "rb-tabwarn", title: "이 탭의 경고" }, `!${tabIssues(k)}`) : null,
+      k === "ai" && build?.pendingCount() ? h("small", null, String(build.pendingCount())) : null
     )));
   }
   function toggleHelp(on) {
@@ -543,7 +561,7 @@ export async function openEditorCore(ctx, cfg) {
   // 접는 카드(목업의 기본·켜지는 조건·고급 …): 열림 상태는 항목을 바꿔도 기억
   const foldCard = (key, title, hint, open, ...kids) => {
     es.fold ??= {};
-    const d = h("details", { class: "rb-fold wide" }, h("summary", null, h("span", { class: "t" }, title), h("span", { class: "h" }, hint ?? ""), icon("down", 16)), h("div", { class: "rb-fold-body" }, ...kids));
+    const d = h("details", { class: ["rb-fold wide", `f-${key}`] }, h("summary", null, h("span", { class: "t" }, title), h("span", { class: "h" }, hint ?? ""), icon("down", 16)), h("div", { class: "rb-fold-body" }, ...kids));
     d.open = es.fold[key] ?? !!open;
     d.addEventListener("toggle", () => { es.fold[key] = d.open; });
     return d;
@@ -1018,7 +1036,7 @@ export async function openEditorCore(ctx, cfg) {
       const affPath = isLore && es.loreTab === "char" ? affsOf(it2, fmap) : [];
       const b = h(
         "button",
-        { type: "button", class: ["rb-item", off && "off", child && "child", divider && "divider"], role: "option", "aria-selected": es.sel[kind] === i2 && !showVars ? "true" : "false", onClick: () => {
+        { type: "button", class: ["rb-item", off && "off", child && "child", divider && "divider", !divider && itemTone(kind, it2, off)], role: "option", "aria-selected": es.sel[kind] === i2 && !showVars ? "true" : "false", onClick: () => {
           if (selecting) {
             if (es.multi.has(it2)) es.multi.delete(it2);
             else es.multi.add(it2);
@@ -1065,7 +1083,7 @@ export async function openEditorCore(ctx, cfg) {
         } }, icon("chevron", 14)),
         h(
           "button",
-          { type: "button", class: "rb-folder", role: "option", "aria-selected": es.sel[kind] === i2 ? "true" : "false", style: `flex:1;margin-top:2px;background:${tint.fill};${es.sel[kind] === i2 ? "box-shadow:inset 0 0 0 2px var(--rb-sel-ring);" : ""}`, onClick: () => {
+          { type: "button", class: "rb-folder k-folder", role: "option", "aria-selected": es.sel[kind] === i2 ? "true" : "false", style: `flex:1;margin-top:2px;background:${tint.fill};${es.sel[kind] === i2 ? "box-shadow:inset 0 0 0 2px var(--rb-sel-ring);" : ""}`, onClick: () => {
             if (selecting) {
               if (es.multi.has(f)) es.multi.delete(f);
               else es.multi.add(f);
@@ -1259,7 +1277,7 @@ export async function openEditorCore(ctx, cfg) {
       es.mItem = true;
       render();
     } }, "📦 초기 변수", h("small", null, String(parseVars(draft.defaultVariables).length)))) : null;
-    replace(body, h("div", { class: "side" }, h("div", { class: "rb-treehead" }, loreTabs, filterSeg, searchBox), pinned, bulkBar, items), pane);
+    replace(body, h("div", { class: "side" }, h("div", { class: "rb-treehead" }, loreTabs, filterSeg, searchBox), pinned, bulkBar, items, toneLegend(kind)), pane);
     es.shown = { kind, items, pane, item: cur };
     restoreView(kind, items, pane, cur);
   }
@@ -2536,4 +2554,28 @@ export async function openEditorCore(ctx, cfg) {
     return draft;
   }, apply, replaceDraft, undoAi, canUndoAi: () => aiHist.length > 0 };
   return handle;
+}
+
+// 2.2.0(편집 B안): 목록 줄 왼쪽 색띠 — 종류를 색으로. 아래 toneLegend가 색 뜻을 적어 둔다.
+var TONES = {
+  lorebook: [["k-always", "항상 켜짐"], ["k-key", "키로 켜짐"], ["k-prob", "확률"], ["k-rule", "Dusk 규칙"], ["k-folder", "폴더"], ["k-off", "꺼짐"]],
+  regex: [["k-out", "출력 수정"], ["k-in", "입력 수정"], ["k-disp", "화면 표시"], ["k-req", "요청 데이터"], ["k-key", "그 밖"], ["k-off", "사용 안 함"]],
+  trigger: [["k-key", "일반 트리거"], ["k-lua", "Lua"]]
+};
+export function itemTone(kind, it, off) {
+  if (off) return "k-off";
+  if (kind === "lorebook") {
+    if (isManaged(it)) return "k-rule";
+    if (it.alwaysActive || it.mode === "constant") return "k-always";
+    if (it.activationPercent != null && Number(it.activationPercent) < 100) return "k-prob";
+    return "k-key";
+  }
+  if (kind === "regex") return { editoutput: "k-out", editinput: "k-in", editdisplay: "k-disp", editprocess: "k-req" }[it.type] ?? "k-key";
+  if (kind === "trigger") return Array.isArray(it.effect) && it.effect.length === 1 && ["triggerlua", "triggercode"].includes(it.effect[0]?.type) ? "k-lua" : "k-key";
+  return null;
+}
+function toneLegend(kind) {
+  const t = TONES[kind];
+  if (!t) return null;
+  return h("div", { class: "rb-tonelegend", "aria-label": "색 설명" }, t.map(([k, label]) => h("span", { class: k }, h("i", { "aria-hidden": "true" }), label)));
 }

@@ -67,11 +67,17 @@ export async function renderStealth(ctx) {
   };
   function draw() {
     const L = mergeLabels(pick, st.labels?.[pick]);
-    const cards = PRESET_IDS.map((id) => h("button", {
-      type: "button", class: ["rb-card", "bordered"], "aria-pressed": id === pick ? "true" : "false", "data-preset": id,
-      style: `text-align:left;cursor:pointer;padding:14px 16px;display:flex;flex-direction:column;gap:6px;${id === pick ? "outline:2px solid var(--rb-accent, #7a6cf0)" : ""}`,
-      onClick: () => { if (id === pick && st.active === id) return; pick = id; if (st.active) turnOn(id); else draw(); }   // 켜져 있으면 누르는 즉시 그 모양으로
-    }, h("b", null, PRESETS[id].label + (st.active === id ? "  ● 켜짐" : "")), h("small", { class: "rb-muted", style: "display:block" }, PRESETS[id].desc)));
+    const choose = (id) => { if (id === pick && st.active === id) return; pick = id; if (st.active) turnOn(id); else draw(); };   // 켜져 있으면 누르는 즉시 그 모양으로
+    const idx = PRESET_IDS.indexOf(pick), step = (d) => choose(PRESET_IDS[(idx + d + PRESET_IDS.length) % PRESET_IDS.length]);
+    const chips = PRESET_IDS.map((id) => h("button", { type: "button", class: "rb-stx-chip", "aria-pressed": id === pick ? "true" : "false", "data-preset": id, onClick: () => choose(id) }, PRESETS[id].label + (st.active === id ? "  ● 켜짐" : "")));
+    const stage = h("div", { class: "rb-stx" },
+      h("div", { class: "rb-stx-top" }, h("b", null, PRESETS[pick].label), h("span", { class: "rb-muted" }, `${idx + 1} / ${PRESET_IDS.length}`), st.active === pick ? h("span", { class: "rb-stx-on" }, "켜짐") : null),
+      h("div", { class: "rb-stx-view" },
+        h("button", { type: "button", class: "rb-stx-nav", "aria-label": "이전 모양", onClick: () => step(-1) }, icon("back", 18)),
+        stealthPreview(pick, st.scheme === "auto" ? ctx.state.mode : st.scheme),
+        h("button", { type: "button", class: "rb-stx-nav next", "aria-label": "다음 모양", onClick: () => step(1) }, icon("back", 18))),
+      h("small", { class: "rb-muted rb-stx-desc" }, PRESETS[pick].desc),
+      h("div", { class: "rb-stx-chips", role: "group", "aria-label": "모양" }, ...chips));
     const fields = LABEL_FIELDS.map(([k, name]) => {
       const inp = h("input", { type: "text", class: "rb-input", value: L[k], maxlength: 80, placeholder: "비우면 이 장식을 빼요", "aria-label": name });
       inp.addEventListener("change", () => { st.labels = { ...st.labels, [pick]: { ...st.labels?.[pick], [k]: inp.value } }; persist(); if (st.active === pick) refresh(); });
@@ -80,8 +86,8 @@ export async function renderStealth(ctx) {
     replace(wrap,
       h("h3", { class: "rb-h3" }, "더스크 스텔스"),
       h("p", { class: "rb-muted" }, "리스 채팅을 다른 AI 채팅 앱처럼 보이게 해요. 켜면 리스의 커스텀 CSS·채팅 HTML 칸을 쓰고, 끄면 원래 값으로 되돌려요."),
-      toggleRow("더스크 스텔스 켜기", st.active ? `지금 ${PRESETS[st.active].label} 모양이에요. 아래에서 다른 모양을 누르면 바로 바뀌어요` : "켜면 아래에서 고른 모양이 바로 적용돼요", !!st.active, (v) => v ? turnOn(pick) : turnOff()),
-      h("div", { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px" }, ...cards),
+      stage,
+      toggleRow("더스크 스텔스 켜기", st.active ? `지금 ${PRESETS[st.active].label} 모양이에요. 위에서 다른 모양을 누르면 바로 바뀌어요` : "켜면 위에서 고른 모양이 바로 적용돼요", !!st.active, (v) => v ? turnOn(pick) : turnOff()),
       toggleRow("홈 화면도 바꾸기", "끄면 채팅 화면만 바꾸고 리스 홈(채팅 밖)은 원래대로 둬요", !!st.changeHome, (v) => { st.changeHome = v; persist(); refresh(); }),
       st.active ? h("div", { class: "rb-row", style: "display:flex;gap:8px" }, btn("원래 테마로 되돌리기", { onClick: restore })) : null,
       segmented([["auto", "기기 설정 따라"], ["light", "항상 밝게"], ["dark", "항상 어둡게"]], st.scheme, (v) => { st.scheme = v; persist(); refresh(); }, "밝기"),
@@ -117,4 +123,13 @@ export async function renderStealth(ctx) {
   redraw = draw;
   draw();
   replace(ctx.main, wrap);
+}
+
+// 모양 미리보기: 프리셋 색(밝게/어둡게)으로 그린 작은 채팅 화면. 실제 적용 CSS와 같은 색 값을 쓴다.
+function stealthPreview(id, mode) {
+  const p = PRESETS[id], c = (mode === "light" ? p.light : p.dark) ?? p.dark;
+  return h("div", { class: "rb-stx-prev", "aria-label": `${p.label} 미리보기`, style: { background: c.bg, color: c.fg, fontFamily: p.font, "--r": `${p.radius ?? 16}px`, "--ir": `${p.input ?? 24}px` } },
+    h("div", { class: "u", style: { background: c.bubble } }, "오늘 숲 속 오두막에 도착했어."),
+    h("div", { class: "a" }, "문을 열자 장작 타는 냄새가 났다. 리아는 젖은 망토를 벗으며 난로 쪽으로 손짓했다."),
+    h("div", { class: "in", style: { background: c.inputBg, borderColor: c.line2 } }, h("span", { style: { color: c.dim } }, "메시지 입력…"), h("i", { style: { background: p.accent } })));
 }

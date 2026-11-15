@@ -10,6 +10,7 @@ import { maybeShowWhatsNew, openChangelog, CHANGELOG } from './whatsnew.js';
 import { btn, iconBtn, moreNav, openMenu, toast, emptyState, confirmDialog } from './kit.js';
 import { CSS2, FONT_LINK } from './styles.js';
 import { normalizeTheme, resolveMode, themeVars } from './theme.js';
+import { glassThemeInput, glassExtraVars } from './glassthemes.js';
 import { createPrefs } from './prefs.js';
 import { renderSettings } from './screens/settings.js';
 import { renderTools } from './screens/tools.js';
@@ -32,8 +33,9 @@ import { renderHome } from './screens/home.js';
 import { installScrollGuard } from './scrollguard.js';
 import { createExt } from './ext.js';
 import { renderSectionHome } from './screens/sectionhome.js';
-import { createBotAndEdit } from './screens/newbot.js';
+import { renderAiBot } from './screens/aibot.js';
 import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden, setAddonCheck } from './tabs.js';
+import { pushRecent } from './screens/workhome.js';
 
 export function createApp(api, { legacy, version, onPersonaChanged }) {
   const doc = document;
@@ -52,11 +54,26 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   doc.body.appendChild(root);
   const searchInput = h("input", { type: "search", placeholder: "검색", "aria-label": "검색" });
   let searchTimer = null;
-  searchInput.addEventListener("input", (e) => {
-    state.search = e.target.value;
+  let lastTyped = 0;
+  // 2.2.0 한글 조합 중에는 글자만 적어 두고(다시 그리기·화면 이동이 조합을 깨서 ‘안ㄴ녀녕’처럼 겹쳤다), 음절이 확정되면 찾는다.
+  let composing = false;
+  const runSearch = (q) => {
+    // 다른 탭에서 기능 찾기로 홈에 왔다가 칸을 비우면 원래 탭으로 돌아간다
+    if (!q.trim() && state.tab === "home" && state.findFrom) { const f = state.findFrom; state.findFrom = null; state.search = ""; go(f.tab, f.sub); return; }
+    // 기능 찾기 칸(목록 검색이 없는 탭)에서 적으면 홈의 기능 찾기 목록으로 간다
+    if (state.findMode && state.tab !== "home" && q.trim()) { const from = { tab: state.tab, sub: state.sub }; go("home"); state.findFrom = from; state.search = q; searchInput.value = q; if (doc.activeElement !== searchInput) searchInput.focus(); }
+    state.search = q;
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => ctx.refresh(), 120);
+    searchTimer = setTimeout(() => { if (!composing) ctx.refresh(); }, 120);
+  };
+  searchInput.addEventListener("input", (e) => {
+    lastTyped = Date.now();
+    state.search = e.target.value;
+    if (composing || e.isComposing) return;
+    runSearch(e.target.value);
   });
+  searchInput.addEventListener("compositionstart", () => { composing = true; });
+  searchInput.addEventListener("compositionend", () => { composing = false; setTimeout(() => { if (!composing) runSearch(searchInput.value); }, 0); });
   // 새 버전 알림: 열 때 업데이트 주소의 머리말(앞 512바이트)만 읽어 버전을 비교한다
   const UPDATE_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js";
   const UPDATE_HOW = "RisuAI 설정 → 플러그인에서 Dusk Atelier 옆 초록색 + 버튼을 누르면 업데이트돼요.";
@@ -128,7 +145,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       "button",
       { type: "button", class: "rb-brand", title: "홈으로", "aria-label": "Dusk Atelier 홈으로", onClick: () => go("home") },
       runeLogo(),   // 마스코트 루네 로고(1.8.3)
-      h("span", null, h("b", null, "Dusk Atelier"), h("small", null, "for RisuBard"))
+      h("span", null, h("b", null, "Dusk Atelier"))
     ),
     h("div", { class: "rb-spacer" }),
     updBtn,
@@ -147,17 +164,44 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     go(t.id);
   } }, icon(t.icon, size), withCount ? h("span", null, t.label) : t.label, withCount ? h("small") : null);
   // 사이드바·위쪽 바는 기억 → 관리 → 작업실 섹션별로 나눈다.
-  let currentSection = null;
+  // 2.2.0 사이드바: 섹션 제목을 눌러 접고 펴기(지금 섹션은 늘 펼침) · 섹션 색 · 아이콘만 보이는 레일(올리면 펼침, 핀으로 고정)
+  let currentSection = null, navGroup = null;
+  const navSecs = /* @__PURE__ */ new Map();
+  let navTabSeen = null;   // 마지막으로 그린 탭(탭이 바뀔 때만 손으로 펼친 섹션을 닫음)
+  const navOpen = new Set(Array.isArray(prefs.ui?.navOpen) ? prefs.ui.navOpen : []);
+  const paintSecs = () => {
+    const act = TABS.find((t) => t.id === state.tab)?.section;
+    for (const [sec, { btn: b, group }] of navSecs) {
+      const open = navOpen.has(sec) || sec === act;
+      b.setAttribute("aria-expanded", open ? "true" : "false");
+      b.classList.toggle("here", sec === act);
+      group.classList.toggle("open", open);
+      b.hidden = !TABS.some((t) => t.section === sec && !t.mobileOnly && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode));
+    }
+  };
+  const toggleSec = (sec) => {
+    if (navOpen.has(sec)) navOpen.delete(sec); else navOpen.add(sec);
+    paintSecs();
+    prefs.saveUi?.({ navOpen: [...navOpen] })?.catch?.(() => {});
+  };
+  const homeT = TABS.find((t) => t.id === "home");
+  const SEC_ICON = { memory: "brain", manage: "module", work: "tools" };
   for (const t of TABS) {
     if (t.mobileOnly) continue;
     if (t.section && t.section !== currentSection) {
       currentSection = t.section;
-      nav.appendChild(h("div", { class: "rb-nav-lab", "aria-hidden": "true" }, SECTION_NAMES[currentSection]));
+      const sec = currentSection;
+      const b = h("button", { type: "button", class: `rb-nav-sec sec-${sec}`, dataset: { section: sec }, "aria-expanded": "false", title: SECTION_NAMES[sec], onClick: () => toggleSec(sec) },
+        h("span", { class: "ci" }, icon(SEC_ICON[sec] ?? "tools", 16)), h("span", { class: "t" }, SECTION_NAMES[sec]), h("span", { class: "chev", "aria-hidden": "true" }, icon("chevron", 14)));
+      navGroup = h("div", { class: `rb-nav-group sec-${sec}`, role: "group", "aria-label": SECTION_NAMES[sec] });
+      navSecs.set(sec, { btn: b, group: navGroup });
+      nav.append(b, navGroup);
       topnav.appendChild(h("span", { class: "rb-topsep", "aria-hidden": "true" }));
     }
     const a = mkLink(t, 18, true);
     navLinks.set(t.id, a);
-    nav.appendChild(a);
+    if (t === homeT) a.classList.add("rb-nav-home");
+    (t.section && navGroup ? navGroup : nav).appendChild(a);
     const c = mkLink(t, 16, false);
     c.appendChild(h("small"));
     topLinks.set(t.id, c);
@@ -171,11 +215,30 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     return seg;
   };
-  topnav.appendChild(layoutSeg());
+  // 2.2.0 위쪽 메뉴: 홈 + 섹션 알약 3개(섹션 색) → 섹션 메뉴는 그 아래 칩 줄(moreNav). 탭별 링크는 DOM에 남기되 숨김.
+  // 메뉴 위치 분할 버튼은 오른쪽 ⋯ 메뉴 안(글래스에서 글자와 겹치던 것 없앰)
+  const topSecs = h("div", { class: "rb-topsecs" });
+  const topHome = topLinks.get("home");
+  if (topHome) topSecs.append(topHome);
+  for (const section of SECTION_IDS) {
+    const first = TABS.find((t) => t.section === section && t.mobileOnly) ?? TABS.find((t) => t.section === section);
+    const a = h("a", { href: "#", class: `rb-topsec sec-${section}`, dataset: { section }, onClick: (e) => { e.preventDefault(); go(first.id); } },
+      h("span", { class: "ci" }, icon(SEC_ICON[section] ?? "tools", 14)), SECTION_NAMES[section]);
+    topLinks.set(`section:${section}`, a);
+    topSecs.append(a);
+  }
+  const topMenu = h("div", { class: "rb-nav-menu rb-top-menu", role: "menu", hidden: true },
+    h("div", { class: "rb-nav-menu-lab" }, "메뉴 위치"), layoutSeg(),
+    h("button", { type: "button", role: "menuitem", onClick: () => { topMenu.hidden = true; openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록"); } }, icon("history", 14), `v${version} · 변경 기록`),
+    h("div", { class: "rb-nav-menu-tip" }, "파일을 창 어디에 끌어다 놓아도 바로 가져와요"));
+  const topMore = h("button", { type: "button", class: "rb-nav-more rb-top-more", title: "메뉴 설정", "aria-label": "메뉴 설정", "aria-haspopup": "menu", onClick: (e) => { e.stopPropagation(); topMenu.hidden = !topMenu.hidden; } }, "⋯");
+  topnav.prepend(topSecs);
+  topnav.append(h("div", { class: "rb-top-tools" }, topMore, topMenu));
+  win.addEventListener("click", (e) => { if (!e.target.closest?.(".rb-top-tools")) topMenu.hidden = true; });
   // 모바일 아래 탭바: 홈 + 기억 · 관리 · 작업실
   for (const id of BASE_IDS.filter((id) => id === "home")) {
     const t = TABS.find((x) => x.id === id);
-    const b = mkLink(t, 22, false);
+    const b = h("a", { href: "#", class: "sec-home", dataset: { tab: t.id }, onClick: (e) => { e.preventDefault(); go(t.id); } }, h("span", { class: "ci" }, icon(t.icon, 18)), t.label);
     barLinks.set(id, b);
     tabbar.appendChild(b);
   }
@@ -184,12 +247,26 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     const b = h("a", { href: "#", dataset: { section }, onClick: (e) => {
       e.preventDefault();
       go(first.id);
-    } }, icon(first.icon, 22), SECTION_NAMES[section]);
+    } }, h("span", { class: "ci" }, icon(SEC_ICON[section] ?? first.icon, 18)), SECTION_NAMES[section]);
+    b.classList.add(`sec-${section}`);
     tabbar.appendChild(b);
     barLinks.set(`section:${section}`, b);
   }
-  const navFoot = h("div", { style: "margin-top:auto;display:flex;flex-direction:column" });
+  const navFoot = h("div", { class: "rb-nav-foot" });
   nav.appendChild(navFoot);
+  // 레일: 기본은 아이콘만(올리거나 포커스하면 펼침). 핀을 누르면 늘 펼침(prefs.ui.navPinned)
+  const navWrap = h("div", { class: "rb-navwrap" });
+  const paintPin = () => win.classList.toggle("rb-nav-pinned", prefs.ui?.navPinned === true);
+  let navMenuOpen = false;
+  // 레일: 마우스를 떼면 접히므로 ⋯ 메뉴도 닫는다. 키보드(Tab)로 들어오면 펼치고, 나가면 접는다
+  nav.addEventListener("mouseleave", () => { shutNavMenu?.(); nav.classList.remove("rb-nav-kbd"); });
+  nav.addEventListener("keyup", (e) => { if (e.key === "Tab") nav.classList.add("rb-nav-kbd"); });
+  nav.addEventListener("focusout", (e) => { if (!nav.contains(e.relatedTarget)) nav.classList.remove("rb-nav-kbd"); });
+  nav.addEventListener("pointerdown", () => nav.classList.remove("rb-nav-kbd"));
+  // ⋯ 메뉴 밖을 누르거나 Esc면 닫는다
+  const shutNavMenu = () => { if (!navMenuOpen) return; navMenuOpen = false; navFoot.querySelector(".rb-nav-menu")?.setAttribute("hidden", ""); navFoot.querySelector(".rb-nav-more")?.setAttribute("aria-expanded", "false"); };
+  win.addEventListener("click", (e) => { if (!e.target.closest?.(".rb-nav-foot")) shutNavMenu(); });
+  win.addEventListener("keydown", (e) => { if (e.key === "Escape" && win.querySelector(".rb-top-menu:not([hidden])")) { e.stopPropagation(); win.querySelector(".rb-top-menu").hidden = true; win.querySelector(".rb-top-more")?.focus(); return; } if (e.key === "Escape" && navMenuOpen) { e.stopPropagation(); shutNavMenu(); navFoot.querySelector(".rb-nav-more")?.focus(); } });
   const moreHost = h("div", { class: "rb-morehost" });
   const main = h("section", { class: "rb-main", "aria-live": "polite", "data-keep-scroll": "" });
   const detail3 = h("aside", { class: "rb-detail rb-scroll", "aria-label": "상세" });
@@ -198,14 +275,28 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const crumb = h("div", { class: "rb-crumb", "aria-label": "현재 위치" });
   const phDesc = h("div", { class: "rb-ph-desc" });
   const helpBtn = iconBtn("help", "이 화면 설명", { boxed: true, id: "rb-help-btn", onClick: () => toggleHelp() });
+  // 목록 검색이 있는 탭에서도 기능 찾기는 ? 옆 단추로(누르면 홈의 기능 찾기 칸)
+  const findBtn = iconBtn("sparkle", "기능 찾기", { boxed: true, id: "rb-find-btn", onClick: () => { go("home"); setTimeout(() => searchInput.focus(), 0); } });
+  // 검색 칸 하나를 홈(가운데 '기능 찾기')과 다른 탭(오른쪽 위 ? 옆)이 함께 쓴다 — 옮겨 붙일 때 입력 중이면 포커스·커서 유지
+  const searchLabel = h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/"));
+  const phTools = h("div", { class: "rb-ph-tools" }, searchLabel, findBtn, helpBtn);
+  const placeSearch = (parent, before = null) => {
+    if (!parent || searchLabel.parentNode === parent || !parent.isConnected) return;   // 늦게 끝난 낡은 화면(붙지 않은 자리)이 칸을 가져가지 못하게
+    // 다시 그리기로 칸이 잠깐 빠졌다 돌아오면 포커스가 사라지므로, 방금(1.5초 안) 적고 있었으면 다시 포커스
+    const had = doc.activeElement === searchInput || Date.now() - lastTyped < 1500;
+    const a = searchInput.selectionStart ?? searchInput.value.length, b = searchInput.selectionEnd ?? a;
+    parent.insertBefore(searchLabel, before);
+    if (had) { searchInput.focus(); try { searchInput.setSelectionRange(a, b); } catch { /* type=search 일부 브라우저 */ } }
+  };
   const pagehead = h(
     "div",
     { class: "rb-pagehead" },
     h("div", { class: "rb-ph-text" }, crumb, phDesc),
-    h("div", { class: "rb-ph-tools" }, h("label", { class: "rb-search" }, icon("search", 16), searchInput, h("span", { class: "rb-kbd", "aria-hidden": "true" }, "/")), helpBtn)
+    phTools
   );
   const col = h("div", { class: "rb-col" }, moreHost, pagehead, main);
-  const body = h("div", { class: "rb-body" }, nav, col, sheetBack, detail3);
+  navWrap.append(nav);
+  const body = h("div", { class: "rb-body" }, navWrap, col, sheetBack, detail3);
   let wasLoading = false;
   new MutationObserver(() => {
     const now = !!main.querySelector(":scope > .rb-loading");
@@ -286,8 +377,12 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   function applyTheme() {
     const theme = prefs.ui?.theme;
     state.mode = resolveMode(theme ?? { mode: "auto" }, state.risuScheme);
-    const { vars, scheme } = themeVars(theme, state.mode);
+    // 2.2.0 글래스 화면: 고른 글래스 테마의 바탕·강조로 토큰을 계산(밝은·어두운 모드 모두). 고대비에선 예전 모양
+    const th0 = normalizeTheme(theme);
+    const glassOn = th0.skin === "glass" && th0.contrast !== "high";
+    const { vars, scheme } = themeVars(glassOn ? glassThemeInput(th0, state.mode) : theme, state.mode);
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
+    for (const [k, v] of Object.entries(glassExtraVars(glassOn ? th0 : { gtheme: "mine" }, scheme))) { if (v) root.style.setProperty(k, v); else root.style.removeProperty(k); }
     doc.documentElement.style.colorScheme = state.risuScheme;
     win.style.colorScheme = scheme;
     const th = normalizeTheme(theme);
@@ -297,6 +392,11 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     win.classList.toggle("rb-hc", th.contrast === "high");
     win.classList.toggle("rb-glass", th.glass === true && th.contrast !== "high");
     win.classList.toggle("rb-calm", th.motion === "reduce");
+    // 2.2.0 글래스 화면: 어두운 모드·보통 대비에서만. 가벼운 화면은 설정 또는 PocketRisu·RisuBard(블러가 무거움)
+    win.classList.toggle("rb-skin-glass", glassOn);
+    win.classList.toggle("rb-glass-light", glassOn && scheme === "light");
+    win.dataset.gtheme = glassOn ? th.gtheme : "";
+    win.classList.toggle("rb-lite", th.lite === true || /pocket|bard/i.test(globalThis.navigator?.userAgent ?? ""));
     paintLay();
   }
   // 메뉴 위치 분할 버튼(사이드바·위쪽 바)의 눌림 표시
@@ -314,8 +414,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
   }
   function go(tab, sub = null) {
+    if (tab !== "home") state.findFrom = null;   // 기능 찾기에서 고른 곳으로 가거나 다른 데로 옮기면 ‘원래 탭으로’는 잊는다
     if (tab !== state.tab || sub !== state.sub) win.__scrollGuard?.markNav();   // 화면 이동만 맨 위에서 시작(다시 그리기는 위치 유지)
-    if (tab === "aibot") { if (ctx.ext.get("svc", "aibuild")) createBotAndEdit(ctx, { tab: "ai" }); return; }
     if (tab === "tools" && sub === "personabuilder") { tab = "personabuilder"; sub = null; }
     // 기록은 설정 탭 안으로 옮겼다 (1.6.1, 그전엔 도구). 예전 go("history")·go("tools","history") 호출도 그대로 동작
     if (tab === "history" || tab === "tools" && sub === "history") {
@@ -336,9 +436,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     const leaving = tab !== state.tab || sub !== state.sub;
     if (leaving) stashPane();
     if (tab !== state.tab || (sub === "history") !== (state.sub === "history") || (tab === "home" && state.search)) {   // 홈 기능 찾기에서 홈 안 기능(애드온)으로 갈 때도 검색을 비운다
-      state.search = "";
-      searchInput.value = "";
+      state.search = state.searchNext ?? "";   // 2.2.0: 관리 개요 통합 검색 결과는 검색어를 들고 넘어간다
+      searchInput.value = state.search;
     }
+    state.searchNext = null;
     if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
     if (tab === "characters") state.charOrderStale = true;
     if (tab === "provider" && !prefs.ui?.experimental) {
@@ -377,7 +478,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     for (const t of TABS) for (const links of [navLinks, topLinks]) { const a = links.get(t.id); if (a && (t.exp || t.hideWhenExp || t.addon)) a.hidden = tabHidden(t, prefs.ui); }
     // 모바일 아래 탭바: 보일 탭이 하나도 없는 묶음(예: 관리 애드온·ProtLink+가 다 없을 때 '관리')은 숨긴다
+    for (const section of SECTION_IDS) { const live = TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)); const tb = topLinks.get(`section:${section}`); if (tb) tb.hidden = !live; }
     for (const section of SECTION_IDS) { const b = barLinks.get(`section:${section}`); if (b) b.hidden = !TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)); }
+    paintSecs();   // 애드온이 늦게 켜져도 섹션 제목(관리 등)이 바로 보이게
     if (state.tab === "provider" && !prefs.ui?.experimental) go("tools");
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
@@ -397,8 +500,10 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   let renderToken = 0;
   // 기능 맛보기용: 가 본 화면(탭, 장기 기억은 'memory:페이지')을 모아 둔다. 잠깐 뒤 한 번에 저장.
   let visitTimer = null;
+  let recentTimer = null;
   function noteVisit() {
     const key = state.tab === "memory" ? `memory:${state.mem?.page || "home"}` : state.tab;
+    if (prefs.ui && TABS.find((t) => t.id === state.tab)?.section === "work") { prefs.ui.recentTabs = pushRecent(prefs.ui.recentTabs, state.tab); clearTimeout(recentTimer); recentTimer = setTimeout(() => { prefs.saveUi?.({ recentTabs: prefs.ui.recentTabs }).catch?.(() => {}); }, 800); }
     const have = prefs.ui?.visited ?? [];
     if (!key || have.includes(key)) return;
     if (prefs.ui) prefs.ui.visited = [...have, key].slice(-60);
@@ -415,6 +520,9 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     // 개요 화면(기억·관리·작업실)에서는 위 칩 줄을 숨긴다: 목록이 같은 이동을 이미 보여 준다(목업 1)
     win.classList.toggle("rb-on-hub", String(state.tab).endsWith("-home"));
     const activeSection = TABS.find((t) => t.id === state.tab)?.section;
+    win.dataset.sec = activeSection ?? "home";   // 섹션 색(칩 줄·탭바)
+    // 다른 탭으로 옮기면 사이드바는 그 탭이 든 섹션만 펼친다(손으로 펼쳐 둔 다른 섹션은 닫음, 홈이면 모두 닫힘)
+    if (state.tab !== navTabSeen) { navTabSeen = state.tab; if (navOpen.size) { navOpen.clear(); prefs.saveUi?.({ navOpen: [] })?.catch?.(() => {}); } }
     replace(moreHost, moreNav(TABS.filter((t) => t.section === activeSection && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)), state.tab, (id) => go(id)));
     for (const links of [navLinks, topLinks, barLinks]) for (const [id, a] of links) {
       const activeTab = TABS.find((t) => t.id === state.tab);
@@ -422,17 +530,31 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       if (on) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
     }
+    // 아래 칸: 한 줄(끌어다 놓기 · 버전) + ⋯ 메뉴(메뉴 위치·변경 기록·늘 펼침)
+    const closeMenu = shutNavMenu;
+    const menu = h("div", { class: "rb-nav-menu", role: "menu", hidden: !navMenuOpen },
+      h("div", { class: "rb-nav-menu-lab" }, "메뉴 위치"), layoutSeg(),
+      h("button", { type: "button", role: "menuitem", id: "rb-nav-pin", onClick: () => { const v = prefs.ui?.navPinned !== true; if (prefs.ui) prefs.ui.navPinned = v; paintPin(); closeMenu(); prefs.saveUi?.({ navPinned: v })?.catch?.(() => {}); } }, icon("sliders", 14), prefs.ui?.navPinned ? "아이콘만 보이게 접기" : "메뉴 늘 펼쳐 두기"),
+      h("button", { type: "button", role: "menuitem", onClick: () => { closeMenu(); openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록"); } }, icon("history", 14), `v${version} · 변경 기록`),
+      h("div", { class: "rb-nav-menu-tip" }, "파일을 창 어디에 끌어다 놓아도 바로 가져와요"));
     replace(
       navFoot,
-      h("div", { class: "rb-nav-hint" }, "파일을 창 어디에 끌어다 놓아도 바로 가져와요"),
-      layoutSeg(),
-      h("button", { type: "button", class: "rb-nav-hint", style: "padding-top:4px;background:none;border:0;color:inherit;cursor:pointer;text-align:left", title: "변경 기록 보기", onClick: () => openChangelog(ctx, CHANGELOG.slice(0, 4), "변경 기록") }, `v${version} · 변경 기록`)
+      h("div", { class: "rb-nav-mini" },
+        h("span", { class: "ci", "aria-hidden": "true" }, icon("upload", 14)),
+        h("span", { class: "t", title: "파일을 창 어디에 끌어다 놓아도 바로 가져와요" }, `끌어다 놓기 · v${version}`),
+        h("button", { type: "button", class: "rb-nav-more", title: "메뉴 설정", "aria-label": "메뉴 설정", "aria-haspopup": "menu", "aria-expanded": navMenuOpen ? "true" : "false", onClick: (e) => { e.stopPropagation(); navMenuOpen = !navMenuOpen; menu.hidden = !navMenuOpen; e.currentTarget.setAttribute("aria-expanded", navMenuOpen ? "true" : "false"); } }, "⋯")),
+      menu
     );
-    paintLay();
+    paintLay(); paintSecs(); paintPin();
     const inHist = state.tab === "settings" && state.sub === "history";
     const showSearch = inHist || ["modules", "plugins", "characters"].includes(state.tab);
-    searchInput.placeholder = inHist ? "기록에서 이름 찾기" : SEARCH[state.tab] ?? "검색";
+    // 2.2.0 오른쪽 위 검색 칸: 목록 검색이 있는 탭은 그 검색, 나머지 탭(홈 포함)은 '기능 찾기'(적으면 홈의 기능 찾기 목록으로)
+    searchInput.placeholder = inHist ? "기록에서 이름 찾기" : showSearch ? SEARCH[state.tab] ?? "검색" : "기능 찾기 (예: 테마, 생리, API)";
+    searchInput.setAttribute("aria-label", showSearch ? "검색" : "기능 찾기");
+    state.findMode = !showSearch;
     win.classList.toggle("rb-nosearch", !showSearch);
+    findBtn.hidden = !showSearch;
+    if (state.tab !== "home") placeSearch(phTools, findBtn);   // 홈이 가운데로 가져갔던 칸을 되돌림
     win.classList.toggle("rb-is-home", state.tab === "home");
     paintHead();
     replace(detail3);
@@ -446,7 +568,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       return;
     }
     paneReady = false;
-    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome,      cocoa: renderCocoaTab, look: renderSettings,   presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
+    const screen = { home: renderHome, "memory-home": renderSectionHome, "manage-home": renderSectionHome, "work-home": renderSectionHome, aibot: renderAiBot,      cocoa: renderCocoaTab, look: renderSettings,   presets: renderPresets, tools: renderTools, settings: state.sub === "history" ? renderHistory : renderSettingsTab, dev: renderDev }[state.tab] ?? ctx.ext.get("tab", state.tab) ?? renderPlaceholder;   // 애드온 탭(AI로 페르소나 만들기 등)
     // 장기기억을 쓰는 화면은 기억 시작이 끝난 뒤 그린다(새로고침 직후 먹통 방지). 최대 20초, 넘으면 그냥 그린다.
     const needsMem = ["memory-home"].includes(state.tab) || ctx.ext.get("needsMemory", state.tab);
     const waitMem = needsMem && ctx.memory?.isReady && !ctx.memory.isReady()
@@ -528,6 +650,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const ctx = {
     api,
     confirmAnywhere,
+    // 홈이 검색 칸(기능 찾기)을 자기 자리에 붙인다
+    mountSearch: (slot) => placeSearch(slot),
     prefs,
     svc,
     assets,

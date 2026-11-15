@@ -1,5 +1,6 @@
 // v1.6.7 2단계 연기 시험: 편집기 우측 하단 버튼 → AI 창 → 요청 → 수정안 적용 → 탭에 바로 반영 → 되돌리기
 import { openEditorCore } from "../../src/ui/screens/editor.js";
+import { aibuildExt } from "./aibuild-ext.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const $ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -9,7 +10,7 @@ export async function runSmoke() {
   const out = [], ok = (name, cond, extra = "") => out.push({ name, ok: !!cond, extra });
   const store = new Map();
   let reply = { schemaVersion: 1, task: "lorebook", data: { upsert: [{ ref: null, entry: { key: "아코", content: "행정위원" } }, { ref: "l0", entry: { content: "선도부장 겸 풍기위원장" } }], remove: [] } };
-  const ctx = {
+  const ctx = { ext: aibuildExt,
     win: document.body, toast: () => {}, prefs: {},
     api: {
       pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => void store.set(k, v) },

@@ -214,6 +214,7 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
         if (op === "status") return { ok: true, ...P.status() };
         if (op === "start") return { ok: true, ...(await P.start(args[0], args[1])) };
         if (op === "cancel") return { ok: true, ...P.cancel() };
+        if (op === "turn") return typeof P.turn === "function" ? await P.turn(args[0]) : { ok: false, reason: "이 버전에서는 매 턴 계산을 할 수 없어요" };   // 매 턴 계산(변화분 1번)
         if (op === "lore") return typeof P.lore === "function" ? await P.lore() : { ok: false, reason: "이 버전에서는 인물을 골라 분석할 수 없어요" };   // 인물 골라서 분석: 고를 수 있는 로어북 항목
         return { ok: false, reason: "알 수 없는 동작이에요" };
       } catch (e) { return { ok: false, reason: String(e?.message ?? e) }; }

@@ -2,3 +2,5 @@ node_modules
 
 # Dusk 서버 데이터(토큰 등)
 dusk-data/
+test-addons/
+.preview/

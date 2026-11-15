@@ -26,3 +26,12 @@ test("only the first message holding the placeholder gets the block", () => {
   const out = insertBlock(m, "B");
   assert.equal(out[0].content, "B"); assert.equal(out[1].content, "");
 });
+
+test("end: 맨 뒤에 넣고, 끝의 어시스턴트 prefill은 그 뒤에 남긴다", () => {
+  const m = [{ role: "system", content: "S" }, { role: "user", content: "U" }];
+  assert.equal(insertBlock(m, "BLOCK", "end").at(-1).content, "BLOCK");
+  const pre = [...m, { role: "assistant", content: "P" }];
+  const out = insertBlock(pre, "BLOCK", "end");
+  assert.deepEqual(out.map((x) => x.content), ["S", "U", "BLOCK", "P"]);
+  assert.equal(insertBlock(m, "BLOCK").at(-1).content, "BLOCK");
+});

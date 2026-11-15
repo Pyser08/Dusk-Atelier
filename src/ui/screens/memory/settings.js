@@ -35,7 +35,7 @@ function recordBox(M) {
 }
 
 // ---- 전체 설정: 기억 탭 메인 화면(봇 목록 위)에 접이식으로 둔다. 모든 봇에 공통 적용.
-export async function renderGlobalSettings(ctx, host, { redraw, panel = false }) {
+export async function renderGlobalSettings(ctx, host, { redraw, panel = false, bare = false }) {
   const m = mem(ctx), M = ctx.memory, idx = await M.store.getIndex();
   const backend = M.backend(idx.settings), caps = M.capabilities(backend.id);
   const { S, save, num, sw, section } = builders(ctx, idx, redraw);
@@ -50,6 +50,7 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
   const modeLabel = backend.id === "bardwiki" ? "BardWiki 모드" : backend.id === "off" ? "기억 꺼짐" : "플러그인 모드";
 
   const flowHost = h("div"), shareHost = h("div");
+
   const adv = h("details", { class: "rb-mem-man rb-mem-adv rb-mem-advfold", open: !!m.advOpen, onToggle: (e) => { m.advOpen = e.target.open; } }, h("summary", null, "고급: 기록·기억 넣기 세부 설정"),
     section("기억 저장소", h("label", { class: "rb-mem-field" }, h("span", null, "저장소"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.backend = e.target.value; }).then(() => askRefresh(ctx)) }, [["auto", "자동"], ["local", "플러그인"], ["bardwiki", "BardWiki"], ["off", "끔"]].map(([v, l]) => h("option", { value: v, selected: S.backend === v }, l)))), h("p", { class: "rb-muted" }, "리스바드에서는 이중 비용을 막으려고 플러그인의 분석·기억 넣기을 끄고 위키를 읽어요. 바꾼 뒤에는 RisuAI를 다시 불러와야 훅에 반영돼요.")),
     caps.analyze ? section("분석", h("label", { class: "rb-mem-field" }, h("span", null, "분석 모델"), mode, sid),
@@ -81,11 +82,11 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
     caps.analyze ? regexSection(ctx, { S, save, sw, section }) : null,
     caps.analyze ? section("HypaPlus에서 가져오기", h("p", { class: "rb-muted" }, "HypaPlus에 쌓은 기억을 장면·인물 기록으로 옮겨요. HypaPlus와는 동시에 쓸 수 없어요."), btn("HypaPlus 가져오기", { onClick: () => openHypaModal(ctx, {}) })) : null,
     caps.inject || caps.analyze ? section("기억 넣기",   // 켜기·확장 넣기 스위치는 고급 '대화에 넣기'에만 둔다
-      h("p", { class: "rb-muted" }, "목표·상한 토큰은 장기 기억 홈의 ‘기억 옵션’에 있어요."),
+      h("p", { class: "rb-muted" }, "목표·상한 토큰은 장기 기억 → 설정 칸의 ‘기억 옵션’에 있어요."),
       num("기억 넣기 시작 턴", () => S.inject.fromTurn, (s, v) => { s.inject.fromTurn = Math.max(1, v); }, { min: 1, max: 50 }), num("이야기 요약 토큰", () => S.inject.eventTokens, (s, v) => { s.inject.eventTokens = v; }, { min: 0, max: 4000 }),
       num("오래된 D·C 잊기(메시지 수, 0=끔)", () => S.inject.forgetAfter ?? 150, (s, v) => { s.inject.forgetAfter = v; }, { max: 5000, step: 10 }),
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40 }),
-      h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
+      h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["end", "맨 뒤 (권장)"], ["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : "넣지 않음"}`),
         h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), potOn(S) ? previewBox(ctx) : null) : null);
   // 흐름 설정·공유 칸은 읽는 데 오래 걸려서 화면을 먼저 보여 주고 뒤에서 채운다. 접힌 설정은 처음 열 때 채운다.
@@ -94,13 +95,18 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false })
     if (loaded) return; loaded = true;
     if (backend.id !== "local" || !potOn(S)) return;
     // 리수폿 설정(수준·기능·방식·성인·모델·가져오기·고급)은 장기 기억 → 리수폿 화면의 '설정' 탭으로 옮겼다(2.0.0)
-    replace(flowHost, h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "리수폿 설정"), h("p", { class: "rb-muted" }, "추적 수준·기능 카드·AI 모델·가져오기는 리수폿 화면의 ‘설정’ 탭에 있어요."),
-      h("div", { class: "rb-mem-sact" }, btn("리수폿 설정 열기", { onClick: () => { const mm = mem(ctx); mm.page = "pot"; mm.potTab = "settings"; ctx.go?.("memory"); redraw(); } }))));
+    replace(flowHost, h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "인물 위키 설정"), h("p", { class: "rb-muted" }, "추적 수준·기능 카드·가져오기는 인물 위키 설정의 ‘설정’ 탭, AI 모델은 ‘고급’ 탭에 있어요."),
+      h("div", { class: "rb-mem-sact" }, btn("인물 위키 설정 열기", { onClick: () => { const mm = mem(ctx); mm.page = "pot"; mm.potTab = "settings"; ctx.go?.("memory"); redraw(); } }))));
     if (M.flow) (async () => { try { const st = await M.flow.settings(); if (!st.status().blocked) replace(shareHost, shareSection(ctx, tracked(ctx, st), { apply: () => M.flow.apply().catch(fail(ctx)), redraw })); } catch { /* 흐름 설정을 못 읽으면 공유 칸만 뺀다 */ } })();
   };
   const tools = h("div", { class: "rb-mem-tools" });
   const body = h("div", { class: "rb-mem-foldbody" }, h("div", { class: "rb-mem-modeline" }, h("span", { class: ["rb-mem-mode", backend.id] }, modeLabel), h("span", { class: "rb-muted" }, backend.reason)), tools, flowHost, shareHost, adv);
   tools.append(searchBox(body), btn("설정 변경 이력", { size: "sm", onClick: () => openSettingsHistory(ctx, { apply: () => M.flow?.apply?.(), redraw }).catch(fail(ctx)) }));
+  if (bare) {
+    // 2.2.0 장기 기억 옵션 칸: 설정 찾기·모드 표시·변경 이력·리수폿 안내·프리셋 공유 없이 ‘기록·기억 넣기 세부 설정’ 내용만
+    loadHeavy();
+    return replace(host, h("div", { class: "rb-mem-advbody" }, ...[...adv.children].filter((e) => e.tagName !== "SUMMARY")));
+  }
   if (panel) {
     // 넓은 화면: 설정을 오른쪽(가운데) 칸에 크게 펼친다.
     loadHeavy();

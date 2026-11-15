@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>글래스 홈 F안</title>
+<style>
+:root{
+  --rb-bg:#160f2b;--rb-blob1:rgba(255,110,180,.55);--rb-blob2:rgba(100,120,255,.6);--rb-blob3:rgba(255,180,100,.4);--rb-blob4:rgba(150,90,255,.45);
+  --rb-acc:#ff8ec6;--rb-acc2:#8a7bff;--rb-acc3:#ffb36b;--rb-tint:#ffd0ea;--rb-glow:rgba(255,142,198,.55);
+  --rb-acc-grad:linear-gradient(90deg,var(--rb-acc),var(--rb-acc2));
+  --rb-glass:rgba(255,255,255,.10);--rb-glass-2:rgba(255,255,255,.14);--rb-glass-line:rgba(255,255,255,.22);
+  --rb-glass-hi:inset 0 1px 0 rgba(255,255,255,.25);--rb-glass-shadow:0 8px 30px rgba(0,0,0,.25);--rb-glass-blur:blur(22px) saturate(140%);
+  --rb-text:#f2f0fa;--rb-sub:rgba(255,255,255,.65);--rb-mute:rgba(255,255,255,.55);--rb-line:rgba(255,255,255,.10);
+  --rb-r2:15px;--rb-r3:20px;--rb-r4:22px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0816;color:var(--rb-text);font:14px/1.5 "Pretendard",system-ui,sans-serif;padding:20px 16px}
+.cap{color:#aaa;font-size:13px;margin:0 0 8px}
+.wrap{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.frame{border-radius:var(--rb-r4);overflow:hidden;border:1px solid #333}
+.pc{width:1280px;max-width:100%}.mo{width:390px}
+.stage{background:radial-gradient(40% 50% at 12% 18%,var(--rb-blob1),transparent 70%),radial-gradient(45% 55% at 88% 78%,var(--rb-blob2),transparent 70%),radial-gradient(35% 40% at 70% 8%,var(--rb-blob3),transparent 70%),radial-gradient(40% 45% at 30% 95%,var(--rb-blob4),transparent 70%),var(--rb-bg);padding:22px;display:flex;gap:16px;min-height:760px}
+.glass{background:var(--rb-glass);-webkit-backdrop-filter:var(--rb-glass-blur);backdrop-filter:var(--rb-glass-blur);border:1px solid var(--rb-glass-line);border-radius:var(--rb-r3);box-shadow:var(--rb-glass-shadow),var(--rb-glass-hi)}
+.logo{font-weight:800;font-size:18px;background:linear-gradient(90deg,var(--rb-acc3),var(--rb-acc));-webkit-background-clip:text;color:transparent}
+/* 레일 */
+.rail{width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding:16px 12px}
+.ri{display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;color:var(--rb-sub)}
+.ri.on{background:var(--rb-glass-2);color:var(--rb-text)}.ri.sp{margin-top:auto}
+.ri i{width:28px;height:28px;border-radius:9px;background:var(--rb-glass-2);display:grid;place-items:center;font-style:normal;font-size:13px}
+.ri.on i{background:var(--rb-acc-grad);box-shadow:0 0 12px var(--rb-glow)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+/* 포커스 머리 */
+.fx{text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;padding:6px 0 4px;position:relative}
+.fx small{color:var(--rb-sub)}
+.fh{margin:0;font-size:28px;background:linear-gradient(90deg,#fff,var(--rb-tint));-webkit-background-clip:text;color:transparent}
+.pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--rb-glass-2);font-size:13px}
+.cmd{width:min(560px,100%);text-align:left;color:var(--rb-mute);padding:13px 20px;border-radius:999px}
+.edit{position:absolute;right:0;top:0;padding:6px 14px;border-radius:999px;border:1px dashed rgba(255,255,255,.3);background:none;color:var(--rb-sub);font:inherit;font-size:13px;cursor:pointer}
+.edit.on{background:var(--rb-acc-grad);color:#fff;border:0;box-shadow:0 0 12px var(--rb-glow)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--rb-acc);box-shadow:0 0 8px var(--rb-glow);flex:none}
+.sw{display:inline-block;width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.22);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.sw.on{background:var(--rb-acc-grad);box-shadow:0 0 12px var(--rb-glow)}.sw.on::after{left:21px}
+/* 스냅 격자 */
+.grid{position:relative;--cols:6;--cell:96px;--gap:16px}
+.grid.editing{background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);border-radius:12px}
+.w{position:absolute;padding:14px 16px;overflow:hidden;transition:left .18s,top .18s,width .18s,height .18s;display:flex;flex-direction:column;gap:6px}
+.w.drag{transition:none;z-index:5;opacity:.92;box-shadow:0 18px 40px rgba(0,0,0,.4),0 0 0 2px var(--rb-acc)}
+.ghostcell{position:absolute;border:2px dashed var(--rb-acc);border-radius:var(--rb-r3);background:rgba(255,142,198,.08);pointer-events:none;transition:all .12s}
+.editing .w{cursor:grab;outline:1px dashed rgba(255,255,255,.35);outline-offset:-4px}
+.hdl{display:none;position:absolute;right:6px;bottom:6px;width:18px;height:18px;border-right:3px solid var(--rb-acc);border-bottom:3px solid var(--rb-acc);border-radius:0 0 6px 0;cursor:nwse-resize}
+.editing .hdl{display:block}
+.rm{display:none;position:absolute;right:8px;top:8px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.4);color:#fff;font-size:12px;border:0;cursor:pointer}
+.editing .rm{display:block}
+.wt{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:15px}
+.wt span{font-weight:400;font-size:12px;color:var(--rb-sub)}
+.ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+.g1{background:linear-gradient(135deg,#ffb36b,#ff7a59)}.g2{background:linear-gradient(135deg,#ff8ec6,#8a7bff)}.g3{background:linear-gradient(135deg,#7fd4ff,#5b8cff)}.g4{background:linear-gradient(135deg,#6ff0c4,#38b6a0)}
+.sc small,.mut{color:var(--rb-mute);font-size:12px}
+.sc.s1{align-items:center;justify-content:center;text-align:center}.sc.s1 small{display:none}
+.num b{font-size:32px;background:linear-gradient(180deg,#fff,var(--rb-tint));-webkit-background-clip:text;color:transparent;line-height:1.1}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--rb-line);font-size:13px}
+.row:last-child{border:0}.row .t{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{padding:4px 11px;border-radius:20px;background:var(--rb-glass-2);font-size:12px}
+.chip.new{background:var(--rb-acc-grad)}
+.tray{display:none;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--rb-sub)}
+.tray.on{display:flex}.tray button{padding:4px 12px;border-radius:999px;border:1px dashed rgba(255,255,255,.3);background:none;color:var(--rb-text);font:inherit;font-size:12px;cursor:pointer}
+.foot{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.ghost{border:1px dashed rgba(255,255,255,.3);border-radius:999px;padding:6px 14px;color:var(--rb-sub);font-size:13px}
+/* 모바일: 레일 → 아래 탭바, 격자 2칸 */
+.mo .stage{flex-direction:column-reverse;padding:16px 16px 0}
+.mo .rail{width:auto;flex-direction:row;justify-content:space-around;padding:8px;border-radius:var(--rb-r3) var(--rb-r3) 0 0;position:sticky;bottom:0}
+.mo .rail .logo,.mo .ri.sp{display:none}.mo .ri{flex-direction:column;gap:2px;font-size:11px;padding:4px 6px}
+.mo .fh{font-size:20px}.mo .edit{position:static}
+.mo .grid{--cols:2;--cell:84px;--gap:12px}
+</style></head><body>
+<p class="cap">F안 · 사이드 레일 + 포커스 머리 + 위젯 격자. '홈 꾸미기'를 누르면 위젯을 끌어 옮기고 오른쪽 아래 모서리로 크기를 바꿀 수 있어요(격자에 붙음). PC 6칸·모바일 2칸, 배치는 따로 저장.</p>
+<div class="wrap" id="wrap"></div>
+<template id="tpl">
+<div class="stage">
+  <nav class="rail glass"><span class="logo" style="margin-bottom:14px">Dusk</span>
+    <span class="ri on"><i>⌂</i>홈</span><span class="ri"><i>◎</i>기억</span><span class="ri"><i>✦</i>작업실</span><span class="ri"><i>▦</i>관리</span><span class="ri"><i>⚙</i>설정</span><span class="ri sp"><i>?</i>도움말</span></nav>
+  <div class="main">
+    <div class="fx">
+      <button class="edit">홈 꾸미기</button>
+      <small>지금 열린 채팅</small>
+      <h1 class="fh">레이나 · 비 오는 밤의 카페</h1>
+      <div class="pills"><span class="pill"><span class="dot"></span>장기 기억 · 21:42에 12개 넣음 <i class="sw on"></i></span></div>
+      <div class="cmd glass">⌕ 무엇을 할까요? 기능·인물·봇 찾기…</div>
+    </div>
+    <div class="tray"><b>숨긴 위젯:</b><span class="trayList"></span><button class="reset">기본 배치로</button></div>
+    <div class="grid"></div>
+    <div class="foot"><span class="ghost">처음 둘러보기</span><span class="ghost">v2.2.0 · 새로 바뀐 점</span></div>
+  </div>
+</div>
+</template>
+<script>
+// 위젯 정의: 크기 범위(min~max, 칸 단위)와 크기별 내용
+const W={
+ imp:{n:"가져오기",min:[1,1],max:[2,2],r:(w,h)=>sc("g1","↑","가져오기","봇·모듈·파일",w,h)},
+ mem:{n:"기억",min:[1,1],max:[2,2],r:(w,h)=>sc("g2","◎","기억","장기 기억·카드",w,h)},
+ man:{n:"관리",min:[1,1],max:[2,2],r:(w,h)=>sc("g3","▦","관리","캐릭터·모듈",w,h)},
+ wrk:{n:"작업실",min:[1,1],max:[2,2],r:(w,h)=>sc("g4","✦","작업실","프로바이더·도구",w,h)},
+ n1:{n:"저장된 기억",min:[1,1],max:[2,1],r:()=>num(184,"저장된 기억")},
+ n2:{n:"이번에 넣음",min:[1,1],max:[2,1],r:()=>num(12,"이번에 넣음")},
+ n3:{n:"인물",min:[1,1],max:[2,1],r:()=>num(6,"인물")},
+ n4:{n:"확인할 것",min:[1,1],max:[2,1],r:()=>num(3,"확인할 것")},
+ rec:{n:"최근 기록",min:[2,2],max:[4,4],r:(w,h)=>`<div class="wt">최근 기록<span>전체 보기</span></div>`+[["레이나","우산을 같이 썼다","21:40"],["민준","카페 문을 닫았다","21:31"],["레이나","비밀을 털어놓았다","21:12"],["민준","레이나에게 사과했다","20:58"],["레이나","편지를 받았다","20:40"]].slice(0,h*2-1).map(r=>`<div class="row"><span class="dot"></span><div class="t"><b>${r[0]}</b> <span class="mut">${r[1]}</span></div><span class="mut">${r[2]}</span></div>`).join("")},
+ qs:{n:"빠른 설정",min:[2,2],max:[3,4],r:(w,h)=>`<div class="wt">빠른 설정</div>`+[["이 채팅 장기 기억",1],["인물 게이지",1],["스토리 타임",0],["기억 카드",1],["스텔스",0]].slice(0,h*2).map(r=>`<div class="row"><div class="t">${r[0]}</div><i class="sw ${r[1]?"on":""}"></i></div>`).join("")},
+ cont:{n:"이어서 하기",min:[2,1],max:[4,2],r:()=>`<div class="wt">이어서 하기</div><div class="chips"><span class="chip">레이나 인물 위키</span><span class="chip">민준 인물 위키</span><span class="chip">지난 대화 분석</span><span class="chip">봇·모듈 가져오기</span></div>`},
+ disc:{n:"추천",min:[2,1],max:[4,2],r:()=>`<div class="wt"><span class="chip new" style="color:#fff">추천</span></div><b>관계도로 인물 사이 보기</b><span class="mut">기억이 쌓였어요. 인물 관계를 한눈에.</span>`},
+ add:{n:"애드온",min:[2,1],max:[3,2],r:()=>`<div class="wt">애드온<span>관리 ›</span></div><div class="chips"><span class="chip">장기기억 · 켬</span><span class="chip">Erosync · 끔</span></div>`},
+};
+function sc(g,i,t,s,w,h){return `<div class="sc ${w*h===1?"s1":""}" style="display:flex;gap:10px;${w*h>1?"align-items:flex-start;flex-direction:"+(h>1?"column":"row"):"flex-direction:column"};height:100%"><span class="ico ${g}" ${w*h>2?'style="width:48px;height:48px;font-size:20px"':''}>${i}</span><div><b>${t}</b><br><small>${s}</small></div></div>`}
+function num(n,l){return `<div class="num" style="display:flex;flex-direction:column;justify-content:center;height:100%"><b>${n}</b><small class="mut">${l}</small></div>`}
+const DEF={
+ 6:[["rec",0,0,2,2],["imp",2,0,1,1],["mem",3,0,1,1],["man",2,1,1,1],["wrk",3,1,1,1],["qs",4,0,2,3],["n1",0,2,1,1],["n2",1,2,1,1],["n3",2,2,1,1],["n4",3,2,1,1],["cont",0,3,2,1],["disc",2,3,2,1],["add",4,3,2,1]],
+ 2:[["imp",0,0,1,1],["mem",1,0,1,1],["man",0,1,1,1],["wrk",1,1,1,1],["rec",0,2,2,2],["n1",0,4,1,1],["n2",1,4,1,1],["qs",0,5,2,3],["cont",0,8,2,1],["disc",0,9,2,1],["add",0,10,2,1]]
+};
+function mount(frame){
+ const grid=frame.querySelector(".grid"),cols=()=>+getComputedStyle(grid).getPropertyValue("--cols");
+ const C=cols(),key="dusk-f-"+C;
+ let L;try{L=JSON.parse(localStorage.getItem(key))}catch{}
+ L=L||DEF[C].map(a=>({id:a[0],x:a[1],y:a[2],w:a[3],h:a[4]}));
+ const cell=()=>{const s=getComputedStyle(grid);const g=parseFloat(s.getPropertyValue("--gap"));const cw=(grid.clientWidth-g*(C-1))/C;return{cw,ch:parseFloat(s.getPropertyValue("--cell")),g}};
+ const save=()=>{try{localStorage.setItem(key,JSON.stringify(L))}catch{}};
+ const hit=(a,b)=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;
+ // 움직인 위젯을 먼저 놓고, 나머지는 원래 순서대로 겹치지 않게 아래로 밀고 위로 당긴다
+ function settle(fixed){
+  const order=[...L].sort((a,b)=>a.y-b.y||a.x-b.x).filter(i=>i!==fixed),placed=fixed?[fixed]:[];
+  for(const it of order){while(placed.some(p=>hit(p,it)))it.y++;while(it.y>0&&!placed.some(p=>hit(p,{...it,y:it.y-1})))it.y--;placed.push(it)}
+ }
+ const ghost=document.createElement("div");ghost.className="ghostcell";ghost.style.display="none";
+ function draw(){
+  const {cw,ch,g}=cell();grid.innerHTML="";grid.append(ghost);
+  let maxY=0;
+  for(const it of L){maxY=Math.max(maxY,it.y+it.h);
+   const el=document.createElement("section");el.className="w glass";el.dataset.id=it.id;
+   Object.assign(el.style,{left:it.x*(cw+g)+"px",top:it.y*(ch+g)+"px",width:it.w*cw+(it.w-1)*g+"px",height:it.h*ch+(it.h-1)*g+"px"});
+   el.innerHTML=W[it.id].r(it.w,it.h)+`<button class="rm" title="숨기기">✕</button><i class="hdl"></i>`;
+   grid.append(el)}
+  grid.style.height=maxY*(ch+g)+(grid.classList.contains("editing")?ch+g:0)+"px";
+  grid.style.backgroundSize=`${cw+g}px ${ch+g}px`;
+  const hid=Object.keys(W).filter(k=>!L.some(i=>i.id===k));
+  frame.querySelector(".trayList").innerHTML=hid.length?hid.map(k=>`<button data-add="${k}">+ ${W[k].n}</button>`).join(" "):"없음";
+ }
+ grid.addEventListener("pointerdown",e=>{
+  if(!grid.classList.contains("editing"))return;
+  const el=e.target.closest(".w");if(!el)return;
+  const it=L.find(i=>i.id===el.dataset.id);
+  if(e.target.classList.contains("rm")){L=L.filter(i=>i!==it);settle();save();draw();return}
+  e.preventDefault();
+  const resize=e.target.classList.contains("hdl"),{cw,ch,g}=cell(),sx=e.clientX,sy=e.clientY,o={...it},d=W[it.id];
+  el.classList.add("drag");el.setPointerCapture(e.pointerId);ghost.style.display="block";
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const move=ev=>{
+   const dx=ev.clientX-sx,dy=ev.clientY-sy;
+   if(resize){el.style.width=o.w*cw+(o.w-1)*g+dx+"px";el.style.height=o.h*ch+(o.h-1)*g+dy+"px";
+    it.w=clamp(Math.round((o.w*(cw+g)+dx)/(cw+g)),d.min[0],Math.min(d.max[0],C-o.x));it.h=clamp(Math.round((o.h*(ch+g)+dy)/(ch+g)),d.min[1],d.max[1]);}
+   else{el.style.left=o.x*(cw+g)+dx+"px";el.style.top=o.y*(ch+g)+dy+"px";
+    it.x=clamp(Math.round(o.x+dx/(cw+g)),0,C-it.w);it.y=Math.max(0,Math.round(o.y+dy/(ch+g)));}
+   Object.assign(ghost.style,{left:it.x*(cw+g)+"px",top:it.y*(ch+g)+"px",width:it.w*cw+(it.w-1)*g+"px",height:it.h*ch+(it.h-1)*g+"px"});
+  };
+  const up=()=>{el.removeEventListener("pointermove",move);el.removeEventListener("pointerup",up);ghost.style.display="none";settle(it);save();draw()};
+  el.addEventListener("pointermove",move);el.addEventListener("pointerup",up);
+ });
+ frame.querySelector(".edit").onclick=e=>{const on=grid.classList.toggle("editing");e.target.classList.toggle("on",on);e.target.textContent=on?"다 했어요":"홈 꾸미기";frame.querySelector(".tray").classList.toggle("on",on);draw()};
+ frame.querySelector(".tray").addEventListener("click",e=>{
+  const k=e.target.dataset.add;
+  if(k){const d=W[k];L.push({id:k,x:0,y:999,w:d.min[0],h:d.min[1]});settle();save();draw()}
+  if(e.target.classList.contains("reset")){L=DEF[C].map(a=>({id:a[0],x:a[1],y:a[2],w:a[3],h:a[4]}));save();draw()}
+ });
+ new ResizeObserver(draw).observe(grid);
+}
+const t=document.getElementById("tpl").innerHTML,w=document.getElementById("wrap");
+w.innerHTML=`<div><p class="cap">PC 1280</p><div class="frame pc">${t}</div></div><div><p class="cap">모바일 390</p><div class="frame mo">${t}</div></div>`;
+document.querySelectorAll(".frame").forEach(mount);
+</script>
+</body></html>

@@ -275,6 +275,7 @@ function row(ctx, e, filtering) {
       }
     },
     filtering ? null : h("span", { class: "rb-mcb", role: "checkbox", "aria-checked": "false", "aria-label": `${m.name} 고르기` }),
+    h("span", { class: "rb-ordnum", "aria-hidden": "true" }),
     filtering ? null : grip = h("span", { class: "grip", title: "끌어서 순서 바꾸기 (Alt+↑↓) · Ctrl/⌘·Shift+클릭으로 여러 개", "aria-hidden": "true" }, icon("grip", 14)),
     h(
       "div",
@@ -292,6 +293,7 @@ function row(ctx, e, filtering) {
       // '연결 N'은 이름 아래 작은 칩(누르면 연결 창) — 1.8.3(목업 4)
       h("div", { class: "rb-linkrow" }, linkBtn(ctx, e))
     ),
+    h("span", { class: ["rb-onlab", e.enabled && "on"], "aria-hidden": "true" }, e.enabled ? "켜짐" : "꺼짐"),
     sw,
     rowEdit(ctx, m),
     iconBtn("more", `${m.name} 메뉴`, { onClick: (ev) => {
@@ -311,10 +313,31 @@ function select(ctx, id, el) {
   // 일반 모드: 오른쪽 패널 대신 모바일은 이름을 누르면 편집, PC는 고르기만. 상세 패널은 개발자 모드에서만.
   if (!isDev(ctx)) {
     if (ctx.isMobile()) ctx.openEditor(id);
+    else expandRow(ctx, id, el);
     return;
   }
   showDetail(ctx);
   if (ctx.isMobile()) ctx.openSheet();
+}
+// 2.2.0(4번 A): 줄을 누르면 아래에 자주 쓰는 동작을 펼친다(나머지는 ··· 메뉴 그대로). 다시 누르면 접힘.
+function expandRow(ctx, id, el) {
+  const list = el?.closest(".rb-list");
+  if (!list) return;
+  const old = list.querySelector(".rb-modexp");
+  const same = old?.dataset.for === id;
+  old?.remove();
+  if (same) return;
+  const e = ctx.state.modData.entries.find((x) => x.module.id === id);
+  if (!e) return;
+  const m = e.module;
+  const act = (label, ic, run, kind) => btn(label, { size: "sm", icon: ic, kind, onClick: (ev) => { ev.stopPropagation(); Promise.resolve(run(ev)).catch((err) => ctx.toast(err?.message ?? String(err), { error: true })); } });
+  el.after(h("div", { class: "rb-modexp", dataset: { for: id } },
+    act("편집", "edit", () => ctx.openEditor(m.id), "primary"),
+    act("연결 설정…", "link", (ev) => openModuleLinks(ctx, e, ev.currentTarget, { refresh: () => reload(ctx) })),
+    act("에셋 관리", "image", () => ctx.openAssets(m.id)),
+    act("기록 보기", "refresh", () => { ctx.state.histTarget = m.id; ctx.go("history"); }),
+    act(".risum으로 내보내기", "download", () => exportRisum(ctx, m)),
+    act("삭제", "trash", () => removeModule(ctx, m), "danger")));
 }
 function rowEdit(ctx, m) {
   const b = btn("편집", { size: "sm", icon: "edit", onClick: (ev) => {

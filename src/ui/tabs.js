@@ -2,7 +2,7 @@
 // 메뉴 섹션: 기억 → 관리 → 작업실. 홈은 섹션 바깥에 둔다.
 export var TABS = [
   { id: "home", label: "홈", icon: "home", group: "base", desc: "지금 열린 채팅의 상태를 보고, 하고 싶은 일을 골라요.", help: [] },
-  { id: "memory-home", label: "개요", icon: "brain", mobileOnly: true, group: "more", section: "memory", desc: "기억 기능을 골라 열어요.", card: "장기 기억·기억 카드·코코아로 이동해요.", help: ["원하는 기억 기능을 눌러 바로 이동해요."] },
+  { id: "memory-home", label: "개요", icon: "grid", mobileOnly: true, group: "more", section: "memory", desc: "기억 기능을 골라 열어요.", card: "장기 기억·기억 카드·코코아로 이동해요.", help: ["원하는 기억 기능을 눌러 바로 이동해요."] },
   {
     id: "memory", addon: "memory", label: "장기 기억", icon: "brain", group: "more", section: "memory",
     desc: "응답마다 인물별 기억을 쌓고, 필요할 때 꺼내 써요.",
@@ -97,7 +97,7 @@ export var SECTION_NAMES = { memory: "기억", manage: "관리", work: "작업�
 export var SECTION_IDS = ["memory", "manage", "work"];
 export var MORE_IDS = TABS.filter((t) => t.group === "more").map((t) => t.id);
 export var SUBNAMES = {
-  settings: { prompts: "기억·리수폿 프롬프트", theme: "플러그인 꾸미기", updset: "업데이트 설정", cleanup: "설정 정리", history: "기록 · 되돌리기" },
+  settings: { prompts: "기억·인물 위키 프롬프트", theme: "플러그인 꾸미기", updset: "업데이트 설정", cleanup: "설정 정리", history: "기록 · 되돌리기" },
   tools: { presets: "프리셋", chattheme: "채팅 테마 빌더", themebuilder: "테마 빌더", themestudio: "테마 스튜디오", lorelog: "로어북 로그", inspector: "검사기", history: "기록 · 되돌리기" },
   dev: { patchmaker: "패치 만들기" }
 };

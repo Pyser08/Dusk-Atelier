@@ -6,6 +6,7 @@ import { activate as widgetsAddon } from "../../addons/widgets/index.js";
 import { activate as manageAddon } from "../../addons/manage/index.js";
 import { activate as memoryAddon } from "../../addons/memory/index.js";
 import { activate as cardsAddon } from "../../addons/cards/index.js";
+import { activate as erosyncAddon } from "../../addons/erosync/index.js";
 import { activate as protlinkAddon } from "../../addons/protlink/index.js";
 import { activate as providerAddon } from "../../addons/provider/index.js";
 import { activate as stealthAddon } from "../../addons/stealth/index.js";
@@ -81,6 +82,7 @@ window.bootApp = async (seed, opts = {}) => {
   if (!opts.onboard) { const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); ui.onboardDone ??= true; ui.onboardVer ??= 99; seed = { ...seed, "rbm:ui:v1": JSON.stringify(ui) }; }
   const api = fakeApi(seed, !!opts.story, !!opts.mods);
   delete api.store.__bard;
+  if (opts.noChat) { api.getCurrentCharacterIndex = async () => -1; api.getCurrentChatIndex = async () => -1; }   // 열린 채팅 없음(미리보기·시험)
   const errors = (window.__errors = []);
   window.addEventListener("error", (e) => errors.push(e.message));
   window.addEventListener("unhandledrejection", (e) => errors.push(String(e.reason?.message ?? e.reason)));
@@ -178,6 +180,12 @@ window.bootApp = async (seed, opts = {}) => {
     if (app.ctx.protlink) { app.ctx.protlinkForTest = app.ctx.protlink; await protlinkAddon(api, actx); }
     else { app.ctx.ext.add("tab", "protlink", _rp); app.ctx.ext.add("svc", "protlink", { on: () => false, list: async () => ({ ok: false, items: [] }), lastError: () => "", targets: async () => [] }); }
     if (app.ctx.memory) { app.ctx.memoryForTest = app.ctx.memory; await memoryAddon(api, actx); await cardsAddon(api, actx); }
+    // opts.erosync: 실제 Erosync 애드온(미리보기용). ctx.erosync는 본체(main.js)처럼 svc에서 읽는다. AI 호출은 가짜 호스트라 실패해도 화면은 뜬다.
+    if (opts.erosync && app.ctx.memory) {
+      if (opts.erosyncOn) await api.pluginStorage.setItem("dusk.erosync.on", "true");
+      Object.defineProperty(app.ctx, "erosync", { configurable: true, get: () => app.ctx.ext.get("svc", "erosync") ?? null });
+      await erosyncAddon(api, actx).catch((e) => console.warn("Erosync 시작 실패", e));
+    }
     else {
       app.ctx.ext.add("tab", "memory", _rm); app.ctx.ext.add("tab", "relmap", _rr); app.ctx.ext.add("tab", "cards", _rc);
       app.ctx.ext.add("svc", "memory", {}); app.ctx.ext.add("svc", "cards", {}); app.ctx.ext.add("svc", "memoryui", { tracked: () => null, STAGE_NAMES: {} });
@@ -191,7 +199,7 @@ window.bootApp = async (seed, opts = {}) => {
       setOn: async (id, on) => { idx[id] = { ...idx[id], on }; window.__addonLog.push(["setOn", id, on]); } };
   }
   if (opts.addons) {  // 애드온 카드 시험: 파일은 실행기가 window.__addonFiles로 넣어 준다(주소 → 내용)
-    app.ctx.addons = createAddons(api, { core: "2.1.0", ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => app.ctx.toast?.(t, o), openDusk: async (tab) => { if (tab) app.ctx.go(tab); } }, fetcher: async (_a, url0) => { const url = url0.split("?")[0]; return (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null; } });
+    app.ctx.addons = createAddons(api, { core: typeof __VERSION__ === "string" && /^\d+\.\d+\.\d+$/.test(__VERSION__) ? __VERSION__ : "2.1.0", ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => app.ctx.toast?.(t, o), openDusk: async (tab) => { if (tab) app.ctx.go(tab); } }, fetcher: async (_a, url0) => { const url = url0.split("?")[0]; return (url.endsWith("addons.json") ? window.__addonFiles?.manifest : window.__addonFiles?.[url]) ?? null; } });
     await app.ctx.addons.boot();
   }
   // 모듈 호환 애드온: 헌터물 봇(화이트리스트형) + 이미지 모듈·스스로 그리는 모듈을 켠 상태

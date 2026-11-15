@@ -1,14 +1,15 @@
 {
   "name": "dusk-atelier",
-  "version": "2.1.9",
+  "version": "2.2.0",
   "description": "RisuAI 플러그인 Dusk Atelier — 모듈·봇 관리와 인물별 장기기억",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
     "check": "node tools/build.mjs --check",
-    "test": "node --test",
-    "pot:split": "node tools/pot-split.mjs"
+    "test": "node --experimental-strip-types --no-warnings=ExperimentalWarning --test",
+    "pot:split": "node tools/pot-split.mjs",
+    "release": "node tools/release.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",

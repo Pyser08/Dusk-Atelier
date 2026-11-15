@@ -78,12 +78,16 @@ export async function renderProtLink(ctx) {
   replace(ctx.main, h("div", { class: "rb-section rb-scroll", style: "flex:1;min-height:0" }, head, body));
   if (!pl) { replace(body, emptyState({ title: "ProtLink+를 쓸 수 없어요", text: "이 환경에서는 ProtLink+가 준비되지 않았어요." })); return; }
   const busy = new Set();
+  // 2.2.0(4번 A): 오른쪽 세로 타임라인 — 링크의 연결·확인 시각 + 이 창에서 받은 기록(ctx.state.plLog, 창을 닫으면 사라짐)
+  const plog = (ctx.state.plLog ??= []);
+  const logIt = (name, text, tone) => { plog.unshift({ at: Date.now(), name, text, tone }); plog.length = Math.min(plog.length, 30); };
   const fail = (e) => ctx.toast(e?.message ?? String(e), { error: true });
   async function applyLink(it) {
     if (busy.has(it.id)) return;
     busy.add(it.id); await paint();
     try {
       const r = await pl.apply(it.id, { onProgress: (p) => { const el = body.querySelector(`[data-id="${it.id}"] .pl-prog`); if (el) el.textContent = `받는 중 ${p.index + 1}/${p.count} · ${p.name}${p.total ? ` · ${Math.round((p.done / p.total) * 100)}%` : ""}`; } });
+      logIt(it.name, r.kind === "plugin" ? "받아서 저장" : "받아서 업데이트로 넘김", "ok");
       ctx.toast(r.kind === "plugin" ? (r.pluginUpdated ? "연결한 플러그인을 새 버전으로 바꿨어요. 리스를 새로고침하면 적용돼요." : `${r.names.join(", ")} 파일을 저장했어요. 리스에서 플러그인으로 넣어 주세요. (Dusk Cellar 플러그인 편집을 켜면 바로 바꿀 수 있어요)`) : "받았어요. 열린 가져오기 창에서 업데이트를 이어 가요.");
     } catch (e) { fail(e); } finally { busy.delete(it.id); await paint(); }
   }
@@ -149,7 +153,19 @@ export async function renderProtLink(ctx) {
         toggleRow("시작할 때 새 파일 확인", "리스를 켠 뒤 잠시 있다가 연결한 링크에 새 파일이 있는지 한 번 확인해요.", pl.settings().check, async (v) => { await pl.setSettings({ check: v }); })));
       kids.push(h("p", { class: "rb-muted", style: "white-space:normal;margin:0" }, "캐릭터·모듈은 받으면 가져오기 창으로 넘어가 연결한 항목을 맨 위 후보로 보여 줘요(영향 미리보기 → 백업 → 적용). 플러그인은 리스가 목록을 바꾸지 못하게 막혀 있어서 파일로 저장돼요. 리스에서 플러그인으로 넣어 주세요."));
     }
-    replace(body, ...kids);
+    if (!(on && running)) return replace(body, ...kids);
+    const items = (await pl.list()).items;
+    const ev = [...plog.map((x) => ({ ...x, live: true }))];
+    for (const it of items) {
+      if (it.checkedAt) ev.push({ at: it.checkedAt, name: it.name, text: it.error ? `확인 실패 · ${it.error}` : it.update ? `새 파일 ${it.pending.length}개 발견` : "확인 · 변화 없음", tone: it.error ? "err" : it.update ? "new" : "" });
+      if (it.addedAt) ev.push({ at: it.addedAt, name: it.name, text: `연결 · ${it.target?.name || "연결 없음"}`, tone: "add" });
+    }
+    ev.sort((a, b) => b.at - a.at);
+    const tl = h("aside", { class: "rb-pl-tl", id: "rb-pl-timeline", "aria-label": "최근 일" },
+      h("div", { class: "hd" }, h("span", { class: "ico", "aria-hidden": "true" }, icon("refresh", 16)), h("b", null, "최근 일")),
+      ev.length ? h("ol", null, ev.slice(0, 40).map((x) => h("li", { class: x.tone || "" }, h("b", null, x.name), h("small", null, ago(x.at)), h("span", null, x.text))))
+        : h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, "링크를 연결하면 확인·받기 기록이 여기에 쌓여요."));
+    replace(body, h("div", { class: "rb-pl2" }, h("div", { class: "rb-pl-main" }, ...kids), tl));
   }
   await paint();
 }

@@ -377,7 +377,8 @@ export function readTags(text, idx) {
     const parts = INNER.exec(m[1]);
     if (!parts || skipPayload(parts[3])) continue;
     const r = resolvePayload(idx, parts[3]);
-    if (r.entry) res.push({ raw: m[0], entry: r.entry });
+    // raw는 실제 에셋 이름으로 고친 꼴(2.2.0): AI가 붙인 .webp 같은 확장자·오타를 알림의 '직전 태그'로 되돌려 주지 않게
+    if (r.entry) res.push({ raw: `<img${parts[1]}${parts[2]}${r.entry.name}${parts[2]}${parts[4] ? " /" : ""}>`, entry: r.entry });
   }
   return res;
 }

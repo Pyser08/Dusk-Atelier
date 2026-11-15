@@ -157,6 +157,17 @@ var CSS = `
 .rb-pb-diff .del{background:var(--rb-danger-soft);text-decoration:line-through;opacity:.8}
 .rb-pb-diff .same{color:var(--rb-mute)}
 @media (prefers-reduced-motion:reduce){.rb-pb-cab .lights{animation:none}.rb-pb-reel.go .strip{filter:none}}
+/* 2.2.0 3번: 페르소나 공방 구성을 Dusk 유리 카드 + 라이트바로(기능 색: 이름 주황 · AI 분홍 · 시트 파랑 · 미리보기 민트 · 레버 노랑 · 현재 채팅 파랑) */
+.rb-pb-card,.rb-pb-box{position:relative;padding-left:22px;border-color:var(--rb-line2);background:var(--rb-card,var(--rb-surf))}
+.rb-pb-card::before,.rb-pb-box::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--pbg,linear-gradient(180deg,#7fd4ff,#5b8cff));box-shadow:0 0 10px var(--pbk,#6f9dff)}
+.rb-pb-card .rb-pb-card,.rb-pb-card .rb-pb-box{padding-left:16px}.rb-pb-card .rb-pb-card::before,.rb-pb-card .rb-pb-box::before{display:none}
+.rb-pb-idc{--pbk:#ff8a5c;--pbg:linear-gradient(180deg,#ffb36b,#ff7a59)}
+.rb-pb-fcard{--pbk:#e98bd6;--pbg:linear-gradient(180deg,#ff8ec6,#8a7bff)}.rb-pb-fcard>summary{padding-left:6px}.rb-pb-fcard>.in{padding-left:6px}
+.rb-pb-sheetc{--pbk:#3fcfa6;--pbg:linear-gradient(180deg,#6ff0c4,#38b6a0)}
+.rb-pb-sidec>.rb-pb-box{--pbk:#f5c451;--pbg:linear-gradient(180deg,#ffe08a,#f5b43c)}
+.rb-skin-glass .rb-pb-card,.rb-skin-glass .rb-pb-box{background:var(--rb-glass-bg);border-color:var(--rb-glass-line,rgba(255,255,255,.2))}
+.rb-lite .rb-pb-card::before,.rb-lite .rb-pb-box::before{box-shadow:none}
+@media (max-width:760px){.rb-pb-card,.rb-pb-box{padding-left:18px}}
 `;
 
 export async function renderPersonaBuilder(ctx) {
@@ -1396,7 +1407,7 @@ export async function renderPersonaBuilder(ctx) {
           aiBox,
           h("div", { class: "rb-pb-wh" }, h("b", null, "페르소나 만들기"), h("span", null, "원하는 항목만 채워도 괜찮아요")),
           sheet),
-        h("div", { class: "rb-pb-sidec" }, sideSheet, chatCard, rlBox)),
+        h("div", { class: "rb-pb-sidec" }, sideSheet, rlBox, chatCard)),
       foot,
       h("div", { class: "rb-pb-thanks" },
         "🪶 Special thanks · ",

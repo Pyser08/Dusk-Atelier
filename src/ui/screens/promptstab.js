@@ -35,8 +35,8 @@ export async function renderPrompts(ctx) {
   const st = tracked ? tracked(ctx, await ctx.memory?.flow?.settings?.().catch(() => null)) : null;
   const host = h("div", { class: "rb-mem2-main" });
   replace(ctx.main, h("div", { class: "rb-scroll" }, h("div", { class: "rb-mem2", dataset: { page: "prompts" } }, host)));
-  const head = () => pageHead("기억·리수폿 프롬프트", { sub: "기억·리수폿을 쓸 때 덧붙는 프롬프트예요. 앞·중간·뒤 위치를 고를 수 있어요. ‘장기기억 분석’ 단계를 켠 프롬프트는 페르소나·AI 봇 제작 등 플러그인의 다른 AI 작업에도 같은 위치로 들어가요.", back: { label: "설정으로", onClick: () => ctx.go("settings") } });
-  if (!st) return replace(host, head(), emptyState({ icon: "info", title: "아직 쓸 수 없어요", text: "기억·리수폿을 한 번 켠 뒤에 다시 열어 주세요." }));
+  const head = () => pageHead("기억·인물 위키 프롬프트", { sub: "기억·인물 위키을 쓸 때 덧붙는 프롬프트예요. 앞·중간·뒤 위치를 고를 수 있어요. ‘장기기억 분석’ 단계를 켠 프롬프트는 페르소나·AI 봇 제작 등 플러그인의 다른 AI 작업에도 같은 위치로 들어가요.", back: { label: "설정으로", onClick: () => ctx.go("settings") } });
+  if (!st) return replace(host, head(), emptyState({ icon: "info", title: "아직 쓸 수 없어요", text: "기억·인물 위키을 한 번 켠 뒤에 다시 열어 주세요." }));
   const fail = (e) => ctx.toast(e?.message ?? String(e), { error: true });
   const edit = (fn) => { try { st.update(fn); } catch (e) { fail(e); } paint(); };
 
@@ -120,8 +120,8 @@ export async function maybePromptIntro(ctx) {
   try { await ctx.prefs.saveUi({ promptIntroDone: true }); } catch { /* 저장 못 해도 안내는 보여 준다 */ }
   const go = await modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "프롬프트 추가 안내", style: "width:min(440px,100%);display:flex;flex-direction:column;gap:10px" },
     h("h3", { class: "rb-h3" }, "내 프롬프트를 넣을 수 있어요"),
-    h("p", { class: "rb-p", style: "word-break:keep-all" }, "기억·리수폿을 쓸 때 기본 규칙 뒤에 덧붙일 내 프롬프트를 추가할 수 있어요. JSON이나 리스 프리셋(.risup) 파일에서 불러와도 돼요."),
-    h("p", { class: "rb-p rb-muted", style: "font-size:12.5px" }, "나중에 설정 → 기억·리수폿 프롬프트에서 언제든 열어요."),
+    h("p", { class: "rb-p", style: "word-break:keep-all" }, "기억·인물 위키을 쓸 때 기본 규칙 뒤에 덧붙일 내 프롬프트를 추가할 수 있어요. JSON이나 리스 프리셋(.risup) 파일에서 불러와도 돼요."),
+    h("p", { class: "rb-p rb-muted", style: "font-size:12.5px" }, "나중에 설정 → 기억·인물 위키 프롬프트에서 언제든 열어요."),
     h("div", { class: "btns" }, btn("나중에", { onClick: () => done(false) }), btn("프롬프트 추가하기", { kind: "primary", id: "rb-pr-intro-go", onClick: () => done(true) }))));
   if (go) ctx.go("settings", "prompts");
 }

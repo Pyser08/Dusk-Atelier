@@ -31,7 +31,9 @@ function append(el, children) {
   return el;
 }
 function clear(el) {
-  while (el.firstChild) el.removeChild(el.firstChild);
+  // 지운 자식이 그대로면(낡은 화면 보호 staleguard가 removeChild를 무시한 경우) 멈춘다 — 안 그러면 무한 반복으로 창이 얼어붙음(2.2.0)
+  let n;
+  while ((n = el.firstChild)) { el.removeChild(n); if (el.firstChild === n) break; }
   return el;
 }
 // 같은 화면을 다시 그릴 때(설정 바꾸기 등) 스크롤 위치를 지켜 '창을 다시 불러온' 듯 튀지 않게 한다.

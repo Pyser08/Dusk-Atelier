@@ -152,7 +152,8 @@ export async function openCharEditor(ctx, index, chaId, { startTab, draftChar = 
           h("div", { class: "rb-info-body" }, ...kids));
         d.open = !!ui.open[key];
         d.addEventListener("toggle", () => { ui.open[key] = d.open; });
-        d.querySelector("summary").addEventListener("click", () => setHelp?.(key));
+        // 누르는 순간 바로 기억(toggle 이벤트는 늦게 와서, 곧바로 다른 탭으로 가면 놓칠 수 있다)
+        d.querySelector("summary").addEventListener("click", () => { ui.open[key] = !d.open; setHelp?.(key); });
         return d;
       };
       const basic = card("basic", "기본", "이름 · 설명 · 성격 · 시나리오",

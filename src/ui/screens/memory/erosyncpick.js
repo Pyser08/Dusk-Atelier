@@ -15,7 +15,7 @@ export async function pickLoreEntries(ctx) {
   const got = await ctx.erosync.profile("lore");
   if (!got?.ok) { ctx.toast(got?.reason || "인물 목록을 읽지 못했어요", { error: true }); return null; }
   const entries = got.entries ?? [];
-  if (!entries.length) { ctx.toast("이 봇의 로어북에서 고를 항목을 찾지 못했어요. ‘전체 캐릭터 분석’을 써 주세요."); return null; }
+  if (!entries.length) { ctx.toast("이 봇의 로어북에서 고를 항목을 찾지 못했어요. ‘전체 인물로 만들기’을 써 주세요."); return null; }
   const max = got.max ?? 2000, picked = new Set(entries.filter((e) => e.picked).map((e) => e.id));
   let q = "";
   return modal(ctx.win, (done) => {

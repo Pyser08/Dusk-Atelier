@@ -29,7 +29,7 @@ export async function autoTrackingBox(env, { noAdvanced = false } = {}) {
   const adv = h("div"); let loaded = false;
   const advanced = h("details", { class: "rb-mem-man", onToggle: (e) => {
     if (e.target.open && !loaded) { loaded = true; Promise.resolve(advancedPot(ctx, env, cur, env.idx, () => env.redraw?.())).then((nodes) => adv.replaceChildren(...nodes)).catch(fail(ctx)); }
-  } }, h("summary", null, "리수폿 고급 설정"), adv);
+  } }, h("summary", null, "인물 위키 고급 설정"), adv);
   return h("section", { class: "rb-card rb-mem-sec rb-wk-integrated" },
     h("h3", null, "자동 기록 · 인물 추적"),
     h("div", { class: "rb-mem-shead" }, h("b", null, "새 인물 자동 추적"), h("span", { style: "flex:1" }),

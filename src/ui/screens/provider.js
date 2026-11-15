@@ -8,8 +8,9 @@ import { normalizeConnection, normalizeProfile } from "../../engine/provider/pro
 import { field, text, num, area, select, grid } from "./provider/ui.js";
 import { presetsFor, isOn, apply } from "../../engine/provider/presets.js";
 import { renderMore, MORE_TABS } from "./provider/more.js";
+import { glancePanel } from "./provider/glance.js";
 
-const TABS = [["conn", "연결"], ["prof", "프로필"], ...MORE_TABS];
+const TABS = [["home", "한눈에"], ["conn", "연결"], ["prof", "프로필"], ...MORE_TABS];
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 export async function renderProvider(ctx) {
@@ -17,7 +18,7 @@ export async function renderProvider(ctx) {
   const host = h("div", { class: "rb-section rb-scroll rb-prov" });
   replace(ctx.main, host);
   if (!P) { replace(host, emptyState({ icon: "alert", title: "프로바이더를 쓸 수 없어요", text: "이 환경에서는 프로바이더 기능이 준비되지 않았어요." })); return; }
-  const st = (ctx.state.prov ??= { tab: "conn", models: {}, busy: "" });
+  const st = (ctx.state.prov ??= { tab: "home", models: {}, busy: "" });
   const token = ctx.state.tab;
   const alive = () => ctx.state.tab === token && host.isConnected;
   let cfg = await P.store.get();
@@ -28,10 +29,12 @@ export async function renderProvider(ctx) {
     if (!alive()) return;
     cfg = await P.store.get();
     const sup = P.supported(), names = P.names();
+    if (st.tab === "home" && !cfg.connections.length) st.tab = "conn";   // 연결이 없으면 연결부터
     const body = h("div", { class: "rb-prov-body", style: "display:flex;flex-direction:column;gap:14px" });
     const tabs = segmented(TABS, st.tab, (v) => { st.tab = v; draw(); }, "프로바이더 메뉴");
     tabs.style.cssText = "flex-wrap:wrap";
-    if (st.tab === "conn") body.append(...connPanel());
+    if (st.tab === "home") body.append(...(await glancePanel({ P, cfg, mutate, draw, st })));
+    else if (st.tab === "conn") body.append(...connPanel());
     else if (st.tab === "prof") body.append(...profPanel());
     else body.append(...(await renderMore(st.tab, { ctx, P, cfg, mutate, draw, toast, fail })));
     replace(host,

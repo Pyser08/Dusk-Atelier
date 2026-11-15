@@ -114,6 +114,7 @@ export async function renderDev(ctx) {
         h("span", { class: "meta" }, meta)
       )
     );
+    if (t) createStore(ctx.api).baselineInfo(keyOf(p)).then((b) => { r.querySelector(".ttl")?.appendChild(b ? badge(`기준 ${fmtWhen(b.t)}`, "ok") : badge("기준 없음", "mute")); }).catch(() => {});   // 2.2.0 보충
     return r;
   };
   for (const kind of ["module", "character"]) {
@@ -215,7 +216,7 @@ async function newDevBot(ctx) {
   }
 }
 function card(title, ...children) {
-  return h("div", { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px" }, typeof title === "string" ? h("b", null, title) : title, ...children);
+  return h("div", { class: "rb-card pad bordered rb-devcard", style: "display:flex;flex-direction:column;gap:10px" }, typeof title === "string" ? h("b", null, title) : title, ...children);
 }
 function detail(ctx, all, p) {
   const st = ctx.state;
@@ -294,6 +295,7 @@ function versionCard(ctx, p) {
     h("span", { class: "rb-muted", style: "white-space:normal" }, "패치를 만들 때 이 버전이 미리 채워지고, 만든 뒤에는 릴리스 기록에 남아요.")
   );
 }
+var DIFF_KO = { added: "추가", removed: "삭제", update: "바뀜", mine: "바뀜", conflict: "겹침" };
 var rowMeta = (p) => {
   const rel = p.releases?.[0];
   return [p.version ? `v${p.version}` : "버전 없음", rel ? `패치 ${p.releases.length}번 · 최근 ${fmtWhen(rel.t)}` : "아직 패치 없음"].join(" · ");
@@ -482,9 +484,10 @@ function baseCard(ctx, all, p, obj) {
     }
     head.appendChild(badge(`기록됨 · ${fmtWhen(info?.t)}`, "ok"));
     const patch = await buildPatch({ kind: p.kind, name: obj.name, namespace: obj.namespace ?? obj.moduleNamespace, base, current: obj, readAsset: async () => null, includeAssets: false });
-    const n = patch ? planPatch(patch, base).items.length : 0;
+    const plan = patch ? planPatch(patch, base) : null, n = plan ? plan.items.length : 0;
     head.appendChild(badge(n ? `바뀐 곳 ${n}` : "바뀐 곳 없음", n ? "acc" : "mute"));
     replace(st, n ? `기준 뒤로 ${n}곳을 고쳤어요. 패치 크기 약 ${fmtBytes(new Blob([JSON.stringify(patch)]).size)} (에셋 제외).` : "기준과 같아요. 고친 뒤 다시 보면 바뀐 곳이 나와요.");
+    if (n) st.after(h("ul", { class: "rb-dev-diff", "aria-label": "바뀐 곳 미리보기" }, ...plan.items.slice(0, 4).map((x) => h("li", null, h("span", { class: ["k", x.kind] }, DIFF_KO[x.kind] ?? "바뀜"), h("span", null, [x.group === "field" ? "설정" : LIST_KO[x.group] ?? x.group, x.label].filter(Boolean).join(" · ")))), n > 4 ? h("li", { class: "more" }, `그 밖에 ${n - 4}곳`) : null));   // 2.2.0 보충
     replace(btns, n ? btn("패치 만들기", { size: "sm", kind: "primary", icon: "code", onClick: go, id: "rb-dev-makepatch" }) : null, setBase);
   })().catch((e) => replace(st, `비교하지 못했어요: ${e?.message ?? e}`));
   return card(head, st, btns);

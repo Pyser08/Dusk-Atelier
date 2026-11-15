@@ -65,8 +65,8 @@ test("digest replaces old D/C records but A/B stay", () => {
 });
 test("insertBlock inserts before last user, replaces an existing block, no mutation", () => {
   const msgs = [{ role: "system", content: "sys" }, { role: "user", content: "a" }, { role: "assistant", content: "b" }, { role: "user", content: "c" }];
-  const a = insertBlock(msgs, MARKER + "] one"); assert.equal(a.length, 5); assert.equal(a[3].content, MARKER + "] one"); assert.equal(msgs.length, 4);
-  const b = insertBlock(a, MARKER + "] two"); assert.equal(b.length, 5); assert.equal(b.filter((m) => m.content.startsWith(MARKER)).length, 1);
+  const a = insertBlock(msgs, MARKER + "] one", "beforeLastUser"); assert.equal(a.length, 5); assert.equal(a[3].content, MARKER + "] one"); assert.equal(msgs.length, 4);
+  const b = insertBlock(a, MARKER + "] two", "beforeLastUser"); assert.equal(b.length, 5); assert.equal(b.filter((m) => m.content.startsWith(MARKER)).length, 1);
   assert.equal(insertBlock(msgs, MARKER + "]", "afterSystem")[1].content, MARKER + "]");
 });
 test("lore fallback upsert is idempotent and removable", () => {
@@ -96,7 +96,7 @@ test("injector hook: modifies only the request copy and ignores non-model types"
   assert.equal(await api.rep(req, "model"), req, "no folder → unchanged");
   await store.updateFolder("c", "t", (f) => { f.cursor = { at: 1 }; f.scenes.push({ id: "s", sum: "장면", facts: [], who: [] }); });
   const out = await api.rep(req, "model");
-  assert.equal(out.length, 2); assert.match(out[0].content, /Current scene: 장면/); assert.equal(req.length, 1);
+  assert.equal(out.length, 2); assert.match(out[1].content, /Current scene: 장면/);  // 기본 위치 end: 맨 뒤 assert.equal(req.length, 1);
   assert.equal(await api.rep(req, "memory"), req);
   assert.equal(inj.lastRequest().injected, true);
   await store.updateFolder("c", "t", (f) => { f.cursor = null; });  // 마지막 분석 응답을 리롤한 직후 상태
@@ -169,4 +169,17 @@ test("요약된 옛 대화 빼고 보내기: 켜면 분석된 옛 대화만 요�
   assert.equal(inj.lastRequest().dropped, 16, "12턴 중 최근 4턴(8개)만 남김");
   assert.equal(out.length, req.length - 16 + 1);
   assert.equal(out[0].content, "sys");
+});
+
+// 2.1.9 제보: 예산 때문에 일부만 깎인 기록은 manifest.trimmedIds에 남겨 '예산 제한'으로 센다(예전엔 관련 없음으로 셌다).
+test("예산에 맞추려고 덜 중요한 순간을 뺀 기록은 trimmedIds에 남는다", () => {
+  const people = { 가: { name: "가", ctx: "always", records: [1, 2, 3, 4, 5].map((i) => rec(i, "A", "가".repeat(50))) } };
+  const { manifest } = buildBlock(folder(people), { messageCount: 200, settings: { targetTokens: 90, capTokens: 130, sceneTokens: 0 } });
+  assert.ok(manifest.recordIds.length > 0 && manifest.recordIds.length < 5);
+  assert.deepEqual([...manifest.trimmedIds].sort(), ["r1", "r2", "r3", "r4", "r5"].filter((id) => !manifest.recordIds.includes(id)).sort());
+});
+test("예산이 넉넉하면 trimmedIds는 비어 있다", () => {
+  const people = { 가: { name: "가", ctx: "always", records: [rec(1, "A", "짧은 기록")] } };
+  const { manifest } = buildBlock(folder(people), { messageCount: 200, settings: {} });
+  assert.deepEqual(manifest.trimmedIds, []);
 });

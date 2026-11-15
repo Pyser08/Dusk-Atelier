@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>사이드바 목업</title>
+<style>
+:root{--acc:#cc4b2e;--acc2:#e0703f;--glow:rgba(204,75,46,.55);--gbg:#141220;
+  --glass:rgba(255,255,255,.10);--glass2:rgba(255,255,255,.14);--line:rgba(255,255,255,.22);--sub:rgba(255,255,255,.72);--mute:rgba(255,255,255,.55);--text:#f2f0fa}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0816;color:var(--text);font:14px/1.5 "IBM Plex Sans KR",system-ui,sans-serif;padding:20px 16px}
+.cap{color:#aaa;font-size:13px;margin:0 0 10px;text-align:center}
+.vbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 16px}
+.vbar button{padding:8px 16px;border-radius:999px;border:1px solid #444;background:#1a1528;color:#ddd;font:inherit;cursor:pointer}
+.vbar button.on{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff;border-color:transparent}
+.desc{max-width:900px;margin:0 auto 14px;color:#ccc;font-size:13px;text-align:center}
+.win{width:1100px;max-width:100%;height:720px;margin:0 auto;border-radius:22px;overflow:hidden;border:1px solid var(--line);display:flex;flex-direction:column;
+  background:radial-gradient(40% 50% at 12% 18%,rgba(204,75,46,.5),transparent 70%),radial-gradient(45% 55% at 88% 78%,rgba(120,90,255,.4),transparent 70%),radial-gradient(35% 40% at 70% 8%,rgba(255,180,100,.3),transparent 70%),var(--gbg)}
+.head{display:flex;align-items:center;gap:10px;padding:14px 18px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6b5bd6,#2b2550)}
+.head b{font-size:15px}.sp{flex:1}
+.hb{height:34px;padding:0 14px;border-radius:999px;background:var(--glass);border:1px solid var(--line);display:grid;place-items:center;font-size:13px}
+.hi{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--sub)}
+.body{flex:1;display:flex;gap:16px;padding:0 16px 16px;min-height:0}
+.glass{background:var(--glass);border:1px solid var(--line);border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25);backdrop-filter:blur(22px)}
+.content{flex:1;display:flex;flex-direction:column;gap:14px;align-items:center;padding-top:20px;min-width:0}
+.ph{border-radius:18px;background:var(--glass);border:1px solid var(--line)}
+.side{width:216px;flex:none;padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow:auto;transition:width .2s}
+.it{display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:12px;color:var(--sub);cursor:pointer;white-space:nowrap;font-size:14px}
+.it:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.it.on{background:var(--glass2);color:var(--text);font-weight:600}
+.ic{width:18px;text-align:center;flex:none;font-size:14px}
+.lab{font-size:12px;font-weight:700;color:var(--mute);padding:12px 10px 4px}
+.foot{margin-top:auto;padding:10px;font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;width:max-content}
+.seg span{padding:3px 10px;font-size:12px}.seg span.on{background:#fff;color:#111}
+/* 1 접기 */
+.sec{display:flex;align-items:center;gap:11px;height:38px;padding:0 10px;border-radius:12px;cursor:pointer;font-weight:600;color:var(--text)}
+.sec .chev{margin-left:auto;color:var(--mute);transition:transform .2s;font-size:11px}
+.sec.open .chev{transform:rotate(90deg)}
+.sub{display:none;flex-direction:column;gap:2px;padding-left:18px;margin:2px 0 6px;border-left:1px solid rgba(255,255,255,.12);margin-left:19px}
+.sec.open+.sub{display:flex}
+.sub .it{height:32px;font-size:13px}
+.cnt{margin-left:auto;font-size:11px;color:var(--mute)}
+/* 2 색 아이콘 */
+.ci{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:13px;flex:none}
+.c0{background:linear-gradient(135deg,#ffd27a,#ff9a5c)}.c1{background:linear-gradient(135deg,#ff8ec6,#8a7bff)}.c2{background:linear-gradient(135deg,#7fd4ff,#5b8cff)}.c3{background:linear-gradient(135deg,#6ff0c4,#38b6a0)}.c4{background:linear-gradient(135deg,#c9c9d6,#8a8aa3)}
+.v2 .it{height:40px}.v2 .it.on{box-shadow:inset 3px 0 0 var(--k,var(--acc))}
+.dotk{width:6px;height:6px;border-radius:50%;background:var(--k);margin-right:4px}
+/* 3 아래 정리 */
+.mini{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.06);font-size:12px;color:var(--mute)}
+.mini .m{margin-left:auto;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--glass2);color:var(--text);position:relative}
+.pop{position:absolute;bottom:34px;right:0;width:220px;padding:8px;border-radius:14px;background:rgba(30,26,46,.96);border:1px solid var(--line);box-shadow:0 12px 30px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:2px;text-align:left;color:var(--text)}
+.pop div{padding:7px 10px;border-radius:9px;font-size:13px}.pop div:hover{background:rgba(255,255,255,.08)}
+.pop small{display:block;color:var(--mute);font-size:11px}
+/* 4 레일 */
+.v4 .side{width:68px;padding:12px 10px;align-items:stretch}
+.v4 .side:hover{width:216px}
+.v4 .side .t,.v4 .side .lab,.v4 .side .foot .t{opacity:0;transition:opacity .15s}
+.v4 .side:hover .t,.v4 .side:hover .lab,.v4 .side:hover .foot .t{opacity:1}
+.v4 .lab{height:22px;padding:4px 10px 0;overflow:hidden}
+.v4 .sepl{height:1px;background:rgba(255,255,255,.12);margin:8px 6px}
+.v4 .side:hover .sepl{display:none}
+.v4 .it{padding:0 9px}
+.tip{font-size:11px;color:var(--mute);text-align:center;margin-top:8px}
+/* 5 위치 */
+.badge{margin-left:auto;font-size:10px;padding:1px 7px;border-radius:999px;background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff}
+.grp{display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:14px;background:rgba(255,255,255,.04);margin-bottom:6px}
+.grp .gl{font-size:11px;color:var(--mute);padding:2px 8px 4px}
+</style></head><body>
+<p class="cap">사이드바 목업 — 바꾼 곳은 왼쪽 메뉴뿐이고 오른쪽은 홈 자리 표시. 모바일은 지금처럼 아래 탭바(사이드바 없음).</p>
+<div class="vbar" id="vbar"></div>
+<p class="desc" id="desc"></p>
+<div class="win" id="win">
+  <div class="head"><span class="logo"></span><b>Dusk Atelier</b><span class="sp"></span><span class="hb">⇩ 업데이트</span><span class="hb">⇧ 가져오기</span><span class="hi">🎨</span><span class="hi">⚙</span><span class="hi">✕</span></div>
+  <div class="body"><nav class="side glass" id="side"></nav>
+    <div class="content"><div class="ph" style="width:60%;height:60px"></div><div class="ph" style="width:60%;height:44px;border-radius:999px"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%"><div class="ph" style="height:180px;grid-column:span 2"></div><div class="ph" style="height:180px"></div><div class="ph" style="height:180px"></div><div class="ph" style="height:90px"></div><div class="ph" style="height:90px"></div><div class="ph" style="height:90px"></div><div class="ph" style="height:90px"></div></div></div>
+  </div>
+</div>
+<script>
+const S={mem:["기억",["장기 기억","◎",128],["인물 관계도","⌘"],["코코아","♨"],["기억 카드","✦"]],man:["관리",["캐릭터","☺",138],["모듈","❒",104],["플러그인","⧉",8],["ProtLink+","⛓"]],wrk:["작업실",["플러그인 꾸미기","🎨"],["AI로 봇 만들기","✧"],["AI로 페르소나 만들기","☻"],["도구","⚒"],["설정","⚙"]]};
+const it=(n,i,on,x="")=>`<div class="it ${on?"on":""}"><span class="ic">${i}</span><span class="t">${n}</span>${x}</div>`;
+const nowFoot=`<div class="foot"><span>파일을 창 어디에 끌어다 놓아도 바로 가져와요</span><span class="seg"><span class="on">◧ 왼쪽</span><span>⬒ 위쪽</span></span><span>v2.1.9 · 변경 기록</span></div>`;
+const V={
+ now:{n:"지금",d:"지금 모습. 항목 13개가 한꺼번에 펼쳐져 있고, 아래에 안내·위치 전환·버전이 따로 3줄.",
+  r:()=>it("홈","⌂",1)+Object.values(S).map(s=>`<div class="lab">${s[0]}</div>`+s.slice(1).map(x=>it(x[0],x[1])).join("")).join("")+nowFoot},
+ a1:{n:"1 · 섹션 접기",d:"섹션 제목을 누르면 열고 닫아요. 지금 있는 섹션만 기본으로 펼침. 줄 수가 13→5로 줄고, 숫자(봇·모듈 개수)로 무엇이 있는지 보여요.",
+  r:()=>it("홈","⌂",1)+Object.entries(S).map(([k,s],i)=>`<div class="sec ${i===0?"open":""}" onclick="this.classList.toggle('open')"><span class="ic">${["◎","☺","⚒"][i]}</span>${s[0]}<span class="chev">▶</span></div><div class="sub">`+s.slice(1).map((x,j)=>it(x[0],"",0,x[2]?`<span class="cnt">${x[2]}</span>`:"")).join("")+`</div>`).join("")+nowFoot},
+ a2:{n:"2 · 섹션 색",d:"홈 바로가기와 같은 색으로 섹션을 구분해요(기억=분홍보라, 관리=하늘, 작업실=민트). 고른 메뉴는 그 섹션 색 띠가 붙어서 지금 어디인지 바로 보여요.",
+  r:()=>`<div class="v2" style="display:contents">`+it("홈",`<span class="ci c0">⌂</span>`,0).replace('class="ic"','class="ic" style="width:28px"')+Object.values(S).map((s,i)=>`<div class="lab" style="display:flex;align-items:center"><i class="dotk" style="--k:${["#c48bff","#6aaeff","#4fd6b0"][i]}"></i>${s[0]}</div>`+s.slice(1).map((x,j)=>`<div class="it ${i===0&&j===0?"on":""}" style="--k:${["#c48bff","#6aaeff","#4fd6b0"][i]}"><span class="ci c${i+1}">${x[1]}</span><span class="t">${x[0]}</span></div>`).join("")).join("")+`</div>`+nowFoot},
+ a3:{n:"3 · 아래 정리",d:"아래 3줄(끌어다 놓기 안내·왼쪽/위쪽·버전)을 작은 한 줄 + ‘…’ 메뉴로 모아요. 메뉴 항목이 더 넓게 보여요. (‘…’ 메뉴를 펼친 모습)",
+  r:()=>it("홈","⌂",1)+Object.values(S).map(s=>`<div class="lab">${s[0]}</div>`+s.slice(1).map(x=>it(x[0],x[1])).join("")).join("")+`<div class="foot" style="padding:6px 0 0"><div class="mini">⇧ 파일을 끌어다 놓기 · v2.1.9<span class="m">⋯<div class="pop"><div>메뉴를 위쪽으로<small>왼쪽 메뉴 대신 위쪽 줄</small></div><div>변경 기록<small>v2.1.9 · 새로 바뀐 점</small></div><div>처음 둘러보기</div><div>파일 가져오기 안내</div></div></span></div></div>`},
+ a4:{n:"4 · 접은 레일",d:"아이콘만 있는 좁은 레일(68px). 마우스를 올리면 이름까지 펼쳐져요. 내용 칸이 150px쯤 넓어져서 홈 위젯이 한 줄 더 들어가요. 핀(📌)으로 늘 펼침 고정도 가능.",
+  r:()=>it("홈","⌂",1)+Object.values(S).map(s=>`<div class="sepl"></div><div class="lab">${s[0]}</div>`+s.slice(1).map(x=>it(x[0],x[1])).join("")).join("")+`<div class="foot"><div class="it"><span class="ic">📌</span><span class="t">늘 펼쳐 두기</span></div></div>`},
+ a5:{n:"5 · 자리 다듬기",d:"자주 쓰는 것 위로, 설정은 맨 아래로. ‘설정’이 작업실 안에 있던 걸 빼고, ‘플러그인 꾸미기’는 설정 옆 ‘꾸미기’로. 새 기능엔 ‘새로’ 표시.",
+  r:()=>it("홈","⌂",1)+`<div class="grp"><span class="gl">기억</span>`+S.mem.slice(1).map(x=>it(x[0],x[1],0,x[0]==="기억 카드"?`<span class="badge">새로</span>`:"")).join("")+`</div><div class="grp"><span class="gl">관리</span>`+S.man.slice(1).map(x=>it(x[0],x[1])).join("")+`</div><div class="grp"><span class="gl">만들기</span>`+[["AI로 봇 만들기","✧"],["AI로 페르소나 만들기","☻"],["도구","⚒"]].map(x=>it(x[0],x[1])).join("")+`</div><div class="foot" style="padding:4px 0 0">`+it("꾸미기","🎨")+it("설정","⚙")+`</div>`},
+ mix:{n:"추천 · 1+2+3",d:"섹션 접기 + 섹션 색 + 아래 정리를 합친 안. 지금 섹션만 펼쳐지고, 색으로 위치를 알고, 아래는 한 줄.",
+  r:()=>`<div class="v2" style="display:contents">`+`<div class="it"><span class="ci c0">⌂</span><span class="t">홈</span></div>`+Object.entries(S).map(([k,s],i)=>`<div class="sec ${i===0?"open":""}" onclick="this.classList.toggle('open')"><span class="ci c${i+1}">${["◎","☺","⚒"][i]}</span>${s[0]}<span class="chev">▶</span></div><div class="sub" style="border-color:${["#c48bff","#6aaeff","#4fd6b0"][i]}55">`+s.slice(1).map((x,j)=>`<div class="it ${i===0&&j===0?"on":""}" style="--k:${["#c48bff","#6aaeff","#4fd6b0"][i]}"><span class="t">${x[0]}</span>${x[2]?`<span class="cnt">${x[2]}</span>`:""}</div>`).join("")+`</div>`).join("")+`</div><div class="foot" style="padding:6px 0 0"><div class="mini">⇧ 파일을 끌어다 놓기 · v2.1.9<span class="m">⋯</span></div></div>`}
+};
+const vb=document.getElementById("vbar");
+vb.innerHTML=Object.entries(V).map(([k,v])=>`<button data-v="${k}">${v.n}</button>`).join("");
+const show=k=>{document.getElementById("side").innerHTML=V[k].r();document.getElementById("desc").textContent=V[k].d;document.getElementById("win").className="win "+(k==="a4"?"v4":"");vb.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===k))};
+vb.onclick=e=>e.target.dataset.v&&show(e.target.dataset.v);
+show("now");
+</script>
+</body></html>

@@ -5,14 +5,17 @@ export var USAGE_KINDS = [["used", "넣음"], ["digested", "요약에 반영됨"
 export function usageOf(folder, manifest) {
   const out = { total: 0, used: 0, digested: 0, unrelated: 0, budget: 0 };
   const ids = new Set(manifest?.recordIds ?? []);
-  const cut = new Set((manifest?.excluded ?? []).map((x) => x?.name).filter(Boolean));
+  // excluded에는 끔(never)·장면 밖(not-relevant)·예산(budget) 인물이 섞여 있다 — 예산 제한은 budget만(이유가 없는 옛 기록은 예전처럼 budget으로 본다).
+  // 포함된 인물의 기록 중 예산에 맞추려고 뺀 것은 trimmedIds로 따로 남는다.
+  const cut = new Set((manifest?.excluded ?? []).filter((x) => x?.name && (x.reason === undefined || x.reason === "budget")).map((x) => x.name));
+  const trimmed = new Set(manifest?.trimmedIds ?? []);
   for (const p of Object.values(folder?.people ?? {})) {
     for (const r of p.records ?? []) {
       if (r.orphan) continue;
       out.total++;
       if (ids.has(r.id)) out.used++;
       else if (r.digested) out.digested++;
-      else if (cut.has(p.name)) out.budget++;
+      else if (trimmed.has(r.id) || cut.has(p.name)) out.budget++;
       else out.unrelated++;
     }
   }
@@ -25,4 +28,11 @@ export function injectLine(last, hhmm, reasonText) {
   const n = last.manifest?.recordIds?.length ?? 0;
   if (last.injected) return `마지막 요청 ${hhmm} · 기억 ${n}건을 넣었어요`;
   return `마지막 요청 ${hhmm} · 넣지 않았어요${reasonText ? ` (${reasonText})` : ""}`;
+}
+
+// 최근 기록 n건(인물 이름·행동·턴·등급), 시각 역순. 기억 화면·기억 개요가 같이 쓴다.
+export function recentOf(folder, n = 3) {
+  const rows = [];
+  for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (!r.orphan) rows.push({ who: p.name, ms: r.at_ms ?? 0, at: r.at, act: r.act, g: r.g });
+  return rows.sort((a, b) => b.ms - a.ms).slice(0, n);
 }

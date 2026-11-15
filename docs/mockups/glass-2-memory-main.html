@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>글래스 장기 기억</title>
+<style>
+:root{
+  --bg:#171028;--b1:rgba(255,154,118,.45);--b2:rgba(176,124,255,.55);--b3:rgba(255,142,198,.4);--b4:rgba(120,90,255,.4);
+  --acc:#ff9a76;--acc2:#b07cff;--tint:#ffd6e6;--glow:rgba(255,154,118,.5);
+  --secg:linear-gradient(135deg,#ff8ec6,#8a7bff);--accg:linear-gradient(90deg,var(--acc),var(--acc2));
+  --glass:color-mix(in srgb,#171028 44%,transparent);--cell:rgba(255,255,255,.08);--line:rgba(255,255,255,.2);
+  --text:#f2f0fa;--sub:rgba(255,255,255,.84);--mute:rgba(255,255,255,.62);--rl:rgba(255,255,255,.1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0816;color:var(--text);font:14px/1.5 "Pretendard",system-ui,sans-serif;padding:20px 16px}
+b{font-weight:700}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:0 0 10px}
+.bar button{padding:7px 14px;border-radius:999px;border:1px solid #444;background:#1b1530;color:#ddd;font:inherit;cursor:pointer}
+.bar button.on{background:var(--secg);color:#fff;border:0}
+.cap{color:#bbb;font-size:13px;margin:0 auto 14px;max-width:1100px;text-align:center}
+.wrap{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.frame{border-radius:22px;overflow:hidden;border:1px solid #333}
+.pc{width:1280px;max-width:100%}.mo{width:390px}
+.stage{background:radial-gradient(40% 50% at 12% 18%,var(--b1),transparent 70%),radial-gradient(45% 55% at 88% 78%,var(--b2),transparent 70%),radial-gradient(35% 40% at 70% 8%,var(--b3),transparent 70%),radial-gradient(40% 45% at 30% 95%,var(--b4),transparent 70%),var(--bg);padding:22px;display:flex;gap:16px;min-height:780px}
+.gl{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.22);position:relative}
+.pad{padding:18px 20px}
+.rail{width:68px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;align-items:center;border-radius:20px}
+.ri{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--sub)}
+.ri.on{background:var(--secg);color:#fff;box-shadow:0 0 14px rgba(217,140,255,.5)}
+.ri.sub{width:34px;height:34px}.ri.sub.cur{color:#e98bd6;background:rgba(233,139,214,.12);border:1px solid rgba(233,139,214,.5)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+.mut{color:var(--mute);font-size:12.5px}
+.head{display:flex;align-items:flex-end;gap:12px}.sp{flex:1}
+.ttl{font-size:26px;font-weight:800;background:linear-gradient(90deg,#fff,var(--tint));-webkit-background-clip:text;color:transparent;text-shadow:0 0 14px rgba(217,140,255,.35)}
+.q{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sub);flex:none}
+.chips{display:flex;gap:8px;overflow-x:auto}
+.chip{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--cell);font-size:12px;color:var(--sub);white-space:nowrap}
+.chips .chip{padding:5px 12px;font-size:12.5px}.chips .on{color:#fff;box-shadow:inset 0 0 0 1px #d98cff,0 0 10px rgba(217,140,255,.35)}
+/* 6번 공통: 색띠 + 약한 네온 */
+.c1{--c:#e98bd6;--cg:linear-gradient(180deg,#ff8ec6,#8a7bff)}.c2{--c:#6f9dff;--cg:linear-gradient(180deg,#7fd4ff,#5b8cff)}.c3{--c:#3fcfa6;--cg:linear-gradient(180deg,#6ff0c4,#38b6a0)}.c4{--c:#ff8a5c;--cg:linear-gradient(180deg,#ffb36b,#ff7a59)}.cg{--c:#5fe0a8;--cg:#5fe0a8}
+.band{padding-left:24px}
+.band::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--cg);box-shadow:0 0 10px var(--c)}
+.ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--c) 10%,transparent);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);color:var(--c);box-shadow:0 0 8px color-mix(in srgb,var(--c) 35%,transparent)}
+.ico.s{width:32px;height:32px;border-radius:10px}
+.cta{display:block;text-align:center;padding:11px 18px;border-radius:999px;font-weight:700;color:#ffd9ca;background:color-mix(in srgb,var(--acc) 14%,transparent);border:1px solid color-mix(in srgb,var(--acc) 60%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--acc) 30%,transparent);white-space:nowrap}
+.btn{padding:6px 14px;border-radius:999px;background:var(--cell);border:1px solid var(--line);font-size:12.5px;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:#5fe0a8;box-shadow:0 0 8px #5fe0a8;flex:none;display:inline-block}
+.sw{display:inline-block;width:40px;height:23px;border-radius:999px;background:rgba(255,255,255,.2);position:relative;flex:none;border:1px solid transparent}
+.sw::after{content:"";position:absolute;top:2px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff}
+.sw.on{background:color-mix(in srgb,#5fe0a8 22%,transparent);border-color:color-mix(in srgb,#5fe0a8 70%,transparent);box-shadow:0 0 10px color-mix(in srgb,#5fe0a8 35%,transparent)}.sw.on::after{left:19px;background:#c9ffe6}
+.num{padding:12px 14px;background:var(--cell);border-radius:13px}.num b{display:block;font-size:28px;line-height:1.1;background:linear-gradient(180deg,#fff,var(--tint));-webkit-background-clip:text;color:transparent}.num small{color:var(--mute);font-size:12px}
+.meter{height:7px;border-radius:9px;display:flex;overflow:hidden;background:rgba(255,255,255,.12)}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute)}.leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.ttl2{font-weight:700;font-size:15px;display:flex;align-items:center;gap:10px}.ttl2 small{font-weight:400;color:var(--mute);font-size:12px;margin-left:auto}
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rl);font-size:13px}.row:last-child{border:0}.row .t{flex:1;min-width:0}
+.who{font-size:11.5px;padding:2px 8px;border-radius:999px;background:rgba(217,140,255,.18);color:#f1d9ff;white-space:nowrap}
+.tag{font-size:11px;padding:1px 7px;border-radius:6px;background:var(--cell);color:var(--sub)}
+.grid{display:grid;gap:16px}.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.sc{padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;text-align:center}
+.seg{display:inline-flex;padding:4px;border-radius:999px;gap:2px}
+.seg span{padding:6px 16px;border-radius:999px;font-size:13px;color:var(--sub)}
+.seg span.on{color:#fff;background:rgba(233,139,214,.14);box-shadow:inset 0 0 0 1px rgba(233,139,214,.6),0 0 10px rgba(233,139,214,.3)}
+.toc{position:sticky;top:0;display:flex;flex-direction:column;gap:4px;padding:12px}
+.toc span{padding:7px 12px;border-radius:10px;font-size:13px;color:var(--sub);display:flex;gap:8px;align-items:center}
+.toc span.on{background:var(--cell);color:#fff;box-shadow:inset 3px 0 0 #e98bd6}
+.mo .stage{flex-direction:column-reverse;padding:14px 16px 0;min-height:844px}
+.mo .rail{width:auto;flex-direction:row;justify-content:space-around;padding:8px;border-radius:20px 20px 0 0}
+.mo .rail .ri.sub{display:none}
+.mo .hp{display:none!important}.pc .hm{display:none!important}
+.mo .ttl{font-size:21px}.mo .pad{padding:16px}
+.mo .grid.two{grid-template-columns:1fr!important}
+</style></head><body>
+<div class="bar" id="bar"></div>
+<p class="cap" id="cap"></p>
+<div class="wrap" id="wrap"></div>
+<script>
+const SV=(d,s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const IC={brain:'<path d="M9 4a3 3 0 0 0-3 3v.5A3 3 0 0 0 4 10.5a3 3 0 0 0 1 2.2A3 3 0 0 0 6 18a3 3 0 0 0 3 2V4z"/><path d="M15 4a3 3 0 0 1 3 3v.5a3 3 0 0 1 2 3 3 3 0 0 1-1 2.2A3 3 0 0 1 18 18a3 3 0 0 1-3 2V4z"/>',
+network:'<circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M11 7 6 16M13 7l5 9M7.2 18h9.6"/>',
+sliders:'<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2" fill="currentColor"/><circle cx="12" cy="15" r="2" fill="currentColor"/><circle cx="19" cy="7" r="2" fill="currentColor"/>',
+sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+home:'<path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/>',layers:'<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+wrench:'<path d="M14.7 6.3a4 4 0 0 0 5 5L13 18a2.1 2.1 0 0 1-3-3z"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',chat:'<path d="M4 5h16v11H8l-4 4z"/>',
+me:'<circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8.5 14.5a5 5 0 0 0 7 0"/>',book:'<path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6v16"/>',
+doc:'<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',heart:'<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>',token:'<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5h4.5a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3H15"/>'};
+const I=(k,s)=>SV(IC[k],s);
+const rail=`<nav class="rail gl">${["home","brain","layers","wrench","gear"].map((k,i)=>`<div class="ri ${i==1?"on":""}">${I(k)}</div>`).join("")}<div style="height:4px"></div>${["brain","network","sliders","sparkle"].map((k,i)=>`<div class="ri sub ${i==0?"cur":""}">${I(k,17)}</div>`).join("")}</nav>`;
+const head=`<div class="hp mut">⌂ 홈 › 기억 › <b style="color:var(--text)">장기 기억</b></div>
+<div class="head"><div><div class="ttl">장기 기억</div><div class="mut">응답마다 인물별 기억을 쌓고, 필요할 때 꺼내 써요.</div></div><span class="sp"></span><span class="q">?</span></div>
+<div class="chips hm">${["개요","장기 기억","관계도","코코아","기억 카드"].map((t,i)=>`<span class="chip ${i==1?"on":""}">${t}</span>`).join("")}</div>`;
+const status=(cta=true)=>`<section class="gl pad band cg" style="display:flex;flex-direction:column;gap:14px">
+ <div style="display:flex;align-items:center;gap:10px"><span class="dot"></span><div style="flex:1;min-width:0"><b style="color:#7ff0bd">사용 중</b><div class="mut">시로코 · 교실 이야기 · 마지막 요청 09:17 · 기억 3건을 넣었어요</div></div><span class="sw on"></span></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px">${[["6","저장된 기록"],["3","이번에 넣음"],["4","미처리"]].map(n=>`<div class="num"><b>${n[0]}</b><small>${n[1]}</small></div>`).join("")}</div>
+ <div class="meter"><i style="width:50%;background:#5fe0a8;box-shadow:0 0 8px #5fe0a8"></i><i style="width:17%;background:#ff9a76"></i><i style="width:33%;background:#77708c"></i></div>
+ <div class="leg"><span><i style="background:#5fe0a8"></i>넣음 3</span><span><i style="background:#ff9a76"></i>요약에 반영됨 1</span><span><i style="background:#77708c"></i>관련 없음 2</span><span><i style="background:#f5c451"></i>예산 제한 0</span></div>
+ ${cta?`<span class="cta">✦ 지난 대화 분석 · 미처리 4개</span>`:""}</section>`;
+const shortcuts=`<section class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px">${[["user","인물 위키","c1"],["list","기록 보기","c2"],["image","카드로 만들기","c4"],["chat","다른 채팅","c3"]].map(s=>`<div class="gl sc ${s[2]}"><span class="ico s">${I(s[0],17)}</span>${s[1]}</div>`).join("")}</section>`;
+const links=`<section class="gl pad" style="padding-top:6px;padding-bottom:6px">${[["me","나에 대한 기억","다른 인물들이 나를 어떻게 보고 부르는지 모아 봐요.","c1"],["network","인물 관계도","인물 2명의 거리와 관계를 한눈에 봐요.","c2"],["book","리수폿","인물 위키를 자동으로 쌓아요. 설정·자동 기록·고급.","c3"]].map(l=>`<div class="row ${l[3]}"><span class="ico s">${I(l[0],17)}</span><span class="t"><b>${l[1]}</b><div class="mut">${l[2]}</div></span>›</div>`).join("")}</section>`;
+const opts=`<section class="gl pad band c1"><div class="ttl2"><span class="ico s">${I("heart",17)}</span>기억 옵션 <small>사람다운 기억</small></div>${[["관계 진도·호칭·말투·둘만의 추억","on"],["감정이 시간이 지나면 식어요","on"],["거짓말·오해 추적",""],["요약된 옛 대화 빼고 보내기","on"],["지난 대화 분석에 함께 기록",""]].map(o=>`<div class="row"><span class="t">${o[0]}</span><span class="sw ${o[1]}"></span></div>`).join("")}</section>`;
+const tokens=`<section class="gl pad band c4"><div class="ttl2"><span class="ico s">${I("token",17)}</span>기억 넣기 토큰 <small>응답마다 넣는 양</small></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">${[["1200","목표(최소)"],["3000","상한(최대)"],["6턴","남길 최근 턴"]].map(n=>`<div class="num"><b style="font-size:20px">${n[0]}</b><small>${n[1]}</small></div>`).join("")}</div></section>`;
+const settings=`<section class="gl pad band c2" style="padding-top:6px;padding-bottom:6px"><div class="row"><span class="ico s">${I("doc",17)}</span><span class="t"><b>기억·리수폿 프롬프트</b><div class="mut">앞·중간·뒤에 덧붙일 프롬프트</div></span>›</div><div class="row"><span class="ico s">${I("search",17)}</span><span class="t"><b>임베딩 (의미 검색)</b><div class="mut">뜻이 비슷한 기억 찾기 · 꺼짐</div></span>›</div><div class="row"><span class="t mut" style="padding-left:42px">고급 모드에서 더 보기</span>›</div></section>`;
+const recs=[["호시노","선생님에게 잔소리를 들었다","#8","D"],["시로코","호시노를 걱정했다","#7","A"],["호시노","복도에서 낮잠을 잤다","#7","C"],["시로코","선생님과 함께 순찰을 나가기로 했다","#6","B"],["시로코","교실에서 선생님을 기다렸다","#5","A"]];
+const recent=(n=5)=>`<section class="gl pad band c3"><div class="ttl2"><span class="ico s">${I("list",17)}</span>최근 기록 <small>전체 보기 ›</small></div>${recs.slice(0,n).map(r=>`<div class="row"><span class="who">${r[0]}</span><span class="t">${r[1]}</span><span class="tag">${r[2]}</span><span class="tag">${r[3]}</span></div>`).join("")}</section>`;
+const V={
+ A:{n:"A · 두 단",c:"왼쪽 = 지금 일어나는 것(상태·분석·최근 기록), 오른쪽 = 바꾸는 것(바로가기·연결·옵션·토큰·설정). 카드마다 색띠로 종류 구분: 초록=상태, 분홍=옵션, 주황=토큰, 파랑=설정, 민트=기록. 모바일은 위 순서대로 쌓임.",
+  b:()=>`${head}<div class="grid two" style="grid-template-columns:1.1fr 1fr;align-items:start"><div class="col">${status()}${recent()}</div><div class="col">${shortcuts}${links}${opts}${tokens}${settings}</div></div>`},
+ B:{n:"B · 칸 나누기",c:"상태 카드는 늘 위, 아래는 [한눈에 · 기록 · 옵션 · 설정] 칸. 지금은 ‘한눈에’(바로가기·최근 기록·연결). 스크롤이 가장 짧음 — 모바일에서 특히 편함.",
+  b:()=>`${head}${status()}<div><span class="gl seg"><span class="on">한눈에</span><span>기록</span><span>옵션</span><span>설정</span></span></div>
+  <div class="grid two" style="grid-template-columns:1fr 1fr;align-items:start"><div class="col">${shortcuts}${recent(4)}</div><div class="col">${links}</div></div>`},
+ C:{n:"C · 목차 + 한 줄",c:"PC: 왼쪽에 목차(상태·기록·옵션·토큰·설정, 누르면 그 카드로 스크롤, 지금 보는 곳 표시), 오른쪽은 한 줄로 쭉. 모바일은 목차가 위 칩 줄로. 모든 걸 한 화면 흐름으로 보되 길을 잃지 않게.",
+  b:()=>`${head}<div class="mo-toc chips hm">${["상태","기록","옵션","토큰","설정"].map((t,i)=>`<span class="chip ${i==0?"on":""}">${t}</span>`).join("")}</div>
+  <div class="grid two" style="grid-template-columns:200px 1fr;align-items:start"><nav class="gl toc hp">${[["brain","상태"],["list","최근 기록"],["heart","기억 옵션"],["token","토큰"],["doc","설정"]].map((t,i)=>`<span class="${i==0?"on":""}">${I(t[0],16)}${t[1]}</span>`).join("")}<span style="margin-top:8px" class="mut">바로가기</span>${["인물 위키","기록 보기","카드로 만들기","다른 채팅"].map(t=>`<span>${t}</span>`).join("")}</nav>
+  <div class="col">${status()}${recent(4)}${opts}${tokens}${settings}${links}</div></div>`},
+};
+let cur="A";
+function draw(){bar.innerHTML=Object.entries(V).map(([k,x])=>`<button data-k="${k}" class="${k==cur?"on":""}">${x.n}</button>`).join("");cap.textContent=V[cur].c;
+ wrap.innerHTML=["pc","mo"].map(f=>`<div><p class="cap">${f=="pc"?"PC 1280":"모바일 390"}</p><div class="frame ${f}"><div class="stage">${rail}<div class="main">${V[cur].b()}</div></div></div></div>`).join("");}
+bar.onclick=e=>{const k=e.target.dataset.k;if(k){cur=k;draw();}};draw();
+</script></body></html>

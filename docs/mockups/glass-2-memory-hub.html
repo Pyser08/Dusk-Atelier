@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>글래스 기억 개요</title>
+<style>
+:root{
+  --bg:#171028;--b1:rgba(255,154,118,.45);--b2:rgba(176,124,255,.55);--b3:rgba(255,142,198,.4);--b4:rgba(120,90,255,.4);
+  --acc:#ff9a76;--acc2:#b07cff;--tint:#ffd6e6;--glow:rgba(255,154,118,.5);
+  --sec:#d98cff;--secg:linear-gradient(135deg,#ff8ec6,#8a7bff);--accg:linear-gradient(90deg,var(--acc),var(--acc2));
+  --g1:linear-gradient(135deg,#ff8ec6,#8a7bff);--g2:linear-gradient(135deg,#7fd4ff,#5b8cff);--g3:linear-gradient(135deg,#6ff0c4,#38b6a0);--g4:linear-gradient(135deg,#ffb36b,#ff7a59);
+  --glass:color-mix(in srgb,#171028 44%,transparent);--cell:rgba(255,255,255,.08);--line:rgba(255,255,255,.2);
+  --text:#f2f0fa;--sub:rgba(255,255,255,.84);--mute:rgba(255,255,255,.62);--rl:rgba(255,255,255,.1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0816;color:var(--text);font:14px/1.5 "Pretendard",system-ui,sans-serif;padding:20px 16px}
+h1,h2,b{margin:0}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:0 0 10px}
+.bar button{padding:7px 14px;border-radius:999px;border:1px solid #444;background:#1b1530;color:#ddd;font:inherit;cursor:pointer}
+.bar button.on{background:var(--secg);color:#fff;border:0}
+.cap{color:#bbb;font-size:13px;margin:0 auto 14px;max-width:1100px;text-align:center}
+.wrap{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.frame{border-radius:22px;overflow:hidden;border:1px solid #333}
+.pc{width:1280px;max-width:100%}.mo{width:390px}
+.stage{background:radial-gradient(40% 50% at 12% 18%,var(--b1),transparent 70%),radial-gradient(45% 55% at 88% 78%,var(--b2),transparent 70%),radial-gradient(35% 40% at 70% 8%,var(--b3),transparent 70%),radial-gradient(40% 45% at 30% 95%,var(--b4),transparent 70%),var(--bg);padding:22px;display:flex;gap:16px;min-height:780px}
+.gl{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid var(--line);border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.22)}
+.cell{background:var(--cell);border-radius:15px}
+.rail{width:68px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;align-items:center}
+.ri{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:13px;color:var(--sub)}
+.ri.on{background:var(--secg);color:#fff;box-shadow:0 0 14px rgba(217,140,255,.5)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+.mut{color:var(--mute);font-size:12.5px}
+.dot{width:9px;height:9px;border-radius:50%;background:#5fe0a8;box-shadow:0 0 8px #5fe0a8;flex:none;display:inline-block}
+.cta{display:inline-block;padding:10px 18px;border-radius:999px;background:var(--accg);color:#fff;font-weight:700;box-shadow:0 0 18px var(--glow);white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;background:var(--cell);font-size:12.5px;color:var(--sub);white-space:nowrap}
+.ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:800;flex:none;box-shadow:0 0 16px rgba(217,140,255,.35)}
+.i1{background:var(--g1)}.i2{background:var(--g2)}.i3{background:var(--g3)}.i4{background:var(--g4)}
+.big{font-size:34px;font-weight:800;line-height:1;background:linear-gradient(180deg,#fff,var(--tint));-webkit-background-clip:text;color:transparent}
+.ttl{font-size:28px;font-weight:800;background:linear-gradient(90deg,#fff,var(--tint));-webkit-background-clip:text;color:transparent}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rl);font-size:13px}.row:last-child{border:0}.row .t{flex:1;min-width:0}
+.who{font-size:11.5px;padding:2px 8px;border-radius:999px;background:rgba(217,140,255,.18);color:#f1d9ff;white-space:nowrap}
+.q{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sub);flex:none}
+.flex{display:flex;align-items:center;gap:12px}.sp{flex:1}
+.mo .stage{flex-direction:column-reverse;padding:14px 16px 0;min-height:844px}
+.mo .rail{width:auto;flex-direction:row;justify-content:space-around;padding:8px;border-radius:20px 20px 0 0;position:sticky;bottom:0}
+.mo .hp{display:none!important}.pc .hm{display:none!important}
+/* A 궤도 */
+.orbit{position:relative;height:520px}
+.orbit .ring{position:absolute;left:50%;top:50%;border:1px dashed rgba(255,255,255,.18);border-radius:50%;transform:translate(-50%,-50%)}
+.core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:250px;height:250px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;box-shadow:0 0 60px rgba(217,140,255,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+.sat{position:absolute;width:230px;padding:14px 16px;display:flex;gap:12px;align-items:center}
+.mo .orbit{height:auto;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mo .orbit .ring{display:none}.mo .core{position:relative;left:auto;top:auto;transform:none;grid-column:1/3;margin:0 auto;width:220px;height:220px}
+.mo .sat{position:static;width:auto;flex-direction:column;align-items:flex-start;gap:8px;padding:14px}
+/* B 벤토 */
+.bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:16px}
+.bx{padding:18px 20px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+.bx .glowc{position:absolute;width:220px;height:220px;border-radius:50%;filter:blur(40px);opacity:.45;right:-60px;bottom:-80px}
+.mo .bento{grid-template-columns:1fr 1fr;grid-auto-rows:132px;gap:12px}
+.mo .bx{padding:14px 16px}
+/* C 별자리 띠 */
+.hero{padding:28px 30px;display:flex;gap:28px;align-items:center;overflow:hidden;position:relative}
+.ava{width:96px;height:96px;border-radius:50%;background:var(--g4);display:grid;place-items:center;font-size:36px;font-weight:800;color:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.15),0 0 40px var(--glow);flex:none}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.fc{padding:20px;display:flex;flex-direction:column;gap:12px;min-height:220px;border-top:3px solid transparent}
+.fc .bar2{height:5px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}.fc .bar2 i{display:block;height:100%}
+.mo .hero{flex-direction:column;text-align:center;padding:22px 18px;gap:14px}
+.mo .strip{grid-template-columns:1fr 1fr;gap:12px}.mo .fc{min-height:170px;padding:14px}
+/* D 덱 */
+.deck{display:flex;justify-content:center;gap:0;padding:30px 0 10px;perspective:1200px}
+.dc{width:250px;height:330px;padding:22px;display:flex;flex-direction:column;gap:10px;margin:0 -18px;position:relative;transition:transform .2s}
+.dc:nth-child(1){transform:rotate(-8deg) translateY(18px)}.dc:nth-child(2){transform:rotate(-3deg)}.dc:nth-child(3){transform:rotate(3deg)}.dc:nth-child(4){transform:rotate(8deg) translateY(18px)}
+.dc:hover{transform:translateY(-14px) rotate(0);z-index:3}
+.dc .art{height:110px;border-radius:14px;display:grid;place-items:center;font-size:40px;font-weight:800;color:#fff}
+.mo .deck{flex-direction:column;align-items:stretch;padding:0;gap:12px}
+.mo .dc{width:auto;height:auto;margin:0;transform:none!important;flex-direction:row;align-items:center;padding:14px}
+.mo .dc .art{width:64px;height:64px;font-size:24px;flex:none}.mo .dc .desc{display:none}
+</style></head><body>
+<div class="bar" id="bar"></div>
+<p class="cap" id="cap"></p>
+<div class="wrap" id="wrap"></div>
+<script>
+const F=[["장","장기 기억","i1","6","저장된 기록","미처리 4"],["관","인물 관계도","i2","2","인물","이번 턴 1명"],["코","코코아","i3","0","스킬","꺼짐"],["카","기억 카드","i4","0","만든 카드","시로코 기억 8개"]];
+const rail=`<nav class="rail gl">${["홈","기","관","작","설"].map((t,i)=>`<div class="ri ${i==1?"on":""}">${t}</div>`).join("")}</nav>`;
+const hd=(t)=>`<div class="flex"><div><div class="mut hp">⌂ 홈 › <b style="color:var(--text)">기억</b></div>${t??`<div class="ttl">기억</div>`}</div><span class="sp"></span><span class="q">?</span></div>`;
+const recent=(n=4)=>`<section class="gl" style="padding:16px 20px"><div class="flex" style="margin-bottom:4px"><b>최근 기록</b><span class="sp"></span><span class="mut">전체 보기 ›</span></div>${[["호시노","선생님에게 잔소리를 들었다","07:20"],["시로코","호시노를 걱정했다","07:19"],["호시노","복도에서 낮잠을 잤다","07:19"],["시로코","선생님과 함께 순찰을 나가기로 했다","07:17"]].slice(0,n).map(r=>`<div class="row"><span class="who">${r[0]}</span><span class="t">${r[1]}</span><span class="mut">${r[2]}</span></div>`).join("")}</section>`;
+const V={
+ A:{n:"A · 궤도",c:"가운데 둥근 유리 = 지금 채팅(상태·분석 버튼). 기능 4개가 궤도 위에 떠 있어요. 관계도와 같은 ‘궤도’ 모티프라 기억 섹션의 얼굴이 됨. 모바일은 원 아래 2×2.",
+  b:()=>`${hd()}<div class="orbit">
+   <div class="ring" style="width:620px;height:430px"></div><div class="ring" style="width:420px;height:300px"></div>
+   <div class="core gl"><span class="pill"><span class="dot"></span>사용 중</span><b style="font-size:18px">시로코</b><span class="mut">교실 이야기 · 09:17<br>기억 3건을 넣었어요</span><span class="cta" style="padding:8px 14px;font-size:13px">✦ 분석 · 미처리 4</span></div>
+   ${F.map((f,i)=>`<div class="sat gl" style="${["left:4%;top:6%","right:4%;top:6%","left:4%;bottom:6%","right:4%;bottom:6%"][i]}"><span class="ico ${f[2]}">${f[0]}</span><span><b>${f[1]}</b><div class="mut">${f[3]} ${f[4]} · ${f[5]}</div></span></div>`).join("")}
+  </div>${recent(3)}`},
+ B:{n:"B · 벤토",c:"크기가 다른 유리 칸 격자(벤토). 장기 기억은 큰 칸(숫자·막대·분석), 나머지는 작은 칸에 숫자 하나씩 + 칸마다 색 빛 번짐. 최근 기록도 한 칸. 홈 위젯과 같은 말투라 익숙함.",
+  b:()=>`${hd()}<div class="bento">
+   <div class="gl bx" style="grid-column:span 2;grid-row:span 2"><div class="glowc" style="background:#ff8ec6"></div><div class="flex"><span class="ico i1">장</span><span><b style="font-size:17px">장기 기억</b><div class="mut"><span class="dot"></span> 사용 중 · 시로코 · 교실 이야기</div></span></div>
+    <div class="flex" style="gap:22px;margin-top:8px">${[["6","저장"],["3","이번에 넣음"],["4","미처리"]].map(x=>`<div><div class="big">${x[0]}</div><div class="mut">${x[1]}</div></div>`).join("")}</div>
+    <div style="height:8px;border-radius:9px;display:flex;overflow:hidden;background:rgba(255,255,255,.12);margin-top:6px"><i style="width:50%;background:#5fe0a8"></i><i style="width:17%;background:#ff9a76"></i></div>
+    <span class="sp"></span><span class="cta" style="align-self:flex-start">✦ 지난 대화 분석 · 미처리 4개</span></div>
+   ${F.slice(1).map((f,i)=>`<div class="gl bx" ${i==0?'style="grid-row:span 2"':""}><div class="glowc" style="background:${["#5b8cff","#38b6a0","#ff7a59"][i]}"></div><div class="flex"><span class="ico ${f[2]}" style="width:34px;height:34px">${f[0]}</span><b>${f[1]}</b></div><span class="sp"></span><div class="big">${f[3]}</div><div class="mut">${f[4]} · ${f[5]}</div></div>`).join("")}
+   <div class="gl bx hp" style="grid-column:span 4"><b>최근 기록</b>${[["호시노","선생님에게 잔소리를 들었다"],["시로코","호시노를 걱정했다"]].map(r=>`<div class="row"><span class="who">${r[0]}</span><span class="t">${r[1]}</span></div>`).join("")}</div>
+  </div><div class="hm">${recent(3)}</div>`},
+ C:{n:"C · 인물 무대",c:"맨 위 큰 유리 무대에 지금 채팅 인물(아바타 빛) + 상태 + 분석. 아래 기능 4개는 세로 카드 띠, 카드마다 색 윗선과 진행 막대(채워진 정도). 이야기 속 ‘등장인물 소개’ 느낌.",
+  b:()=>`${hd()}<section class="gl hero"><div class="ava">시</div><div style="flex:1"><span class="pill"><span class="dot"></span>장기 기억 사용 중</span><div class="ttl" style="font-size:30px;margin:6px 0 2px">시로코 · 교실 이야기</div><div class="mut">마지막 요청 09:17 · 기억 3건을 넣었어요 · 등장 인물 2명</div></div><div style="display:flex;flex-direction:column;gap:8px;align-items:center"><span class="cta">✦ 지난 대화 분석</span><span class="mut">미처리 4개</span></div></section>
+   <div class="strip">${F.map((f,i)=>`<div class="gl fc" style="border-top-color:${["#ff8ec6","#5b8cff","#38b6a0","#ff9a76"][i]}"><span class="ico ${f[2]}">${f[0]}</span><b style="font-size:16px">${f[1]}</b><div><span class="big" style="font-size:26px">${f[3]}</span> <span class="mut">${f[4]}</span></div><div class="bar2"><i style="width:${[60,40,0,10][i]}%;background:var(--accg)"></i></div><div class="mut">${f[5]}</div></div>`).join("")}</div>${recent(3)}`},
+ D:{n:"D · 카드 덱",c:"기능 4개를 부채꼴로 펼친 유리 카드(올리면 위로 떠오름). 카드 윗면은 기능 색 그림 칸. 가장 ‘놀이’스러운 안. 모바일은 가로 카드 목록. 지금 채팅 상태는 위 얇은 띠.",
+  b:()=>`${hd()}<section class="gl flex" style="padding:12px 18px;flex-wrap:wrap"><span class="dot"></span><b>시로코 · 교실 이야기</b><span class="mut sp">사용 중 · 기억 3건을 넣었어요</span><span class="cta" style="padding:7px 14px;font-size:13px">✦ 분석 4</span></section>
+   <div class="deck">${F.map((f,i)=>`<div class="gl dc"><div class="art ${f[2]}">${f[0]}</div><div><b style="font-size:16px">${f[1]}</b><div class="mut">${f[3]} ${f[4]} · ${f[5]}</div><div class="mut desc" style="margin-top:6px">${["응답마다 인물별 기억을 쌓고 필요할 때 꺼내요.","인물 사이 거리·관계를 한눈에.","정리 노트·기록하기에 붙는 스킬.","기억을 카드로 만들어 새 봇으로."][i]}</div></div></div>`).join("")}</div>${recent(3)}`},
+};
+let cur="A";
+function draw(){bar.innerHTML=Object.entries(V).map(([k,v])=>`<button data-k="${k}" class="${k==cur?"on":""}">${v.n}</button>`).join("");cap.textContent=V[cur].c;
+ wrap.innerHTML=["pc","mo"].map(f=>`<div><p class="cap">${f=="pc"?"PC 1280":"모바일 390"}</p><div class="frame ${f}"><div class="stage">${rail}<div class="main">${V[cur].b()}</div></div></div></div>`).join("");}
+bar.onclick=e=>{const k=e.target.dataset.k;if(k){cur=k;draw();}};draw();
+</script></body></html>

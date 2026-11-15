@@ -184,11 +184,12 @@ async function viewList(ctx, { fresh }) {
     ),
     memo(ctx).reloadNeeded ? note("warn", "서버에서 바꾼 내용이 있어요. 리스를 새로고침(F5 또는 앱 다시 시작)하면 적용돼요. 지금 목록은 서버 기준이에요.") : null,
     shown.length ? null : h("div", { class: "rb-empty" }, q ? "찾는 플러그인이 없어요." : "플러그인이 없어요."),
-    keys.map((g) => h(
+    // 2.2.0(4번 A): 카테고리 = 색띠 카드(카테고리마다 다른 색, 미분류는 회색), 머리는 폴더 아이콘·이름·개수 칩·접기 화살표
+    keys.map((g, k) => h(
       "details",
-      { class: "rb-plug-group", open: !(ctx.state.pluginFold ??= {})[g], onToggle: (e) => { ctx.state.pluginFold[g] = !e.target.open; } },
-      h("summary", { class: "rb-h3", style: "display:flex;gap:6px;align-items:center" }, icon("down", 16), g, h("small", { class: "rb-muted" }, String(groups.get(g).length))),
-      h("div", { style: "display:flex;flex-direction:column;gap:4px" }, groups.get(g).map(row))
+      { class: ["rb-plug-group", "rb-plcat", g === "미분류" ? "k-none" : `k-${k % 5}`], open: !(ctx.state.pluginFold ??= {})[g], onToggle: (e) => { ctx.state.pluginFold[g] = !e.target.open; } },
+      h("summary", { class: "rb-h3 hd" }, h("span", { class: "ico", "aria-hidden": "true" }, icon("folder", 18)), h("span", { class: "t" }, g), h("span", { class: "n" }, `${groups.get(g).length}개`), h("span", { class: "chev", "aria-hidden": "true" }, icon("down", 16))),
+      h("div", { class: "rb-plcat-b" }, groups.get(g).map(row))
     ))
   );
 }

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>관리·설정 목업</title>
+<style>
+:root{
+  --bg:#0f1426;--b1:rgba(95,212,255,.42);--b2:rgba(63,207,166,.42);--b3:rgba(176,124,255,.38);--b4:rgba(255,154,118,.32);
+  --acc:#6aaeff;--acc2:#7fd4ff;--tint:#dbe9ff;
+  --secg:linear-gradient(135deg,#7fd4ff,#5b8cff);
+  --glass:color-mix(in srgb,#0f1426 46%,transparent);--cell:rgba(255,255,255,.08);--line:rgba(255,255,255,.2);
+  --text:#f2f5fa;--sub:rgba(255,255,255,.84);--mute:rgba(255,255,255,.62);--rl:rgba(255,255,255,.1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#070a14;color:var(--text);font:14px/1.5 "Pretendard",system-ui,sans-serif;padding:20px 16px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:0 0 10px}
+.bar button{padding:7px 14px;border-radius:999px;border:1px solid #3a4258;background:#141a2c;color:#ddd;font:inherit;cursor:pointer}
+.bar button.on{background:var(--secg);color:#05121a;border:0;font-weight:700}
+.cap{color:#bbb;font-size:13px;margin:0 auto 14px;max-width:1100px;text-align:center}
+.wrap{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.frame{border-radius:22px;overflow:hidden;border:1px solid #333}
+.pc{width:1280px;max-width:100%}.mo{width:390px}
+.lbl{color:#999;font-size:12px;text-align:center;margin:0 0 6px}
+.stage{background:radial-gradient(40% 50% at 12% 18%,var(--b1),transparent 70%),radial-gradient(45% 55% at 88% 78%,var(--b2),transparent 70%),radial-gradient(35% 40% at 70% 8%,var(--b3),transparent 70%),radial-gradient(40% 45% at 30% 95%,var(--b4),transparent 70%),var(--bg);padding:22px;display:flex;gap:16px;min-height:820px}
+.mo .stage{padding:14px 14px 0;flex-direction:column;min-height:844px;gap:12px}
+/* 카드: 스크롤 안 카드는 블러 없음(깜빡임 수정 규칙) */
+.gl{background:var(--glass);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.22);position:relative}
+.pad{padding:18px 20px}.mo .pad{padding:16px}
+.rail{width:68px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;align-items:center;border-radius:20px;backdrop-filter:blur(22px)}
+.ri{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--sub)}
+.ri.on{background:var(--secg);color:#05121a;box-shadow:0 0 14px rgba(95,212,255,.5)}
+.ri.sub{width:34px;height:34px}.ri.sub.cur{color:var(--acc);background:rgba(95,212,255,.12);border:1px solid rgba(95,212,255,.5)}
+.rsep{width:28px;height:1px;background:var(--rl);margin:4px 0}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+.mo .main{gap:12px;padding-bottom:84px}
+.mut{color:var(--mute);font-size:12.5px}
+.head{display:flex;align-items:flex-end;gap:12px}.sp{flex:1}
+.ttl{font-size:26px;font-weight:800;background:linear-gradient(90deg,#fff,var(--tint));-webkit-background-clip:text;color:transparent;text-shadow:0 0 14px rgba(95,212,255,.35)}
+.mo .ttl{font-size:21px}
+.crumb{font-size:12px;color:var(--mute)}
+.q{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sub);flex:none;font-weight:700}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.chip{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--cell);font-size:12px;color:var(--sub);white-space:nowrap}
+.chips .chip{padding:6px 13px;font-size:12.5px;cursor:pointer}.chips .on{color:#fff;box-shadow:inset 0 0 0 1px var(--acc),0 0 10px rgba(95,212,255,.35)}
+.c1{--c:#5fd4ff;--cg:linear-gradient(180deg,#7fe0ff,#4a9dff)}.c2{--c:#3fcfa6;--cg:linear-gradient(180deg,#6ff0c4,#38b6a0)}.c3{--c:#b07cff;--cg:linear-gradient(180deg,#d2a6ff,#8a7bff)}.c4{--c:#ff8a5c;--cg:linear-gradient(180deg,#ffb36b,#ff7a59)}.c5{--c:#ffd166;--cg:linear-gradient(180deg,#ffe08a,#f5b43c)}.c6{--c:#ff7eb6;--cg:linear-gradient(180deg,#ff9ccc,#e8609c)}
+.band{padding-left:24px}
+.band::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--cg);box-shadow:0 0 10px var(--c)}
+.ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--c,#5fd4ff) 10%,transparent);border:1px solid color-mix(in srgb,var(--c,#5fd4ff) 55%,transparent);color:var(--c,#5fd4ff);box-shadow:0 0 8px color-mix(in srgb,var(--c,#5fd4ff) 35%,transparent)}
+.ico.s{width:32px;height:32px;border-radius:10px}
+.ico svg,.ri svg{width:19px;height:19px}
+.cta{display:inline-block;text-align:center;padding:10px 18px;border-radius:999px;font-weight:700;color:#d6f6ff;background:color-mix(in srgb,var(--acc) 14%,transparent);border:1px solid color-mix(in srgb,var(--acc) 60%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--acc) 30%,transparent);white-space:nowrap;cursor:pointer}
+.btn{display:inline-block;padding:6px 14px;border-radius:999px;background:var(--cell);border:1px solid var(--line);font-size:12.5px;white-space:nowrap}
+.btn.warn{border-color:rgba(255,120,120,.5);color:#ffb3b3}
+.dot{width:9px;height:9px;border-radius:50%;background:#5fe0a8;box-shadow:0 0 8px #5fe0a8;flex:none;display:inline-block}
+.dot.off{background:#777;box-shadow:none}.dot.warn{background:#ffd166;box-shadow:0 0 8px #ffd166}
+.sw{display:inline-block;width:40px;height:23px;border-radius:999px;background:rgba(255,255,255,.2);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff}
+.sw.on{background:color-mix(in srgb,#5fe0a8 30%,transparent);box-shadow:0 0 10px rgba(95,224,168,.45)}.sw.on::after{left:20px;background:#5fe0a8}
+.seg{display:inline-flex;border-radius:999px;background:var(--cell);padding:3px;gap:2px}
+.seg span{padding:4px 11px;border-radius:999px;font-size:12px;color:var(--sub);white-space:nowrap}.seg .on{background:rgba(95,212,255,.2);color:#fff;box-shadow:inset 0 0 0 1px rgba(95,212,255,.6)}
+.val{font-size:12.5px;color:var(--sub);padding:5px 12px;border-radius:10px;background:var(--cell);white-space:nowrap}
+.val::after{content:" ▾";color:var(--mute)}
+.meter{width:120px;height:7px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden;flex:none}.meter i{display:block;height:100%;background:var(--secg)}
+.slider{width:140px;height:5px;border-radius:9px;background:rgba(255,255,255,.15);position:relative;flex:none}.slider i{position:absolute;left:0;top:0;bottom:0;background:var(--secg);border-radius:9px}.slider b{position:absolute;top:-6px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 0 8px var(--acc)}
+.row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--rl)}
+.row:first-child{border-top:0}
+.rt{flex:1;min-width:0}.rn{font-weight:650}.rd{font-size:12.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis}
+.mo .rd{white-space:normal}
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:6px}.sh h3{margin:0;font-size:15.5px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.mo .g2,.mo .g3,.mo .g4{grid-template-columns:1fr}
+.mo .g2.keep{grid-template-columns:1fr 1fr}
+.stat{display:flex;gap:10px;flex-wrap:wrap}.st{padding:10px 14px;border-radius:12px;background:var(--cell);min-width:96px}.st b{display:block;font-size:19px}.st span{font-size:12px;color:var(--mute)}
+.mo .st{flex:1;min-width:80px;padding:8px 10px}.mo .st b{font-size:16px}
+.hero{display:flex;gap:18px;align-items:center}
+.mo .hero{flex-direction:column;align-items:stretch;gap:12px}
+.hero .big{width:64px;height:64px;border-radius:18px}.hero .big svg{width:30px;height:30px}
+.htt{font-size:20px;font-weight:800}
+.md{display:flex;gap:16px;align-items:flex-start}.md>.lst{width:300px;flex:none}.md>.det{flex:1;min-width:0}
+.mo .md{flex-direction:column;align-items:stretch}.mo .md>.det{width:100%}.mo .md>.lst{width:100%}
+.li{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer}.li.on{background:rgba(95,212,255,.12);box-shadow:inset 0 0 0 1px rgba(95,212,255,.45)}
+.li .rn{font-size:13.5px}
+.tile{padding:14px;border-radius:14px;background:var(--cell);display:flex;flex-direction:column;gap:8px;min-height:104px}
+.tile .rn{font-size:13.5px}
+.mo .tiles{grid-template-columns:1fr 1fr}
+.sws{display:flex;gap:8px;flex-wrap:wrap}.swt{width:52px;height:52px;border-radius:14px;border:2px solid transparent;position:relative}.swt.on{border-color:#fff;box-shadow:0 0 12px var(--acc)}.swt small{position:absolute;bottom:-17px;left:0;right:0;text-align:center;font-size:10.5px;color:var(--mute);white-space:nowrap}
+.mo .swt{width:44px;height:44px}
+.chat{border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:12.5px}
+.bub{max-width:80%;padding:8px 11px;border-radius:14px}
+.field{display:flex;flex-direction:column;gap:5px;padding:10px 0;border-top:1px solid var(--rl)}.field:first-child{border-top:0}
+.fl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);font-weight:650}
+.fi{background:rgba(0,0,0,.22);border:1px solid var(--rl);border-radius:10px;padding:8px 11px;font-size:13px;color:var(--sub);min-height:36px}
+.ai{font-size:11.5px;padding:2px 9px;border-radius:999px;border:1px solid rgba(176,124,255,.6);color:#d9c3ff;margin-left:auto}
+.step{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--rl)}.step:first-child{border-top:0}
+.num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:800;background:var(--cell);flex:none}.num.on{background:var(--secg);color:#05121a}.num.ok{background:rgba(95,224,168,.25);color:#5fe0a8}
+.opt{padding:12px;border-radius:14px;background:var(--cell);border:1px solid transparent}.opt.on{border-color:rgba(95,212,255,.7);box-shadow:0 0 10px rgba(95,212,255,.25)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:72px;display:flex;justify-content:space-around;align-items:center;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(22px);border-top:1px solid var(--line);font-size:10.5px;color:var(--mute)}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px}.tabbar svg{width:20px;height:20px}.tabbar .on{color:var(--acc)}
+.mo .stage{position:relative}
+.foot{font-size:12px;color:var(--mute);text-align:center}
+.tag{font-size:11px;padding:1px 8px;border-radius:999px;background:rgba(95,212,255,.14);color:var(--acc);border:1px solid rgba(95,212,255,.4);white-space:nowrap}
+.tag.g{background:rgba(95,224,168,.14);color:#5fe0a8;border-color:rgba(95,224,168,.4)}.tag.o{background:rgba(255,209,102,.12);color:#ffd166;border-color:rgba(255,209,102,.4)}.tag.p{background:rgba(176,124,255,.14);color:#d2a6ff;border-color:rgba(176,124,255,.45)}
+.note{font-size:12.5px;color:#ffe3a3;background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35);border-radius:12px;padding:9px 12px}
+/* 탭별 맞춤 안 */
+.flow{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;align-items:stretch;gap:0}
+.flow .arr{display:grid;place-items:center;color:var(--acc);font-size:20px;text-shadow:0 0 8px var(--acc)}
+.mo .flow{grid-template-columns:1fr}.mo .flow .arr{transform:rotate(90deg);height:26px}
+.node{padding:10px 12px;border-radius:12px;background:var(--cell);margin-top:8px;font-size:13px;border:1px solid transparent}.node.on{border-color:rgba(95,212,255,.6);box-shadow:0 0 10px rgba(95,212,255,.2)}
+.node small{display:block;color:var(--mute);font-size:11.5px}
+table.mx{width:100%;border-collapse:collapse;font-size:13px}table.mx th{text-align:left;font-weight:600;color:var(--mute);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--rl)}table.mx td{padding:10px 8px;border-bottom:1px solid var(--rl)}
+.mo table.mx .hm{display:none}
+.wiz{display:flex;gap:6px;margin-bottom:14px}.wiz div{flex:1;height:5px;border-radius:9px;background:rgba(255,255,255,.14)}.wiz .on{background:var(--secg);box-shadow:0 0 8px var(--acc)}
+.wizl{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin:-8px 0 12px}.wizl .on{color:#fff;font-weight:700}
+.prev{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(135deg,rgba(255,154,118,.35),rgba(176,124,255,.4)),#171028;padding:12px;display:flex;gap:10px;min-height:250px}
+.prev .pr{width:34px;border-radius:10px;background:rgba(255,255,255,.1)}.prev .pm{flex:1;display:flex;flex-direction:column;gap:8px}.prev .pc2{border-radius:10px;background:rgba(255,255,255,.1);padding:8px 10px;font-size:12px}
+.mood{padding:14px;border-radius:14px;cursor:pointer;min-height:110px;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid var(--line)}.mood.on{box-shadow:0 0 0 2px #fff,0 0 14px var(--acc)}
+.acc{border-top:1px solid var(--rl);padding:12px 0}.acc:first-child{border-top:0}.acch{display:flex;align-items:center;gap:12px;font-weight:650}.accb{padding:6px 0 0 44px}
+.big-prev{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:10px}.big-prev .nav{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:18px}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:10px}.dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3)}.dots i.on{background:var(--acc);width:20px;border-radius:9px}
+.check{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--rl)}.check:first-child{border-top:0}.cb{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12px;flex:none}.cb.on{background:rgba(95,224,168,.25);border-color:#5fe0a8;color:#5fe0a8}
+.prompt{display:flex;gap:10px;align-items:flex-end}.prompt .fi{flex:1;min-height:84px;font-size:14px}
+.msg{display:flex;gap:10px;margin:10px 0}.msg .bubble{padding:10px 13px;border-radius:14px;background:var(--cell);font-size:13px;max-width:85%}.msg.me{justify-content:flex-end}.msg.me .bubble{background:rgba(95,212,255,.15);border:1px solid rgba(95,212,255,.35)}
+.gen{padding:14px;border-radius:14px;min-height:130px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;border:1px solid var(--line)}
+.reel{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.mo .reel{grid-template-columns:1fr 1fr}
+.rl{border-radius:14px;background:rgba(0,0,0,.28);border:1px solid var(--line);padding:10px;text-align:center;font-size:12.5px;position:relative;min-height:120px;display:flex;flex-direction:column;gap:6px}.rl .w{font-size:14px;font-weight:700;color:#fff;flex:1;display:grid;place-items:center}.rl.lock{border-color:#ffd166;box-shadow:0 0 10px rgba(255,209,102,.3)}
+.lever{width:56px;flex:none;display:flex;flex-direction:column;align-items:center;gap:6px}.lever .stick{width:6px;height:120px;border-radius:6px;background:linear-gradient(#ddd,#888)}.lever .ball{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff9ccc,#e8609c);box-shadow:0 0 14px #ff7eb6}
+.pcard{border-radius:18px;padding:18px;background:linear-gradient(160deg,rgba(176,124,255,.3),rgba(95,212,255,.15));border:1px solid var(--line)}
+.ava{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#3a2b7a,#ff7eb6);display:grid;place-items:center;font-size:28px;font-weight:800}
+.qa{padding:12px 14px;border-radius:14px;background:var(--cell);display:flex;gap:10px;align-items:center}.qa .rn{font-size:13.5px}
+.search{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid var(--line);color:var(--mute)}
+.kbd{font-size:11px;padding:1px 6px;border-radius:6px;border:1px solid var(--line);color:var(--mute)}
+.tl{position:relative;padding-left:22px}.tl::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--rl)}
+.tli{position:relative;padding:8px 0 12px}.tli::before{content:"";position:absolute;left:-19px;top:13px;width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}.tli.p::before{background:#d2a6ff;box-shadow:0 0 8px #d2a6ff}
+.diff{font:12px/1.6 ui-monospace,monospace;border-radius:10px;background:rgba(0,0,0,.3);padding:8px 10px}.diff .a{color:#7ef0b8}.diff .d{color:#ff9b9b}
+.ide{display:grid;grid-template-columns:240px 1fr 260px;gap:16px}.mo .ide{grid-template-columns:1fr}
+.tree div{padding:5px 8px;border-radius:8px;font-size:13px}.tree .on{background:rgba(95,212,255,.12)}.tree .in{padding-left:24px;color:var(--sub)}
+</style></head><body>
+<div class="bar" id="tabs"></div>
+<div class="bar" id="vars"></div>
+<p class="cap" id="cap"></p>
+<div class="wrap">
+  <div><p class="lbl">PC 1280</p><div class="frame pc"><div class="stage" id="pc"></div></div></div>
+  <div><p class="lbl">모바일 390</p><div class="frame mo"><div class="stage" id="mo"></div></div></div>
+</div>
+<style>
+.fl2{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.srch{flex:1;min-width:160px;padding:9px 14px;border-radius:999px;background:var(--cell);border:1px solid var(--line);color:var(--mute);font-size:13px}
+.fold{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;font-weight:650;font-size:13px}
+.fold i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.av{width:44px;height:44px;border-radius:12px;flex:none;background:linear-gradient(135deg,var(--a1,#7fd4ff),var(--a2,#5b8cff));display:grid;place-items:center;font-weight:800;color:#06101f}
+.ccard{padding:12px;border-radius:14px;background:var(--cell);display:flex;flex-direction:column;gap:8px}
+.ccard .cv{height:120px;border-radius:12px;background:linear-gradient(135deg,var(--a1),var(--a2));position:relative}
+.mo .ccard .cv{height:90px}
+.ccard .cv span{position:absolute;left:8px;top:8px}
+.grip{color:var(--mute);letter-spacing:-2px;flex:none;cursor:grab}
+.num{width:22px;text-align:center;color:var(--mute);font-size:12px;flex:none}
+.lane{display:flex;flex-direction:column;gap:8px;min-width:0}
+.kan{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.mo .kan{grid-template-columns:1fr}
+.mini{padding:10px 12px;border-radius:12px;background:var(--cell);display:flex;align-items:center;gap:10px}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;background:var(--cell);color:var(--sub)}
+.tag.g{color:#7ff0c0;box-shadow:inset 0 0 0 1px rgba(95,224,168,.5)}.tag.o{color:#ffd59a;box-shadow:inset 0 0 0 1px rgba(255,209,102,.5)}.tag.p{color:#ffb3d9;box-shadow:inset 0 0 0 1px rgba(255,126,182,.5)}.tag.b{color:#bcd6ff;box-shadow:inset 0 0 0 1px rgba(106,174,255,.55)}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.flow .st2{padding:8px 12px;border-radius:12px;background:var(--cell);font-size:12.5px}.flow .on{box-shadow:inset 0 0 0 1px var(--acc);color:#fff}
+.tl{border-left:2px solid var(--rl);margin-left:8px;padding-left:16px}.tl .ev{position:relative;padding:8px 0}.tl .ev::before{content:"";position:absolute;left:-22px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--c,#6aaeff);box-shadow:0 0 8px var(--c,#6aaeff)}
+.stabs{display:flex;gap:4px;border-bottom:1px solid var(--rl);margin-bottom:8px;overflow-x:auto;scrollbar-width:none}.stabs span{padding:8px 12px;font-size:13px;color:var(--mute);white-space:nowrap}.stabs .on{color:#fff;border-bottom:2px solid var(--acc)}
+.side{width:220px;flex:none;display:flex;flex-direction:column;gap:4px}.mo .side{width:100%;flex-direction:row;overflow-x:auto}
+.sn{padding:9px 12px;border-radius:10px;display:flex;gap:10px;align-items:center;font-size:13.5px;white-space:nowrap}.sn.on{background:rgba(106,174,255,.14);box-shadow:inset 0 0 0 1px rgba(106,174,255,.5)}
+.sn svg{width:17px;height:17px}
+.foot{color:var(--mute);font-size:12px;text-align:center;margin-top:4px}
+.fix{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:10.5px;color:#ffb3d9;box-shadow:inset 0 0 0 1px rgba(255,126,182,.55)}
+.tile{padding:16px;border-radius:14px;background:var(--cell);display:flex;flex-direction:column;gap:8px;position:relative}
+.tile b{font-size:15px}
+.big2{font-size:28px;font-weight:800}
+</style>
+<script>
+/* ---------- 아이콘(선) ---------- */
+const P={
+ tools:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+ network:'<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M12 11.5 6.5 17M12 11.5l5.5 5.5"/>',
+ palette:'<path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.2-1-1.4-1-2.4 0-.9.7-1.5 1.6-1.5H17a4 4 0 0 0 4-4c0-4.7-4-8.5-9-8.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>',
+ mask:'<path d="M3 7c3-1.5 6-1.5 9 0 3-1.5 6-1.5 9 0v4c0 4-4 7-9 7s-9-3-9-7z"/><path d="M7.5 11h2M14.5 11h2"/>',
+ sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+ character:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>',
+ code:'<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
+ sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+ home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+ brain:'<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a3 3 0 0 0-3-1zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/>',
+ box:'<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+ key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
+ layers:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+ route:'<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/>',
+ chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+ type:'<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
+ eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+ file:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/>',
+ preset:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5"/>',
+ image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+ book:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
+ size:'<path d="M3 20h18M6 20V10M11 20V6M16 20v-8M21 20V4"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+ download:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
+ history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 3"/>',
+ broom:'<path d="M14 3 9 13M5 13h9l1 8H4z"/>',
+ heart:'<path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 6-8 11-8 11z"/>',
+ flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+ patch:'<path d="M8 3h8v6l-4 3-4-3zM8 21h8v-6l-4-3-4 3z"/>',
+ note:'<path d="M5 3h10l4 4v14H5z"/><path d="M9 11h6M9 15h6"/>',
+ bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ dice:'<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'
+};
+const I=(n)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${P[n]||P.info}</svg>`;
+const ico=(n,c,s)=>`<div class="ico ${s?'s':''} ${c||''}">${I(n)}</div>`;
+
+/* ---------- 조각 ---------- */
+const sw=(on)=>`<span class="sw ${on?'on':''}"></span>`;
+const seg=(a,i)=>`<span class="seg">${a.map((t,k)=>`<span class="${k===i?'on':''}">${t}</span>`).join('')}</span>`;
+const val=(t)=>`<span class="val">${t}</span>`;
+const btn=(t,w)=>`<span class="btn ${w?'warn':''}">${t}</span>`;
+const meter=(p)=>`<span class="meter"><i style="width:${p}%"></i></span>`;
+const slider=(p)=>`<span class="slider"><i style="width:${p}%"></i><b style="left:calc(${p}% - 8px)"></b></span>`;
+const tag=(t,k)=>`<span class="tag ${k||''}">${t}</span>`;
+const row=(r)=>`<div class="row">${r.i?ico(r.i,r.c,1):''}<div class="rt"><div class="rn">${r.n}${r.t?' '+r.t:''}</div>${r.d?`<div class="rd">${r.d}</div>`:''}</div>${r.x||''}</div>`;
+const box=(c,inner,cls)=>`<div class="gl pad band ${c} ${cls||''}">${inner}</div>`;
+const plain=(inner,cls)=>`<div class="gl pad ${cls||''}">${inner}</div>`;
+const H=(i,c,t,d,x)=>`<div class="sh">${ico(i,c)}<div class="rt"><h3>${t}</h3>${d?`<div class="mut">${d}</div>`:''}</div>${x||''}</div>`;
+const cta=(t,blk)=>`<span class="cta" ${blk?'style="display:block"':''}>${t}</span>`;
+const fx=(t)=>`<span class="fix">${t||'보강'}</span>`;
+const TABS={
+ 'manage-home':{label:'관리 개요',crumb:'관리',desc:'캐릭터·모듈·플러그인을 관리해요.',icon:'box'},
+ characters:{label:'캐릭터',crumb:'관리 › 캐릭터',desc:'캐릭터를 폴더로 정리하고 에셋·로어북을 다듬어요.',icon:'character'},
+ modules:{label:'모듈',crumb:'관리 › 모듈',desc:'모듈을 켜고 끄고, 순서를 정하고, 로어북·정규식을 고쳐요.',icon:'layers'},
+ plugins:{label:'플러그인',crumb:'관리 › 플러그인',desc:'설치된 플러그인을 모아 보고 새 버전이 있는지 확인해요.',icon:'bolt'},
+ protlink:{label:'ProtLink+',crumb:'관리 › ProtLink+',desc:'Proton Drive 링크를 항목에 연결해 두고 새 파일을 받아 업데이트해요.',icon:'globe'},
+ settings:{label:'설정',crumb:'설정',desc:'화면 모드·테마·업데이트·백업을 한곳에서 바꿔요.',icon:'sliders'}
+};
+const ORDER=Object.keys(TABS);
+const MAN=['characters','modules','plugins','protlink'];
+const header=(t,m)=>`<div class="head"><div><div class="crumb">${t.crumb}</div><div class="ttl">${t.label}</div>${m?'':`<div class="mut">${t.desc}</div>`}</div><span class="sp"></span>${m?'':btn('기능 찾기 ⌕')}<span class="q">?</span></div>`;
+const rail=(cur)=>{const set=cur==='settings';return `<div class="gl rail">${['home','brain','tools','box','sliders'].map((n,k)=>`<div class="ri ${(set?k===4:k===3)?'on':''}">${I(n)}</div>`).join('')}<div class="rsep"></div>${set?'':MAN.map(id=>`<div class="ri sub ${id===cur?'cur':''}">${I(TABS[id].icon)}</div>`).join('')}</div>`};
+const tabbar=(cur)=>`<div class="tabbar">${[['home','홈'],['brain','기억'],['tools','작업실'],['box','관리'],['sliders','설정']].map((t,k)=>`<div class="${(cur==='settings'?k===4:k===3)?'on':''}">${I(t[0])}${t[1]}</div>`).join('')}</div>`;
+const subchips=(cur)=>cur==='settings'?'':`<div class="chips">${['manage-home',...MAN].map(id=>`<span class="chip ${id===cur?'on':''}" data-t="${id}">${id==='manage-home'?'개요':TABS[id].label}</span>`).join('')}</div>`;
+const srch=(p,x)=>plain(`<div class="fl2"><span class="srch">⌕ ${p}</span>${x||''}</div>`);
+const G=(m,c)=>`grid ${m?'':c}`;
+/* 데이터 */
+const BOTS=[['검은 숲의 마녀','숲지기','#b07cff','#5b8cff','판타지',1],['항구 도시 탐정','레인','#7fd4ff','#3fcfa6','현대',0],['하윤','민트','#ff9ccc','#b07cff','일상',0],['용사 파티','sol','#ffb36b','#ff7a59','판타지',1],['우주 정거장 7','ast','#5fd4ff','#8a7bff','SF',0],['카페 루나','moon','#ffe08a','#ff9ccc','일상',0]];
+const FOLD=[['판타지','#b07cff',2],['현대','#7fd4ff',1],['일상','#ff9ccc',2],['SF','#5fd4ff',1]];
+const MODS=[['상태창 HUD','정규식 6 · 로어북 0',1,'전역'],['세계관: 아르덴','로어북 31',1,'봇 2개'],['감정 표현 팩','에셋 24 · 정규식 2',1,'전역'],['번역 보조','트리거 2',0,'꺼짐'],['NSFW 수위 조절','로어북 8',0,'채팅 1개']];
+const PLUG=[['Dusk Atelier','도구','v2.2.0','최신',1],['LBI','프롬프트','v1.4','새 버전 1.5','o'],['Risu Tracker','도구','v0.8','최신',1],['Auto Translate','번역','v3.1','확인 실패','w'],['내 플러그인','미분류','v0.1','템플릿',0]];
+const LINKS=[['마녀 봇 배포','검은 숲의 마녀','새 파일 1','o','2시간 전'],['HUD 모듈','상태창 HUD','최신','g','어제'],['LBI 배포','LBI','최신','g','3일 전'],['탐정 v2','연결 안 됨','고르기','b','방금']];
+const cbot=(b,m)=>`<div class="ccard" style="--a1:${b[2]};--a2:${b[3]}"><div class="cv">${b[5]?'<span class="tag o">업데이트</span>':''}</div><div><b>${b[0]}</b><div class="mut">${b[1]} · ${b[4]}</div></div></div>`;
+const brow=(b)=>row({n:`<span style="display:flex;align-items:center;gap:10px"><span class="av" style="--a1:${b[2]};--a2:${b[3]};width:34px;height:34px;border-radius:10px;font-size:13px">${b[0][0]}</span>${b[0]}</span>`,d:'',x:`<span class="mut">${b[1]}</span>${b[5]?tag('업데이트','o'):''}<span class="grip">⋮⋮</span>`});
+const mrow=(x,i,drag)=>row({n:(drag?`<span class="grip">⋮⋮</span> `:'')+x[0],d:x[1]+' · '+x[3],x:`<span class="mut" style="font-size:12px">${x[2]?'켜짐':'꺼짐'}</span>${sw(x[2])}`});
+const prow=(p)=>row({i:'bolt',c:'c1',n:p[0]+' '+tag(p[1]),d:p[2],x:tag(p[3],p[4]===1?'g':p[4]==='o'?'o':p[4]==='w'?'p':'')});
+const lrow=(l)=>row({i:'globe',c:'c3',n:l[0],d:'→ '+l[1]+' · 확인 '+l[4],x:tag(l[2],l[3])});
+
+const V={
+'manage-home':[
+ {n:'A 숫자 타일',cap:'네 기능을 큰 타일로. 타일마다 개수·주의 배지, 아래 최근 바뀐 것.',r:m=>`<div class="${G(m,'g4')}">${[['character','c1','캐릭터','24','업데이트 2'],['layers','c3','모듈','12','켜짐 8'],['bolt','c5','플러그인','9','새 버전 1'],['globe','c2','ProtLink+','4','새 파일 1']].map(t=>box(t[1],`<div class="sh">${ico(t[0],t[1])}<h3 style="flex:1">${t[2]}</h3></div><div class="big2">${t[3]}</div>${tag(t[4],'o')}`)).join('')}</div>`+box('c1',H('history','c1','최근 바뀐 것')+[['검은 숲의 마녀','에셋 3개 추가','10분 전'],['상태창 HUD','켰어요','1시간 전'],['LBI','v1.5 나왔어요','오늘']].map(r=>row({n:r[0],d:r[1],x:`<span class="mut">${r[2]}</span>`})).join(''))},
+ {n:'B 할 일 먼저',cap:'“손볼 것” 카드가 맨 위(업데이트·새 파일·꺼진 모듈). 아래 바로가기 줄.',r:m=>box('c4',H('flag','c4','손볼 것 4','누르면 바로 처리해요')+[['character','검은 숲의 마녀 업데이트','ProtLink+에서 새 파일',cta('받기')],['bolt','LBI 1.5','플러그인 새 버전',btn('보기')],['bolt','Auto Translate','업데이트 확인 실패',btn('다시')],['layers','번역 보조','봇에 켰는데 모듈은 꺼짐',btn('켜기')]].map(r=>row({i:r[0],c:'c4',n:r[1],d:r[2],x:r[3]})).join(''))+plain(['character','layers','bolt','globe'].map((ic,k)=>row({i:ic,c:'c'+(k+1),n:TABS[MAN[k]].label,d:TABS[MAN[k]].desc,x:'›'})).join(''))},
+ {n:'C 통합 검색',cap:'큰 검색창 하나로 캐릭터·모듈·플러그인을 함께 찾기. 결과는 종류 배지.',r:m=>plain(`<div class="fl2"><span class="srch" style="font-size:15px;padding:13px 18px">⌕ 캐릭터·모듈·플러그인 한 번에 찾기</span></div><div class="chips" style="margin-top:10px"><span class="chip on">전체</span><span class="chip">캐릭터 24</span><span class="chip">모듈 12</span><span class="chip">플러그인 9</span><span class="chip">링크 4</span></div>`)+plain([['character','검은 숲의 마녀','캐릭터 · 판타지'],['layers','세계관: 아르덴','모듈 · 로어북 31'],['bolt','Risu Tracker','플러그인 · v0.8'],['character','하윤','캐릭터 · 일상']].map((r,k)=>row({i:r[0],c:'c'+(k%3+1),n:r[1],d:r[2],x:'›'})).join(''))},
+ {n:'D 두 단',cap:'왼쪽 기능 목록(개수), 오른쪽 즐겨찾기 캐릭터 카드 + 켜진 모듈 요약.',r:m=>`<div class="md"><div class="lst">${plain(MAN.map((id,k)=>row({i:TABS[id].icon,c:'c'+(k+1),n:TABS[id].label,x:`<span class="mut">${[24,12,9,4][k]}</span>`})).join(''))}</div><div class="det" style="display:flex;flex-direction:column;gap:16px">${box('c1',H('heart','c1','즐겨찾는 캐릭터')+`<div class="${G(0,'g3')}" style="${m?'grid-template-columns:1fr 1fr':''}">${BOTS.slice(0,3).map(b=>cbot(b)).join('')}</div>`)}${box('c3',H('layers','c3','켜진 모듈 3')+MODS.slice(0,3).map(x=>mrow(x)).join(''))}</div></div>`}
+],
+characters:[
+ {n:'A 폴더 + 목록',cap:'지금 구조 그대로 유리로: 왼쪽 폴더(색), 오른쪽 줄 목록·끌어 옮기기. 줄 누르면 메뉴.',r:m=>srch('캐릭터 이름, 제작자 검색',btn('새 폴더')+cta('가져오기'))+`<div class="md"><div class="lst" style="${m?'':'width:220px'}">${plain(`<div class="fold" style="background:rgba(106,174,255,.14)">전체 24</div>`+FOLD.map(f=>`<div class="fold"><i style="background:${f[1]};box-shadow:0 0 6px ${f[1]}"></i>${f[0]} <span class="sp"></span><span class="mut">${f[2]}</span></div>`).join(''))}</div><div class="det">${plain(BOTS.map(brow).join(''))}</div></div>`},
+ {n:'B 카드 갤러리',cap:'봇 이미지 카드 격자. 폴더는 위 칩, 카드에 업데이트 배지. 누르면 오른쪽 상세 패널.',r:m=>srch('캐릭터 이름, 제작자 검색',cta('가져오기'))+`<div class="chips"><span class="chip on">전체</span>${FOLD.map(f=>`<span class="chip">${f[0]}</span>`).join('')}<span class="chip">＋ 폴더</span></div><div class="md"><div class="det"><div class="grid" style="grid-template-columns:repeat(${m?2:3},1fr)">${BOTS.map(b=>cbot(b)).join('')}</div></div>${m?'':`<div class="lst">${box('c3',`<div class="ccard" style="--a1:#b07cff;--a2:#5b8cff;padding:0;background:none"><div class="cv"></div></div><h3 style="margin:10px 0 2px">검은 숲의 마녀</h3><div class="mut">숲지기 · 판타지 · 로어북 31 · 에셋 48</div>`+[['image','에셋 관리'],['note','편집'],['sparkle','AI로 다듬기'],['download','업데이트 가져오기'],['patch','패치 적용…']].map(r=>row({i:r[0],c:'c3',n:r[1],x:'›'})).join(''))}</div>`}</div>`},
+ {n:'C 폴더 칸반',cap:'폴더가 세로 칸. 카드를 칸 사이로 끌어 옮겨요(모바일은 폴더 접기 목록).',r:m=>srch('캐릭터 이름, 제작자 검색',btn('새 폴더'))+`<div class="kan">${FOLD.slice(0,3).map((f,k)=>`<div class="gl pad lane" style="border-top:3px solid ${f[1]}"><div class="fold"><i style="background:${f[1]}"></i>${f[0]}<span class="sp"></span><span class="mut">${f[2]}</span></div>${BOTS.filter(b=>b[4]===f[0]).map(b=>`<div class="mini"><span class="av" style="--a1:${b[2]};--a2:${b[3]};width:32px;height:32px;font-size:12px">${b[0][0]}</span><div class="rt"><b>${b[0]}</b><div class="mut">${b[1]}</div></div>${b[5]?tag('업데이트','o'):''}</div>`).join('')}<div class="mut" style="text-align:center;padding:6px;border:1px dashed var(--line);border-radius:10px">여기로 끌어 놓기</div></div>`).join('')}</div>`},
+ {n:'D 선택 + 작업대',cap:'왼쪽 목록에서 고르면 오른쪽에 작업대 탭(정보·에셋·로어북·기록). 메뉴 대신 화면 안에서.',r:m=>srch('캐릭터 이름, 제작자 검색')+`<div class="md"><div class="lst">${plain(BOTS.slice(0,5).map((b,k)=>`<div class="li ${k?'':'on'}"><span class="av" style="--a1:${b[2]};--a2:${b[3]};width:34px;height:34px;font-size:13px">${b[0][0]}</span><div class="rt"><b>${b[0]}</b><div class="mut">${b[4]}</div></div></div>`).join(''))}</div><div class="det">${box('c3',`<div class="hero"><span class="av big" style="--a1:#b07cff;--a2:#5b8cff">마</span><div class="rt"><div class="htt">검은 숲의 마녀</div><div class="mut">숲지기 · 판타지 폴더</div></div>${cta('편집')}</div><div class="stabs" style="margin-top:14px"><span class="on">정보</span><span>에셋 48</span><span>로어북 31</span><span>기록</span><span>업데이트</span></div>`+[['에셋 크기','12.4MB',meter(62)],['중복 에셋','3개',btn('정리')],['마지막 수정','10분 전 · 에셋 3개 추가',''],['내 수정만 내보내기','.rbupatch',btn('내보내기')]].map(r=>row({n:r[0],d:r[1],x:r[2]})).join(''))}</div></div>`}
+],
+modules:[
+ {n:'A 순서 목록',cap:'지금 구조 그대로: 번호 + 끌기 손잡이 + 켜짐 글자·스위치. 줄 누르면 펼침.',r:m=>srch('모듈 이름, 로어북 키워드 검색',btn('필터')+cta('파일 가져오기'))+plain(MODS.map((x,i)=>`<div class="row"><span class="num">${i+1}</span><span class="grip">⋮⋮</span><div class="rt"><div class="rn">${x[0]}</div><div class="rd">${x[1]} · ${x[3]}</div></div><span class="mut" style="font-size:12px">${x[2]?'켜짐':'꺼짐'}</span>${sw(x[2])}</div>`+(i===1?`<div style="padding:0 0 12px 46px" class="fl2">${btn('편집')}${btn('연결 설정…')}${btn('에셋 관리')}${btn('기록 보기')}${btn('.risum으로 내보내기')}${btn('삭제',1)}</div>`:'')).join(''))},
+ {n:'B 켜짐/꺼짐 두 칸',cap:'켜진 모듈(순서대로)과 꺼진 모듈을 나눠서. 칸 사이로 끌면 켜고 꺼요.',r:m=>srch('모듈 이름, 로어북 키워드 검색')+`<div class="${G(m,'g2')}">${box('c2',H('eye','c2','켜짐 3','위에서부터 적용돼요')+MODS.filter(x=>x[2]).map((x,i)=>row({n:`<span class="grip">⋮⋮</span> ${i+1}. ${x[0]}`,d:x[1]+' · '+x[3]})).join(''))}${box('c4',H('layers','c4','꺼짐 2','끌어 올리면 켜져요')+MODS.filter(x=>!x[2]).map(x=>row({n:x[0],d:x[1]})).join(''))}</div>`},
+ {n:'C 적용 범위 기준',cap:'“어디에 켜졌나”로 묶기: 전역 / 봇별 / 채팅별. 범위 칩을 누르면 연결 설정.',r:m=>srch('모듈 이름, 로어북 키워드 검색')+[['globe','c1','전역','모든 채팅',[0,2]],['character','c3','봇별','봇 2개',[1]],['note','c5','채팅별','채팅 1개',[4]],['layers','c4','꺼짐','',[3]]].map(g=>box(g[1],H(g[0],g[1],g[2],g[3])+g[4].map(i=>mrow(MODS[i])).join(''))).join('')},
+ {n:'D 목록 + 상세',cap:'왼쪽 순서 목록, 오른쪽 상세(로어북·정규식·에셋 탭에서 바로 고치기).',r:m=>`<div class="md"><div class="lst">${srch('검색')}${plain(MODS.map((x,i)=>`<div class="li ${i===1?'on':''}"><span class="num">${i+1}</span><div class="rt"><b>${x[0]}</b><div class="mut">${x[3]}</div></div>${sw(x[2])}</div>`).join(''))}</div><div class="det">${box('c3',`<div class="hero">${ico('layers','c3')}<div class="rt"><div class="htt">세계관: 아르덴</div><div class="mut">봇 2개에 켜짐 · 로어북 31</div></div>${btn('연결 설정…')}</div><div class="stabs" style="margin-top:14px"><span>정보</span><span class="on">로어북 31</span><span>정규식 0</span><span>에셋</span><span>기록</span></div>`+[['아르덴 왕국','키: 아르덴, 왕국'],['검은 숲','키: 숲, 마녀'],['성기사단','키: 기사, 성기사']].map(r=>row({n:r[0],d:r[1],x:btn('고치기')})).join(''))}</div></div>`}
+],
+plugins:[
+ {n:'A 카테고리 묶음',cap:'카테고리별 접는 카드. 줄마다 버전·상태 배지, 위에 새로고침·전체 백업.',r:m=>srch('플러그인 이름, 카테고리 검색',btn('새로고침')+btn('전체 백업')+cta('파일에서 등록'))+[['도구','c1',[0,2]],['프롬프트','c3',[1]],['번역','c5',[3]],['미분류','c4',[4]]].map(g=>box(g[1],H('bolt',g[1],g[0],g[2].length+'개')+g[2].map(i=>prow(PLUG[i])).join(''))).join('')},
+ {n:'B 업데이트 먼저',cap:'맨 위 “새 버전·문제” 띠, 아래 전체 표(이름·카테고리·버전·상태).',r:m=>box('c4',H('download','c4','새 버전 1 · 확인 실패 1','',cta('모두 확인'))+[PLUG[1],PLUG[3]].map(prow).join(''))+plain(`<table style="width:100%;border-collapse:collapse;font-size:13px">${['<tr style="color:var(--mute)"><td>이름</td><td>카테고리</td><td>버전</td><td></td></tr>',...PLUG.map(p=>`<tr style="border-top:1px solid var(--rl)"><td style="padding:10px 0"><b>${p[0]}</b></td><td>${tag(p[1])}</td><td class="mut">${p[2]}</td><td>${btn('⋯')}</td></tr>`)].join('')}</table>`)},
+ {n:'C 타일 + 만들기',cap:'플러그인 타일 격자, 마지막 칸은 “플러그인 만들기(템플릿)”. DA Interop 줄은 아래.',r:m=>srch('플러그인 이름, 카테고리 검색')+`<div class="grid" style="grid-template-columns:repeat(${m?2:4},1fr)">${PLUG.map((p,k)=>`<div class="tile">${ico('bolt','c'+(k%5+1),1)}<b>${p[0]}</b><span class="mut">${p[1]} · ${p[2]}</span>${tag(p[3],p[4]===1?'g':p[4]==='o'?'o':p[4]==='w'?'p':'')}</div>`).join('')}<div class="tile" style="border:1px dashed var(--line);background:none;align-items:center;justify-content:center">${ico('plus','c2')}<b>플러그인 만들기</b><span class="mut">템플릿으로 시작</span></div></div>`+box('c2',row({i:'route',c:'c2',n:'DA Interop',d:'다른 플러그인과 설정 주고받기',x:btn('연동 설정 열기')}))},
+ {n:'D 목록 + 코드',cap:'왼쪽 목록, 오른쪽 상세(메타·글로벌 프리셋·코드 수정·백업 복원).',r:m=>`<div class="md"><div class="lst">${srch('검색')}${plain(PLUG.map((p,k)=>`<div class="li ${k===1?'on':''}"><div class="rt"><b>${p[0]}</b><div class="mut">${p[1]} · ${p[2]}</div></div>${p[4]==='o'?'<span class="dot warn"></span>':''}</div>`).join(''))}</div><div class="det">${box('c3',`<div class="hero">${ico('bolt','c3')}<div class="rt"><div class="htt">LBI</div><div class="mut">프롬프트 · v1.4 → 1.5 있음</div></div>${cta('업데이트')}</div><div class="stabs" style="margin-top:14px"><span class="on">정보</span><span>글로벌 프리셋</span><span>코드</span><span>백업</span></div>`+[['카테고리',val('프롬프트')],['메타데이터 정리',btn('정리')],['중복 정리',btn('찾기')],['내보내기',btn('파일로')],['삭제',btn('삭제',1)]].map(r=>row({n:r[0],x:r[1]})).join(''))}</div></div>`}
+],
+protlink:[
+ {n:'A 링크 목록',cap:'지금 구조: 위 링크 추가, 아래 연결된 링크 줄(대상·상태·지금 확인).',r:m=>box('c3',H('plus','c3','링크 추가','Proton Drive 공유 링크를 붙여 넣어요')+`<div class="fl2"><span class="srch">https://drive.proton.me/urls/…</span>${cta('확인')}</div>`)+plain(H('globe','c1','연결된 링크 4','',btn('모두 지금 확인'))+LINKS.map(lrow).join(''))},
+ {n:'B 흐름 보이기',cap:'새 파일 있는 링크를 위에 크게: 확인 → 영향 미리보기 → 백업 → 적용 단계 표시.',r:m=>box('c4',H('download','c4','마녀 봇 배포 — 새 파일','검은 숲의 마녀 · v1.4.risum')+`<div class="flow" style="margin:10px 0"><span class="st2 on">① 새 파일</span>›<span class="st2">② 영향 미리보기</span>›<span class="st2">③ 백업</span>›<span class="st2">④ 적용</span></div>${cta('받아서 업데이트')}`)+plain(LINKS.slice(1).map(lrow).join(''))+`<div class="${G(m,'g2')}">${box('c2',row({i:'bolt',c:'c2',n:'시작할 때 확인',x:sw(1)}))}${box('c1',row({i:'home',c:'c1',n:'홈 위젯',d:'위젯 홈에서 보기',x:sw(1)}))}</div>`},
+ {n:'C 항목 기준',cap:'링크가 아니라 “캐릭터·모듈·플러그인” 기준으로 묶어 연결 상태 보기.',r:m=>[['character','c1','캐릭터',[0,3]],['layers','c3','모듈',[1]],['bolt','c5','플러그인',[2]]].map(g=>box(g[1],H(g[0],g[1],g[2],'',btn('＋ 연결'))+g[3].map(i=>lrow(LINKS[i])).join(''))).join('')},
+ {n:'D 타임라인',cap:'확인·받기 기록을 시간 순서로. 오른쪽(모바일 위) 링크 요약.',r:m=>`<div class="md"><div class="det">${plain(H('history','c1','최근 일')+`<div class="tl">${[['#ff8a5c','마녀 봇 배포','새 파일 v1.4 발견','2시간 전'],['#5fe0a8','HUD 모듈','업데이트 적용 · 백업 만듦','어제'],['#6aaeff','LBI 배포','변화 없음','3일 전'],['#b07cff','탐정 v2','링크 추가 · 연결 대기','방금']].map(e=>`<div class="ev" style="--c:${e[0]}"><b>${e[1]}</b> <span class="mut">${e[3]}</span><div class="mut">${e[2]}</div></div>`).join('')}</div>`)}</div><div class="lst">${box('c3',`<div class="stat"><div class="st"><b>4</b><span>링크</span></div><div class="st"><b>1</b><span>새 파일</span></div></div><div style="margin-top:12px">${cta('링크 추가',1)}</div>`)}</div></div>`}
+],
+settings:[
+ {n:'A 왼쪽 목차',cap:'왼쪽 목차(화면·백업·업데이트·서버·이야기 도우미·로어북·정리), 오른쪽 그 항목만.',r:m=>`<div class="md"><div class="side">${[['eye','화면'],['download','백업'],['history','업데이트'],['network','서버'],['sparkle','이야기 도우미'],['book','로어북 · 채팅 메뉴'],['broom','정리 · 기록'],['info','도움말']].map((s,k)=>`<div class="sn ${k?'':'on'}">${I(s[0])}${s[1]}</div>`).join('')}</div><div class="det" style="display:flex;flex-direction:column;gap:16px">${box('c1',H('eye','c1','화면')+[['화면 모드',seg(['간단','고급'],0)],['글래스 화면',sw(1)],['가벼운 화면','저사양 기기용',sw(0)],['테마',val('Dusk 황혼')]].map(r=>row(r.length>2?{n:r[0],d:r[1],x:r[2]}:{n:r[0],x:r[1]})).join(''))}${box('c2',H('download','c2','백업','마지막: 3일 전',cta('지금 백업'))+row({n:'세이브 백업',x:btn('되돌리기')}))}</div></div>`},
+ {n:'B 한 장 스크롤',cap:'카드를 위에서 아래로 한 장에. 각 카드 색띠, 고급 항목은 “고급” 배지로 접힘.',r:m=>[['eye','c1','화면',[['화면 모드',seg(['간단','고급'],0)],['글래스 화면',sw(1)],['가벼운 화면',sw(0)]]],['download','c2','백업',[['전체 백업',btn('지금')],['세이브 백업',btn('되돌리기')]]],['history','c3','업데이트',[['새 봇 자동으로 잡기',sw(1)],['시작할 때 확인',sw(1)]]],['network','c4','서버 · Dusk Cellar',[['Cellar 주소',val('끔')]]]].map(g=>box(g[1],H(g[0],g[1],g[2])+g[3].map(r=>row({n:r[0],x:r[1]})).join(''))).join('')+plain([['sparkle','이야기 도우미'],['book','로어북 · 채팅 메뉴'],['broom','정리 · 기록']].map(r=>row({i:r[0],c:'c5',n:r[1]+' '+tag('고급','b'),x:'⌄'})).join(''))},
+ {n:'C 상황별 타일',cap:'“이럴 땐 여기로”를 타일로: 색·글자 / 꼬였어요 / 기기 옮기기 / 자동 잡기. 아래 전체 설정.',r:m=>`<div class="grid" style="grid-template-columns:repeat(${m?2:4},1fr)">${[['palette','c3','색·글자 크기','플러그인 꾸미기'],['undo','c4','모듈이 꼬였어요','기록 · 되돌리기'],['download','c2','다른 기기로','백업 만들기'],['bolt','c1','새 봇 자동','업데이트 설정']].map(t=>`<div class="tile">${ico(t[0],t[1])}<b>${t[2]}</b><span class="mut">${t[3]} ›</span></div>`).join('')}</div>`+box('c1',H('sliders','c1','전체 설정')+[['화면 모드',seg(['간단','고급'],1)],['글래스 · 가벼운 화면',`${sw(1)} ${sw(0)}`],['백업','3일 전 '+btn('지금')],['Dusk Cellar',tag('연결 안 됨')]].map(r=>row({n:r[0],x:r[1]})).join(''))},
+ {n:'D 위쪽 탭',cap:'위쪽 탭 4개(일반·백업·업데이트·고급)로 나눠서 한 번에 한 묶음만.',r:m=>plain(`<div class="stabs"><span class="on">일반</span><span>백업</span><span>업데이트</span><span>고급</span></div>`+[['eye','c1','화면 모드',seg(['간단','고급'],0)],['layers','c2','글래스 화면',sw(1)],['bolt','c4','가벼운 화면',sw(0)],['palette','c3','테마',val('Dusk 황혼')],['type','c5','글자 크기',val('15px')]].map(r=>row({i:r[0],c:r[1],n:r[2],x:r[3]})).join(''))+box('c2',row({i:'network',c:'c2',n:'Dusk Cellar',d:'백그라운드 서버(선택)',x:tag('끔')}))}
+]};
+
+let cur='manage-home',vi=0;
+const draw=()=>{
+ const t=TABS[cur],v=V[cur][vi];
+ document.getElementById('tabs').innerHTML=ORDER.map(id=>`<button class="${id===cur?'on':''}" data-t="${id}">${TABS[id].label}</button>`).join('');
+ document.getElementById('vars').innerHTML=V[cur].map((x,k)=>`<button class="${k===vi?'on':''}" data-v="${k}">${x.n}</button>`).join('');
+ document.getElementById('cap').textContent=v.cap;
+ document.getElementById('pc').innerHTML=rail(cur)+`<div class="main">${header(t,0)}${v.r(0)}<div class="foot">? 도움말 · 기능 찾기 · 처음 둘러보기 유지</div></div>`;
+ document.getElementById('mo').innerHTML=`<div class="main">${header(t,1)}${subchips(cur)}${v.r(1)}</div>${tabbar(cur)}`;
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-t],[data-v]');if(!b)return;if(b.dataset.t){cur=b.dataset.t;vi=0}else vi=+b.dataset.v;draw();});
+draw();
+</script>
+</body></html>

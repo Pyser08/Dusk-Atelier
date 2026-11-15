@@ -4,7 +4,11 @@
 // 못 찾으면 그냥 '없음' — 다른 기능은 지금처럼 동작한다(Cellar는 선택 기능).
 export const CELLAR_URL_KEY = "dusk.cellar.url";
 export const CELLAR_DEFAULT_URL = "http://127.0.0.1:6011";
-const TIMEOUT = 4000, TTL = 60e3, FAIL_TTL = 3e3;   // 못 찾은 결과는 3초만 기억한다(켜자마자 못 찾았다가 계속 '없음'으로 남지 않게)
+const TIMEOUT = 10000, TTL = 60e3, FAIL_TTL = 3e3;   // 못 찾은 결과는 3초만 기억한다(켜자마자 못 찾았다가 계속 '없음'으로 남지 않게)
+// 2.2.0: 리스 프록시(/proxy2)를 거치면 휴대폰·원격 서버에서 4초를 자주 넘겨서 10초로. 한 번 연결된 뒤에는
+// 연속 DOWN_AFTER번 실패해야 '없음'으로 바꾼다(잠깐 느려진 것 하나로 기억 저장이 플러그인 쪽으로 돌아가지 않게).
+export const DOWN_AFTER = 3;
+const RETRY_TTL = 5e3;   // 연결된 상태에서 실패했을 때 다시 확인하는 간격
 
 // 켜고 끄기: 끄면 주소를 찾으러 가지도, 요청을 보내지도 않는다(기본은 켜짐)
 export const CELLAR_ON_KEY = "dusk.cellar.on";
@@ -70,15 +74,28 @@ export async function cellarRequest(api, { url, via = "native" }, path, { method
 
 // 화면이 여러 번 물어도 1분에 한 번만 실제로 확인한다. 동시에 물으면 한 번만 보낸다.
 export function createCellar(api, { now = () => Date.now() } = {}) {
-  let last = null, at = 0, pending = null, fails = 0;
+  let last = null, at = 0, pending = null, fails = 0, good = null;   // good: 마지막으로 연결됐던 결과
+  const ttl = () => (last.ok ? (last.retrying ? RETRY_TTL : TTL) : Math.min(FAIL_TTL * 2 ** Math.max(0, fails - 1), 60e3));
   return {
     peek: () => last,
     async status({ fresh = false } = {}) {
-      if (!fresh && last && now() - at < (last.ok ? TTL : Math.min(FAIL_TTL * 2 ** Math.max(0, fails - 1), 60e3))) return last;
+      if (!fresh && last && now() - at < ttl()) return last;
       if (pending) return pending;
-      pending = (async () => { try { const url = await loadCellarUrl(api); last = await probeCellar(api, url); at = now(); fails = last.ok ? 0 : fails + 1; return last; } finally { pending = null; } })();
+      pending = (async () => {
+        try {
+          const url = await loadCellarUrl(api);
+          const r = await probeCellar(api, url);
+          at = now();
+          if (r.ok) { fails = 0; good = r; last = r; return last; }
+          fails++;
+          // 연결돼 있던 같은 주소면 몇 번은 '연결됨(다시 확인 중)'으로 둔다. 꺼 둔 경우·주소가 바뀐 경우는 바로 반영
+          last = !r.off && good && good.url === r.url && fails < DOWN_AFTER ? { ...good, retrying: true, error: r.error } : r;
+          if (!last.ok) good = null;
+          return last;
+        } finally { pending = null; }
+      })();
       return pending;
     },
-    forget() { last = null; at = 0; fails = 0; },
+    forget() { last = null; at = 0; fails = 0; good = null; },
   };
 }

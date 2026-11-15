@@ -5,8 +5,10 @@
 | 작업 | 먼저 읽을 파일 |
 |---|---|
 | 앱 진입·훅 등록 | `src/main.js` |
-| 메뉴·탭 구성 | `src/ui/tabs.js`, `src/ui/app.js` |
-| 홈 화면 | `src/ui/screens/home.js` |
+| 메뉴·탭 구성 | `src/ui/tabs.js`, `src/ui/app.js`(사이드바 섹션 접기·레일·⋯ 메뉴·위쪽 메뉴 알약·모바일 탭바·검색 칸 옮겨 붙이기), 모양 `src/ui/navcss.js`, e2e `tests/e2e/run-nav.mjs` |
+| 홈 화면 | `src/ui/screens/home.js`(위젯 내용), 격자 `src/ui/homegrid.js`(배치 계산)·`src/ui/screens/homegridui.js`(끌기·크기)·`homegridcss.js`, 둘러보기 `src/ui/screentours.js`, e2e `run-home-grid.mjs` |
+| 글래스 화면·테마 | `src/ui/glasscss.js`(토큰·유리 카드·팝업·밝은 판), `src/ui/glassthemes.js`(22종), 적용 `app.js` applyTheme, 고르기 `src/ui/lookparts.js`·`screens/settings.js`, 시험 `tests/glassthemes.test.js`·e2e `run-glass-theme.mjs` |
+| 탭 이동 경합(늦게 끝난 화면) | `src/ui/staleguard.js`, `src/ui/dom.js` clear, e2e `run-tab-race.mjs` |
 | 위젯 홈(켜고 끄기·수명) | `src/data/widgethome.js`, 설정 카드 `src/ui/screens/devtools.js` `widgetHomeCard`, 테스트 `tests/widgethome-ctrl.test.js` |
 | 위젯 홈 화면·자동 열기·음악·배치 | `src/widgethome/home.js`(원본 view.js), `src/widgethome/lib/*.cjs`, `style.js`, 테스트 `tests/widgethome-*.test.cjs`, e2e `tests/e2e/run-widgethome.mjs` |
 | 프로바이더(요청 만들기·해독·키·사슬·예산) | `src/engine/provider/*`(순수), `src/data/provider/runner.js`·`index.js`, 테스트 `tests/provider-*.test.js` |
@@ -28,7 +30,7 @@
 | 모듈 호환(모듈 이미지가 봇 이미지처럼) | `src/engine/modcompat.js`(태그 모양 학습·등록부·지키기·그리기, 순수), `src/engine/modcompatprompt.js`(모델 안내), `src/data/modcompat.js`(훅·캐시·진단), `src/ui/screens/modcompat.js`, `addons/modcompat/index.js` — 전부 애드온 전용 |
 | AI로 봇 만들기 | `src/ui/screens/aibuild.js`, `src/ui/screens/newbot.js` |
 | 테마 빌더/꾸미기 | `src/ui/screens/themebuilder.js`, `src/ui/screens/chattheme.js`, `src/ui/theme.js` |
-| Erosync(NSFW 장면 강화, 격리 이식) | `src/erosync/erosync.js`(본체, 원본 그대로·고치지 말고 비교만), `src/data/erosync.js`(켜기/끄기), `src/ui/screens/memory/erosyncui.js`(기억 설정 카드) · 위키/관계도 연동: `src/engine/erosyncview.js`, `src/ui/screens/memory/erosyncwiki.js`(+`personv2.js`), `src/ui/screens/relmap.js`(Erosync 층 칩) |
+| Erosync(NSFW 장면 강화, 격리 이식) | `src/erosync/erosync.js`(본체, 원본 그대로·고치지 말고 비교만), `src/data/erosync.js`(켜기/끄기), `src/ui/screens/memory/erosyncui.js`(기억 설정 카드) · 매 턴 계산: `src/erosync/turnupdate.js`, `src/data/erosyncturn.js`, `src/ui/screens/memory/erosyncturnui.js`(HandOff/EROSYNC-TURN.md) · 위키/관계도 연동: `src/engine/erosyncview.js`, `src/ui/screens/memory/erosyncwiki.js`(+`personv2.js`), `src/ui/screens/relmap.js`(Erosync 층 칩) |
 | 플러그인 탭·DA Interop | `src/data/plugins.js`, `src/data/interopSnippet.js`, `src/ui/screens/plugins.js` |
 | 플러그인 코드 수정(Cellar가 대신 고침, RisuBard) | `src/data/cellarplugins.js`, `src/ui/screens/pluginedit.js`, `src/ui/screens/plugins.js`(행 메뉴), Cellar 저장소 `plugins.cjs` |
 | 플러그인 매니저 기능(켜기/끄기·별칭·순서·삭제·등록·중복·백업복원·프리셋·메타·스토리지 편집) | `src/data/pluginmgr.js`, `storagemgr.js`, `ui/screens/pluginmgr.js`, `storageedit.js`, `plugins.js`, Cellar `plugins.cjs` mutate | tests/pluginmgr·storagemgr, e2e run-pluginmgr |

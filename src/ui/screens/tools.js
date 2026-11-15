@@ -39,14 +39,15 @@ export function renderTools(ctx) {
   }
 
   // 1.8.3(목업 5): 같은 크기 타일 7개 → '자주 쓰는 도구 3' + '확인·복구 4' 목록. 도움 주신 분들은 이름·한 줄 설명만(원문 글 링크 없음).
+  // 2.2.0 3번 목업 A: 큰 아이콘 타일. 묶음 이름(자주 쓰는 도구 · 확인·복구)은 타일 줄 위 작은 제목으로 남긴다.
+  const TK = { palette: "look", preset: "fix", image: "make", book: "fix", size: "pin", info: "link", download: "fix", history: "look" };
   const row = (ic, title, desc, onClick, id) => h(
     "button",
-    { type: "button", class: "rb-srow rb-toolrow", onClick, id },
-    h("span", { class: "ico", "aria-hidden": "true" }, icon(ic, 18)),
-    h("span", { class: "t" }, title, h("small", null, desc)),
-    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))
+    { type: "button", class: ["rb-toolrow", "rb-tooltile", `k-${TK[ic] ?? "fix"}`], onClick, id },
+    h("span", { class: "ico", "aria-hidden": "true" }, icon(ic, 20)),
+    h("b", null, title), h("small", null, desc)
   );
-  const group = (title, ...rows) => h("section", { class: "rb-card bordered rb-scard rb-toolgrp" }, h("span", { class: "h" }, title), ...rows);
+  const group = (title, ...rows) => h("section", { class: "rb-toolgrp rb-tooltiles" }, h("span", { class: "h" }, title), h("div", { class: "grid" }, ...rows.filter(Boolean)));
   const content = h(
     "div",
     { class: "rb-section rb-tools3", style: "flex:1;min-width:0" },

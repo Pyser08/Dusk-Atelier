@@ -3,6 +3,7 @@
 import { createErosync } from "../../src/data/erosync.js";
 import { runAI } from "../../src/engine/runai.js";
 import { parseStatus as parseStoryStatus } from "../../src/engine/storytime.js";
+import { createErosyncTurn } from "../../src/data/erosyncturn.js";
 
 export async function activate(api, ctx) {
   const ext = ctx.ext, app = ctx.app;
@@ -14,7 +15,11 @@ export async function activate(api, ctx) {
     // AI 호출은 Dusk 모델 설정(‘자체 AI 작업’ → 없으면 리스 보조 모델)으로. Dusk 사용자 프롬프트는 끼우지 않는다.
     host: { runAI: (messages, role, signal) => runAI(api, messages, { stage: `erosync-${role}`, noUserPrompts: true }, signal),
       storyStatus: (text, prevDate) => (app.storyTime?.isOn?.() ? parseStoryStatus(text, { date: prevDate || "", time: "", place: "" }) : null) } });
-  const off = [ext.add("svc", "erosync", erosync)];
+  // 매 턴 계산: 장기기억 기록기가 턴을 기록하면 그 인물만 갱신(장기기억 애드온이 먼저 켜져 있어야 함 — requires memory)
+  const turn = createErosyncTurn(api, { erosync, log });
+  const tryAttach = () => turn.attach(app.memory?.flow);
+  tryAttach();
+  const off = [ext.add("svc", "erosync", erosync), ext.add("svc", "erosyncTurn", Object.assign(turn, { tryAttach })), () => turn.detach()];
   erosync.boot().catch((e) => log(`Erosync 시작 실패 ${e?.message ?? e}`));
   return { async deactivate() { off.forEach((f) => f()); await erosync.stop?.().catch?.(() => {}); } };
 }

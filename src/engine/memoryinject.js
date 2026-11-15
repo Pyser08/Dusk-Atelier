@@ -81,7 +81,7 @@ export function pastScenes(older, recentText, capTokens, { max = 2 } = {}) {
 // ctx: {messageCount, recentText, settings:{targetTokens,capTokens,sceneTokens,recentSkip}}
 export function buildBlock(folder, { messageCount = 0, recentText = "", settings = {}, messages = null, focus = null, storyNow = "", sem = null, semMin = 0.32 } = {}) {
   const target = settings.targetTokens ?? 2000, cap = settings.capTokens ?? 8000, sceneCap = settings.sceneTokens ?? 300, skip = settings.recentSkip ?? 8;
-  const manifest = { included: [], excluded: [], tokens: 0, recordIds: [] }, plus = settings.plus !== false;
+  const manifest = { included: [], excluded: [], tokens: 0, recordIds: [], trimmedIds: [] }, plus = settings.plus !== false;
   const human = plus && settings.human !== false, cool = settings.cool !== false;   // v1.8.3 사람다운 기억(관계 진도·재등장·이전·흐려짐·호칭·추억) · 감정 식기
   const scenes = (folder.scenes ?? []).filter((s) => !s.orphan);
   const cur = scenes.at(-1);
@@ -156,6 +156,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
         if (used + k + 4 <= limit) { fit = { text: t, tokens: k, ids: rest.map((x) => x.id) }; break; }
       }
       if (!fit) { manifest.excluded.push({ kind: "person", name: c.name, tokens: c.tokens, reason: "budget" }); continue; }
+      for (const id of c.ids) if (!fit.ids.includes(id)) manifest.trimmedIds.push(id);   // 예산에 맞추려고 뺀 기록(기억 화면 '예산 제한'으로 센다)
       ({ text, tokens, ids } = fit);
     }
     if (!chars.length) used += headTok;   // 제목 줄도 전체 상한에 센다(뒤 칸들이 상한을 넘지 않게)
@@ -196,7 +197,8 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
 }
 
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
-// messages 사본에 블록을 삽입(이미 있으면 교체). position: "beforeLastUser" | "afterSystem"
+// messages 사본에 블록을 삽입(이미 있으면 교체). position: "end" | "beforeLastUser" | "afterSystem"
+// end(2.2.0 기본): 최종 프롬프트 맨 뒤. 끝에 어시스턴트 미리 채우기(prefill)가 있으면 그 앞에 넣어 이어 쓰기를 깨지 않는다.
 // v1.8.1 자리표시자: 프롬프트(프리셋·로어북 등)에 [Dusk.memory]를 적어 두면 그 자리에 블록이 들어간다.
 // 첫 번째로 찾은 곳만 채우고 나머지는 지운다. 블록이 비어도 글자가 새지 않게 지운다. 원본 요청은 바꾸지 않는다.
 export const PLACEHOLDER = "[Dusk.memory]";
@@ -211,13 +213,14 @@ function fillPlaceholder(list, text) {
   });
   return { out, found, filled };
 }
-export function insertBlock(messages, text, position = "beforeLastUser") {
+export function insertBlock(messages, text, position = "end") {
   const list = (Array.isArray(messages) ? messages : []).filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(MARKER)));
   const ph = fillPlaceholder(list, text);
   if (ph.found) return ph.out;  // 자리표시자가 있으면 위치 설정보다 우선
   const block = { role: "system", content: text };
   let at;
-  if (position === "afterSystem") { at = 0; while (at < list.length && list[at]?.role === "system") at++; }
+  if (position === "end") { at = list.length; while (at > 0 && list[at - 1]?.role === "assistant") at--; if (at === 0) at = list.length; }
+  else if (position === "afterSystem") { at = 0; while (at < list.length && list[at]?.role === "system") at++; }
   else { at = -1; for (let i = list.length - 1; i >= 0; i--) if (list[i]?.role === "user") { at = i; break; } if (at < 0) at = list.length; }
   return [...list.slice(0, at), block, ...list.slice(at)];
 }

@@ -4,12 +4,26 @@ import { h } from './dom.js';
 import { segmented, toggleRow } from './kit.js';
 import { ACCENT_GROUPS, DIRECTIONS, EDGES, FONTS, GRADIENTS, ICONWS, LINEHS, MODES, PATTERNS, ROUNDS, SHADOWS, THEME_SETS, WEIGHTS } from './themekit.js';
 import { PRESETS, applySet, randomSet } from './theme.js';
+import { GLASS_THEMES, glassSwatch } from './glassthemes.js';
 
 // 글자 크기 빠른 선택(퍼센트). 세밀한 값은 고급의 '확대율' 막대로.
 export var SIZE_CHOICES = [["90", "작게"], ["100", "보통"], ["110", "크게"], ["130", "아주 크게"]];
 export var sizeOf = (zoom) => zoom >= 125 ? "xl" : zoom >= 105 ? "l" : "m";
 
-export function lookParts({ get, set }) {
+export function lookParts({ get, set: rawSet }) {
+  // 색을 직접 고르면(테마 묶음·강조 색·그라데이션·직접 색) 글래스 테마는 '내 강조색'으로 바꿔 고른 색이 보이게 한다
+  const COLOR_KEYS = ["a", "b", "set", "preset", "grad", "cBg", "cCard", "cText", "cSide"];
+  const set = (patch) => {
+    const cur = get();
+    // 부분 패치(강조 색·그라데이션·직접 색 버튼)는 누르기만 해도, 테마 전체(테마 묶음)는 색이 실제로 바뀔 때만
+    const partial = patch && !("v" in patch);
+    const colorChanged = patch && COLOR_KEYS.some((k) => k in patch && (partial || patch[k] !== cur[k]));
+    return rawSet(colorChanged && (!("gtheme" in patch) || patch.gtheme === cur.gtheme) ? { ...patch, gtheme: "mine" } : patch);
+  };
+  // ── 글래스 테마 6종 + 내 강조색(2.2.0) ──
+  const glassBtns = [...GLASS_THEMES.map((g) => h("button", { type: "button", class: "rb-gpick", dataset: { id: g.id }, "aria-label": `${g.name} 글래스 테마`, onClick: () => rawSet({ gtheme: g.id, skin: "glass" }) }, h("i", { style: { background: glassSwatch(g) } }), g.name)),
+    h("button", { type: "button", class: "rb-gpick", dataset: { id: "mine" }, "aria-label": "내 강조색 글래스 테마", onClick: () => rawSet({ gtheme: "mine", skin: "glass" }) }, h("i", { class: "mine" }), "내 강조색")];
+  const glass = h("div", { class: "rb-gpicks", role: "group", "aria-label": "글래스 테마" }, glassBtns);
   const press = (nodes, on) => nodes.forEach((b) => b.setAttribute("aria-pressed", on(b) ? "true" : "false"));
 
   // ── 테마 묶음 12 + 🎲 아무거나 ──
@@ -85,11 +99,15 @@ export function lookParts({ get, set }) {
   // motion은 'reduce'/'normal' 문자열이라 따로 처리
   const motion = toggleRow("움직임 줄이기", "화면 전환과 반짝임을 줄여요.", get().motion === "reduce", (on) => set({ motion: on ? "reduce" : "normal" }));
   shapeMore.push(motion);
+  // 2.2.0 글래스 화면: 어두운 모드에서 빛 번짐 배경 + 유리 카드. 가벼운 화면 = 블러·발광 끔(저사양 기기)
+  shapeMore.push(toggleRow("글래스 화면", "어두운 모드에서 빛 번짐 배경과 유리 카드로 보여요.", get().skin !== "classic", (on) => set({ skin: on ? "glass" : "classic" })));
+  shapeMore.push(toggleRow("가벼운 화면", "흐림·발광 효과를 꺼서 느린 기기에서 가볍게 보여요.", get().lite === true, (on) => set({ lite: on })));
   // 시작 안내처럼 간단히 보여 줄 땐 full:false (모서리·그림자·글꼴·바탕 무늬만)
   const shape = ({ full = true } = {}) => h("div", { class: "rb-shape" }, shapeBasic, full ? shapeMore : null);
 
   function paint() {
     const t = get();
+    press(glassBtns, (b) => t.skin === "glass" && b.dataset.id === t.gtheme);
     press(setBtns, (b) => b.dataset.id === t.set);
     press(accBtns, (b) => !t.grad && b.dataset.id === t.preset);
     press(gradBtns, (b) => b.dataset.id === t.grad);
@@ -102,5 +120,5 @@ export function lookParts({ get, set }) {
     motion.querySelector("[role=switch]")?.setAttribute("aria-checked", t.motion === "reduce" ? "true" : "false");
     modeNote.textContent = modeNotes[t.mode] ?? "";
   }
-  return { sets, accents, grads, dirSeg, modeSeg, modeNote, sizeSeg, shape, paint, field };
+  return { glass, sets, accents, grads, dirSeg, modeSeg, modeNote, sizeSeg, shape, paint, field };
 }

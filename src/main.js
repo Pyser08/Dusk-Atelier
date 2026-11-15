@@ -245,6 +245,7 @@ async function start() {
   app.ctx.onClosed = () => wh()?.resume?.();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
   // Erosync는 애드온(addons/erosync, 2.0.0). 기억 화면들은 ctx.erosync가 없으면 Erosync 칸을 숨긴다.
   Object.defineProperty(app.ctx, "erosync", { configurable: true, get: () => app.ctx.ext.get("svc", "erosync") ?? null });
+  Object.defineProperty(app.ctx, "erosyncTurn", { configurable: true, get: () => app.ctx.ext.get("svc", "erosyncTurn") ?? null });   // 매 턴 계산(2.2.0)
   // 애드온(2.0.0): 받아 둔 애드온을 같은 창에서 불러온다. 리스 플러그인 목록에는 안 뜬다.
   globalThis.__duskLib = ADDON_LIB; globalThis.__duskVersion = VERSION;   // 애드온이 코어 모듈을 다시 넣지 않고 함께 쓴다(tools/build-addons.mjs)
   // 훅 있는 애드온(장기기억·Erosync) 업데이트를 받아 두면 새로고침을 부탁한다: 리스 화면 알림 → 못 띄우면 Dusk 창 안 알림

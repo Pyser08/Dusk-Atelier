@@ -1,4 +1,6 @@
 import { createLookaheadDelay, LOOKAHEAD_CANCELLED } from "./lookaheaddelay.js";
+import { autoRefreshCancellable, matchEditedDocument } from "./autorefresh.js";
+import { turnKeys, buildTurnSystem, buildTurnUser, parseTurnReply, matchProfile } from "./turnupdate.js";
 // Erosync V0.9.1 격리 이식 — 원작자에게 제공받은 플러그인(erosync, api 3.0)을 Dusk 안에서 켜고 끌 수 있게 감싼 것.
 // 원본 대비 바뀐 곳: (1) //@ 머리말 제거 (2) 즉시 실행 함수 → bootErosync(api) (3) R을 주입받은 api의 프록시로(onUnload를 가로챔)
 // (4) 배경음 자료는 비움 (5) 끝에 Dusk 연결부(duskReadSnapshot, duskContent/Config/Prompts/Guard/Flags/Profile/Analysis/Behind) 추가 (6) 원래 설정 창·이펙트·소리·관계망 화면·열기 진입점은 tools/erosync-prune.mjs로 걷어냄(엔진만 남음) (7) bootErosync(api, host): host.runAI로 Dusk 모델 설정 사용. 그 밖의 본문은 원본 그대로이니 고칠 때는 원본과 비교할 것.
@@ -14257,7 +14259,7 @@ Constraint: {{constraint}}
     return true;
   }
 
-  function additiveFullSourceContext(bundle, inventory, store, scope, variantKey, previousRun = null) {
+  function additiveFullSourceContext(bundle, inventory, store, scope, variantKey, previousRun = null, knownPeopleOnly = false) {
     if (previousRun?.sourceHash === inventory.sourceHash
       && Array.isArray(previousRun.incrementalSourceDocumentIds)
       && Array.isArray(previousRun.incrementalReusableProfileIds)
@@ -14287,7 +14289,8 @@ Constraint: {{constraint}}
       if (!bySemantic.has(key)) bySemantic.set(key, []);
       bySemantic.get(key).push(document);
     }
-    const sourceIdMap = {}, matchedCurrent = new Set();
+    const sourceIdMap = {}, matchedCurrent = new Set(), editedOld = new Set();
+    const editedPending = [];
     for (const oldDocument of before) {
       const key = JSON.stringify([oldDocument.semanticLabel, oldDocument.semanticHash]);
       const sameOrigin = document => document.kind === oldDocument.kind
@@ -14295,12 +14298,24 @@ Constraint: {{constraint}}
       const matches = oldDocument.semanticHash ? (bySemantic.get(key) || []).filter(sameOrigin)
         : after.filter(document => sameOrigin(document) && sameAnalysisDocument(oldDocument, document));
       if (matches.length !== 1 || !sameAnalysisDocument(oldDocument, matches[0])
-        || matchedCurrent.has(matches[0].id)) return null;
+        || matchedCurrent.has(matches[0].id)) {
+        // Dusk: 자동 재분석은 내용만 고쳐진 자료를 같은 출처로 이어 붙이고, 그 자료를 쓰던 인물만 다시 분석한다.
+        if (!knownPeopleOnly) return null;
+        editedPending.push({ oldDocument, sameOrigin });
+        continue;
+      }
       sourceIdMap[oldDocument.id] = matches[0].id;
       matchedCurrent.add(matches[0].id);
     }
+    for (const { oldDocument, sameOrigin } of editedPending) {
+      const edited = matchEditedDocument(oldDocument, after.filter(document => !matchedCurrent.has(document.id)), sameOrigin);
+      if (!edited) return null;
+      sourceIdMap[oldDocument.id] = edited.id;
+      matchedCurrent.add(edited.id);
+      editedOld.add(oldDocument.id);
+    }
     const addedDocuments = inventory.documents.filter(document => afterById.has(document.id) && !matchedCurrent.has(document.id));
-    if (!addedDocuments.length || addedDocuments.some(document => !['character_lore', 'chat_lore', 'module_lore'].includes(document.kind))) return null;
+    if ((!addedDocuments.length && !editedOld.size) || addedDocuments.some(document => !['character_lore', 'chat_lore', 'module_lore'].includes(document.kind))) return null;
     const reusableIds = new Set(), candidates = [];
     for (const id of bundle.characterIds || []) {
       const stored = store.profiles?.[id];
@@ -14308,7 +14323,7 @@ Constraint: {{constraint}}
       const sources = normalizeStringList(profile?.sourceDocumentIds, 200, 180);
       if (!profile || !['ready', 'low_evidence'].includes(profile.analysisStatus)
         || !sources.length || sources.some(sourceId => !beforeById.has(sourceId))) return null;
-      reusableIds.add(id);
+      if (!sources.some(sourceId => editedOld.has(sourceId))) reusableIds.add(id);
       candidates.push({
         id, candidateIds: [id], name: profile.name, aliases: normalizeStringList(profile.aliases, 80, 180),
         isMain: profile.isMain === true, sourceKinds: normalizeStringList(profile.sourceKinds, 12, 120),
@@ -14385,7 +14400,12 @@ Constraint: {{constraint}}
       const previousRun = !targetedMode && options.resume === true && store.analysisRuns?.[analysisRunKey]?.sourceHash === inventory.sourceHash
         ? analysisCheckpointSnapshot(store.analysisRuns[analysisRunKey])
         : null;
-      const additiveContext = !targetedMode ? additiveFullSourceContext(currentBundle, inventory, store, scope, variantKey, previousRun) : null;
+      const additiveContext = !targetedMode ? additiveFullSourceContext(currentBundle, inventory, store, scope, variantKey, previousRun, options.knownPeopleOnly === true) : null;
+      if (options.knownPeopleOnly === true && !targetedMode && !additiveContext) {
+        const error = new Error('자동 재분석은 아는 인물만 다시 분석합니다. 새 인물을 찾으려면 직접 분석하세요.');
+        error.code = 'EROSYNC_AUTO_NEEDS_FULL';
+        throw error;
+      }
       if (additiveContext) {
         analysisFence.incrementalReusableProfileIds = [...additiveContext.reusableIds];
         analysisFence.incrementalSourceIdMap = safeClone(additiveContext.sourceIdMap);
@@ -19104,12 +19124,13 @@ Constraint: {{constraint}}
         return await manualPending('analysis_busy', '다른 수동 분석 또는 인물 판독이 진행 중이어서 자동 재분석을 시작하지 않았습니다. 수동 재분석이 필요합니다.');
       }
       const assignment = resolveRoleProfile(config, 'profile');
-      if (assignment.providerId === 'risu') return await manualPending('risu_non_cancellable', '자동 재분석 대기 · RisuAI 보조 모델 호출은 안전하게 취소할 수 없어 수동 재분석이 필요합니다.');
+      const cancellable = autoRefreshCancellable(assignment.providerId, typeof host.runAI === 'function');
+      if (!cancellable) return await manualPending('risu_non_cancellable', '자동 재분석 대기 · RisuAI 보조 모델 호출은 안전하게 취소할 수 없어 수동 재분석이 필요합니다.');
       if (activeAutoProfileRefresh) return await manualPending('coordinator_busy', '다른 자동 재분석이 진행 중이어서 이 변경은 수동 재분석 대기로 남겼습니다.');
       if (!reservationIsCurrent()) return null;
       // 정의학 반영 뒤 프로필 묶음마다 호출이 둘(축 채점·프로필 작성)이라 자동 재분석 시간 예산을 그만큼 늘렸다(호출 시간 ×3 → ×5).
       const timeoutMs = Math.max(30000, providerAttemptLimitMs(assignment) * 5);
-      const guard = assignment.providerId === 'risu' ? null : createRequestGuard(timeoutMs, 'automatic profile refresh');
+      const guard = cancellable ? createRequestGuard(timeoutMs, 'automatic profile refresh') : null;
       const refreshGeneration = guard ? ++autoProfileRefreshGeneration : null;
       const active = guard ? {
         id: `auto_refresh_${++autoProfileRefreshSequence}`,
@@ -19177,7 +19198,7 @@ Constraint: {{constraint}}
         }, { pending, fence: reservationFence });
         if (!reservationIsCurrent()) return null;
         guard.throwIfAborted('automatic profile admission');
-        await compileProfilesFromInventory(character, scope, config, inventory, { force: true, autoRefresh: true, requestGuard: guard, autoProfileRefreshGeneration: refreshGeneration, backgroundFence: reservationFence });
+        await compileProfilesFromInventory(character, scope, config, inventory, { force: true, autoRefresh: true, knownPeopleOnly: true, requestGuard: guard, autoProfileRefreshGeneration: refreshGeneration, backgroundFence: reservationFence });
         if (!reservationIsCurrent()) return null;
         guard.throwIfAborted('automatic profile completion');
         const fresh = await guard.wait(readFreshProfileRegistryState(), 'automatic profile durable verification');
@@ -19233,6 +19254,10 @@ Constraint: {{constraint}}
         if (error?.code === 'EROSYNC_ANALYSIS_CANCELLED' || isStaleLifecycleError(error) || unloaded) return null;
         if (active?.beforeState) {
           try { await restoreAutoProfileSnapshot(active); } catch (restoreError) { warn('automatic profile rollback failed:', restoreError?.message || restoreError); }
+        }
+        if (error?.code === 'EROSYNC_AUTO_NEEDS_FULL') {
+          updateAnalysisRuntime({ running: false, phase: 'idle', detail: '', errors: [], finishedAt: Date.now() });
+          return await manualPending('needs_full', '새 인물을 찾아야 할 만큼 자료가 바뀌어 자동 재분석을 하지 않았습니다. 인물 분석을 직접 실행하세요.');
         }
         if (error?.code === 'EROSYNC_PROFILE_VARIANT_CONFLICT') return await manualPending('variant_conflict', '여러 설정 변형이 함께 활성화되어 수동 재분석이 필요합니다.');
         const failureCode = truncate(error?.code || 'provider_error', 80).replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -23951,6 +23976,68 @@ Constraint: {{constraint}}
     return duskContentGet();
   }
 
+  // ── Dusk 매 턴 계산(HandOff/EROSYNC-TURN.md): 장기기억이 기록한 인물만, 원본 축 정의로 변화분 1번 호출 → 분석값(baseProfile)에 반영 ──
+  // people: [{ name, aliases, memory }], rp: 이번 턴 글, groups: ['axes','sexual']. 사용자 수정값(userOverrides)·잠근 인물은 건드리지 않는다.
+  const turnValueOf = (base, key) => key === 'eroticInterest' ? (Number.isFinite(base?.eroticInterest?.level) ? base.eroticInterest.level : null) : (Number.isFinite(base?.[key]) ? base[key] : null);
+  async function duskTurnUpdate({ people = [], rp = '', groups = null, signal = null } = {}) {
+    const { context } = await duskProfileCtx('');
+    const config = normalizeConfig(context.config);
+    const keys = turnKeys(groups);
+    const profiles = contextProfiles(context);
+    const targets = [], unmatched = [];
+    for (const person of Array.isArray(people) ? people : []) {
+      const profile = matchProfile(person, profiles);
+      if (!profile) { if (person?.name) unmatched.push(String(person.name)); continue; }
+      if (profile.locked || targets.some(t => t.id === profile.id)) continue;
+      const base = uiProfileViewOf(profile, context, null).base || {}, ov = isPlainObject(profile.userOverrides) ? profile.userOverrides : {};
+      const own = keys.filter(k => !(k in ov) && !(k === 'eroticInterest' && ov.eroticInterest));
+      if (!own.length) continue;
+      targets.push({ id: profile.id, name: profile.name, aliases: profile.aliases || [], memory: truncate(person.memory || '', 1200), own,
+        values: Object.fromEntries(keys.map(k => [k, turnValueOf(base, k)])) });
+    }
+    if (!targets.length || !String(rp).trim()) return { ok: true, changed: [], unmatched };
+    const guard = createRequestGuard(Math.max(30000, providerAttemptLimitMs(resolveRoleProfile(config, 'profile')) * 2), 'dusk turn update');
+    const onAbort = () => guard.abort(Object.assign(new Error('턴 계산을 취소했어요'), { code: 'EROSYNC_ANALYSIS_CANCELLED' }));
+    signal?.addEventListener?.('abort', onAbort, { once: true });
+    try {
+      const system = buildTurnSystem({ keys, axisDefs: AXIS_DEFINITIONS, sexDefs: SEX_AXIS_DEFINITIONS, sexRules: SEX_AXIS_COMMON_RULES });
+      const raw = await runJsonTask(system, truncate(buildTurnUser({ targets, rp, keys }), config.analysisProfileBatchChars), config, 'profile', 'dusk turn update', { requestGuard: guard });
+      const parsed = parseTurnReply(raw, targets, keys);
+      for (const t of targets) if (parsed[t.id]) for (const k of Object.keys(parsed[t.id].changes)) if (!t.own.includes(k)) delete parsed[t.id].changes[k];
+      const ids = Object.keys(parsed).filter(id => Object.keys(parsed[id].changes).length);
+      if (!ids.length) return { ok: true, changed: [], unmatched };
+      const result = await mutateProfileRegistry('dusk turn update', (store) => {
+        const done = [];
+        for (const id of ids) {
+          const profile = store.profiles?.[id]; if (!profile || profile.locked) continue;
+          const variantKey = String(context.scope?.variantKey || profile.activeVariantKey || 'default');
+          const current = materializeProfileVariant(profile, variantKey);
+          const next = { ...(current.baseProfile || {}) }, before = {}, after = {};
+          for (const [k, v] of Object.entries(parsed[id].changes)) {
+            before[k] = turnValueOf(current.baseProfile, k); after[k] = v;
+            if (k === 'eroticInterest') next.eroticInterest = { ...(isPlainObject(next.eroticInterest) ? next.eroticInterest : {}), level: v }; else next[k] = v;
+          }
+          Object.assign(profile, current, { baseProfile: normalizeEroticProfile(next), updatedAt: new Date().toISOString() });
+          saveProfileVariant(profile, variantKey, { label: current.variantLabel || variantKey, activationSignature: profile.variants?.[variantKey]?.activationSignature || '', sourceHash: current.sourceHash, sourceDocumentIds: current.sourceDocumentIds });
+          done.push({ id, name: profile.name, before, after, reason: parsed[id].reason });
+        }
+        return done;
+      }, { writeRegistry: false });
+      const changed = result.outcome || [];
+      if (changed.length) {
+        invalidateAllPreparedDecisionState('dusk turn update');
+        duskReadCache = null;
+        try {
+          await appendProfileAuditEntries(context, changed.map(c => ({ profile: result.profiles?.profiles?.[c.id] || { id: c.id, name: c.name }, source: 'turn_update', before: c.before, after: c.after, reason: c.reason })));
+        } catch (error) { warn('turn update audit skipped:', error?.message || error); }
+      }
+      return { ok: true, changed, unmatched };
+    } finally {
+      signal?.removeEventListener?.('abort', onAbort);
+      guard.dispose();
+    }
+  }
+
   return {
     // 원본이 끝까지 올라왔는지(정리 함수를 맡겼으면 초기화가 끝까지 간 것)
     loaded: () => unloadFns.length > 0,
@@ -23959,7 +24046,7 @@ Constraint: {{constraint}}
     content: { get: duskContentGet, set: duskContentSet, global: duskContentGlobal },
     config: { get: duskConfigGet, set: duskConfigSet },
     behind: { list: duskBehindList, remove: duskBehindRemove },
-    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, lore: duskLoreList, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
+    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, lore: duskLoreList, turn: duskTurnUpdate, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
     prompts: { get: duskPromptsGet, set: duskPromptSet },
     guard: { set: duskGuardSet },
     tags: { set: duskTagsSet },

@@ -29,20 +29,8 @@ export async function advancedGlobal(ctx, host, { redraw, st, apply }) {
   const paint = () => {
     const s = st.rawSnapshot();
     const ed = (fn) => { try { st.update((x) => { fn(x); healDeps(x); }); } catch (e) { fail(ctx)(e); } paint(); };
-    const lock = lockedBy("relationshipPerceptionMode", s);
     const sw = (title, text, key) => toggleRow(title, text, s[key] === true, (v) => ed((x) => { x[key] = v; }));
-    const stageCtx = h("div", { class: "rb-mem-grid" }, ["router", "director", "writer"].map((k) => num(`${STAGE_NAMES[k]} · 최근 대화 턴`, s.stageContext?.[k] ?? 2, (n) => ed((x) => { x.stageContext[k] = n; }), { min: 0, max: 200 })));
     const adv = [
-      sec("자동 기록 세부", "기본값이면 충분해요. 바꾸면 다음 응답부터 적용돼요.",
-        h("div", { class: "rb-mem-field" }, h("span", null, "장면 정리의 역할"), segmented([["directing", "연출 지시"], ["facts", "사실만 전달"]], s.directorRole ?? "directing", (v) => ed((x) => { x.directorRole = v; }), "장면 정리 역할")),
-        stageCtx,
-        num("자동 기록 입력 예산(토큰)", s.writerInputBudgetTokens ?? 48000, (n) => ed((x) => { x.writerInputBudgetTokens = Math.min(1000000, Math.max(1000, n)); }), { min: 1000, max: 1000000, step: 1000 }),
-        sw("본문 변경 검사", "켜면 응답 본문이 도중에 바뀐 경우 기록을 저장하지 않아요.", "writerSourceCheckEnabled"),
-        sw("기존 인물 로어북 검색", "인물 후보를 찾을 때 로어북도 함께 살펴요.", "writerSearchExistingLore"),
-        h("label", { class: "rb-mem-field" }, h("span", null, "고르기 키워드 고정 (쉼표·줄바꿈, 2,000자까지)"), h("textarea", { class: "rb-input", rows: 3, "aria-label": "고르기 키워드 고정", onChange: (e) => ed((x) => { x.routerFixedKeywords = e.target.value.slice(0, 2000); }) }, s.routerFixedKeywords ?? "")),
-        sw("서사관계 전용 모드", "인물 문서와 관계만 기록해요. 사건·장면·장소 기록과 리듬 기능은 쉬고, 이미 있던 기록은 그대로 보존돼요.", "relationshipOnlyMode"),
-        h("div", { class: "rb-mem-field" }, h("span", null, "관계만 기록할 때 인지·정체 인식"), segmented([["off", "끔"], ["light", "라이트"], ["on", "켬"]], s.relationshipPerceptionMode ?? "light", (v) => { if (lock && v !== "on") ctx.toast(`‘${lock}’이 켜져 있어 ‘켬’으로 유지돼요. 바꾸려면 ${lock}을 먼저 꺼 주세요.`); ed((x) => { x.relationshipPerceptionMode = v; }); }, "관계 인지"),
-          lock ? h("small", { class: "rb-muted", id: "rb-mem-perc-lock" }, `‘${lock}’에 필요해서 ‘켬’으로 고정돼 있어요.`) : null)),
       sec("무엇을 따라갈까요", null,
         sw("관찰자 모드", "내가 이야기에 직접 나오지 않고 지켜보는 형식일 때 켜요.", "observerModeEnabled"),
         sw("인물 기본 정보 자동 만들기", "처음 나온 인물의 이름·나이·소속 같은 기본 정보를 채워 둬요.", "peopleProfileEnabled"),
@@ -148,4 +136,28 @@ function retention(env) {
     num(`관계 이력 (지금 ${relationshipHistoryLimit(wiki)}개 보관)`, relationshipHistoryLimit(wiki), (n) => save((w) => ({ ...w, relationshipHistoryLimit: Math.max(1, n) }), "관계 이력 보관 개수를 바꿨어요."), { min: 1, max: RELATIONSHIP_HISTORY_MAX }),
     num(`변경 이력 (지금 ${st.history.count}/${st.history.limit})`, st.history.limit, (n) => save((w) => ({ ...w, recordRetention: { ...(w.recordRetention ?? {}), history: Math.max(1, n) } }), "변경 이력 보관 개수를 바꿨어요."), { min: 1, max: WIKI_RETENTION_MAX }),
     num(`자동 기록 활동 (지금 ${st.activity.count}/${st.activity.limit})`, st.activity.limit, (n) => save((w) => ({ ...w, recordRetention: { ...(w.recordRetention ?? {}), activity: Math.max(1, n) } }), "자동 기록 활동 보관 개수를 바꿨어요."), { min: 1, max: WIKI_RETENTION_MAX }));
+}
+
+// 2.2.0 ‘자동 기록 세부’는 인물 위키 설정 → 고급이 아니라 장기 기억 → 설정(기록·기억 넣기 세부)에 둔다(settings.js).
+export function writerDetails(ctx, st) {
+  const host = h("div");
+  const paint = () => {
+    const s = st.rawSnapshot();
+    const ed = (fn) => { try { st.update((x) => { fn(x); healDeps(x); }); } catch (e) { fail(ctx)(e); } paint(); };
+    const lock = lockedBy("relationshipPerceptionMode", s);
+    const sw = (title, text, key) => toggleRow(title, text, s[key] === true, (v) => ed((x) => { x[key] = v; }));
+    const stageCtx = h("div", { class: "rb-mem-grid" }, ["router", "director", "writer"].map((k) => num(`${STAGE_NAMES[k]} · 최근 대화 턴`, s.stageContext?.[k] ?? 2, (n) => ed((x) => { x.stageContext[k] = n; }), { min: 0, max: 200 })));
+    replace(host,
+      sec("자동 기록 세부", "기본값이면 충분해요. 바꾸면 다음 응답부터 적용돼요.",
+        h("div", { class: "rb-mem-field" }, h("span", null, "장면 정리의 역할"), segmented([["directing", "연출 지시"], ["facts", "사실만 전달"]], s.directorRole ?? "directing", (v) => ed((x) => { x.directorRole = v; }), "장면 정리 역할")),
+        stageCtx,
+        sw("본문 변경 검사", "켜면 응답 본문이 도중에 바뀐 경우 기록을 저장하지 않아요.", "writerSourceCheckEnabled"),
+        sw("기존 인물 로어북 검색", "인물 후보를 찾을 때 로어북도 함께 살펴요.", "writerSearchExistingLore"),
+        h("label", { class: "rb-mem-field" }, h("span", null, "고르기 키워드 고정 (쉼표·줄바꿈, 2,000자까지)"), h("textarea", { class: "rb-input", rows: 3, "aria-label": "고르기 키워드 고정", onChange: (e) => ed((x) => { x.routerFixedKeywords = e.target.value.slice(0, 2000); }) }, s.routerFixedKeywords ?? "")),
+        sw("서사관계 전용 모드", "인물 문서와 관계만 기록해요. 사건·장면·장소 기록과 리듬 기능은 쉬고, 이미 있던 기록은 그대로 보존돼요.", "relationshipOnlyMode"),
+        h("div", { class: "rb-mem-field" }, h("span", null, "관계만 기록할 때 인지·정체 인식"), segmented([["off", "끔"], ["light", "라이트"], ["on", "켬"]], s.relationshipPerceptionMode ?? "light", (v) => { if (lock && v !== "on") ctx.toast(`‘${lock}’이 켜져 있어 ‘켬’으로 유지돼요. 바꾸려면 ${lock}을 먼저 꺼 주세요.`); ed((x) => { x.relationshipPerceptionMode = v; }); }, "관계 인지"),
+          lock ? h("small", { class: "rb-muted", id: "rb-mem-perc-lock" }, `‘${lock}’에 필요해서 ‘켬’으로 고정돼 있어요.`) : null)));
+  };
+  paint();
+  return host;
 }
