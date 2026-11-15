@@ -33,6 +33,7 @@ async function chat(kind, model, messages, { maxTokens = 8000, tier = null } = {
   if (tier) body.service_tier = tier;
   if (kind !== "aux") body.temperature = 0;   // 답변·채점은 온도 0(같은 블록이면 같은 답 — 시험 흔들림 줄이기). 기록(aux)은 플러그인 실제 동작 그대로
   if (kind === "aux" && AUX_PROVIDER) body.provider = AUX_PROVIDER;
+  if (kind === "aux" && args.auxReason === "off") body.reasoning = { enabled: false };   // --auxReason off: 보조 모델 추론 끄기
   for (let k = 0; ; k++) {
     try {
       const r = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${KEY}` }, body: JSON.stringify(body), signal: AbortSignal.timeout(300000) });
