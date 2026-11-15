@@ -200,6 +200,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const imp = (e) => Math.max(e.p ?? 0, e.s ?? 0, e.r ?? 0);
   const seen = new Set(), targets = [], skipped = [];
   for (const e of [...stage1.people].sort((x, y) => imp(y) - imp(x))) {
+    if (e.extra) continue;   // 2.2.2 추가 사실(fact) 줄은 인물 카드 대상이 아니다
     const k = nk(e.name); if (seen.has(k) || userKeys.has(k)) continue; seen.add(k);
     const doc = byName.get(k) ?? null;
     if (doc ? !doc.writable : !run.allowCreate) continue;
