@@ -768,7 +768,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-mem-advfold>summary::-webkit-details-marker{display:none}.rb-mem-advfold>summary::before{content:"고급";font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--rb-text);color:var(--rb-win)}
 .rb-mem-advfold>summary::after{content:"▾";margin-left:auto;font-size:16px;color:var(--rb-sub)}.rb-mem-advfold[open]>summary::after{content:"▴"}
 .rb-mem-advfold>*:not(summary){margin-left:14px;margin-right:14px}.rb-mem-advfold[open]{padding-bottom:12px}
-.rb-mem-navtabs{position:sticky;top:-12px;z-index:3;background:var(--rb-win);padding-top:8px;margin-top:-8px}
+.rb-mem-navtabs{position:relative;z-index:3;background:none}   /* 2.2.4: 고정 배경(창 색) 상자가 글래스 테마에서 짙은 사각형으로 보였다 → 배경 없이 */
 .rb-mem-anchor{scroll-margin-top:64px;display:flex;flex-direction:column;gap:10px;padding-top:6px}.rb-mem-anchor+.rb-mem-anchor{border-top:1px solid var(--rb-line2);margin-top:18px;padding-top:18px}
 .rb-mem-anchortitle{margin:0;font-size:18px}.rb-mem-anchor-body{min-width:0}
 .rb-wk-headwrap{display:flex;flex-direction:column;gap:10px}.rb-wk-auto{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rb-wk-auto .rb-note{flex:1;min-width:220px;margin:0}
