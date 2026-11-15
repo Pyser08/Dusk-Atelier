@@ -14,6 +14,6 @@ fs.mkdirSync(path.dirname(out), { recursive: true });
 await build({
   entryPoints: [path.join(root, 'src/cellar/node-entry.js')], bundle: true, format: 'esm', platform: 'node', target: 'node22',
   outfile: out, legalComments: 'none', logLevel: 'warning',
-  banner: { js: `// Dusk Atelier v${pkg.version} 분석 엔진(빌드 결과물, 직접 고치지 마세요). 만든 곳: Atelier tools/build-cellar-engine.mjs\n// 라이선스: GNU AGPL-3.0-only (Dusk Atelier)` }
+  banner: { js: `// Dusk Atelier v${pkg.version} 분석 엔진(빌드 결과물, 직접 고치지 마세요). 만든 곳: Atelier tools/build-cellar-engine.mjs\n// 라이선스: Dusk Atelier 라이선스(저장소 LICENSE)` }
 });
 console.log(`${out} (${(fs.statSync(out).size / 1024).toFixed(1)} KB)`);

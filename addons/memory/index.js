@@ -27,6 +27,8 @@ export async function activate(api, ctx) {
   setUserPromptProvider(() => memory.userPrompts());
   // Erosync가 있으면 지난 대화 분석 끝에 성향 분석을 한 번(이미 있으면 그대로)
   memory.link.backfillErosync = async () => {
+    // 2.2.4: 따로 켠 경우에만(기본 꺼짐). 예전엔 '함께 기록'에 묶여 NSFW가 아닌 채팅에서도 누를 때마다 Erosync 전체 분석이 떴다
+    try { if ((await memory.store.getIndex()).settings?.backfillErosync !== true) return false; } catch { return false; }
     const er = app.erosync; if (!er?.isRunning?.()) return false;
     const r = await er.read(); if (r?.ok && (r.people ?? []).length) return false;
     const st = await er.profile("status"); if (st?.running) return false;

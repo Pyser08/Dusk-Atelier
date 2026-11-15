@@ -53,7 +53,7 @@ for (const a of src.addons) {
   } };
   const r = await build({ ...common, entryPoints: [path.join(root, "addons", a.id, "index.js")], format: "esm", target: "es2022", legalComments: "none", minify: true, define, plugins: [lib], metafile: true });
   shared.forEach((x) => usedLib.add(x));
-  const code = `/* Dusk Atelier 애드온 ${a.id} v${a.version} — 소스: addons/${a.id} (AGPL-3.0-only) */\n` + r.outputFiles[0].text;
+  const code = `/* Dusk Atelier 애드온 ${a.id} v${a.version} — 소스: addons/${a.id} (${a.id === "protlink" ? "GPL-3.0-or-later" : "Dusk Atelier 라이선스, 저장소 LICENSE"}) */\n` + r.outputFiles[0].text;
   const file = path.join(dist, `${a.id}.js`);
   if (check) same &&= fs.existsSync(file) && fs.readFileSync(file, "utf8") === code;
   else fs.writeFileSync(file, code);

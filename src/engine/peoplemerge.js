@@ -45,6 +45,7 @@ export function renameDoc(folder, doc, name) {
 export function alignDocTitles(folder) {
   const out = [];
   for (const p of Object.values(folder?.people ?? {})) {
+    if (!p?.name || keyOf(p.name) === keyOf("{{user}}")) continue;   // {{user}}는 페르소나 이름 별칭으로 남의 문서를 잡을 수 있어 건드리지 않는다
     const d = findDoc(folder.wiki, p); if (!d || keyOf(d.title) === keyOf(p.name)) continue;
     if (Object.values(folder.wiki?.documents ?? {}).some((x) => x !== d && x?.type === "Character" && keyOf(x.title) === keyOf(p.name))) continue;   // 같은 이름 문서가 따로 있으면 합치기로 해결
     const from = d.title; if (renameDoc(folder, d, p.name)) { relinkNames(folder, [from], p.name); out.push({ from, to: p.name }); }
