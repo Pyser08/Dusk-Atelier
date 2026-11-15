@@ -1,6 +1,7 @@
 // LoCoMo 평가: 플러그인 없음(최근 대화만) vs 장기기억 켬(같은 최근 대화 + [Dusk Memory] 블록).
 // 기록과 주입은 플러그인 코드(createMemoryRunner.analyzeAt, createMemoryInjector.compose)를 그대로 쓰고, 모델 호출만 OpenRouter로 바꾼다.
 // 사용: node tools/locomo/run.mjs --data locomo10.json --out <dir> [--conv 0] [--phase record|qa|all] [--limit N]
+// Node 내장 fetch가 프록시를 쓰게 하려면 NODE_USE_ENV_PROXY=1 로 실행한다. --upto N: 메시지 N개까지만 기록(시험용)
 // 키는 OPENROUTER_API_KEY 또는 프록시 주입(값이 없으면 placeholder를 보낸다).
 import fs from "node:fs";
 import path from "node:path";
