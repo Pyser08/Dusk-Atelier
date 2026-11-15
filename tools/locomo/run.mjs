@@ -2,6 +2,8 @@
 // 기록과 주입은 플러그인 코드(createMemoryRunner.analyzeAt, createMemoryInjector.compose)를 그대로 쓰고, 모델 호출만 OpenRouter로 바꾼다.
 // 사용: node tools/locomo/run.mjs --data locomo10.json --out <dir> [--conv 0] [--phase record|qa|all] [--limit N]
 // Node 내장 fetch가 프록시를 쓰게 하려면 NODE_USE_ENV_PROXY=1 로 실행한다. --upto N: 메시지 N개까지만 기록(시험용)
+// --lang ko: 대화·질문을 한국어로 번역해서(처음 한 번, 파일로 저장) 시험한다. --memOnly: 답할 때 기억 블록만 본다(최근 대화 없음).
+// --embed: 플러그인의 Voyage 임베딩 기억 고르기를 켠다(api.voyageai.com, 키는 프록시 주입).
 // 키는 OPENROUTER_API_KEY 또는 프록시 주입(값이 없으면 placeholder를 보낸다).
 import fs from "node:fs";
 import path from "node:path";
@@ -9,6 +11,7 @@ import { createMemoryStore } from "../../src/data/memorystore.js";
 import { createMemoryRunner } from "../../src/data/memoryrunner.js";
 import { createMemoryInjector } from "../../src/data/memoryinject.js";
 import { insertBlock } from "../../src/engine/memoryinject.js";
+import { createEmbedder } from "../../src/data/embed.js";
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, all) => (v.startsWith("--") ? [...a, [v.slice(2), all[i + 1]?.startsWith("--") || all[i + 1] == null ? "1" : all[i + 1]]] : a), []));
 const CONV = Number(args.conv ?? 0), OUT = args.out ?? "locomo-out", PHASE = args.phase ?? "all", LIMIT = Number(args.limit ?? Infinity);
@@ -16,6 +19,7 @@ const MAIN = args.main ?? "google/gemini-3-flash-preview", MAIN_TIER = args.tier
 const AUX = args.aux ?? "deepseek/deepseek-v4.1-flash";
 const JUDGE = args.judge ?? MAIN;
 const RECENT_TOKENS = Number(args.recent ?? 8000), MIN_CHARS = Number(args.minChars ?? 20), CONC = Number(args.conc ?? 6);
+const LANG = args.lang ?? "en", MEM_ONLY = args.memOnly === "1", EMBED = args.embed === "1";
 const KEY = process.env.OPENROUTER_API_KEY || "proxy-injected";
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -44,7 +48,9 @@ async function chat(kind, model, messages, { maxTokens = 8000, tier = null } = {
 
 // ---- LoCoMo → 리스 채팅 ----
 const data = JSON.parse(fs.readFileSync(args.data ?? "locomo10.json", "utf8"));
-const sample = data[CONV], conv = sample.conversation;
+const sample = data[CONV];
+if (LANG === "ko") await translateSample(sample);
+const conv = sample.conversation;
 const A = conv.speaker_a, B = conv.speaker_b;   // A = {{user}}, B = 봇(char)
 const messages = [];
 for (let s = 1; conv[`session_${s}`]; s++) {
@@ -57,6 +63,30 @@ for (let s = 1; conv[`session_${s}`]; s++) {
 }
 console.log(`대화 ${CONV}: ${A}(user) ↔ ${B}(char), 메시지 ${messages.length}개, 질문 ${sample.qa.length}개`);
 
+// ---- 한국어 번역(번역 모델 = 메인 모델, 세션 단위, 결과는 파일에 저장해 다시 쓴다) ----
+async function translateSample(smp) {
+  const file = path.join(OUT, `ko-${CONV}.json`);
+  if (fs.existsSync(file)) { const ko = JSON.parse(fs.readFileSync(file, "utf8")); smp.conversation = ko.conversation; smp.qa = ko.qa; return; }
+  const ask = async (items, what) => {
+    for (let k = 0; k < 4; k++) {
+      const raw = await chat("main", MAIN, [{ role: "system", content: `Translate each string of the JSON array into natural Korean (${what}). Keep personal names in their original Latin spelling. Convert dates to Korean format like "2023년 5월 8일 오후 1:56". Empty strings stay empty. Return ONLY a JSON array of the same length, same order.` }, { role: "user", content: JSON.stringify(items) }], { maxTokens: 30000, tier: MAIN_TIER });
+      try { const t = raw.replace(/```(?:json)?/g, ""); const a = JSON.parse(t.slice(t.indexOf("["), t.lastIndexOf("]") + 1)); if (Array.isArray(a) && a.length === items.length) return a.map(String); } catch { /* 다시 */ }
+    }
+    throw new Error("번역 실패: " + what);
+  };
+  const c = smp.conversation, jobs = [];
+  for (let s = 1; c[`session_${s}`]; s++) jobs.push((async () => {
+    const turns = c[`session_${s}`], items = [c[`session_${s}_date_time`], ...turns.flatMap((t) => [t.text, t.blip_caption ?? ""])];
+    const out = await ask(items, "a casual chat between two friends; the first string is a date/time");
+    c[`session_${s}_date_time`] = out[0]; turns.forEach((t, i) => { t.text = out[1 + 2 * i]; if (t.blip_caption) t.blip_caption = out[2 + 2 * i]; });
+  })());
+  const qa = smp.qa.filter((q) => q.category !== 5);
+  for (let i = 0; i < qa.length; i += 40) { const part = qa.slice(i, i + 40); jobs.push((async () => { const out = await ask(part.flatMap((q) => [q.question, String(q.answer)]), "questions and short answers about the chat"); part.forEach((q, k) => { q.question = out[2 * k]; q.answer = out[2 * k + 1]; }); })()); }
+  await Promise.all(jobs); smp.qa = qa;
+  fs.writeFileSync(file, JSON.stringify({ conversation: c, qa }, null, 1));
+  console.log(`번역 끝 (메인 모델 비용 $${cost.main.toFixed(4)})`);
+}
+
 // ---- 가짜 리스 API (플러그인 저장소는 파일로 남겨 이어 돌릴 수 있게) ----
 const STORE_FILE = path.join(OUT, `store-${CONV}.json`);
 const kv = new Map(fs.existsSync(STORE_FILE) ? Object.entries(JSON.parse(fs.readFileSync(STORE_FILE, "utf8"))) : []);
@@ -67,13 +97,16 @@ const api = {
   pluginStorage: { getItem: async (k) => kv.get(k) ?? null, setItem: async (k, v) => { kv.set(k, v); }, removeItem: async (k) => { kv.delete(k); } },
   getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0,
   getCharacterFromIndex: async () => character, getChatFromIndex: async () => chatObj,
-  getDatabase: async () => ({ username: A, personas: [{ name: A }] })
+  getDatabase: async () => ({ username: A, personas: [{ name: A }] }),
+  getLocalPluginStorage: async () => api.pluginStorage, nativeFetch: (u, o) => fetch(u, o)
 };
 const store = createMemoryStore(api);
 await store.updateIndex((i) => { i.settings.minChars = MIN_CHARS; i.settings.confirm = "now"; });
 const quiet = (...a) => { if (process.env.DEBUG) console.log("[dusk]", ...a); };
 const runner = createMemoryRunner(api, { store, log: quiet, notify: () => {}, call: (msgs) => chat("aux", AUX, msgs, { maxTokens: 12000 }) });
-const injector = createMemoryInjector(api, { store, log: quiet });
+const embedder = EMBED ? createEmbedder(api, { log: quiet }) : null;
+if (embedder) await embedder.save({ on: true, key: "proxy-injected", timeoutMs: 60000 });
+const injector = createMemoryInjector(api, { store, log: quiet, embedder });
 
 const progressFile = path.join(OUT, `progress-${CONV}.json`);
 const progress = fs.existsSync(progressFile) ? JSON.parse(fs.readFileSync(progressFile, "utf8")) : { recordedUpTo: -1, cost: { aux: 0 }, usage: { aux: [0, 0, 0] } };
@@ -96,6 +129,7 @@ async function record() {
 
 // ---- 2단계: 질문 답변 두 쪽 + 채점 ----
 const tok = (s) => Math.ceil(String(s).length / 4);
+const sysMem = LANG === "ko" ? `너는 ${B}이고 ${A}와 대화하고 있어. 아래 기억 블록은 지금까지 둘의 대화에 대한 너의 기억이야. ${A}가 지난 대화에 대해 질문하면 기억 블록만 근거로 짧게(몇 단어) 답해. 이름과 날짜는 정확히. 모르면 가장 그럴듯한 답을 해.` : `You are ${B}, chatting with ${A}. The memory block below is your memory of your past conversations. Answer ${A}'s question in a short phrase using only that memory, with exact names and dates. If unsure, give your best guess.`;
 const sysPrompt = `You are ${B}, chatting with ${A}. The conversation so far is below. ${A} now asks you a question about things that happened in your past conversations. Answer in a short phrase (a few words), with exact names and dates when relevant. If you do not know, give your best guess.`;
 function recentMessages() {
   const out = []; let used = 0;
@@ -109,22 +143,30 @@ async function pool(items, fn) { const res = new Array(items.length); let next =
 async function qa() {
   chatObj.message = messages.slice();
   const recent = recentMessages();
+  if (embedder) {   // 답하기 전에 기록 벡터를 미리 다 만든다(한 번에 96개씩)
+    const { loadReconciled } = await import("../../src/data/memoryload.js"); const { folderIdOf } = await import("../../src/data/memorystore.js"); const { chatKeyOf } = await import("../../src/engine/chatkey.js");
+    const folder = await loadReconciled(store, character.chaId, chatKeyOf(chatObj), chatObj.message), fid = folderIdOf(character.chaId, chatKeyOf(chatObj));
+    const n = Object.values(folder.people).reduce((a, p) => a + p.records.length, 0);
+    for (let k = 0; k < 20; k++) { const m = await embedder.scores(fid, folder, "warmup " + k, { budgetMs: 120000 }); if (m && m.size >= n) break; }
+    saveKv(); console.log("임베딩 준비 끝", embedder.status().lastError || "");
+  }
   console.log(`최근 대화: ${recent.length}/${messages.length}개 메시지(약 ${RECENT_TOKENS} 토큰)`);
   const qs = sample.qa.filter((q) => q.category !== 5).slice(0, LIMIT);   // 5 = adversarial(정답 없음), 관례대로 뺀다
   const rows = await pool(qs, async (q, k) => {
     const question = { role: "user", data: q.question, speaker: A };
-    const base = [{ role: "system", content: sysPrompt }, ...toApi(recent), { role: "user", content: `${A}: ${q.question}` }];
+    const base = MEM_ONLY ? [{ role: "system", content: sysMem }, { role: "user", content: `${A}: ${q.question}` }] : [{ role: "system", content: sysPrompt }, ...toApi(recent), { role: "user", content: `${A}: ${q.question}` }];
     chatObj.message = [...messages, question];
     const c = await injector.compose({ character, chat: chatObj }, { mark: false });
     const withMem = c?.text ? insertBlock(base, c.text, c.position ?? "end") : base;
     const [a0, a1] = await Promise.all([chat("main", MAIN, base, { maxTokens: 2000, tier: MAIN_TIER }), chat("main", MAIN, withMem, { maxTokens: 2000, tier: MAIN_TIER })]);
-    const [j0, j1] = await Promise.all([chat("judge", JUDGE, judgePrompt(q.question, q.answer, a0), { maxTokens: 1000, tier: MAIN_TIER }), chat("judge", JUDGE, judgePrompt(q.question, q.answer, a1), { maxTokens: 1000, tier: MAIN_TIER })]);
+    const jt = JUDGE === MAIN ? MAIN_TIER : null;
+    const [j0, j1] = await Promise.all([chat("judge", JUDGE, judgePrompt(q.question, q.answer, a0), { maxTokens: 1000, tier: jt }), chat("judge", JUDGE, judgePrompt(q.question, q.answer, a1), { maxTokens: 1000, tier: jt })]);
     const ok = (s) => /CORRECT/i.test(s) && !/WRONG/i.test(s);
     if ((k + 1) % 20 === 0) console.log(`  질문 ${k + 1}/${qs.length}`);
     return { q: q.question, gold: String(q.answer), category: q.category, evidence: q.evidence, noPlugin: a0, plugin: a1, okNo: ok(j0), okMem: ok(j1), memTokens: c?.manifest?.tokens ?? 0, memReason: c?.reason ?? "" };
   });
   const CAT = { 1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop" };
-  const summary = { conv: CONV, main: `${MAIN} (${MAIN_TIER})`, aux: AUX, judge: JUDGE, recentTokens: RECENT_TOKENS, n: rows.length, byCategory: {}, cost: { aux: progress.cost.aux, main: cost.main, judge: cost.judge }, usage: { aux: progress.usage.aux, main: usage.main, judge: usage.judge } };
+  const summary = { conv: CONV, lang: LANG, memOnly: MEM_ONLY, embed: EMBED, main: `${MAIN} (${MAIN_TIER})`, aux: AUX, judge: JUDGE, recentTokens: RECENT_TOKENS, n: rows.length, byCategory: {}, cost: { aux: progress.cost.aux, main: cost.main, judge: cost.judge }, usage: { aux: progress.usage.aux, main: usage.main, judge: usage.judge } };
   const acc = (rs, f) => rs.length ? +(100 * rs.filter(f).length / rs.length).toFixed(1) : null;
   summary.overall = { noPlugin: acc(rows, (r) => r.okNo), plugin: acc(rows, (r) => r.okMem), avgMemTokens: Math.round(rows.reduce((s, r) => s + r.memTokens, 0) / rows.length) };
   for (const [k, name] of Object.entries(CAT)) { const rs = rows.filter((r) => String(r.category) === k); summary.byCategory[name] = { n: rs.length, noPlugin: acc(rs, (r) => r.okNo), plugin: acc(rs, (r) => r.okMem) }; }

@@ -94,7 +94,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
   const evCap = settings.eventTokens ?? 2000, evLines = []; let evUsed = 0;
   for (const s of scenes.slice(0, -1).reverse()) {
-    const t = "- " + oneLine(s.sum) + (s.place ? ` (${s.place})` : ""), n = estimateTokens(t);
+    const t = "- " + (s.when ? `[${oneLine(s.when)}] ` : "") + oneLine(s.sum) + (s.place ? ` (${s.place})` : ""), n = estimateTokens(t);   // 2.2.2: 장면 날짜도 넣는다(언제 일인지 답할 수 있게)
     if (evUsed + n > evCap) { manifest.excluded.push({ kind: "event", name: oneLine(s.sum).slice(0, 20), tokens: n, reason: "budget" }); break; }
     evLines.unshift(t); evUsed += n;
   }
