@@ -18,7 +18,7 @@ import { renderPlaceholder } from './screens/placeholder.js';
 import { renderPresets } from './screens/presets.js';
 import { renderHistory } from './screens/history.js';
 import { onNotice } from '../data/modules.js';
-import { fadeUp, h, motion, replace } from './dom.js';
+import { fadeUp, h, motion, replace, installImeGuard } from './dom.js';
 import { icon } from './icons.js';
 import { createService } from '../data/service.js';
 import { openEditor } from './screens/editor.js';
@@ -49,6 +49,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const state = { tab: "home", search: "", risuScheme: "dark", mode: "dark", sub: null, opened: false, layout: "left", lastMore: "tools" };
   const root = h("div", { class: "rb-root", hidden: true });
   installTooltips(root);
+  installImeGuard(root);   // 2.2.2 한글 조합이 첫 글자부터 끊기던 문제(천지인·원격 모바일)
   const win = h("div", { class: "rb-win", role: "dialog", "aria-modal": "true", "aria-label": "Dusk Atelier" });
   root.appendChild(win);
   doc.body.appendChild(root);

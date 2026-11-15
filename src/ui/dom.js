@@ -13,6 +13,7 @@ export function h(tag, props, ...children) {
         }
       } else if (k === "ref") v(el);
       else if (k === "dataset") Object.assign(el.dataset, v);
+      else if (k === "onKeyDown" && typeof v === "function" && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) el.addEventListener("keydown", (e) => { if (e.isComposing || e.keyCode === 229) return; v(e); });   // 조합 중 Enter가 저장·전송으로 처리되지 않게
       else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2).toLowerCase(), v);
       else if (k === "value" && "value" in el) el.value = v;
       else if (k === "checked" && "checked" in el) el.checked = !!v;
@@ -22,6 +23,21 @@ export function h(tag, props, ...children) {
   }
   append(el, children);
   return el;
+}
+// 2.2.2 한글(천지인 등) 입력: 플러그인 화면 전체에서, 조합 중인 input 이벤트는 위에서 붙잡아 입력칸까지 내려보내지 않고
+// 조합이 끝나면 input을 한 번 다시 보낸다. 조합 중 처리 함수가 화면을 다시 그리거나 값을 다시 넣으면 첫 글자들이 낱자로 끊겼다
+// (원격 접속 모바일에서 특히 잘 보임). 입력칸을 어떤 방식으로 만들었든 모두 적용된다.
+export function installImeGuard(root) {
+  if (!root || root.__duskIme) return; root.__duskIme = true;
+  const editable = (t) => t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+  const composing = new WeakSet();
+  root.addEventListener("compositionstart", (e) => { if (editable(e.target)) composing.add(e.target); }, true);
+  root.addEventListener("compositionend", (e) => {
+    const t = e.target; if (!editable(t) || !composing.has(t)) return;
+    composing.delete(t);
+    setTimeout(() => { try { t.dispatchEvent(new Event("input", { bubbles: true })); } catch { /* 이미 사라진 칸 */ } }, 0);
+  }, true);
+  root.addEventListener("input", (e) => { if (editable(e.target) && (e.isComposing || composing.has(e.target))) e.stopImmediatePropagation(); }, true);
 }
 function append(el, children) {
   for (const c of children.flat(Infinity)) {
