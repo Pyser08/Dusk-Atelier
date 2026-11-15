@@ -51,7 +51,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const rx = prep ? await prep.entriesFor(character, chat) : [];  // v1.8.1 정규식 전처리: 임베딩·키워드 질의 글에서 군더더기 제거
     const tail = msgs.slice(-2).map((m) => rx.length ? prep.apply(extractMessageText(m), rx) : extractMessageText(m)).join("\n");
     let sem = null;  // 임베딩이 켜져 있으면 의미 유사도로 기억 고르기를 돕는다(실패하면 기존 방식 그대로)
-    try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40)); if (sem && embedder.rerank) sem = await embedder.rerank(folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40), sem); } catch { sem = null; }
+    try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40)); if (sem && embedder.rerank && idx.settings.inject.rerankRecords !== false) sem = await embedder.rerank(folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40), sem); } catch { sem = null; }
     const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
     if (built.manifest && sem) built.manifest.sem = sem.size;
     // 2.2.2 원문 회상: 임베딩이 켜져 있으면 지난 대화 원문에서 지금 글과 관련 있는 조각을 날짜와 함께 덧붙인다(요약 기억이 놓친 사실을 받친다).
