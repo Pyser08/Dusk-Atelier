@@ -108,6 +108,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   else if (plus && cur && !cur.when && currentStoryTime(folder)) lines.push(`Story time (last known): ${oneLine(currentStoryTime(folder))}`);
   // Story so far: 이전 장면을 최신부터 이벤트 예산 안에서 채우고 시간순으로 출력(통째로만 포함)
   // 2.2.2: 임베딩 점수가 있으면 같은 예산을 나눠 쓴다 — 최근 장면은 흐름을 이을 만큼(recentEventTokens)만, 나머지는 지금 글과 의미가 가까운 옛 장면.
+  const recallAt = lines.length;   // 2.2.2: recallFirst=true면 관련 기억 칸을 이 자리에 넣는다(시험에서 손해라 기본은 맨 뒤)
   const evCap = settings.eventTokens ?? 2000, evRows = []; let evUsed = 0;
   const lineOf = (s, withFacts) => "- " + (s.when ? `[${oneLine(s.when)}] ` : "") + oneLine(s.sum) + (withFacts && (s.facts ?? []).length ? " — " + s.facts.map(oneLine).join("; ") : "") + (s.place ? ` (${s.place})` : "");
   const prev = scenes.slice(0, -1), recentCap = sem ? Math.min(evCap, settings.recentEventTokens ?? 700) : evCap;
@@ -200,7 +201,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     const capR = settings.recallTokens ?? 700, keep = []; let n = estimateTokens(RECALL_TITLE);
     const picked = [];   // 거의 같은 말을 반복하는 기록은 건너뛴다(다양한 사실이 들어가게)
     for (const x of rows) { const t = `- ${dateOf(x.r)}${x.p.name}: ${oneLine(x.r.act)}`, k = estimateTokens(t); if (n + k > capR || used + n + k + 4 > cap) continue; const w = wordSet(x.r.act); if (settings.recallDedupe && picked.some((o) => overlap(o, w) >= settings.recallDedupe)) continue; picked.push(w);   /* 비슷한 기록 건너뛰기: 기본 꺼짐(시험에서 손해) */ keep.push({ t, at: x.r.at ?? 0, id: x.r.id }); n += k; if (keep.length >= (settings.recallMax ?? 16)) break; }
-    if (keep.length) { keep.sort((a, b) => a.at - b.at); lines.push(RECALL_TITLE, ...keep.map((x) => x.t)); used += n; manifest.included.push({ kind: "recall", tokens: n, count: keep.length }); manifest.recordIds.push(...keep.map((x) => x.id)); }
+    if (keep.length) { keep.sort((a, b) => a.at - b.at); lines.splice(settings.recallFirst === true ? recallAt : lines.length, 0, RECALL_TITLE, ...keep.map((x) => x.t)); used += n; manifest.included.push({ kind: "recall", tokens: n, count: keep.length }); manifest.recordIds.push(...keep.map((x) => x.id)); }
   }
   if (plus) {  // v1.6.2: 열린 항목 · 관계 변화량 · 지식 경계 · 원문 발췌. 각각 자기 예산 안에서 줄 단위로, 전체 상한을 넘으면 통째로 뺀다.
     const rel = new Set([...included, ...inScene]);
