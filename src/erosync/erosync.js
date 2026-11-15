@@ -24020,7 +24020,8 @@ Constraint: {{constraint}}
           const current = materializeProfileVariant(profile, variantKey);
           const next = { ...(current.baseProfile || {}) }, before = {}, after = {};
           for (const [k, v] of Object.entries(parsed[id].changes)) {
-            before[k] = turnValueOf(current.baseProfile, k); after[k] = v;
+            const uov = isPlainObject(profile.userOverrides) ? profile.userOverrides : {};   // 고친 값이 있으면 그 값에서 바뀐 것으로 보인다
+            before[k] = turnValueOf((k in uov) || (k === 'eroticInterest' && uov.eroticInterest) ? uov : current.baseProfile, k); after[k] = v;
             if (k === 'eroticInterest') next.eroticInterest = { ...(isPlainObject(next.eroticInterest) ? next.eroticInterest : {}), level: v }; else next[k] = v;
           }
           Object.assign(profile, current, { baseProfile: normalizeEroticProfile(next), updatedAt: new Date().toISOString() });

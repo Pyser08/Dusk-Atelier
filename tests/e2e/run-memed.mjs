@@ -89,7 +89,7 @@ for (const [tag, vp, extra] of [["PC", { width: 1280, height: 860 }, {}], ["모�
   ok(`[편집기 ${tag}] 감정 탭: 6태그 게이지, 미설정 표시, 변환 안내`, (await page.locator(".rb-mem-edgauge").count()) === 6 && (await page.locator(".rb-mem-edval", { hasText: "미설정" }).count()) === 4 && (await page.locator(".rb-mem-edconv").count()) === 1);
   await page.locator(".rb-mem-edrange").nth(5).evaluate((el) => { el.value = "4"; el.dispatchEvent(new Event("change", { bubbles: true })); }); await page.waitForTimeout(500);
   f = await folder(page); const pr = f.emo["시로코>{{user}}"];
-  ok(`[편집기 ${tag}] 두려움 게이지 4로 저장 + 잠금`, pr.tags.fear === 4 && pr.lock.fear === true);
+  ok(`[편집기 ${tag}] 두려움 게이지 4로 저장(2.2.4 잠그지 않음 — 다음 응답부터 이 값에서 이어감)`, pr.tags.fear === 4 && !pr.lock?.fear);
   await shot(page, `ed-${t}-3-emo`);
   // 상황·관점
   await page.locator(".rb-mem-edbar .rb-seg button", { hasText: "상황" }).click(); await page.waitForTimeout(400);
