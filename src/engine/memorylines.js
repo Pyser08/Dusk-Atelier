@@ -31,8 +31,6 @@ export const LINES_STAGE1 = [
   "   Always write exactly one scene line. yes = place, people present or the situation changed versus previousScene.",
   "3. who|Name|what they did or said that matters (<=60 chars)|0-3",
   "   0 trivial, 1 matters in this scene, 2 matters later, 3 permanent. One line per character who acted. Skip background figures.",
-  "   fact|Name|another distinct fact about that person from newest (<=80 chars)|0-3",
-  "   Use fact lines when newest reveals more than one thing worth remembering about someone (names, places, items, plans, dates, likes, history) — max 3 per person.",
   "4. rel|A|B|what changed between them (<=40 chars)|+ or - or 0",
   "5. open|a new promise, plan, secret or unanswered question (<=60 chars)",
   "6. close|id from openItems that newest resolved, kept or made pointless",

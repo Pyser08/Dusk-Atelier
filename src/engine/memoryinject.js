@@ -194,6 +194,8 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
   if (plus && sem) {   // 2.2.2: 지금 글과 의미가 가까운 기록을 인물 구분 없이 날짜와 함께(인물당 5개 제한에 걸려 빠지던 사실)
     const shown = new Set(manifest.recordIds), rows = [];
     for (const p of Object.values(folder.people ?? {})) { if ((p.ctx ?? "auto") === "never") continue; for (const r of p.records ?? []) { const v = sem.get(r.id); if (v != null && v >= semMin && injectable(r) && !shown.has(r.id)) rows.push({ p, r, v }); } }
+    const qWords = wordSet(recentText), kw = settings.recallKeyword ?? 0.04;   // 2.2.2: 의미 점수에 낱말 일치를 조금 더한다(이름·장소·물건은 낱말이 더 정확)
+    if (kw > 0 && qWords.size) for (const x of rows) { let hit = 0; for (const w of wordSet(x.r.act)) if (w.length >= 2 && qWords.has(w)) hit++; x.v += kw * Math.min(3, hit); }
     rows.sort((a, b) => b.v - a.v);
     const capR = settings.recallTokens ?? 700, keep = []; let n = estimateTokens(RECALL_TITLE);
     const picked = [];   // 거의 같은 말을 반복하는 기록은 건너뛴다(다양한 사실이 들어가게)
