@@ -18,7 +18,7 @@ function semQuery(msgs, minLen = 40) {
   if (last.length >= minLen || u < 1) return last || msgs.slice(-2).map(txt).join("\n");
   return txt(msgs[u - 1]).slice(-400) + "\n" + last;
 }
-export function createMemoryInjector(api, { store, prep = null, storyNow = null, onRequest = null, embedder = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
+export function createMemoryInjector(api, { store, prep = null, storyNow = null, onRequest = null, embedder = null, rerank = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   let last = null, mode = "none";
 
   async function current() {
@@ -79,6 +79,15 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const sem = await embedder.rawScores(fid, chunks, query, { budgetMs: Number(s.rawBudgetMs ?? 1500) }).catch(() => null);
     const fused = rrf([sem, lexScores(chunks, query)]);
     let ranked = [...fused].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+    // 2.2.4 재정렬(선택): 상위 후보를 고르기 모델(Jev 등)이 0~3점으로 매기고, 기준 넘는 것만 점수 순으로 넣는다 — 같은 정확도를 더 적은 토큰으로
+    if (rerank && s.rawRerank !== false && ranked.length) {
+      const byId = new Map(chunks.map((c) => [c.id, c])), pool = ranked.slice(0, Math.max(4, Number(s.rawRerankPool ?? 40))).map((id) => byId.get(id)).filter(Boolean);
+      const recent = msgs.slice(Math.max(0, msgs.length - 3)).map((m) => `${isUserMessage(m) ? "{{user}}" : String(character?.name ?? "{{char}}")}: ${extractMessageText(m)}`).join("\n").slice(-1500);
+      try {
+        const sc = await rerank({ query, recent, items: pool.map((c) => ({ id: c.id, text: `${c.date ? `[${c.date}] ` : ""}${c.t}` })) });
+        if (sc?.size) { const min = Number(s.rawRerankMin ?? 1.5), order = new Map(ranked.map((id, i) => [id, i])); ranked = [...sc].filter(([, v]) => v >= min).sort((a, b) => b[1] - a[1] || order.get(a[0]) - order.get(b[0])).map(([id]) => id); }
+      } catch (e) { log("원문 재정렬 건너뜀", e?.message ?? e); }
+    }
     const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0) });
     return out.lines.length ? { text: [RAW_TITLE, ...out.lines].join("\n"), tokens: out.tokens, count: out.lines.length } : null;
   }

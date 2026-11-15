@@ -111,7 +111,33 @@ const quiet = (...a) => { if (process.env.DEBUG) console.log("[dusk]", ...a); };
 const runner = createMemoryRunner(api, { store, log: quiet, notify: () => {}, call: (msgs) => chat("aux", AUX, msgs, { maxTokens: 32000 }) });
 const embedder = EMBED ? createEmbedder(api, { log: quiet }) : null;
 if (embedder) await embedder.save({ on: true, key: "proxy-injected", timeoutMs: 20000 });
-const injector = createMemoryInjector(api, { store, log: quiet, embedder });
+// --jev: 원문 회상 후보를 Jev(고르기 모델, OpenRouter /systemone)로 재정렬 — Jev 2.0 judgeMem과 같은 질문·기준
+const RANK = ["unrelated", "background", "useful", "answers it"];
+const jevStat = { calls: 0, cost: 0, ms: 0, fail: 0, tokens: 0 };
+async function jevRerank({ query, recent, items }) {
+  const out = new Map();
+  for (let i = 0; i < items.length; i += 20) {
+    const part = items.slice(i, i + 20), q = {};
+    part.forEach((_, k) => { q[`r${k}`] = { type: "score", instructions: `C${k}`, criteria: RANK }; });
+    const state = `[RECENT STORY]\n${String(recent ?? "").slice(-1200)}\n\n[USER]\n${String(query ?? "").slice(-1500)}\n\n[EARLIER RECORDS] For each Cn question, score how useful that record is for writing the next reply to the latest message: 0 unrelated, 1 background only, 2 useful context, 3 answers or explains it.\n${part.map((x, k) => `C${k}: ${String(x.text).slice(0, 420)}`).join("\n")}`;
+    const t = Date.now();
+    for (let a = 0; ; a++) {
+      try {
+        const r = await fetch("https://openrouter.ai/api/v1/systemone", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${KEY}` }, body: JSON.stringify({ model: args.jevModel ?? "typesafe/jev-1.14", state, questions: q }), signal: AbortSignal.timeout(60000) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.error) throw new Error(`${r.status} ${JSON.stringify(j.error ?? j).slice(0, 200)}`);
+        const ans = j.answers ?? j; jevStat.calls++; jevStat.cost += Number(j.usage?.cost ?? 0); jevStat.tokens += Number(j.usage?.input_tokens ?? j.usage?.prompt_tokens ?? 0); jevStat.ms += Date.now() - t;
+        if (jevStat.calls === 1) console.log("Jev 첫 응답 예:", JSON.stringify(j).slice(0, 400));
+        part.forEach((x, k) => { const r0 = ans[`r${k}`]; const p = r0?.probabilities; let s = Number(r0?.score ?? 0);
+          if (p && Object.keys(p).length) { let a2 = 0, b2 = 0; for (const [kk, v] of Object.entries(p)) { const lv = Number.isFinite(Number(kk)) ? Number(kk) : RANK.indexOf(kk); if (lv >= 0) { a2 += lv * v; b2 += v; } } if (b2) s = a2 / b2; }
+          out.set(x.id, s); });
+        break;
+      } catch (e) { if (a >= 3) { jevStat.fail++; console.log("Jev 실패:", e?.message ?? e); break; } await new Promise((res) => setTimeout(res, 1500 * 2 ** a)); }
+    }
+  }
+  return out;
+}
+const injector = createMemoryInjector(api, { store, log: quiet, embedder, rerank: args.jev === "1" ? jevRerank : null });
 
 const progressFile = path.join(OUT, `progress-${CONV}.json`);
 const progress = fs.existsSync(progressFile) ? JSON.parse(fs.readFileSync(progressFile, "utf8")) : { recordedUpTo: -1, cost: { aux: 0 }, usage: { aux: [0, 0, 0] } };
@@ -185,9 +211,10 @@ async function qa() {
     const c = await injector.compose({ character, chat: chatObj }, { mark: false });
     const withMem = c?.text ? insertBlock(base, c.text, c.position ?? "end") : base;
     const ONLY_BASE = args.baseOnly === "1";   // --baseOnly: 플러그인 없는 쪽만(천장 측정: --recent 1000000 과 함께)
-    const [a0, a1] = await Promise.all([chat("main", MAIN, base, { maxTokens: 2000, tier: MAIN_TIER }), ONLY_BASE ? Promise.resolve("") : chat("main", MAIN, withMem, { maxTokens: 2000, tier: MAIN_TIER })]);
+    const SKIP_BASE = args.skipBase === "1";   // --skipBase: 플러그인 없는 쪽 답을 건너뛴다(비용 절약)
+    const [a0, a1] = await Promise.all([SKIP_BASE ? Promise.resolve("") : chat("main", MAIN, base, { maxTokens: 2000, tier: MAIN_TIER }), ONLY_BASE ? Promise.resolve("") : chat("main", MAIN, withMem, { maxTokens: 2000, tier: MAIN_TIER })]);
     const jt = args.judgeTier ?? (JUDGE === MAIN ? MAIN_TIER : null);   // --judgeTier flex
-    const [j0, j1] = await Promise.all([chat("judge", JUDGE, judgePrompt(q.question, q.answer, a0, { a: A, b: B }), { maxTokens: 1000, tier: jt }), ONLY_BASE ? Promise.resolve("WRONG") : chat("judge", JUDGE, judgePrompt(q.question, q.answer, a1, { a: A, b: B }), { maxTokens: 1000, tier: jt })]);
+    const [j0, j1] = await Promise.all([SKIP_BASE ? Promise.resolve("WRONG") : chat("judge", JUDGE, judgePrompt(q.question, q.answer, a0, { a: A, b: B }), { maxTokens: 1000, tier: jt }), ONLY_BASE ? Promise.resolve("WRONG") : chat("judge", JUDGE, judgePrompt(q.question, q.answer, a1, { a: A, b: B }), { maxTokens: 1000, tier: jt })]);
     const ok = (s) => /CORRECT/i.test(s) && !/WRONG/i.test(s);
     if ((k + 1) % 20 === 0) console.log(`  질문 ${k + 1}/${qs.length}`);
     return { q: q.question, gold: String(q.answer), category: q.category, evidence: q.evidence, noPlugin: a0, plugin: a1, okNo: ok(j0), okMem: ok(j1), memTokens: c?.manifest?.tokens ?? 0, memReason: c?.reason ?? "", memText: c?.text ?? "" };
@@ -198,6 +225,7 @@ async function qa() {
   summary.overall = { noPlugin: acc(rows, (r) => r.okNo), plugin: acc(rows, (r) => r.okMem), avgMemTokens: Math.round(rows.reduce((s, r) => s + r.memTokens, 0) / rows.length) };
   for (const [k, name] of Object.entries(CAT)) { const rs = rows.filter((r) => String(r.category) === k); summary.byCategory[name] = { n: rs.length, noPlugin: acc(rs, (r) => r.okNo), plugin: acc(rs, (r) => r.okMem) }; }
   fs.writeFileSync(path.join(OUT, `qa-${CONV}.json`), JSON.stringify(rows, null, 1));
+  if (args.jev === "1") summary.jev = { ...jevStat, avgMs: jevStat.calls ? Math.round(jevStat.ms / jevStat.calls) : 0 };
   fs.writeFileSync(path.join(OUT, `summary-${CONV}.json`), JSON.stringify(summary, null, 1));
   console.log(JSON.stringify(summary, null, 1));
 }
