@@ -26,4 +26,5 @@ for (const f of fs.readdirSync(DIR).filter((x) => /^qa-\d+\.json$/.test(x))) {
 let next = 0; const ok = new Array(rows.length);
 await Promise.all(Array.from({ length: CONC }, async () => { while (next < rows.length) { const i = next++; ok[i] = await judge(judgePrompt(rows[i].q, rows[i].gold, rows[i][FIELD], rows[i].who)); } }));
 const C = { 1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop" }, acc = (f) => { const rs = rows.map((r, i) => [r, ok[i]]).filter(([r]) => f(r)); return rs.length ? +(100 * rs.filter(([, o]) => o).length / rs.length).toFixed(1) : null; };
+if (args.save) fs.writeFileSync(args.save, JSON.stringify(rows.map((r, i) => ({ q: r.q, category: r.category, evidence: r.evidence, ok: ok[i] }))));   // --save <파일>: 문항별 판정
 console.log(JSON.stringify({ dir: path.basename(DIR), field: FIELD, judge: JUDGE, n: rows.length, overall: acc(() => true), byCategory: Object.fromEntries(Object.entries(C).map(([k, n]) => [n, acc((r) => String(r.category) === k)])), cost: +cost.toFixed(4) }));
