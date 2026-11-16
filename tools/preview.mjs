@@ -29,6 +29,7 @@ async function seedWiki() {
       "cand-m2": { id: "cand-m2", documentId: sua.id, axis: "paraphilia", status: "collecting", pattern: "소유당하는 느낌에 끌린다", evidence: [{}] } };
   }
   try { w = L.createBlankPerson(w, "미오"); } catch {}
+  if (q.get("many") === "1") for (const n of ["하루", "나기", "카즈사", "요시미", "아이리", "레이사", "치세", "히나", "아코", "이로하", "츠루기", "하스미", "마시로", "코하루", "하나코", "아즈사"]) { try { w = L.createBlankPerson(w, n); } catch {} }
   await __app.ctx.memory.store.updateFolder("c1", "t1", (f) => {
     f.wiki = w;
     f.people["수아"] = { name: "수아", records: [rec("s1", "외도 의심을 미오에게 털어놓았다", "A", 3), rec("s2", "장례식장에서 오열했다", "A", 5), rec("s3", "미오에게 고백했다", "A", 9), rec("s4", "서진과 말다툼을 했다", "B", 12), rec("s5", "미오과 우산을 같이 썼다", "B", 14), rec("s6", "도윤의 휴대폰을 몰래 봤다", "C", 2)] };
@@ -51,6 +52,7 @@ async function seedWiki() {
     f.bonds = [{ id: "bd1", a: "수아", b: "미오", moment: "장례식 뒤 편의점 앞에서 캔커피를 나눠 마셨다", hook: "캔커피, 편의점" }, { id: "bd2", a: "수아", b: "미오", moment: "비 오는 날 우산을 같이 썼다", hook: "비" }];
     f.rifts = [{ id: "rf1", a: "수아", b: "미오", about: "서진과 단둘이 만난 일", state: "apologized", grudge: "some", who: "수아" }];
     f.exp = { e1: { a: "수아", b: "미오", ae: "매일 연락해 주길 바란다", as: false, be: "혼자 있는 시간도 필요하다", bs: true } };
+    if (q.get("many") === "1") for (const n of ["하루", "나기", "카즈사", "요시미", "아이리", "레이사", "치세", "히나", "아코", "이로하", "츠루기", "하스미", "마시로", "코하루", "하나코", "아즈사"]) { f.people[n] = { name: n, records: [rec("m-" + n, n + "와 복도에서 마주쳤다", "C", 20)] }; f.emo["수아>" + n] = { from: "수아", to: n, tags: { affection: 3, trust: 2 }, log: [] }; }
     f.beliefs = [{ id: "bl1", who: "수아", by: "서진", thinks: "미오이 서진을 좋아한다", truth: "업무 때문에 만났을 뿐이다", open: true }];
   }, { chaId: "c1", chatId: "t1" });
   // Erosync 가짜 스냅샷(성인 항목 카드가 채워지게)

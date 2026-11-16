@@ -360,6 +360,7 @@ export const MEM_ADDON_CSS = `.e-attraction{background:#ff6fae}.e-possess{backgr
 .rb-emo2-big.cracked .track i{-webkit-mask:linear-gradient(90deg,#000 0 44%,transparent 44% 47%,#000 47%);mask:linear-gradient(90deg,#000 0 44%,transparent 44% 47%,#000 47%)}
 .rb-emo2-big.broken .track i{filter:grayscale(.7);-webkit-mask:linear-gradient(90deg,#000 0 30%,transparent 30% 34%,#000 34% 62%,transparent 62% 67%,#000 67%);mask:linear-gradient(90deg,#000 0 30%,transparent 30% 34%,#000 34% 62%,transparent 62% 67%,#000 67%)}
 .rb-emo2-big.broken b{text-decoration:line-through;text-decoration-color:#ef5350}.rb-emo2-big.cracked small::after,.rb-emo2-big.broken small::after{content:" 💔";font-size:10px}
+.rb-wk2-iside .rb-wk2-glance{max-height:360px;overflow-y:auto;scrollbar-width:thin;padding-right:2px}
 `;
 
 export function ensureMemAddonCss(ctx) {
