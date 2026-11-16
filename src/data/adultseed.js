@@ -32,13 +32,14 @@ export async function seedWikiNow(api, memory, log = () => {}) {
 }
 
 // Erosync: 이 채팅을 처음 볼 때 이미 있던 인물은 기준으로만 두고, 그 뒤 새로 생긴 인물(출발값이 막 만들어진 인물)에 성적 수치를 넣는다.
-export async function seedErosyncNow(api, erosync, snap, log = () => {}) {
+// fresh: 지난 대화 분석 뒤처럼 방금 출발값을 만든 경우 — 처음 본 채팅이어도 기준으로 두지 않고 넣는다(직접 고친 인물은 그대로)
+export async function seedErosyncNow(api, erosync, snap, log = () => {}, { fresh = false } = {}) {
   const opt = await readSeedOpt(api);
   if (!opt.on || !snap?.ok) return 0;
   const scope = snap.scope?.scopeKey || "?";
   const all = (await readJ(api, EROS_KEY)) ?? {};
   const people = (snap.people ?? []).filter((p) => !p.nonPerson && !p.sfw);
-  const first = !(scope in all);
+  const first = !fresh && !(scope in all);
   const done = new Set(all[scope] ?? []);
   let n = 0;
   for (const p of people) {

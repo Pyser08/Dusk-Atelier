@@ -332,6 +332,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     }
     const shared = { character, chat };
     const failed = [], reasons = []; let n = 0;
+    if (groups.length && typeof link?.beforeBackfill === "function") { try { await link.beforeBackfill(); } catch (e) { log("지난 대화 분석 준비 실패", e?.message ?? e); } }   // 2.2.6 성적 지향 옮기기 등
     const extras = await backfillExtras(charIndex, chatIndex, shared, groups.length);
     for (const g of groups) {   // 2.2.4 batch: 일괄 처리는 인물을 묶어 묻는다(memoryprompt analyzeLines group)
       if (signal?.aborted) break;
@@ -351,6 +352,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       if (signal?.aborted) break;
       onProgress?.(++n, groups.length, failed.length);
     }
+    if (groups.length && typeof link?.afterBackfill === "function") { try { await link.afterBackfill(); } catch (e) { log("지난 대화 분석 뒤처리 실패", e?.message ?? e); } }   // 2.2.6 처음 등장 성인 항목 무작위 등
     if (failed.length) {  // 실패한 응답은 기억해 두었다가 현황에 '실패'로 보여 준다(성공하면 applyAnalysis가 지운다)
       const msgs = chat.message ?? [], hs = failed.flat().map((i) => messageIdentity(msgs[i]));
       await store.updateFolder(String(character.chaId), chatKeyOf(chat, chatIndex), (f) => { f.failedBackfill = [...new Set([...(f.failedBackfill ?? []), ...hs])].slice(-500); }).catch(() => {});

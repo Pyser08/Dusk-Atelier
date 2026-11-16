@@ -1,7 +1,7 @@
 // 장기기억·관계도 애드온(2.0.0): 장기 기억(기록·주입·턴 흐름·리수폿 위키), 인물 관계도, 회귀, 호감도 HUD.
 // 저장 데이터·설정 키(dusk.mem.v3.*, risupot.*, dusk.ui.memoryButton 등)는 그대로라 애드온을 다시 받으면 이어서 써요.
 // 요청 훅(beforeRequest 주입)이 있어요(hooks:true). 코어 2.0.0 로더가 끌 때 훅을 떼 주므로 업데이트도 바로 적용돼요.
-import { seedWikiNow, syncOrientNow } from "../../src/data/adultseed.js";
+import { seedWikiNow, syncOrientNow, seedErosyncNow } from "../../src/data/adultseed.js";
 import { createMemory } from "../../src/data/memory.js";
 import { createAffHud } from "../../src/data/affhud.js";
 import { createMemoryButton } from "../../src/data/memorybutton.js";
@@ -26,6 +26,15 @@ export async function activate(api, ctx) {
   });
   // 2.2.6 기억 옵션 ‘처음 등장 때 성인 항목 무작위로’: 턴 기록 뒤 위키가 저장될 틈을 두고 새 인물에게 후보를 넣는다
   const seedOff = memory.flow?.onTurn?.(() => { setTimeout(() => { seedWikiNow(api, memory, log).catch((e) => log(`성인 항목 무작위 기록 실패 ${e?.message ?? e}`)); syncOrientNow(memory, app.erosync).catch(() => {}); }, 6000); });
+  // 2.2.6 지난 대화 분석에서도: 시작 전 성적 지향을 옮기고, 끝나면 새 인물에게 무작위 성인 항목(위키 후보·Erosync 출발값)을 넣는다
+  memory.link.beforeBackfill = () => syncOrientNow(memory, app.erosync).catch(() => 0);
+  memory.link.afterBackfill = async () => {
+    await new Promise((r) => setTimeout(r, 3000));   // 함께 기록(인물 위키)이 저장될 틈
+    await seedWikiNow(api, memory, log).catch(() => 0);
+    const er = app.erosync; if (er?.isRunning?.()) { try { for (let i = 0; i < 20 && (await er.profile("status").catch(() => null))?.running; i++) await new Promise((r) => setTimeout(r, 3000));   // 함께 돌린 성향 분석이 끝나길 잠시 기다림(최대 1분)
+      await seedErosyncNow(api, er, await er.read(), log, { fresh: true }); } catch { /* 다음 턴에 */ } }
+    await syncOrientNow(memory, er).catch(() => 0);
+  };
   const affhud = createAffHud(api, { store: memory.store, link: memory.link });
   setUserPromptProvider(() => memory.userPrompts());
   // Erosync가 있으면 지난 대화 분석 끝에 성향 분석을 한 번(이미 있으면 그대로)

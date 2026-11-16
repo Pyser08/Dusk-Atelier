@@ -6,7 +6,8 @@
 const PLACEHOLDER = /\[\s*(character|char|outfit|keyword|yaoi\s*keyword|charname|name|tag|emotion|skinship|action|form|state|image\s*command)[^\]]*\]|character'?s\s*name|^(character|charname|keyword|outfit)$/i;
 const SPLIT = /[,;|+/"`]|\s+and\s+/i;   // 이름 속 ' 와 & 는 자르지 않는다(Sigrid de L'Azur, freda&georgia)
 const NESTED = /<img\b\s*(?:src\s*)?=\s*["']?(?:[^<>"']*<[^<>]*>)+[^<>"']*["']?\s*\/?>/gi;   // <img="<Character Command>_<State Command>">
-const EXT = /\.(png|jpe?g|webp|gif|avif)$/i;
+// 2.2.6 확장자: 흔한 그림 확장자 모두, 두 겹(.png.webp)도. 대소문자 무시
+const EXT = /(?:\.(?:png|apng|jpe?g|jfif|pjpeg|pjp|webp|gif|avif|bmp|svg|heic|heif|tiff?|ico))+$/i;
 const FALLBACK = ["default", "neutral", "idle", "normal"];
 
 export const norm = (s) => String(s ?? "").normalize("NFKC").toLowerCase().replace(/[\s_\-.\[\]"'`]+/g, "");
@@ -112,11 +113,11 @@ function fallbackOf(pool) {
 export function buildAssetIndex(names) {
   const input = Array.isArray(names) ? names : [];
   const groups = input.some((g) => Array.isArray(g)) ? input.filter(Array.isArray) : [input];
-  const seen = new Set(), raw = [], modes = new Set();
+  const seen = new Set(), raw = [], modes = new Set(), exact = new Set();   // exact: 실제 에셋 이름 전부(같은 이름이 확장자만 달라도 각각 — 그대로 쓴 태그는 안 고친다)
   for (const g of groups) {
     // 이름 자체에 확장자가 든 에셋(`Gyeongja_smile.webp`)은 확장자를 떼고 읽되, 고칠 때는 실제 이름(확장자째)을 쓴다.
     const real = new Map();
-    for (const n0 of g) { const n = String(n0 ?? ""), b = n.replace(EXT, ""); if (b && !real.has(b)) real.set(b, n); }
+    for (const n0 of g) { const n = String(n0 ?? ""), b = n.replace(EXT, ""); if (n) exact.add(n); if (b && !real.has(b)) real.set(b, n); }
     const list = [...real.keys()].filter((n) => !seen.has(n));
     if (!list.length) continue;
     list.forEach((n) => seen.add(n));
@@ -126,7 +127,7 @@ export function buildAssetIndex(names) {
     raw.push(...r.raw);
   }
   const dotted = modes.size === 1 && modes.has(true);
-  return indexOf(raw, dotted, modes);
+  return Object.assign(indexOf(raw, dotted, modes), { exact });
 }
 
 function parseGroup(list) {
@@ -336,7 +337,7 @@ export function fixImgTags(text, idx, opts = {}) {
     if (!parts) continue;
     const payload = parts[3];
     if (skipPayload(payload)) continue;
-    if (idx.byName.get(norm(payload)) === payload.trim() && payload === payload.trim()) continue;   // 이미 정확함
+    if (payload === payload.trim() && (idx.exact?.has(payload) || idx.byName.get(norm(payload)) === payload)) continue;   // 이미 정확함
     const r = resolvePayload(idx, payload, opts.state);
     if (r.keep) continue;
     const from = m[0];
@@ -420,6 +421,6 @@ export const renderTag = (span, name) => `<img${span.prefix ?? "="}${span.quote 
 // 태그 하나 해석: 이미 정확하면 exact. → { name, kind, entry } | { remove } | { keep, char }
 export function resolveTag(idx, payload, state) {
   const p = String(payload ?? "");
-  if (idx.byName.get(norm(p)) === p.trim() && p === p.trim()) return { name: p, kind: "exact", entry: idx.byEntryName.get(p) };
+  if (p === p.trim() && (idx.exact?.has(p) || idx.byName.get(norm(p)) === p)) return { name: p, kind: "exact", entry: idx.byEntryName.get(p) ?? idx.byEntryName.get(idx.byName.get(norm(p.replace(EXT, "")))) };
   return resolvePayload(idx, p, state);
 }
