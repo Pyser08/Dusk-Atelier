@@ -6,7 +6,7 @@
 
 | 저장소 | 작업 브랜치 | 비고 |
 |---|---|---|
-| Dusk-Atelier | `claude/cool-ride-t4bbw2` | (2026-11-16, main에 머지됨 · 태그 없음 → 미릴리스) 장기기억 애드온 **0.3.0** — 호감 분리·애인·연애 흐름·위키 개편(B4: 왼쪽 프로필 열 + 탭)·감정 게이지 모양·월경 D-day, Erosync 한국어 출력·전체 분석 호출 줄이기(Erosync 0.1.8은 dist만 바뀜, 버전 그대로). 애드온 배포는 지시 대기. 아카 글 `docs/arca/memory-0.3.0.html`. 자세한 건 그 브랜치 STATE.md 맨 위 |
+| Dusk-Atelier | `claude/cool-ride-t4bbw2` | (2026-11-16, main에 머지됨 · 태그 없음 → 미릴리스) 장기기억 애드온 **0.3.0** — 호감 분리·애인·연애 흐름·위키 개편(B4: 왼쪽 프로필 열 + 탭)·감정 게이지 모양·월경 D-day, Erosync 한국어 출력·전체 분석 호출 줄이기(Erosync 0.1.8은 dist만 바뀜, 버전 그대로). 애드온 배포는 지시 대기. 아카 글 `docs/arca/memory-0.3.0-*.html`(4편). 자세한 건 그 브랜치 STATE.md 맨 위 |
 | Dusk-Atelier | `2.2.0` | (2026-11-13 신설, main fd5fd34에서 분기) 글래스 UI 개편 — 탭별 배치 갈아엎기 → 새 테마 6종. 기준 `HandOff/UI-GLASS.md`, 세션 계획은 그 브랜치 STATE.md 맨 위 |
 | Dusk-Atelier | `SD-Studio` | v2.1.7 코어 릴리스(11-12, 봇 업데이트 뒤 옛 Lua 트리거 남는 버그. 장기기억 애드온 0.2.11 배포). 에셋 제작(sdstudio) 애드온 0.3.1 배포함(11-13). 단 main `addons/addons.src.json`엔 아직 없음 — 다음 publish 전에 넣을 것 — 이어서 할 일은 SD-Studio의 STATE.md 맨 아래 |
 | Dusk-Atelier | `2.1.9` | (2026-11-13, perf/startup 3e12169에서 분기) v2.1.9·장기기억 애드온 0.2.12 — 버그리포트 5건 수정(내 API 기본 주소, 서사관계 모드 월경·임신 구획, 연도 없는 날짜, 한글 이름 주기 보고, 프리셋 user 블록). **배포함**(v2.1.9 태그, 장기기억 애드온 0.2.12는 11-14 addons 브랜치에 단독 배포 d608c9c). 자세한 건 그 브랜치 STATE.md 맨 아래 |
