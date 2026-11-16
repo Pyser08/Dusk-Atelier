@@ -117,6 +117,18 @@ export function linesStage2Group({ light = false, beliefs = false, wiki = false,
   return r.join("\n");
 }
 // 묶음 답 → Map(이름 → 그 묶음 원문). 이름은 names 중 맞는 것으로(띄어쓰기·대소문자 무시). 묶음 표식이 하나도 없으면 null.
+// 2.1.5: 사고 출력이 켜진 모델은 <Thoughts>…</Thoughts>(provider-manager)·<think>…</think>를 본문 앞에 붙인다.
+// 생각 글을 지우고, {"lines":…} 객체가 첫 줄이 아니어도 찾아 그 JSON만 남긴다(못 찾으면 생각 글만 지운 글).
+export function stripThoughts(raw) {
+  let t = String(raw ?? "").replace(/<(Thoughts|think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, "").replace(/^[\s\S]*?<\/(?:Thoughts|think|thinking|reasoning)>/i, "").trim();
+  if (/^[[{]/.test(t.replace(/^```(?:json)?\s*/i, ""))) return t;
+  const at = t.search(/\{\s*"lines"\s*:/);
+  if (at < 0) return t;
+  const end = t.lastIndexOf("}");
+  const body = end > at ? t.slice(at, end + 1) : t.slice(at);
+  try { JSON.parse(body); return body; } catch { return t; }
+}
+
 export function splitGroupReply(raw, names) {
   let text = String(raw ?? "");
   const t = text.replace(/```[a-z]*/gi, "").trim();

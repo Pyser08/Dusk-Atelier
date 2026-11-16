@@ -4,6 +4,7 @@
 // 2.2.4 분기 채팅 기억 이어받기: 기억이 없는 채팅이 같은 봇의 다른 채팅에서 갈라져 나온 것이면(메시지가 그 채팅의 기록과 맞으면)
 //   그 채팅의 기억을 이어받는다. 갈라진 뒤의 기록은 이 채팅 메시지와 맞지 않아 대조(reconcile)에서 빠진다. 위키는 리수폿이 따로 복사한다.
 import { reconcile } from "../engine/memoryreconcile.js";
+import { logFailure } from "./memlog.js";
 
 const checked = new Map();   // 봇|채팅 → 확인한 메시지 수(같은 상태로는 다시 찾지 않는다)
 export const hasMemory = (f) => !!f && (Object.values(f.people ?? {}).some((p) => (p.records ?? []).length) || (f.scenes ?? []).length > 0);
@@ -38,7 +39,8 @@ export async function inheritFromParent(store, chaId, chatId, messages, folder =
 export async function loadReconciled(store, chaId, chatId, messages) {
   let folder = await store.getFolder(String(chaId), String(chatId));
   if (!hasMemory(folder) && Array.isArray(messages) && messages.length >= 6) {
-    try { if (await inheritFromParent(store, String(chaId), String(chatId), messages, folder)) folder = await store.getFolder(String(chaId), String(chatId)); } catch { /* 이어받기 실패는 막지 않는다 */ }
+    try { if (await inheritFromParent(store, String(chaId), String(chatId), messages, folder)) folder = await store.getFolder(String(chaId), String(chatId)); }
+    catch (e) { logFailure({ area: "분기 기억 이어받기", title: "분기한 채팅이 원래 채팅의 기억을 이어받지 못했어요", error: e, fallback: "기억 없이 시작해요", ctx: { 채팅: String(chatId), 메시지: messages.length } }); }
   }
   if (folder && Array.isArray(messages) && messages.length) reconcile(folder, messages);
   return folder;

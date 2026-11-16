@@ -1,5 +1,6 @@
 // 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변).
 import { cleanForMemory } from "../engine/cleantext.js";
+import { logFailure } from "./memlog.js";
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
 import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
 import { stateText } from "../engine/storytime.js";
@@ -61,7 +62,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     if (built.manifest && sem) built.manifest.sem = sem.size;
     // 2.2.2 원문 회상: 임베딩이 켜져 있으면 지난 대화 원문에서 지금 글과 관련 있는 조각을 날짜와 함께 덧붙인다(요약 기억이 놓친 사실을 받친다).
     if (built.text && embedder && idx.settings.inject.raw !== false && idx.settings.inject.plus !== false) {
-      try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.rawQueryMin ?? 0), inj); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); }
+      try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.rawQueryMin ?? 0), inj); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); logFailure({ area: "원문 회상", title: "지난 대화 원문 조각을 넣지 못했어요", error: e, fallback: "원문 조각 없이 기억만 넣었어요", ctx: { 메시지: msgs.length } }); }
     }
     const raw = built.text, manifest = built.manifest;
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
@@ -92,7 +93,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       try {
         const sc = await rerank({ query, recent, items: pool.map((c) => ({ id: c.id, text: `${c.date ? `[${c.date}] ` : ""}${c.t}` })) });
         if (sc?.size) { const min = Number(s.rawRerankMin ?? 1.5), order = new Map(ranked.map((id, i) => [id, i])); ranked = [...sc].filter(([, v]) => v >= min).sort((a, b) => b[1] - a[1] || order.get(a[0]) - order.get(b[0])).map(([id]) => id); }
-      } catch (e) { log("원문 재정렬 건너뜀", e?.message ?? e); }
+      } catch (e) { log("원문 재정렬 건너뜀", e?.message ?? e); logFailure({ area: "Jev 재정렬", title: "원문 회상 후보를 Jev로 고르지 못했어요", error: e, fallback: "원래 순서로 넣었어요", ctx: { 후보: pool.length } }); }
     }
     const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0) });
     return out.lines.length ? { text: [RAW_TITLE, ...out.lines].join("\n"), tokens: out.tokens, count: out.lines.length } : null;
