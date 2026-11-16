@@ -7,7 +7,7 @@ import { readSeedOpt, saveSeedOpt } from "../../../data/adultseed.js";
 import { poolOf, normalizeSeedOpt, DESIRE_CATS, KINK_CATS, CUSTOM_CAT } from "../../../engine/adultseed.js";
 import { ensureMemAddonCss } from "./memaddoncss.js";
 
-export const seedLine = (o) => !o.on ? "꺼짐" : `켜짐 · ${[o.cycle && "월경", o.sexual && "성적 수치", o.desires && "성적 욕망", o.kinks && "이상성향"].filter(Boolean).join("·") || "고른 항목 없음"}`;
+export const seedLine = (o) => !o.on ? "꺼짐" : `켜짐 · ${[o.cycle && "월경", o.sexual && "성적 수치", o.desires && "성적 욕망", o.kinks && "이상성향", o.lewd && "음란도", o.first && "첫인상"].filter(Boolean).join("·") || "고른 항목 없음"}`;
 
 // 기억 옵션에 넣는 줄(누르면 창). onSaved(opt)로 줄 글자를 바꾼다.
 export function adultSeedRow(ctx) {
@@ -64,6 +64,8 @@ export async function openAdultSeedModal(ctx, { onSaved = null } = {}) {
     sw("성적 관심 · 성적 항목", "sexual", "Erosync 성적 관심·즉흥성·개방성·추진력 출발값(Erosync가 켜져 있을 때)."),
     sw("성적 욕망", "desires", "1~2개를 인물 위키 ‘성적 욕망 · 이상성향 후보’에 검토 대기로 넣어요."),
     sw("이상성향", "kinks", "약 절반의 인물에게 1개. 없는 인물도 있어요."),
+    sw("음란도", "lewd", "끄면 0에서 시작해요. 켜면 인물마다 무작위로 정해요(인물 위키 수치)."),
+    sw("첫인상", "first", "끄면 0(특별한 끌림·거부감 없음)에서 시작해요. 켜면 {{user}}에 대한 첫 끌림/거부감(-3~+3)을 무작위로 정해요."),
     poolsEl, msg,
     h("div", { class: "rb-mem-edrow", style: "justify-content:flex-end;flex-wrap:wrap" },
       btn("닫기", { onClick: () => done(null) }),

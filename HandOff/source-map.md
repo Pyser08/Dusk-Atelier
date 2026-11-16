@@ -30,7 +30,7 @@
 - `addons.js` (483줄) 애드온 로더(2.0.0 시험): 우리 저장소 목록(addons.json)의 애드온 ESM을 nativ… — ADDON_MANIFEST_URL, ADDON_URL_KEY, ADOPT_KEY, SEEN_KEY, CUSTOM_INDEX_KEY
 - `addonscope.js` (52줄) 애드온마다 따로 쓰는 api: 애드온이 호스트에 단 훅(요청·스크립트·채팅 리스너)을 기록해 두었다가… — BASE, baseApi, createProviderRelay, scopeApi
 - `addonsdk.js` (134줄) 애드온 SDK(2.1.0): 모든 애드온의 activate(api, ctx)에 ctx.dusk로 넘겨… — SDK_VERSION, createAddonSdk
-- `adultseed.js` (72줄) 2.2.6 ‘처음 등장 때 성인 항목 무작위로’ 옵션(pluginStorage) + 장기기억 위키 후… — readSeedOpt, saveSeedOpt, seedWikiNow, seedErosyncNow, syncOrientNow
+- `adultseed.js` (73줄) 2.2.6 ‘처음 등장 때 성인 항목 무작위로’ 옵션(pluginStorage) + 장기기억 위키 후… — readSeedOpt, saveSeedOpt, seedWikiNow, seedErosyncNow, syncOrientNow
 - `affhud.js` (178줄) 호감도 HUD 프리셋 런타임: 응답이 끝나면 호감도를 채팅 변수($aff…)에 써 둔다. — createAffHud
 - `assetfix.js` (93줄) v1.8.2 에셋 태그 고치기(도구 탭, 사용자가 누를 때만): 지금 열린 채팅 읽기 · 고친 응답 … — UNDO_KEY, loadRange, applyFix, lastUndo, undoFix
 - `assetfolders.js` (65줄) — foldersOf, childFolders, folderPath, createFolder, renameFolder
@@ -85,7 +85,7 @@
 - `memorystore3.js` (201줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
 - `memoryswitches.js` (77줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
 - `memorytools.js` (33줄) 인물 AI 도구(7단계 B): 리수폿 컨트롤러를 한 묶음으로 만든다. 턴 흐름이 켜져 있고 그 채팅이… — makeTools
-- `memoryturn.js` (414줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — cutByLimit, promptKeysOf, stageOf, createTurnFlow
+- `memoryturn.js` (416줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — cutByLimit, promptKeysOf, stageOf, createTurnFlow
 - `modcompat.js` (266줄) 모듈 호환(애드온 modcompat 전용): 리스 훅 셋(output·display·process) … — DEFAULTS, createModCompat, stripOwnSetvars, overlaps
 - `modelhub.js` (97줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (248줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
@@ -169,7 +169,7 @@
 ### src/engine/
 - `addonguide.js` (81줄) 커스텀 애드온 만들기 안내(2.1.0): '애드온 만들기' 창이 AI에게 그대로 넘기는 지침과 빈 틀… — ADDON_TEMPLATE, meta, activate, ADDON_GUIDE, addonRequestPrompt
 - `addons.js` (112줄) 애드온 순수 로직(2.0.0 시험): 목록(manifest) 검사 · 버전 비교 · 업데이트 고르기.… — ADDON_FORMAT, cmpVer, parseManifest, installOrder, bootOrder
-- `adultseed.js` (95줄) 2.2.6 처음 등장한 인물의 성인 항목 무작위 기록(순수, 기억 옵션 ‘처음 등장 때 성인 항목 무… — SEED_KEY, DESIRE_CATS, KINK_CATS, DESIRES, KINKS
+- `adultseed.js` (129줄) 2.2.6 처음 등장한 인물의 성인 항목 무작위 기록(순수, 기억 옵션 ‘처음 등장 때 성인 항목 무… — SEED_KEY, DESIRE_CATS, KINK_CATS, DESIRES, KINKS
 - `affhud.js` (144줄) 호감도 HUD 프리셋(순수): 배경 HTML 조각·기본 변수 설치/제거, 리스폿 수치 읽기, 자체 보… — MARK_A, AFF_DEFAULTS, AFF_KEYS, hudHtml, hasHud
 - `affprompts.js` (54줄) 호감도 HUD가 보조모델에 보내는 기본 프롬프트. 문구만 고치면 되도록 한곳에 모았다. (로직은 af… — JUDGE_SYSTEM, JUDGE_USER, DESIGN_SYSTEM, DESIGN_USER, DESIGN_RETRY
 - `airesponse.js` (30줄) — extractRunAIText
@@ -270,7 +270,7 @@
 - `protlink.js` (77줄) ProtLink+ 순수 로직: 파일 종류 분류 · 연결 후보 순위 · 변경 비교. api·화면 없음. — KIND_LABEL, KINDS, fileKinds, fitsKind, guessKind
 - `rawrecall.js` (66줄) 2.2.2 원문 회상(순수 함수): 지난 대화 원문을 조각내고, 의미 순위와 글자 순위를 합쳐(RRF… — splitText, buildChunks, lexScores, rrf, assemble
 - `recall.js` (107줄) v1.6.4 회상(Recall, 순수): 리수폿이 고른 인물의 Dusk 기록을 골라 Director에… — RECALL_DEFAULTS, keywordBoost, scoreRecord, pickPeople, unknownFor
-- `recorder.js` (491줄) Dusk 기록기 (2.0.0) — 리수폿 '기록하기(Writer)'를 대신하는 짧은 단계별 기록. 순… — isNoneReply, parseWriterRun, cardOf, RECORDER_OUTPUT, recorderText
+- `recorder.js` (497줄) Dusk 기록기 (2.0.0) — 리수폿 '기록하기(Writer)'를 대신하는 짧은 단계별 기록. 순… — isNoneReply, parseWriterRun, cardOf, RECORDER_OUTPUT, recorderText
 - `regexprep.js` (46줄) v1.8.1 정규식 전처리(순수): 기억 분석 입력과 임베딩 질의에서 상태창·HTML 같은 군더더기를… — DEFAULT_REGEX, normEntry, normEntries, parseRegexFile, collectEntries
 - `regexview.js` (28줄) 정규식 '바로 시험' 결과 보기 (v1.6.7 7단계): 입력 글을 일치 위치로 잘라 강조·요약한다.… — segments, describeMatch, summarize
 - `regress.js` (144줄) 회귀 (v1.9.2, 순수): 고른 인물 한 명의 기억만 들고 새 채팅을 시작한다. — detach, findPerson, regressWiki, regressSlice, regressCandidates
@@ -498,7 +498,8 @@
 - `index.js` (92줄) 카드 탭(기억 카드): 장기기억과 따로. 봇을 고르면 그 채팅의 기억으로 카드를 만들고, 카드 목록·…
 
 ### src/ui/screens/memory/
-- `adultseedmodal.js` (75줄) 2.2.6 ‘처음 등장 때 성인 항목 무작위로’ 설정 창(임베딩 창처럼 기억 옵션 줄에서 연다).
+- `adultreroll.js` (41줄) 2.2.6 인물 위키 NSFW 탭 ‘무작위 다시 뽑기’: 무작위 설정에서 고른 것(성적 욕망·이상성향…
+- `adultseedmodal.js` (77줄) 2.2.6 ‘처음 등장 때 성인 항목 무작위로’ 설정 창(임베딩 창처럼 기억 옵션 줄에서 연다).
 - `advanced.js` (165줄) 기억 탭 고급 모드: 리수폿에서 온 세부 기능(추가 프롬프트·관찰자·페르소나 이름·흐름 세부·Hypa…
 - `advorganize.js` (58줄) 2.2.0 고급 세부 설정 보기 정리(모양만): 긴 칸 목록을 주제 3묶음으로 나누고, 칸마다 접힌 …
 - `aitools.js` (200줄) 인물 AI 도구 창(고급 모드): 전체 다시 정리 · 직접 지시 · 항목 AI 작성 · 수치 제안.
@@ -556,7 +557,7 @@
 - `modebar.js` (49줄) 기억 탭 맨 위: 장기기억 방식(저장소). 간단·고급 모드 모두에서 선택을 유지하고 바꿀 수 있다.
 - `modeladv.js` (66줄) 고급 모델 설정(고급 모드): 공급자 전체 · 모델 목록 불러오기 · 온도/최대 출력/문맥/제한시간 …
 - `people.js` (265줄) 
-- `personv2.js` (240줄) v1.8.3 인물 위키 개편: 머리 + 탭(요약 / 관계 / 상세 정보 / 기록). 넓은 화면(@co…
+- `personv2.js` (241줄) v1.8.3 인물 위키 개편: 머리 + 탭(요약 / 관계 / 상세 정보 / 기록). 넓은 화면(@co…
 - `potpage.js` (55줄) 장기 기억 → 리수폿 화면(2.0.0): Erosync 화면처럼 위에 상태·켜기, 아래에 탭(개요·설…
 - `recordsui.js` (68줄) 인물 항목 관리: 항목 직접 추가·고치기·지우기와 NPC 감정 기록(리수폿 people-records…
 - `recovery.js` (53줄) 복구·실행 기록(고급 모드): Writer 원문 JSON을 붙여넣어 진단 → 고치기 → 반영(또는 강…

@@ -14,6 +14,7 @@ import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag, tagsFor } from "../../../engine
 import { isLover, loverPairs, setLover, pairKey } from "../../../engine/lover.js";
 import { timeline, eventText, isSecret, setSecret, unrequited } from "../../../engine/romance.js";
 import { ensureMemAddonCss } from "./memaddoncss.js";
+import { adultRerollCard } from "./adultreroll.js";
 import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const STAGES = [["just met", "처음 봄"], ["acquaintances", "아는 사이"], ["close", "친한 사이"], ["very close", "아주 가까움"]];
@@ -220,7 +221,7 @@ export function personTabs(env, parts) {
       note(!live ? "Erosync가 꺼져 있어요. 켜면 인물의 성적 항목을 읽고 직접 고치거나 다시 분석할 수 있어요." : "이 인물의 Erosync 값이 아직 없어요. 인물 분석을 하면 채워져요."),
       h("div", { class: "rb-mem-sact" }, btn(live ? "Erosync 분석 열기" : "Erosync 켜러 가기", { size: "sm", id: "rb-ero-open", onClick: openEro }))], h("small", { class: "rb-wk2-badge" }, "Erosync"), "rb-wk2-ero rb-nsfw-base");
     const tagBase = e ? eroTagsCard(ctx, card, e) : card("선호·금기 태그", [note("Erosync가 이 인물을 읽으면 선호·금기 태그를 적을 수 있어요.")], h("small", { class: "rb-wk2-badge" }, "Erosync"), "rb-wk2-ero rb-nsfw-base");
-    const kids = [sumCard, cycCard, candCard, eroBase, e && ero ? eroTempCard(ctx, card, ero, e) : null, tagBase].filter(Boolean);
+    const kids = [sumCard, cycCard, candCard, eroBase, e && ero ? eroTempCard(ctx, card, ero, e) : null, tagBase, adultRerollCard(env, card, doc, e, () => env.redraw?.())].filter(Boolean);
     return h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, kids);
   };
   const log = () => h("div", { class: "rb-wk2-pane" }, ...(parts.logBlocks ?? []).filter(Boolean));

@@ -34,6 +34,7 @@ export function normalizeSeedOpt(v) {
     .filter((c, i, a) => c.text && a.findIndex((x) => x.kind === c.kind && x.text === c.text) === i).slice(0, 60);
   return { on: s.on === true, since: Number.isFinite(s.since) ? s.since : 0,
     cycle: bool(s.cycle, true), sexual: bool(s.sexual, true), desires: bool(s.desires, true), kinks: bool(s.kinks, true),
+    lewd: bool(s.lewd, false), first: bool(s.first, false),   // 2.2.6 음란도·첫인상: 기본은 0에서 시작, 켜면 무작위
     off: [...new Set((Array.isArray(s.off) ? s.off : []).map(String))].slice(0, 200), custom };
 }
 // 고를 수 있는 항목(끈 것 빼고 + 직접 넣은 것). 분류별로 묶어 화면에도 쓴다.
@@ -55,7 +56,7 @@ export function seededRandom(seed) {
 }
 const pick = (arr, r, n) => { const a = arr.slice(), out = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(r() * a.length), 1)[0]); return out; };
 // 성향 한 명: 욕망 1~2개, 이상성향 0~1개(약 45%는 없음), 성적 수치 4개(가운데가 두껍고 양 끝도 가끔 나오는 분포)
-export function rollAdult(name, random = null, opt = null) {
+export function rollAdult(name, random = null, opt = null) {   // name 뒤에 #숫자를 붙이면(위키 ‘다시 뽑기’) 다른 결과
   const r = random ?? seededRandom(`dusk-adult:${name}`);
   const o = normalizeSeedOpt(opt ?? {}), D = pickable(o, "desire"), K = pickable(o, "kink");
   const bell = () => Math.round(Math.max(3, Math.min(97, ((r() + r() + r()) / 3) * 100 + (r() - 0.5) * 30)));
@@ -91,4 +92,37 @@ export function seedWikiCandidates(wiki, seeded, { since = 0, now = new Date().t
   }
   if (out.length) wiki.revision = (wiki.revision ?? 0) + 1;
   return out;
+}
+
+// 2.2.6 첫인상(-3~+3): 기본 0, 무작위 설정의 ‘첫인상’을 켜면 이름별 무작위(0 근처가 많고 양 끝은 드묾)
+export function seedFirst(opt, name, salt = "") {
+  if (!(opt?.on && opt?.first)) return 0;
+  const r = seededRandom(`dusk-first:${name}${salt}`), v = (r() + r() + r()) / 3;   // 0~1, 가운데 두꺼움
+  return Math.max(-3, Math.min(3, Math.round((v - 0.5) * 8)));
+}
+// 2.2.6 음란도: 무작위 설정의 ‘음란도’를 켰을 때만 이름별 무작위 값(정책 범위 안), 아니면 null(= 기본값)
+export function seedLewd(opt, name, policy = null, salt = "") {
+  if (!(opt?.on && opt?.lewd)) return null;
+  const lo = Number.isFinite(policy?.minimum) ? policy.minimum : 0, hi = Number.isFinite(policy?.maximum) ? policy.maximum : 100;
+  const v = rollAdult(`${name}${salt}`).sexual.eroticInterest / 100;
+  const raw = lo + v * (hi - lo), vals = policy?.value_map ? Object.values(policy.value_map).filter(Number.isFinite) : null;
+  return vals?.length ? vals.reduce((a, b) => (Math.abs(b - raw) < Math.abs(a - raw) ? b : a)) : Math.round(raw);
+}
+
+// 2.2.6 위키 ‘무작위 다시 뽑기’: 이 인물에게 넣었던 무작위 후보(아직 검토 대기인 것)를 지우고 새로 뽑는다. 반영·거부한 후보는 그대로.
+// 같은 인물을 n번째로 다시 뽑으면 이름 뒤에 #n을 붙여 다른 결과가 나온다. 반환: 새로 넣은 후보 수
+export function rerollWikiCandidates(wiki, docId, opt, n, now = new Date().toISOString()) {
+  const people = wiki?.people, doc = wiki?.documents?.[docId];
+  if (!people?.profiles?.[docId] || !doc) return 0;
+  people.candidates ??= {};
+  for (const [id, c] of Object.entries(people.candidates)) if (id.startsWith(`candidate_seed_${docId}_`) && ["collecting", "review"].includes(c?.status)) delete people.candidates[id];
+  const o = normalizeSeedOpt({ ...opt, on: true });
+  const roll = rollAdult(`${doc.title || docId}#${n}`, null, o);
+  let k = 0;
+  const add = (axis, pattern, i) => { const id = `candidate_seed_${docId}_${axis}_${n}_${i}`; people.candidates[id] = { id, documentId: docId, axis, direction: "replace", pattern, origin: "manual", status: "review",
+    evidence: [{ id: `${id}:0`, ref: "source:manual_input", sceneKey: "", summary: "무작위로 다시 뽑은 취향", confidence: 0, strength: 0, at: now }], sceneKeys: [], confidence: 0, averageStrength: 0, proposedDelta: 0, createdAt: now, updatedAt: now, appliedChange: null }; k++; };
+  roll.desires.forEach((p, i) => add("sexual_desire", p, i));
+  roll.kinks.forEach((p, i) => add("paraphilia", p, i));
+  wiki.revision = (wiki.revision ?? 0) + 1;
+  return k;
 }

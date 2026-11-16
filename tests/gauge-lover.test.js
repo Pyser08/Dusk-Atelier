@@ -335,3 +335,27 @@ test("질투·연적·짝사랑·재회·비밀 연애", () => {
   const labels = m.edges.map((e) => e.label);
   assert.ok(labels.includes("🤫 비밀 연애") && labels.some((l) => /^연적/.test(l)) && labels.includes("짝사랑"), labels.join("|"));
 });
+
+import { seedFirst, seedLewd, rerollWikiCandidates } from "../src/engine/adultseed.js";
+
+test("음란도·첫인상: 기본 0(무작위 끔), 켜면 이름별 무작위·범위 안", () => {
+  assert.equal(seedFirst({ on: true, first: false }, "민지"), 0);
+  assert.equal(seedLewd({ on: true, lewd: false }, "민지"), null);
+  const vs = ["가", "나", "다", "라", "마", "바", "사", "아"].map((n) => seedFirst({ on: true, first: true }, n));
+  assert.ok(vs.every((v) => v >= -3 && v <= 3) && new Set(vs).size >= 2);
+  const l = seedLewd({ on: true, lewd: true }, "민지", { minimum: 0, maximum: 10 });
+  assert.ok(l >= 0 && l <= 10);
+  assert.notDeepEqual([1, 2, 3].map((i) => seedLewd({ on: true, lewd: true }, "민지", null, `#${i}`)), [0, 0, 0]);
+});
+
+test("위키 무작위 다시 뽑기: 검토 대기 무작위 후보만 바뀌고, 반영한 후보는 그대로", () => {
+  const wiki = { documents: { d: { id: "d", type: "Character", title: "민지" } }, people: { profiles: { d: { createdAt: "2026-11-16T00:00:00Z" } }, candidates: {} } };
+  seedWikiCandidates(wiki, [], {});
+  const first = Object.keys(wiki.people.candidates);
+  wiki.people.candidates[first[0]].status = "approved";
+  rerollWikiCandidates(wiki, "d", {}, 1);
+  const ids = Object.keys(wiki.people.candidates);
+  assert.ok(ids.includes(first[0]));
+  assert.ok(first.slice(1).every((id) => !ids.includes(id)));
+  assert.ok(ids.some((id) => id.includes("_1_")));
+});

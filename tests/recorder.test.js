@@ -121,6 +121,10 @@ test("기능을 모두 켜면 나머지 칸(의도·태도·말투 단계·의�
   for (const id of ["affinity.intent", "register.restraint", "register.stage_assessment", "suspicion.case", "suspicion.response", "suspicion.clue"]) assert.ok(slots.has(id), id + " 저장");
   const m = Object.fromEntries((sua.metrics ?? []).map((x) => [x.slotId, x.value]));
   assert.equal(m["suspicion.score"], 5); assert.equal(m["affinity.taste_band"], 1); assert.equal(m["affinity.score"], 1); assert.ok("openness.score" in m);
+  // 2.2.6 첫인상·음란도 줄을 안 준 인물도 처음 등장 때 0으로 채운다(기본, 무작위 끔)
+  const others = Object.values(scope.documents).filter((d) => d.type === "Character" && d.title !== "수아");
+  assert.ok(others.length);
+  for (const d of others) { const mm = Object.fromEntries((d.metrics ?? []).map((x) => [x.slotId, x.value])); assert.equal(mm["affinity.taste_band"], 0, d.title); assert.equal(mm["openness.score"], 0, d.title); }
 });
 
 test("다시 요청: 고르기 열쇠는 위키 내용이 바뀌어도 같은 말·대화면 같고, 요청 번호만 바꿔 돌려준다", async () => {

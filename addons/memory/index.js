@@ -28,11 +28,13 @@ export async function activate(api, ctx) {
   const seedOff = memory.flow?.onTurn?.(() => { setTimeout(() => { seedWikiNow(api, memory, log).catch((e) => log(`성인 항목 무작위 기록 실패 ${e?.message ?? e}`)); syncOrientNow(memory, app.erosync).catch(() => {}); }, 6000); });
   // 2.2.6 지난 대화 분석에서도: 시작 전 성적 지향을 옮기고, 끝나면 새 인물에게 무작위 성인 항목(위키 후보·Erosync 출발값)을 넣는다
   memory.link.beforeBackfill = () => syncOrientNow(memory, app.erosync).catch(() => 0);
-  memory.link.afterBackfill = async () => {
+  // 이미 3턴 넘게 진행한 채팅이면 글(성적 욕망·이상성향 후보)은 새로 넣지 않고, 비어 있는 수치만 채운다
+  memory.link.afterBackfill = async ({ turns = 0 } = {}) => {
+    const progressed = turns >= 3;
     await new Promise((r) => setTimeout(r, 3000));   // 함께 기록(인물 위키)이 저장될 틈
-    await seedWikiNow(api, memory, log).catch(() => 0);
+    if (!progressed) await seedWikiNow(api, memory, log).catch(() => 0);
     const er = app.erosync; if (er?.isRunning?.()) { try { for (let i = 0; i < 20 && (await er.profile("status").catch(() => null))?.running; i++) await new Promise((r) => setTimeout(r, 3000));   // 함께 돌린 성향 분석이 끝나길 잠시 기다림(최대 1분)
-      await seedErosyncNow(api, er, await er.read(), log, { fresh: true }); } catch { /* 다음 턴에 */ } }
+      await seedErosyncNow(api, er, await er.read(), log, { fresh: true, onlyMissing: progressed }); } catch { /* 다음 턴에 */ } }
     await syncOrientNow(memory, er).catch(() => 0);
   };
   const affhud = createAffHud(api, { store: memory.store, link: memory.link });
