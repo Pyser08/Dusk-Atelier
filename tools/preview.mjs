@@ -95,6 +95,45 @@ async function seedWiki() {
       "수아>서진": { from: "수아", to: "서진", items: [it(22, "크게 다퉜다", "-")] },
       "나기>시로코": { from: "나기", to: "시로코", items: [it(13, "소꿉친구", "+")] } };
     f.ties = { t1: { a: "유나", b: "하루", kind: "자매", at: 10 }, t2: { a: "시로코", b: "호시노", kind: "선후배", at: 4 }, t3: { a: "도윤", b: "서진", kind: "전 애인", at: 24, prev: { kind: "연인", at: 2 } }, t4: { a: "나기", b: "시로코", kind: "소꿉친구", at: 13 } };
+    // ── 같은 8명을 서로 복잡하게: 삼각관계·비밀 연애·짝사랑·이별·연적·질투·오래된 앙금 ──
+    Object.assign(f.emo, {
+      "시로코>나기": mkPair("시로코", "나기", [[13, { affection: 6, trust: 7 }], [21, { affection: 6, trust: 7, attraction: 5 }]]),
+      "나기>시로코": mkPair("나기", "시로코", [[13, { affection: 7, trust: 8, attraction: 6 }], [29, { affection: 8, trust: 8, attraction: 7, possess: 3 }]]),
+      "나기>호시노": mkPair("나기", "호시노", [[11, { hostility: 4 }], [28, { hostility: 5, fear: 1 }]]),
+      "호시노>나기": mkPair("호시노", "나기", [[28, { hostility: 3, affection: 2 }]]),
+      "유나>도윤": mkPair("유나", "도윤", [[12, { attraction: 5, affection: 4 }], [25, { attraction: 6, affection: 5 }]]),
+      "도윤>유나": mkPair("도윤", "유나", [[25, { affection: 4, attraction: 3 }]]),
+      "하루>도윤": mkPair("하루", "도윤", [[18, { hostility: 6, trust: 1 }]]),
+      "하루>서진": mkPair("하루", "서진", [[20, { affection: 5, trust: 6 }], [27, { affection: 6, trust: 7, attraction: 6 }]]),
+      "서진>하루": mkPair("서진", "하루", [[27, { affection: 5, trust: 5, attraction: 4 }]]),
+      "수아>시로코": mkPair("수아", "시로코", [[15, { trust: 6, affection: 6, respect: 5 }]]),
+      "시로코>수아": mkPair("시로코", "수아", [[15, { trust: 5, affection: 5 }]]),
+      "수아>도윤": mkPair("수아", "도윤", [[3, { affection: 6, trust: 4 }], [12, { affection: 3, trust: 1, hostility: 5 }]]),
+      "도윤>수아": mkPair("도윤", "수아", [[12, { affection: 4, dependence: 3, fear: 2 }]]),
+      "호시노>유나": mkPair("호시노", "유나", [[19, { affection: 5, trust: 4 }]]),
+      "유나>호시노": mkPair("유나", "호시노", [[19, { affection: 6, trust: 5, dependence: 4 }]]),
+      "서진>시로코": mkPair("서진", "시로코", [[23, { hostility: 3 }]]),
+      "시로코>서진": mkPair("시로코", "서진", [[23, { hostility: 4, trust: 1 }]]),
+      "하루>나기": mkPair("하루", "나기", [[21, { attraction: 6, affection: 5 }]]),
+    });
+    f.rels = { ...f.rels,
+      "시로코>나기": { from: "시로코", to: "나기", items: [it(13, "소꿉친구", "+"), it(21, "다시 가까워짐", "+")] },
+      "나기>호시노": { from: "나기", to: "호시노", items: [it(11, "시로코 일로 대립", "-"), it(28, "여전히 불편", "-")] },
+      "유나>도윤": { from: "유나", to: "도윤", items: [it(12, "몰래 연락", "+"), it(25, "자주 만남", "+")] },
+      "하루>도윤": { from: "하루", to: "도윤", items: [it(18, "동생 일로 경고", "-")] },
+      "하루>서진": { from: "하루", to: "서진", items: [it(20, "위로해 줌", "+"), it(27, "비밀을 나눔", "+")] },
+      "수아>도윤": { from: "수아", to: "도윤", items: [it(3, "부부", "+"), it(12, "외도를 알게 됨", "-")] },
+      "호시노>유나": { from: "호시노", to: "유나", items: [it(19, "상담해 줌", "+")] },
+      "서진>시로코": { from: "서진", to: "시로코", items: [it(23, "말다툼", "-")] },
+      "수아>시로코": { from: "수아", to: "시로코", items: [it(15, "의지하는 후배", "+")] } };
+    f.ties = { ...f.ties, t5: { a: "수아", b: "도윤", kind: "배우자", at: 3 }, t6: { a: "하루", b: "서진", kind: "연인", at: 27 } };
+    f.romance.secret = { ...(f.romance.secret ?? {}), "서진~하루": true };
+    f.romance.events.push(
+      { kind: "confess", a: "나기", b: "시로코", by: "나기", at: 20 }, { kind: "reject", a: "나기", b: "시로코", by: "시로코", at: 21 },
+      { kind: "accept", a: "하루", b: "서진", at: 27 }, { kind: "breakup", a: "도윤", b: "서진", at: 24 },
+      { kind: "rivalry", a: "수아", b: "서진", over: "미오", at: 16 }, { kind: "rivalry", a: "나기", b: "호시노", over: "시로코", at: 28 },
+      { kind: "jealous", a: "하루", b: "서진", c: "도윤", at: 29 }, { kind: "jealous", a: "수아", b: "미오", c: "유나", at: 26 });
+    f.romance.awkward = { ...(f.romance.awkward ?? {}), "나기~시로코": 29 };
     f.orient = { ...(f.orient ?? {}), 시로코: { g: "f" }, 호시노: { g: "f" }, 유나: { g: "f" }, 하루: { g: "f" }, 나기: { g: "m" } };
     if (q.get("many") === "1") for (const n of ["하루", "나기", "카즈사", "요시미", "아이리", "레이사", "치세", "히나", "아코", "이로하", "츠루기", "하스미", "마시로", "코하루", "하나코", "아즈사"]) { f.people[n] = { name: n, records: [rec("m-" + n, n + "와 복도에서 마주쳤다", "C", 20)] }; f.emo["수아>" + n] = { from: "수아", to: n, tags: { affection: 3, trust: 2 }, log: [] }; }
     f.beliefs = [{ id: "bl1", who: "수아", by: "서진", thinks: "미오이 서진을 좋아한다", truth: "업무 때문에 만났을 뿐이다", open: true }];
@@ -107,9 +146,16 @@ async function seedWiki() {
     { id: "a", name: "수아", aliases: [], axes: [{ axis: "initiative", base: 40, value: 55 }, { axis: "extremity", base: 30, value: 35 }, { axis: "obsessiveness", base: 60, value: 72 }, { axis: "submissiveness", base: 55, value: 60 }], sexual: { eroticInterest: 62, sexualOpenness: 48 }, pref: { f: 10, m: 90, x: 0, total: 100 },
       detail: { likes: [{ label: "다정한 스킨십", preference: 80, confidence: 70, reason: "미오에게 기댈 때" }], dislikes: [{ label: "거친 말", preference: -70, confidence: 60 }] } },
     { id: "b", name: "미오", aliases: [], axes: [{ axis: "initiative", base: 50, value: 50 }], sexual: { eroticInterest: 40, sexualOpenness: 40 }, pref: { f: 80, m: 20, x: 0, total: 100 } },
-    { id: "c", name: "서진", aliases: [], axes: [{ axis: "initiative", base: 75, value: 80 }], sexual: { eroticInterest: 70, sexualOpenness: 75 }, pref: { f: 30, m: 70, x: 0, total: 100 } }],
-    goals: [{ id: "g1", actor: "c", actorName: "서진", target: "b", targetName: "미오", typeLabel: "유혹 목표", priority: 60, objective: "단둘이 되기" }],
-    rivalries: [{ actor: "c", actorName: "서진", rival: "a", rivalName: "수아", intensity: 55, reason: "미오을 두고" }],
+    { id: "c", name: "서진", aliases: [], axes: [{ axis: "initiative", base: 75, value: 80 }], sexual: { eroticInterest: 70, sexualOpenness: 75 }, pref: { f: 30, m: 70, x: 0, total: 100 } },
+    { id: "d", name: "유나", aliases: [], axes: [{ axis: "initiative", base: 80, value: 85 }], sexual: { eroticInterest: 85, sexualOpenness: 80 }, pref: { f: 40, m: 60, x: 0, total: 100 } },
+    { id: "e", name: "도윤", aliases: [], axes: [{ axis: "initiative", base: 60, value: 65 }], sexual: { eroticInterest: 50, sexualOpenness: 45 }, pref: { f: 70, m: 30, x: 0, total: 100 } },
+    { id: "f", name: "나기", aliases: [], axes: [{ axis: "initiative", base: 30, value: 30 }], sexual: { eroticInterest: 20, sexualOpenness: 25 }, pref: { f: 50, m: 50, x: 0, total: 100 } },
+    { id: "h", name: "호시노", aliases: [], axes: [{ axis: "initiative", base: 20, value: 25 }], sexual: { eroticInterest: 30, sexualOpenness: 30 }, pref: { f: 60, m: 40, x: 0, total: 100 } },
+    { id: "g", name: "시로코", aliases: [], axes: [{ axis: "initiative", base: 25, value: 30 }], sexual: { eroticInterest: 35, sexualOpenness: 20 }, pref: { f: 80, m: 20, x: 0, total: 100 } }],
+    goals: [{ id: "g1", actor: "c", actorName: "서진", target: "b", targetName: "미오", typeLabel: "유혹 목표", priority: 60, objective: "단둘이 되기" },
+      { id: "g2", actor: "d", actorName: "유나", target: "e", targetName: "도윤", typeLabel: "유혹 목표", priority: 55, objective: "언니 몰래 만나기" },
+      { id: "g3", actor: "f", actorName: "나기", target: "g", targetName: "시로코", typeLabel: "다시 고백", priority: 45, objective: "분위기 좋을 때" }],
+    rivalries: [{ actor: "c", actorName: "서진", rival: "a", rivalName: "수아", intensity: 55, reason: "미오를 두고" }, { actor: "f", actorName: "나기", rival: "h", rivalName: "호시노", intensity: 40, reason: "시로코를 두고" }],
     relations: [{ from: "a", fromName: "수아", to: "b", toName: "미오", affection: 80, eroticAttraction: 70, hatred: 0 }, { from: "c", fromName: "서진", to: "a", toName: "수아", affection: 10, eroticAttraction: 20, hatred: 40 }] };
   const fake = { on: () => true, isRunning: () => true, read: async () => snap };
   try { Object.defineProperty(__app.ctx, "erosync", { configurable: true, get: () => fake }); } catch {}
