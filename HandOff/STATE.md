@@ -1,6 +1,6 @@
 ## cache-trim (2026-11-16, main 1beb6a2에서 분기)
 - v2.2.7 릴리스(11-16): 이미지 태그 확장자 모듈별 수정. main 머지·태그·GitHub 릴리스 확인.
-- 월경 기록 됐다 안됐다(장기기억 애드온, 미배포·버전 그대로): `engine/recorder.js` recordTurn 1단계 ask의 minimal(LINES_STAGE1_MIN) 재시도에 CYCLE_STAGE1이 빠져 그 턴 cycle 목록이 비었음 → cycle이면 덧붙임. 시험 recorder-cycle 3번째. 배포하려면 memory 애드온 버전 올리고 publish 필요.
+- 월경 기록 됐다 안됐다(장기기억 애드온 **0.3.2 배포함** 11-16): `engine/recorder.js` recordTurn 1단계 ask의 minimal(LINES_STAGE1_MIN) 재시도에 CYCLE_STAGE1이 빠져 그 턴 cycle 목록이 비었음 → cycle이면 덧붙임. 시험 recorder-cycle 3번째.
 - 이미지 태그 확장자(코어, 미릴리스): 모듈마다 같은 이름이 확장자만 다르면 buildAssetIndex의 seen 중복 제거로 첫 묶음 이름만 남아 교정 결과 확장자가 그쪽으로 고정됐음. `engine/imgtagfix.js` variants(뗀 이름→실제 이름들)+withExt(AI가 쓴 확장자, 없으면 확장자 없음과 같은 변형 선택) — fixImgTags·resolveTag에 적용. 시험 imgtagfix-ext 7번째.
 - **v2.2.6 릴리스(11-16)**: main에 머지(d9f4ab7)·v2.2.6 태그·GitHub 릴리스(dusk_atelier.js 첨부) 확인. 본체 대기 항목(이야기 시간·캐시 진단 기록·리스 자체 Gemini 순서·캐시 배치 연결·.dka) 모두 반영됨.
 - 애드온 배포(11-16): 장기기억 0.3.1·프로바이더 0.2.8·Erosync 0.1.10(Erosync는 공유 모듈만 바뀜). 본체는 v2.2.5 그대로(이야기 시간·캐시 진단 기록·리스 자체 Gemini 순서·캐시 배치 연결은 본체 릴리스 필요).
