@@ -87,6 +87,8 @@ export async function importCode(code, id = "addon") {
 }
 
 
+// 애드온이었다가 본체에 들어온 기능(2.2.6: 프로바이더). 목록·시작·자동 받기에서 뺀다.
+export const BUILTIN = new Set(["provider"]);
 export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onNewAddons = null, timers = globalThis, fetcher = fetchText, importer = importCode, moduleText = importModuleText, hasher = sha256, now = () => Date.now(), log = (m) => console.log(`[Dusk Atelier] 애드온: ${m}`) } = {}) {
   let storeP = null;
   const S = () => (storeP ??= storeOf(api));
@@ -170,7 +172,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     if (Object.values(idx).some((v) => v?.pendingRestart)) { for (const v of Object.values(idx)) if (v) delete v.pendingRestart; await setIndex(idx); }
     // 동시에 켠다: 저장된 코드는 한꺼번에 읽고, 각 애드온은 자기 필요 애드온(requires)이 켜지기만 기다린다.
     // (예전: 전부 차례로 → 애드온이 늘수록 늦게 켜져서 장기기억 훅이 첫 요청을 놓칠 수 있었다)
-    const ids = Object.entries(idx).filter(([, v]) => v.on !== false).map(([id]) => id);
+    const ids = Object.entries(idx).filter(([id, v]) => v.on !== false && !BUILTIN.has(id)).map(([id]) => id);   // 본체에 들어온 기능(BUILTIN)은 예전에 받은 애드온이 있어도 켜지 않는다
     const codes = new Map(await Promise.all(ids.map(async (id) => [id, await store.getItem(CODE(id)).catch(() => null)])));
     const started = new Map();
     const launch = (id, stack = new Set()) => {
@@ -237,7 +239,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     }
     if (text == null && !m.addons.length) throw new Error("목록을 받지 못했어요");
     if (m.errors.length) log(`목록 오류 ${m.errors.join(", ")}`);
-    manifest = m.addons;
+    manifest = m.addons.filter((a) => !BUILTIN.has(a.id));   // 옛 본체용 목록에는 남아 있어도 새 본체에선 안 보임
     return manifest;
   }
 
@@ -393,7 +395,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     try { if (await store.getItem(ADOPT_KEY)) return { done: true, got: [] }; } catch { /* 처음 */ }
     const idx = await getIndex(), got = [], failed = [];
     for (const [id, probe] of probes) {
-      if (idx[id]) continue;
+      if (idx[id] || BUILTIN.has(id)) continue;
       let used = false; try { used = !!(await probe()); } catch { used = false; }
       if (!used) continue;
       try { await install(id); got.push(id); } catch (e) { failed.push(id); log(`${id} 자동 받기 실패 ${e?.message ?? e}`); }

@@ -455,10 +455,6 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     state.searchNext = null;
     if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
     if (tab === "characters") state.charOrderStale = true;
-    if (tab === "provider" && !prefs.ui?.experimental) {
-      tab = "work-home";
-      sub = null;
-    }
     if (tab === "dev" && !prefs.ui?.devMode) {
       tab = "tools";
       sub = null;
@@ -494,7 +490,6 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     for (const section of SECTION_IDS) { const live = TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)); const tb = topLinks.get(`section:${section}`); if (tb) tb.hidden = !live; }
     for (const section of SECTION_IDS) { const b = barLinks.get(`section:${section}`); if (b) b.hidden = !TABS.some((t) => t.section === section && !t.mobileOnly && !tabHidden(t, prefs.ui) && (!t.dev || prefs.ui?.devMode)); }
     paintSecs();   // 애드온이 늦게 켜져도 섹션 제목(관리 등)이 바로 보이게
-    if (state.tab === "provider" && !prefs.ui?.experimental) go("tools");
     win.classList.toggle("rb-has-dev", on);
     if (!on && state.tab === "dev") go("tools");
   }

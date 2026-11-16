@@ -19,7 +19,6 @@ export async function activate(api, ctx) {
       const f = await memory.store.getFolder(cur.chaId, cur.chatId), want = String(q ?? "").trim().toLowerCase(); if (!f?.people || !want) return [];
       return Object.values(f.people).filter((p) => String(p.name ?? "").toLowerCase().includes(want) || JSON.stringify(p.records ?? []).toLowerCase().includes(want)).slice(0, 5).map((p) => ({ name: p.name, records: (p.records ?? []).slice(-6).map((r) => (typeof r === "string" ? r : r?.text ?? r?.summary ?? JSON.stringify(r)).slice(0, 300)) }));
     } },
-    allowed: () => !!app.prefs?.ui?.experimental,
     createStore, backupSnapshot, log
   });
   setDuskRoute(() => provider.analysisPick(), (a, msgs, pick, signal) => provider.run(msgs, pick, signal));

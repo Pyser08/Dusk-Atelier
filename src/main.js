@@ -1,5 +1,6 @@
 import { parseStatus as parseStoryStatus } from "./engine/storytime.js";
 import { createAddons } from "./data/addons.js";
+import { activate as activateProvider } from "../addons/provider/index.js";
 import { LIB as ADDON_LIB } from "./addonlib.gen.js";
 import { startHostUpdateToast, clearStaleUpdateToast } from './ui/hostupdate.js';
 import { createDbCache, WRITE_RE } from './data/dbcache.js';
@@ -106,7 +107,6 @@ async function start() {
   setSkillBlockProvider((stage) => skills.blockFor(stage));
   const web = createWebTools(api);   // 웹 검색·가져오기 도구 (꺼짐이 기본, v1.8.1)
   setWebWrapProvider((stage, prompt, call) => web.wrap(stage, prompt, call));
-  // Dusk 프로바이더는 애드온(addons/provider, 2.0.0 실험 기능). 설정 화면의 동기화는 ctx.provider(애드온 서비스)로.
   const ICON = iconMarkup("module", 20);
   if (globalThis.__RBM_ENTRY__ === "legacy") {
     if (!document.getElementById("rb-style")) document.head.appendChild(h("style", { id: "rb-style" }, CSS2));
@@ -277,11 +277,11 @@ async function start() {
     ["cards", async () => { const v = await rawOf("dusk.mem.v2.cardidx"); try { return (typeof v === "string" ? JSON.parse(v) : v)?.list?.length > 0; } catch { return false; } }],
     ["erosync", async () => on(await rawOf("dusk.erosync.on"))],
     ["widgets", async () => on(await rawOf("dusk.widgethome.on"))],
-    // 프로바이더(실험): 실험 기능을 켜 두고 프로필을 만들어 둔 사람
-    ["provider", async () => { try { const ui = JSON.parse((await rawOf("rbm:ui:v1")) || "{}"); return ui.experimental === true && !!(await rawOf("dusk.prov.v1")); } catch { return false; } }],
     // ProtLink+: 연결해 둔 링크가 있으면
     ["protlink", async () => { const v = await rawOf("dusk.protlink.links.v1"); try { const d = typeof v === "string" ? JSON.parse(v) : v; return (Array.isArray(d) ? d : d?.links ?? []).length > 0; } catch { return false; } }]
   ];
+  // 2.2.6 프로바이더는 본체 기능: 애드온 자리(ext)에 본체가 직접 단다(예전 애드온은 BUILTIN이라 켜지지 않음)
+  activateProvider(api, { ext: app.ctx.ext, app: app.ctx }).catch((e) => console.log(`[${TITLE}] 프로바이더 시작 실패 ${e?.message ?? e}`));
   addons.boot().then(() => addons.adopt(ADOPT)).then((r) => { if (r?.got?.length) console.log(`[${TITLE}] 쓰던 기능 애드온을 받았어요: ${r.got.join(", ")}`); })
     .catch((e) => console.log(`[${TITLE}] 애드온 시작 실패 ${e?.message ?? e}`));
   // Cellar 연결: 장기기억 애드온이 있으면 그쪽에서 찾은 것을, 없으면 화면이 직접 만든다(plugins·settingstab의 createCellar)

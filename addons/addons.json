@@ -22,8 +22,8 @@
       "hooks": true,
       "desc": "리스 모델 목록에 ‘Dusk 자동’과 내 프로필을 등록하고, API 키 보관·모델 고르기·리스 도구 확인을 해요. 설정 → 실험 기능을 켜야 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/provider.js",
-      "sha256": "b44b4ccca7d6f0ee0c78de2b933c9cd35730f60887de3da528200c66955b0e6d",
-      "size": 153185
+      "sha256": "f999cb83e90ab668f0ccb6a6f59a14ba85461fcb424324aa5eebb0dab43b22bf",
+      "size": 5954
     },
     {
       "id": "chattheme",
@@ -58,8 +58,8 @@
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "c5b76fa21807e8df705b8a945f80761e6da9dac585ff63e08ccc4e0da0e00f0c",
-      "size": 1884154
+      "sha256": "37481e08bea5f9ca16073e59778aadc2c8c24cba7aea5ccc743f97a46ddc2991",
+      "size": 1882688
     },
     {
       "id": "cards",

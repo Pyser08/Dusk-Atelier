@@ -70,7 +70,7 @@ export async function renderSectionHome(ctx) {
       h('span', { class: 'go', 'aria-hidden': 'true' }, icon('chevron', 16)));
     const big = (t) => h('button', { type: 'button', class: 'rb-htile rb-section-tile rb-hubbig', onClick: () => ctx.go(t.id), 'aria-label': t.label, dataset: { tab: t.id } },
       h('span', { class: 'ico' }, icon(t.icon, 22)), h('span', { class: 't' }, h('b', null, t.label), h('small', null, LINE[t.id] ?? t.card ?? '')));
-    const bigIds = section === 'work' ? (ctx.prefs.ui?.experimental ? ['provider', 'aibot'] : ['look', 'aibot']) : (BIG[section] ?? []);
+    const bigIds = BIG[section] ?? [];
     const memCard = section === 'memory' && counts._mem ? h('section', { class: 'rb-card bordered rb-hubstat' },
       counts._mem.cur ? statusCard(counts._mem.on ? 'on' : 'off', `이 채팅 · 기억 ${counts._mem.total}건`) : statusCard('off', '채팅을 열면 기억 상태가 보여요.')) : null;
     replace(listHost,
