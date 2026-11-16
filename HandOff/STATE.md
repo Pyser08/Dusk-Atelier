@@ -15,7 +15,7 @@
   - CSS 전부 memaddoncss.js(코어 styles.js·common.js 안 건드림). 미리보기: `.claude/launch.json` wiki-mock(5179) → `/?wiki=1&adv=1&light=1` 꽉 찬 시험 데이터(주인공 미오·선생님·NSFW·Erosync 가짜 스냅샷, 사진용으로 단추 없음, 시안은 `&lay=B1` 등 주소로).
   - Erosync: 프로필 지시문 descriptive value를 한국어로(erosync.js profile 언어 규칙). erosyncturn: 처음 보는 이름은 2턴 이상 나온 것만 모아 전체 분석 1번, 그 뒤 20턴 쉼(tests/erosync-turn 새 시험).
   - 시험: npm test 1699 pass, e2e wiki-strangers 12(도구 메뉴로 바꿈)·wiki-recorder 60·smoke(감정 카드 기대값 .rb-emo2로)·featurefind 통과, erosync-ui는 예전부터 실패하던 더보기 메뉴 1건.
-  - **11-16 커밋·main 머지(태그 없음, 미배포)**. 장기기억 애드온 0.3.0(사용자 지정), Erosync 0.1.8(dist만 바뀜). 아카 글 `docs/arca/memory-0.3.0.html`(한 글에 감정·연애·NSFW·위키 UI 4부분) — 이미지 자리·MEMORY_0216_POST_ID·ASSET/STEALTH_POST_ID 자리표시자 남음.
+  - **11-16 커밋·main 머지(태그 없음) · 애드온 배포함**: 장기기억 0.3.0(사용자 지정), Erosync 0.1.9, 기억카드 0.1.7(공유 화면이 바뀌어 끝자리 올림). 본체는 v2.2.5 그대로. 아카 글 `docs/arca/memory-0.3.0.html`(한 글에 감정·연애·NSFW·위키 UI 4부분) — 이미지 자리·MEMORY_0216_POST_ID·ASSET/STEALTH_POST_ID 자리표시자 남음.
   - 시험판: test-addons/memory-test.js(0.2.22)·erosync-test.js(0.1.8). 공유 코어 모듈(memory 47·erosync 6)은 모두 v2.2.5와 같음 → v2.2.5 코어에 애드온만 올려도 됨.
   - 남은 일: [ ] 다크 테마 눈 확인 [ ] 실기기 [ ] Erosync 턴 계산을 장면 판단 호출과 합치는 건 미착수(턴 갱신은 이미 1번 호출)
 
@@ -36,7 +36,7 @@
   - (8차) recorder: openness.score·affinity.taste_band를 줄이 없어도 처음이면 init(기본 0, run.seed = readSeedOpt — 무작위 설정 lewd·first 켜면 seedLewd·seedFirst 이름 시드). 첫인상 글(affinity.appraisal)이 없는 기존 인물에게 first 줄을 extraLines로 다시 물음. 위키 NSFW ‘무작위 다시 뽑기’ `memory/adultreroll.js`(rerollWikiCandidates·editMetricValue·Erosync edit, 이름#n). 지난 대화 분석 afterBackfill({turns}) — 3턴 이상이면 위키 후보 안 넣고 Erosync는 onlyMissing.
   - (9차) romancecue NO_SUDDEN_LUST(끌림·애인 ≠ 성적 행동, 입력이나 분명한 흐름일 때만) — romance 칸 맨 앞 규칙 다음. Erosync 장면 디렉터 쪽은 손대지 않음(원본, NSFW 설정 켤 때만).
   - 코어 없이 애드온만으로: 새 CSS(애인 분홍·감정 색·게이지 배수·관계도 막대/단추)는 `ui/screens/memory/memaddoncss.js` ensureMemAddonCss가 화면 그릴 때 <style id=rb-memaddon-css>로 붙임(styles.js·relmap/css.js에서 뺌). memory 애드온이 쓰는 코어 공유 모듈 46개·erosync 3개 모두 v2.2.5 이후 안 바뀜 → v2.2.5 코어에서 애드온만 올려도 동작. 코어에 남은 건 기능 찾기 항목(featurefind)뿐.
-  - 남은 일: [ ] 애드온 버전 올려 배포는 지시 대기 [ ] 새 화면(게이지 배수 카드·관계도 턴 버튼·애인 칸) e2e 없음·실기기 미확인 [ ] mepage·editor 감정 고치기 폼은 애인이 아니어도 소유욕·독점욕 칸이 보임 [ ] 위키 호감도(affinity.score)는 아직 하나(인간적/이성적 분리는 장기 기억 감정 쪽만)
+  - 남은 일: [ ] 새 화면(게이지 배수 카드·관계도 턴 버튼·애인 칸) e2e 없음·실기기 미확인 [ ] mepage·editor 감정 고치기 폼은 애인이 아니어도 소유욕·독점욕 칸이 보임 [ ] 위키 호감도(affinity.score)는 아직 하나(인간적/이성적 분리는 장기 기억 감정 쪽만)
 
 - **오토 스크롤 애드온 0.2.0 + 애드온 자리 자동 넣기 (11-16, 브랜치 claude/happy-dijkstra-wi2dza, 미배포)**
   - 동작: 켜면 리스 채팅의 마지막 AI 응답 맨 위에 ‘▼ 오토 스크롤’ 버튼(생성이 끝난 뒤 옮겨 감) → 누르면 정한 속도(px/초 10~400, 기본 60)로 내려감. 돌 때 화면 위 −/속도/+/■ 막대. 멈춤: ■·버튼 다시·채팅 누르기(pointerdown)·끝 도착.
