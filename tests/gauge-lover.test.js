@@ -260,3 +260,32 @@ test("관계로 처음 감정 채우기: 애인·가족·짝사랑·라이벌, �
   assert.equal(seedFromTies(f, { at: 3 }), 0);
   assert.equal(f.emo["민지>유나"].tags.affection, 1);
 });
+
+import { strayRisk } from "../src/engine/lover.js";
+import { sourAttraction } from "../src/engine/emoseed.js";
+
+test("호감이 바닥이면 끌림이 3턴마다 1씩 식고, 0 밑으로는 안 간다(배수 적용)", () => {
+  const f = { emo: { a: { from: "민지", to: "유나", tags: { attraction: 2, hostility: 5, affection: 2 }, log: [] } } };
+  for (let i = 0; i < 3; i++) sourAttraction(f);
+  assert.equal(f.emo.a.tags.attraction, 1);
+  for (let i = 0; i < 9; i++) sourAttraction(f);
+  assert.equal(f.emo.a.tags.attraction, 0);
+  const g = { emo: { a: { from: "x", to: "y", tags: { attraction: 6, hostility: 5, affection: 1 }, log: [] } } };
+  for (let i = 0; i < 3; i++) sourAttraction(g, null, 1, { gauge: { down: 2 } });
+  assert.equal(g.emo.a.tags.attraction, 4);
+  const h = { emo: { a: { from: "x", to: "y", tags: { attraction: 6, hostility: 2, affection: 5 }, log: [] } } };
+  for (let i = 0; i < 6; i++) sourAttraction(h);
+  assert.equal(h.emo.a.tags.attraction, 6);   // 호감이 더 크면 그대로
+});
+
+test("바람 가능성: 애인에게 끌림이 식으면 지침에 나오고, 다른 사람에게 끌림이 쉽게 오른다", () => {
+  const f = { people: {}, scenes: [], ties: { t: { a: "민지", b: "철수", kind: "남자친구", at: 0 } },
+    emo: { "민지>철수": { from: "민지", to: "철수", tags: { attraction: 1, affection: 4 }, log: [] }, "민지>유나": { from: "민지", to: "유나", tags: { attraction: 3 }, log: [] } } };
+  assert.equal(strayRisk(f, "민지").partner, "철수");
+  const L = romanceLines(f);
+  assert.ok(L.some((x) => /민지 → 철수: lovers, but the spark has faded/.test(x)));
+  assert.ok(L.some((x) => /민지 → 유나: .*while still with 철수/.test(x)));
+  applyAnalysis(f, { emo: [{ from: "민지", to: "유나", t: { attraction: 2 }, why: "끌림" }] }, { at: 1, h: "h1" }, { smooth: true });
+  assert.equal(f.emo["민지>유나"].tags.attraction, 5);   // 처음 봄 상한 3 → 한 단계 위 5
+  assert.equal(strayRisk({ ties: f.ties, emo: { "민지>철수": { tags: { attraction: 8 } } } }, "민지"), null);
+});

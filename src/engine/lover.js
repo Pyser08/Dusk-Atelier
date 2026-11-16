@@ -40,3 +40,15 @@ export function setLover(folder, a, b, on) {
   else folder.lovers[k] = on ? { on: true, a, b, kind: "애인" } : false;
   if (!Object.keys(folder.lovers).length) delete folder.lovers;
 }
+
+// 2.2.6 바람 가능성: 애인이 있는데 그 애인에게 끌림이 바닥(2 이하)이거나, 적대감이 6 이상이거나 인간적 호감보다 크면.
+// 반환 { partner, attraction, why } | null. 끌림 값이 아직 없으면(기록 전) 보지 않는다.
+export function strayRisk(folder, name) {
+  for (const lp of loverOf(folder, name)) {
+    const pr = folder?.emo?.[nk(name) + ">" + nk(lp.other)], t = pr?.tags ?? {};
+    const att = t.attraction, hos = t.hostility ?? 0, aff = t.affection ?? 0;
+    const why = Number.isFinite(att) && att <= 2 ? "faded" : hos >= 6 || (hos > aff && hos >= 3) ? "soured" : "";
+    if (why) return { partner: lp.other, attraction: Number.isFinite(att) ? att : null, why };
+  }
+  return null;
+}

@@ -3,6 +3,7 @@
 // 이미 있는 값은 건드리지 않고(빈 태그만), 같은 관계로는 한 번만 넣는다. 게이지 배수는 변화량에만 쓰므로 여기엔 쓰지 않는다.
 import { liveTies } from "./memoryplus.js";
 import { isLoverKind } from "./lover.js";
+import { scaleDelta } from "./gaugemult.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 // [규칙, 방향, 처음 값]: both = 서로, a2b = A가 B에게(“B는 A의 짝사랑·상사”처럼 A 쪽 감정)
@@ -41,6 +42,25 @@ export function seedFromTies(folder, anchor = null, now = Date.now()) {
       if (Object.keys(next).length) pair.log.push({ t: next, from: prev, why: `관계: ${t.kind}`.slice(0, 40), at: anchor?.at ?? t.at ?? null, at_ms: now });
       if (!Object.keys(pair.tags).length && !pair.log.length) delete folder.emo[k];
     }
+  }
+  return n;
+}
+
+// 2.2.6 호감이 바닥이면 끌림이 천천히 식는다: 적대감이 인간적 호감보다 크면(3 이상) 이성적 호감이 3턴마다 1씩(게이지 배수 ‘내릴 때’ 적용).
+// 이성적 호감은 0 밑으로 내려가지 않는다(‘식음’ 상태로 본다). 반환: 내린 쌍 수
+export function sourAttraction(folder, anchor = null, now = Date.now(), { gauge = null, every = 3 } = {}) {
+  let n = 0;
+  for (const pr of Object.values(folder?.emo ?? {})) {
+    const t = pr?.tags ?? {};
+    if (!((t.attraction ?? 0) > 0 && (t.hostility ?? 0) >= 3 && (t.hostility ?? 0) > (t.affection ?? 0))) { if (pr?.sour) delete pr.sour; continue; }
+    pr.sour = (pr.sour ?? 0) + 1;
+    if (pr.sour < every) continue;
+    pr.sour = 0;
+    const d = scaleDelta(-1, gauge); if (!d) continue;
+    const before = t.attraction, v = Math.max(0, before + d);
+    if (v === before) continue;
+    t.attraction = v; n++;
+    (pr.log ??= []).push({ t: { attraction: v }, from: { attraction: before }, why: "호감이 바닥이라 끌림이 식음", at: anchor?.at ?? null, at_ms: now });
   }
   return n;
 }

@@ -1,6 +1,6 @@
 // 2.2.6 썸 행동 지침(순수): 이성적 호감(attraction 0~10) 단계와 그 인물의 성격(위키 기본 성격 6축)에 맞춰
 // 응답 모델이 끌림을 ‘자연스럽게, 천천히’ 보여 주게 하는 줄을 만든다. 기억 블록(memoryinject)에 들어간다.
-import { isLover } from "./lover.js";
+import { isLover, strayRisk } from "./lover.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 export const ROMANCE_RULE = "Slow burn: show attraction only through small, natural behaviour that fits the stage and the character's personality. Never skip a stage or confess early; keep ambiguity, mixed signals and plausible deniability; one-sided pull stays one-sided. Low or no attraction toward {{user}} means no romantic behaviour toward {{user}}.";
@@ -50,12 +50,24 @@ export function romanceLines(folder, { relevant = null, now = null, eff = null, 
     if (v < 1) continue;
     rows.push({ p, v, lover: isLover(folder, p.from, p.to) });
   }
+  // 2.2.6 애인에게 끌림이 식은 쌍(0도 포함)은 바람 가능성 줄로 따로
+  const strayed = new Map();
+  for (const n of new Set(Object.values(folder?.emo ?? {}).map((p) => p.from))) {
+    if (relevant && !relevant.has(key(n))) continue;
+    const sr = strayRisk(folder, n); if (sr) strayed.set(key(n), { name: n, ...sr });
+  }
   rows.sort((a, b) => b.v - a.v);
-  const lines = rows.slice(0, limit).map(({ p, v, lover }) => {
+  const lines = rows.filter(({ p, lover }) => !(lover && strayed.has(key(p.from)))).slice(0, limit).map(({ p, v, lover }) => {
     const style = styleOf(ax.get(key(p.from)));
+    const sr = strayed.get(key(p.from));
+    if (sr && key(sr.partner) !== key(p.to)) {   // 애인이 있는데 다른 사람에게 끌림
+      const [, name, act] = STAGES.find(([min]) => v >= min);
+      return `- ${p.from} → ${p.to}: ${name} (attraction ${v}) while still with ${sr.partner}: tempted, guilty, hides it; ${act}${style ? ` — as this person: ${style}` : ""}`;
+    }
     if (lover) return `- ${p.from} → ${p.to}: lovers (attraction ${v}); shows love in their own way${style ? ` — ${style}` : ""}`;
     const [, name, act] = STAGES.find(([min]) => v >= min);
     return `- ${p.from} → ${p.to}: ${name} (attraction ${v}): ${act}${style ? ` — as this person: ${style}` : ""}`;
   });
+  for (const sr of strayed.values()) lines.push(`- ${sr.name} → ${sr.partner}: lovers, but the spark has ${sr.why === "faded" ? "faded" : "soured into resentment"}${sr.attraction != null ? ` (attraction ${sr.attraction})` : ""}: may be drawn to someone else — wandering eyes, comparing, excuses to be away; strays only if a real chance comes and it fits their personality, never suddenly`);
   return lines.length ? [ROMANCE_RULE, ...lines] : [];
 }
