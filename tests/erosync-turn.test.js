@@ -96,3 +96,21 @@ test("실제 엔진: 채팅이 없으면 매 턴 계산은 이유를 알리고 �
   await assert.rejects(() => e.profiles.turn({ people: [{ name: "a" }], rp: "턴" }), /채팅/);
   await e.dispose();
 });
+
+test("처음 보는 인물: 한 번 스친 이름으로는 전체 분석을 시작하지 않고, 두 턴 넘게 나온 이름만 모아서 한 번, 그 뒤 한동안은 다시 안 한다", async () => {
+  const { api } = fakeApi(), calls = [];
+  let un = ["점원"];
+  const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [{ id: "a", name: "앨리스" }] }),
+    profile: async (op, arg) => { calls.push([op, arg]); if (op === "turn") return { ok: true, changed: [], unmatched: un }; if (op === "status") return { running: false }; return { ok: true }; } };
+  const t = createErosyncTurn(api, { erosync: er });
+  const turn = async (k) => { await t.onTurn({ key: k, rp: "턴", people: [{ name: "앨리스" }] }); await new Promise((r) => setTimeout(r, 0)); };
+  const starts = () => calls.filter(([op]) => op === "start").length;
+  await turn("k1");
+  assert.equal(starts(), 0, "한 번 스친 점원은 분석 안 함");
+  un = ["세라"]; await turn("k2");
+  assert.equal(starts(), 0, "세라도 아직 한 번");
+  un = ["세라", "유나"]; await turn("k3");
+  assert.equal(starts(), 1, "두 턴째 나온 세라 때문에 전체 분석 한 번");
+  un = ["유나", "카즈"]; await turn("k4"); un = ["카즈"]; await turn("k5");
+  assert.equal(starts(), 1, "쉬는 동안엔 새 이름이 쌓여도 다시 시작하지 않음");
+});

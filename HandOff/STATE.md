@@ -8,6 +8,16 @@
 
 ## ▶ 다음 세션에서 이어갈 것 (11-15 기준)
 
+- **인물 위키 B4 개편 (11-16, 브랜치 claude/cool-ride-t4bbw2, 미커밋·미배포)**
+  - 배치: `memaddoncss.js` wkLayoutOf(m) 기본 "B4"(m.wkLayout ""면 예전 화면). mdetail 구역 탭 가로 줄(.rb-mem3), wikiview 한 줄 인물 막대(top3: 인물 수·찾기·칩·추가·⋯ 도구 — ‘빈 인물 추가’·‘로어북에 없는 인물 지우기’는 도구 메뉴), 위키 상태는 접힌 줄(.rb-wk4-status). 유저 칩 맨 왼쪽(.me), 성별 색 g-f/g-m(folder.orient 또는 Erosync gender).
+  - personv2: infoBox(왼쪽 hero+summary("side")=수치·관계 한눈에(좁은 화면 matchMedia 760은 hero만), 오른쪽 탭 관계(기본)·상세·NSFW·기록). 요약 탭은 없앰 — 달라진 점·기억에 남은 순간은 log() 맨 위 summary("log"), 노리는 목표는 NSFW 지금 상태. 적대감 3+ 호감 고리·막대 cracked, 6+ broken(feelCard fancy·infotab .rb-emo2-big). 관계는 layoutB(B4: PC는 상대 칩 숨기고 관계 한눈에가 고르기), feelCard fancy(고리·막대·칸·하트), cycleViz(parseCycleBody, D-day·주기 띠), 요약 탭 .rb-sum-tab. 시안 A·B1~B3·C 코드는 남아 있음(미리보기 tools/preview.mjs ?wiki=1&lay= 로 비교) — 정리해도 됨.
+  - infotab: 기록 카드 cls "rb-wk3-rec rg-<묶음>"(색·아이콘 CSS), 항목 본문 먼저·제목은 묶음 이름과 다를 때만·대상 칩, 월경 칸 제외, 감정 상대별 카드(.rb-emo2), 축 --v·수치 data-slot. erosyncwiki: 지금 상태 아이콘 줄, 끌리는 상대 비율 막대(.rb-ero-pref), 좋아함/싫어함 k-like/k-hate, 상대별 끌림 .rb-wk2-toward.
+  - CSS 전부 memaddoncss.js(코어 styles.js·common.js 안 건드림). 미리보기: `.claude/launch.json` wiki-mock(5179) → `/?wiki=1&adv=1&light=1` 꽉 찬 시험 데이터(주인공 미오·선생님·NSFW·Erosync 가짜 스냅샷, 사진용으로 단추 없음, 시안은 `&lay=B1` 등 주소로).
+  - Erosync: 프로필 지시문 descriptive value를 한국어로(erosync.js profile 언어 규칙). erosyncturn: 처음 보는 이름은 2턴 이상 나온 것만 모아 전체 분석 1번, 그 뒤 20턴 쉼(tests/erosync-turn 새 시험).
+  - 시험: npm test 1699 pass, e2e wiki-strangers 12(도구 메뉴로 바꿈)·wiki-recorder 60·smoke(감정 카드 기대값 .rb-emo2로)·featurefind 통과, erosync-ui는 예전부터 실패하던 더보기 메뉴 1건.
+  - 시험판: test-addons/memory-test.js(0.2.22)·erosync-test.js(0.1.8). 공유 코어 모듈(memory 47·erosync 6)은 모두 v2.2.5와 같음 → v2.2.5 코어에 애드온만 올려도 됨.
+  - 남은 일: [ ] 다크 테마 눈 확인 [ ] 실기기 [ ] Erosync 턴 계산을 장면 판단 호출과 합치는 건 미착수(턴 갱신은 이미 1번 호출)
+
 - **호감 분리·애인·게이지 배수·관계도 이전 턴·Erosync 정리 (11-16, 브랜치 claude/cool-ride-t4bbw2, 미커밋·미배포)**
   - 호감 분리: `engine/memoryemo.js` EMO_TAGS에 attraction(이성적 호감)·possess(소유욕)·exclusive(독점욕) 추가, affection 라벨 ‘인간적 호감’. LOVER_TAGS·tagsFor(lover). 줄 기록 deed에 flirt·jealous, confess/touch는 attraction(memorylines DEED). JSON 지침(memoryprompt 27줄)·식기(memoryhuman COOL_HALF) 갱신.
   - 애인: `engine/lover.js`(새) — liveTies의 kind가 연인·배우자류(isLoverKind, 전·짝사랑·썸·가짜 제외)면 애인. 사용자 설정 folder.lovers[pairKey]=({on,a,b}|false). applyEmo가 isLover 아닐 때 possess·exclusive 버림. 기록기 입력에 `lovers` 목록(memoryrunner). 위키 관계 탭(personv2) 애인 칸·분홍 표시(styles.js .lover/.rb-wk2-lovercard), 관계도 선 💗(relmap.js e.lover).

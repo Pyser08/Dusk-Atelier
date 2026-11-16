@@ -1,5 +1,6 @@
 // 기록 보기 (1.8.3 목업 3): 인물 위키 · 상황 · 시간선 · 열린 항목 · 관계 중 한 번에 한 구역만 보여 준다.
 // 구역 칩에 개수를 붙이고(모바일 한 줄 가로 스크롤), PC는 왼쪽 구역 목록 + 오른쪽 내용. 채팅 고르기는 머리의 ▾ 하나.
+import { wkLayoutOf, ensureMemAddonCss } from "./memaddoncss.js";
 import { h, replace } from "../../dom.js";
 import { btn, loading, note } from "../../kit.js";
 import { mem, loadBots, loadChats, countOf, loadFolder, fail, potOn } from "./common.js";
@@ -60,12 +61,13 @@ export async function renderMemoryDetail(ctx, host, { redraw }) {
     ? h("select", { class: "rb-input rb-mem-chatpick", "aria-label": "채팅 선택", onChange: (e) => { m.chatIndex = +e.target.value; m.personKey = ""; redraw(); } }, chats.map((c) => h("option", { value: c.index, selected: c.index === m.chatIndex }, `${c.index + 1}. ${c.name}${countOf(c)}`)))
     : h("span", { class: "rb-muted" }, chatItem.name ?? "");
 
+  ensureMemAddonCss(ctx);   // 구역 탭 가로 줄 등 개편 CSS(애드온이 붙임)
   const more = ctx.prefs.advanced ? h("details", { class: "rb-mem-man" }, h("summary", null, "이 봇의 세부 설정"), renderBotSettings(env)) : null;
   replace(host,
     h("div", { class: "rb-mem2-head rb-mem-dhead" }, btn("‹ 장기 기억", { size: "sm", onClick: back }), h("h2", { class: "rb-h2" }, bot.character.name || "이름 없는 캐릭터", h("span", { class: "rb-muted", style: "font-weight:500;font-size:14px;margin-left:6px" }, "기록 보기")), chatPick),
     view.snapshot ? note("warn", `스냅샷 ${new Date(folder.at_ms ?? 0).toLocaleString()} — 그 채팅을 열고 새로고침하면 갱신돼요.`) : null,
     view.missing ? note("warn", "이 채팅을 열면 볼 수 있어요.") : null,
-    h("div", { class: "rb-mem-dgrid" },
+    h("div", { class: ["rb-mem-dgrid", wkLayoutOf(m) && "rb-mem3"] },   // 개편 시안: 구역 탭을 위 가로 줄로
       h("div", { class: "rb-mem-tabs rb-mem-navtabs rb-mem-sectabs", role: "tablist", "aria-label": "이 채팅의 기억 구역" }, tabBtns),
       body),
     more);

@@ -99,9 +99,10 @@ window.runSmoke = async () => {
     const host = document.createElement("div"); document.body.appendChild(host); await renderPeopleTab(env, host); await sleep(80);
     // v1.8.3: 탭 개편 — 감정은 '상세 정보' 탭의 상대별 한 줄(값 있는 감정만)
     host.querySelector('.rb-wk2-tab[data-t="info"]')?.click(); await sleep(60);
-    const erow = [...host.querySelectorAll(".rb-wk3-emorow")].map((r) => r.textContent);
-    check("감정 카드(간단 모드)", erow.some((t) => t.startsWith("→ 나")), host.textContent.slice(0, 200));
-    check("감정 값·미설정 감정은 숨김", erow.some((t) => t.includes("신뢰 7") && t.includes("두려움 2") && !t.includes("애정")), erow.join("|"));
+    // 2.2.6 개편: 상대마다 카드(.rb-emo2) — 이름 머리, 값 있는 감정만 칩(인간적·이성적 호감은 늘 굵은 막대)
+    const erow = [...host.querySelectorAll(".rb-emo2")].map((r) => [r.querySelector(".hd b")?.textContent ?? "", [...r.querySelectorAll(".rb-emo2-chip")].map((c) => c.textContent).join(" ")]);
+    check("감정 카드(간단 모드)", erow.some(([who]) => who === "나"), host.textContent.slice(0, 200));
+    check("감정 값·미설정 감정은 숨김", erow.some(([, chips]) => chips.includes("신뢰7") && chips.includes("두려움2") && !chips.includes("존경")), JSON.stringify(erow));
   } catch (e) { check("감정 게이지 렌더", false, e?.stack ?? e); }
   // v1.8.1: 인물 위키 '수치 상태' 아래 자동 게이지 블록(+ 추가 버튼, 만들어진 게이지 박스)
   try {

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인물 위키 개편 목업</title>
+<style>
+:root{--bg:#f4eef6;--card:rgba(255,255,255,.78);--cell:rgba(120,90,140,.07);--line:rgba(120,90,140,.16);--t:#2b2233;--s:#6c6074;--m:#9b90a3;--pink:#e98bd6;--blue:#6f9dff;--mint:#3fcfa6;--org:#ff8a5c;--ok:#5fe0a8;--yel:#f5c451;--acc:linear-gradient(90deg,#f59a7a,#c58bf5)}
+*{box-sizing:border-box}body{margin:0;font:13px/1.5 "Pretendard",system-ui,sans-serif;color:var(--t);background:radial-gradient(900px 500px at 10% 0,#ffe3d6,transparent),radial-gradient(900px 600px at 90% 30%,#eadcff,transparent),var(--bg);padding:24px 16px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:17px;margin:40px 0 6px}.lead{color:var(--s);margin:0 0 14px;max-width:900px}
+.row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.pc{width:1280px;max-width:100%;overflow:auto}.frame{border-radius:22px;background:rgba(255,255,255,.45);border:1px solid var(--line);padding:18px;box-shadow:0 10px 40px rgba(80,40,90,.12)}
+.mob{width:390px;flex:none}.lbl{font-size:11px;color:var(--m);margin:0 0 6px;font-weight:700;letter-spacing:.04em}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.card.bar::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--k,var(--pink));box-shadow:0 0 10px var(--k,var(--pink))}
+.ch{display:flex;align-items:center;gap:8px;margin-bottom:8px}.ch b{font-size:13px}.ch .sp{flex:1}.link{color:var(--s);font-size:11px}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#f3e6f2;border:2px solid #fff;font-weight:700;flex:none}.av.lg{width:56px;height:56px;font-size:20px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:var(--cell);font-size:11.5px;white-space:nowrap}.chip.p{background:#fde3f6;color:#b13d97}.chip.b{background:#e3ecff;color:#3d64c4}.chip.g{background:#ddf7ec;color:#1f8a62}.chip.y{background:#fff1cf;color:#8a6510}
+.btn{display:inline-flex;align-items:center;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px}.btn.pr{background:rgba(233,139,214,.14);border-color:rgba(233,139,214,.6)}
+.tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px}.tabs span{flex:1;text-align:center;padding:6px 10px;border-radius:999px;color:var(--s);white-space:nowrap}.tabs .on{background:var(--acc);color:#fff;font-weight:700}
+.g{display:grid;gap:10px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.meter{display:grid;grid-template-columns:74px 1fr 34px;gap:8px;align-items:center;font-size:12px;margin:3px 0}.trk{height:7px;border-radius:9px;background:var(--cell);overflow:hidden}.trk i{display:block;height:100%;border-radius:9px}
+.e1{background:#f58aa6}.e2{background:#e86bd0}.e3{background:#6f9dff}.e4{background:#b77bf5}.e5{background:#ff8a5c}.e6{background:#9aa0ab}
+.mu{color:var(--m);font-size:11.5px}.s{color:var(--s)}
+.duel{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start}.duel .mid{text-align:center;padding-top:6px}
+.steps{display:flex;gap:4px;margin:4px 0}.steps i{flex:1;height:6px;border-radius:6px;background:var(--cell)}.steps i.on{background:var(--org)}
+.tl{display:flex;gap:0;overflow:auto;padding:4px 0}.tl div{flex:none;min-width:120px;border-top:2px solid rgba(233,139,214,.5);padding:6px 10px 0 0;position:relative;font-size:11.5px}.tl div::before{content:"";position:absolute;top:-6px;left:0;width:10px;height:10px;border-radius:50%;background:var(--pink)}
+.empty{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 14px;border:1px dashed var(--line);border-radius:14px;color:var(--m);font-size:12px}
+.side{display:flex;flex-direction:column;gap:6px}.who{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:14px;border:1px solid transparent}.who.on{background:#fff;border-color:rgba(233,139,214,.6)}.mini{display:flex;gap:3px;margin-top:3px}.mini i{height:4px;border-radius:4px;display:block}
+.acc{border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:8px}.acc>.h{display:flex;align-items:center;gap:8px;padding:12px 16px;font-weight:700}.acc>.h .sp{flex:1}.acc>.b{padding:0 16px 14px}.acc.c>.b{display:none}
+.toc{position:sticky;top:0;display:flex;gap:6px;overflow:auto;padding:8px 0;background:linear-gradient(var(--bg),rgba(244,238,246,.9))}
+.sec{margin:14px 0 6px;font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px}.sec small{font-weight:400;color:var(--m)}
+.kpi{display:flex;gap:8px;flex-wrap:wrap}.kpi div{background:var(--cell);border-radius:12px;padding:8px 12px;min-width:84px}.kpi b{display:block;font-size:16px}
+.note{background:#fff7e0;border:1px solid #f0d58a;border-radius:12px;padding:8px 12px;font-size:12px;color:#7a5a10}
+.pros{margin:8px 0 0;padding-left:18px;color:var(--s)}
+@media (max-width:700px){.pc{display:none}}
+</style></head><body>
+<h1>인물 위키(인물 상세) 개편 — 3안</h1>
+<p class="lead">지금 문제: ① 인물 화면이 세 번째 열에 끼어 좁음(약 650px), 인물 이름까지 위에 도구줄·경고가 300px ② 관계 탭이 같은 무게의 카드 12~13개를 세로로 늘어놓음(빈 카드도 다 보임) ③ 가장 중요한 감정 게이지가 화면 아래, 그것도 한쪽 방향만 ④ 애인·짝사랑·연표·진도가 따로따로 카드. <b>세 안 모두 기능은 그대로</b>(감정 9종·애인/비밀 연애·연표·짝사랑·호칭·추억·갈등·기대·태도·오해·수치·Erosync·무작위 다시 뽑기).</p>
+
+<!-- ============ A ============ -->
+<h2>A안 · 마주 보기 대시보드</h2>
+<p class="lead">인물 머리를 ‘한 줄 요약 카드’로 압축(핵심 수치 칩) → 관계 탭은 <b>두 사람이 마주 보는 판</b>: 양쪽 감정을 동시에, 가운데에 관계 상태(진도·💗애인·🤫·짝사랑). 연표는 가로 띠. 비어 있는 칸은 맨 아래 한 줄 ‘＋ 추가’로 접음. 2열 격자.</p>
+<div class="row">
+<div class="pc"><p class="lbl">PC 1280</p><div class="frame">
+ <div class="card bar" style="--k:var(--pink);display:flex;gap:14px;align-items:center">
+  <div class="av lg">시</div><div style="min-width:0"><b style="font-size:18px">시로코</b> <span class="chip p">💗 세라와 연애 중</span> <span class="chip">학생회</span><div class="mu">세라와 옥상에서 도시락을 먹는 사이. 고백 뒤 사귀기 시작했어요.</div></div><span style="flex:1"></span>
+  <div class="kpi"><div><span class="mu">호감도</span><b>62</b></div><div><span class="mu">기억</span><b>3</b></div><div><span class="mu">관계</span><b>2명</b></div></div>
+  <span class="btn">⋯ 인물 관리</span></div>
+ <div style="margin:10px 0" class="tabs"><span>요약</span><span class="on">관계</span><span>상세 정보</span><span>NSFW</span><span>기록</span></div>
+ <div style="display:flex;gap:6px;margin-bottom:10px"><span class="btn pr">💗 세라 · 아는 사이</span><span class="btn">유나 · 처음 봄 · 짝사랑</span></div>
+ <div class="card bar" style="--k:var(--pink)">
+  <div class="duel">
+   <div><div class="ch"><b>시로코 → 세라</b><span class="sp"></span><span class="link">고치기</span></div>
+    <div class="meter"><span>인간적 호감</span><span class="trk"><i class="e1" style="width:70%"></i></span><small>7</small></div>
+    <div class="meter"><span>이성적 호감</span><span class="trk"><i class="e2" style="width:80%"></i></span><small>8</small></div>
+    <div class="meter"><span>신뢰</span><span class="trk"><i class="e3" style="width:60%"></i></span><small>6</small></div>
+    <div class="meter"><span>소유욕</span><span class="trk"><i class="e4" style="width:40%"></i></span><small>4</small></div>
+    <div class="meter"><span>독점욕</span><span class="trk"><i class="e4" style="width:30%"></i></span><small>3</small></div></div>
+   <div class="mid"><div class="av">시</div><div style="font-size:20px;margin:6px 0">💗</div><div class="av">세</div>
+    <div class="steps" style="width:120px;margin-top:10px"><i class="on"></i><i class="on"></i><i></i><i></i></div><small class="mu">아는 사이 · 장면 4번</small>
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;align-items:center"><span class="chip p">애인(직접)</span><span class="btn">비밀 연애로</span><span class="btn">애인 아님</span></div></div>
+   <div><div class="ch"><b>세라 → 시로코</b><span class="sp"></span><span class="link">고치기</span></div>
+    <div class="meter"><span>인간적 호감</span><span class="trk"><i class="e1" style="width:60%"></i></span><small>6</small></div>
+    <div class="meter"><span>이성적 호감</span><span class="trk"><i class="e2" style="width:70%"></i></span><small>7</small></div>
+    <div class="mu">아직 없음 · 신뢰 · 적대감 · 두려움 · 존경 · 질투 · 소유욕 · 독점욕</div></div>
+  </div>
+  <div style="margin-top:12px"><div class="ch"><b>관계 연표</b></div><div class="tl"><div><b>처음 만남</b><br><span class="mu">#3 응답</span></div><div><b>고백</b><br><span class="mu">#8 시로코가</span></div><div><b>사귀기 시작</b><br><span class="mu">#9</span></div><div><b>재회</b><br><span class="mu">#24</span></div></div></div>
+ </div>
+ <div class="g g2" style="margin-top:10px">
+  <div class="card bar" style="--k:var(--blue)"><div class="ch"><b>호칭 · 말투</b></div><div>시로코 → 세라 <b>“선배”</b> <span class="chip">존댓말</span></div><div>세라 → 시로코 <b>“시로코야”</b> <span class="chip">반말</span></div></div>
+  <div class="card bar" style="--k:var(--mint)"><div class="ch"><b>둘만의 추억</b><span class="sp"></span><span class="link">2개</span></div><div>옥상 도시락 <span class="mu">· 계기: 비 오는 날</span></div><div>우산을 같이 썼다</div></div>
+  <div class="card bar" style="--k:var(--org)"><div class="ch"><b>갈등</b><span class="chip y">사과함</span></div>약속을 잊어버린 일 <span class="btn">풀렸어요</span></div>
+  <div class="card bar" style="--k:var(--yel)"><div class="ch"><b>오해</b></div>세라는 “시로코가 유나를 좋아한다”고 알아요 · 실제로는 길만 알려 줬어요</div>
+ </div>
+ <div class="empty" style="margin-top:10px">아직 없는 칸 <span class="btn">＋ 기대 차이</span><span class="btn">＋ 사람 앞 태도</span><span class="btn">Erosync 상대 끌림</span></div>
+</div></div>
+<div class="mob"><p class="lbl">모바일 390</p><div class="frame" style="padding:12px">
+ <div class="card bar" style="display:flex;gap:10px;align-items:center"><div class="av">시</div><div style="min-width:0;flex:1"><b>시로코</b><div><span class="chip p">💗 세라</span> <span class="chip">호감 62</span></div></div><span class="btn">⋯</span></div>
+ <div class="tabs" style="margin:8px 0;overflow:auto"><span>요약</span><span class="on">관계</span><span>상세</span><span>NSFW</span><span>기록</span></div>
+ <div style="display:flex;gap:6px;overflow:auto;margin-bottom:8px"><span class="btn pr">💗 세라</span><span class="btn">유나</span></div>
+ <div class="card bar">
+  <div style="display:flex;align-items:center;gap:8px"><div class="av">시</div><span>💗</span><div class="av">세</div><div style="flex:1"><div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div><small class="mu">아는 사이 · 애인(직접)</small></div></div>
+  <div class="tabs" style="margin:10px 0 6px;font-size:12px"><span class="on">시로코 →</span><span>← 세라</span></div>
+  <div class="meter"><span>인간적</span><span class="trk"><i class="e1" style="width:70%"></i></span><small>7</small></div>
+  <div class="meter"><span>이성적</span><span class="trk"><i class="e2" style="width:80%"></i></span><small>8</small></div>
+  <div class="meter"><span>신뢰</span><span class="trk"><i class="e3" style="width:60%"></i></span><small>6</small></div>
+  <div class="tl" style="margin-top:8px"><div><b>고백</b><br><span class="mu">#8</span></div><div><b>사귐</b><br><span class="mu">#9</span></div></div>
+ </div>
+ <div class="card bar" style="--k:var(--blue);margin-top:8px"><b>호칭</b> · “선배”(존댓말) / “시로코야”(반말)</div>
+ <div class="card bar" style="--k:var(--mint);margin-top:8px"><b>추억 2</b> · 옥상 도시락…</div>
+ <div class="empty" style="margin-top:8px">＋ 기대 차이 · 태도 · 오해</div>
+</div></div>
+</div>
+
+<!-- ============ B ============ -->
+<h2>B안 · 상대 목록 + 접는 묶음</h2>
+<p class="lead">관계 탭 왼쪽에 상대 목록(작은 끌림·호감 막대, 💗·짝사랑 표시) — 누르면 오른쪽만 바뀜. 오른쪽은 카드 대신 <b>5묶음 접이식</b>: ① 감정(양방향) ② 관계 상태(진도·애인·연표·짝사랑) ③ 말과 태도(호칭·사람 앞 태도) ④ 추억·갈등·오해·기대 ⑤ Erosync. 열어 둔 묶음은 기억. 모바일은 목록이 위 가로 줄.</p>
+<div class="row">
+<div class="pc"><p class="lbl">PC 1280</p><div class="frame">
+ <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><div class="av lg">시</div><div><b style="font-size:18px">시로코</b><div class="mu">학생회 · 옥상 도시락</div></div><span style="flex:1"></span><span class="btn">⏳ 회귀</span><span class="btn">요약 정리</span><span class="btn">⋯</span></div>
+ <div class="tabs" style="margin-bottom:10px"><span>요약</span><span class="on">관계</span><span>상세 정보</span><span>NSFW</span><span>기록</span></div>
+ <div style="display:grid;grid-template-columns:240px 1fr;gap:12px">
+  <div class="side card" style="padding:8px">
+   <div class="who on"><div class="av">세</div><div style="flex:1"><b style="color:#b13d97">세라 💗</b><div class="mu">아는 사이</div><div class="mini"><i class="e2" style="width:64px"></i><i class="e1" style="width:56px"></i></div></div></div>
+   <div class="who"><div class="av">유</div><div style="flex:1"><b>유나</b> <span class="chip y">짝사랑</span><div class="mu">처음 봄</div><div class="mini"><i class="e2" style="width:10px"></i></div></div></div>
+  </div>
+  <div>
+   <div class="acc"><div class="h">감정 <span class="mu">양쪽</span><span class="sp"></span><span class="link">고치기 ▾</span></div><div class="b g g2">
+    <div><div class="mu">시로코 → 세라</div><div class="meter"><span>인간적 호감</span><span class="trk"><i class="e1" style="width:70%"></i></span><small>7</small></div><div class="meter"><span>이성적 호감</span><span class="trk"><i class="e2" style="width:80%"></i></span><small>8</small></div><div class="meter"><span>신뢰</span><span class="trk"><i class="e3" style="width:60%"></i></span><small>6</small></div><div class="meter"><span>소유욕</span><span class="trk"><i class="e4" style="width:40%"></i></span><small>4</small></div></div>
+    <div><div class="mu">세라 → 시로코</div><div class="meter"><span>인간적 호감</span><span class="trk"><i class="e1" style="width:60%"></i></span><small>6</small></div><div class="meter"><span>이성적 호감</span><span class="trk"><i class="e2" style="width:70%"></i></span><small>7</small></div></div></div></div>
+   <div class="acc"><div class="h">관계 상태 <span class="chip p">💗 애인</span><span class="chip">아는 사이</span><span class="sp"></span>▾</div><div class="b"><div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div><div class="tl"><div><b>처음 만남</b><br><span class="mu">#3</span></div><div><b>고백</b><br><span class="mu">#8</span></div><div><b>사귐</b><br><span class="mu">#9</span></div></div><span class="btn">비밀 연애로</span> <span class="btn">애인 아님</span></div></div>
+   <div class="acc c"><div class="h">말과 태도 <span class="mu">“선배” · “시로코야”</span><span class="sp"></span>▸</div><div class="b"></div></div>
+   <div class="acc c"><div class="h">추억 · 갈등 · 오해 <span class="chip g">추억 2</span><span class="chip y">갈등 1</span><span class="chip">오해 1</span><span class="sp"></span>▸</div><div class="b"></div></div>
+   <div class="acc c"><div class="h">Erosync <span class="mu">상대별 끌림</span><span class="sp"></span>▸</div><div class="b"></div></div>
+  </div>
+ </div>
+</div></div>
+<div class="mob"><p class="lbl">모바일 390</p><div class="frame" style="padding:12px">
+ <div style="display:flex;gap:10px;align-items:center"><div class="av">시</div><b style="flex:1">시로코</b><span class="btn">⋯</span></div>
+ <div class="tabs" style="margin:8px 0"><span>요약</span><span class="on">관계</span><span>상세</span><span>NSFW</span><span>기록</span></div>
+ <div style="display:flex;gap:6px;overflow:auto;margin-bottom:8px"><div class="who on" style="padding:6px 10px"><b style="color:#b13d97">세라 💗</b></div><div class="who" style="padding:6px 10px">유나 <span class="chip y">짝</span></div></div>
+ <div class="acc"><div class="h">감정<span class="sp"></span>▾</div><div class="b"><div class="mu">시로코 → 세라</div><div class="meter"><span>인간적</span><span class="trk"><i class="e1" style="width:70%"></i></span><small>7</small></div><div class="meter"><span>이성적</span><span class="trk"><i class="e2" style="width:80%"></i></span><small>8</small></div><div class="mu" style="margin-top:6px">세라 → 시로코</div><div class="meter"><span>인간적</span><span class="trk"><i class="e1" style="width:60%"></i></span><small>6</small></div></div></div>
+ <div class="acc c"><div class="h">관계 상태 <span class="chip p">💗</span><span class="sp"></span>▸</div></div>
+ <div class="acc c"><div class="h">말과 태도<span class="sp"></span>▸</div></div>
+ <div class="acc c"><div class="h">추억·갈등·오해 <span class="chip">4</span><span class="sp"></span>▸</div></div>
+</div></div>
+</div>
+
+<!-- ============ C ============ -->
+<h2>C안 · 한 장 프로필 (탭 없이 목차)</h2>
+<p class="lead">탭을 없애고 한 페이지로: 위에 붙는 목차(요약·관계·상세·NSFW·기록)를 누르면 그 자리로 스크롤. 각 구역은 짧게 요약만 보이고 ‘더 보기’로 펼침. 관계는 상대마다 한 줄 카드(감정 막대 2개+상태 칩) → 누르면 그 자리에서 펼쳐짐. 찾기 쉽지만 페이지가 길어요.</p>
+<div class="row">
+<div class="pc"><p class="lbl">PC 1280</p><div class="frame">
+ <div style="display:flex;gap:12px;align-items:center"><div class="av lg">시</div><div><b style="font-size:18px">시로코</b> <span class="chip p">💗 세라</span><div class="mu">세라와 옥상에서 도시락을 먹는 사이.</div></div><span style="flex:1"></span><span class="btn">⋯ 인물 관리</span></div>
+ <div class="toc"><span class="btn pr">요약</span><span class="btn">관계 2</span><span class="btn">상세 정보</span><span class="btn">NSFW</span><span class="btn">기록</span></div>
+ <div class="sec">요약</div>
+ <div class="g g3"><div class="card bar"><b>수치</b><div class="meter"><span>호감도</span><span class="trk"><i class="e1" style="width:62%"></i></span><small>62</small></div></div><div class="card bar" style="--k:var(--mint)"><b>기억에 남은 순간</b><div>A 세라에게 고백했다</div></div><div class="card bar" style="--k:var(--org)"><b>달라진 점</b><div class="mu">없음</div></div></div>
+ <div class="sec">관계 <small>상대를 누르면 펼쳐져요</small></div>
+ <div class="card bar"><div style="display:flex;gap:10px;align-items:center"><div class="av">세</div><b style="width:80px">세라 💗</b><div style="flex:1"><div class="meter"><span>이성적</span><span class="trk"><i class="e2" style="width:80%"></i></span><small>8</small></div><div class="meter"><span>인간적</span><span class="trk"><i class="e1" style="width:70%"></i></span><small>7</small></div></div><span class="chip">아는 사이</span><span class="chip p">애인</span>▾</div>
+  <div class="g g2" style="margin-top:10px"><div class="card"><b>감정(양쪽)·연표</b><div class="tl"><div>고백 #8</div><div>사귐 #9</div></div></div><div class="card"><b>호칭·추억·갈등·오해</b><div class="mu">“선배” · 추억 2 · 갈등 1</div></div></div></div>
+ <div class="card bar" style="margin-top:8px;--k:var(--yel)"><div style="display:flex;gap:10px;align-items:center"><div class="av">유</div><b style="width:80px">유나</b><div style="flex:1"><div class="meter"><span>이성적</span><span class="trk"><i class="e2" style="width:10%"></i></span><small>1</small></div></div><span class="chip y">유나의 짝사랑</span>▸</div></div>
+ <div class="sec">상세 정보 <small>기본 성격 · 수치 · 항목</small></div><div class="card mu">접혀 있음 — 더 보기</div>
+ <div class="sec">NSFW</div><div class="card mu">월경·임신 · 후보 · Erosync · 무작위 다시 뽑기 — 더 보기</div>
+</div></div>
+<div class="mob"><p class="lbl">모바일 390</p><div class="frame" style="padding:12px">
+ <div style="display:flex;gap:10px;align-items:center"><div class="av">시</div><b style="flex:1">시로코</b><span class="btn">⋯</span></div>
+ <div class="toc"><span class="btn pr">요약</span><span class="btn">관계</span><span class="btn">상세</span><span class="btn">NSFW</span><span class="btn">기록</span></div>
+ <div class="sec">관계</div>
+ <div class="card bar"><div style="display:flex;gap:8px;align-items:center"><div class="av">세</div><b style="flex:1">세라 💗</b>▾</div><div class="meter"><span>이성적</span><span class="trk"><i class="e2" style="width:80%"></i></span><small>8</small></div><div class="meter"><span>인간적</span><span class="trk"><i class="e1" style="width:70%"></i></span><small>7</small></div></div>
+ <div class="card bar" style="margin-top:8px;--k:var(--yel)"><div style="display:flex;gap:8px;align-items:center"><div class="av">유</div><b style="flex:1">유나</b><span class="chip y">짝사랑</span>▸</div></div>
+ <div class="sec">상세 정보</div><div class="card mu">더 보기</div>
+</div></div>
+</div>
+
+<h2>공통(어느 안이든)</h2>
+<ul class="pros">
+ <li>인물 머리의 버튼 4개(회귀·요약 정리·직접 지시·삭제)는 ‘⋯ 인물 관리’ 하나로 접음(PC는 자주 쓰는 1~2개만 밖에).</li>
+ <li>‘아직 없어요’ 빈 카드는 숨기고, 맨 아래 ‘＋ 추가’ 줄로만.</li>
+ <li>NSFW 탭도 같은 원칙: 값 있는 것 위, 빈 칸은 접힘. 무작위 다시 뽑기·Erosync 카드는 그대로.</li>
+ <li>새 CSS는 memaddoncss.js에만(애드온만 올려도 반영).</li>
+</ul>
+</body></html>

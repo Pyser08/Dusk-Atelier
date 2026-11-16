@@ -24,7 +24,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 860 }], ["모바일", { w
   });
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem ??= {}, { botId: "c1", chatIndex: 0, personKey: "", tab: "people", page: "detail" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1500);
-  const b = page.getByRole("button", { name: "로어북에 없는 인물 지우기" }).first();
+  // 2.2.6 개편: 인물 도구는 위 막대의 ⋯(도구) 메뉴 안에 있다
+  const tools = page.getByRole("button", { name: "도구", exact: true }).first();
+  if (await tools.count()) { await tools.click(); await page.waitForTimeout(300); }
+  const b = page.locator(".rb-menu button, .rb-menu [role=menuitem]", { hasText: "로어북에 없는 인물 지우기" }).first();
   ok(`[${tag}] 버튼이 보임`, (await b.count()) > 0);
   if (!(await b.count())) { await page.screenshot({ path: `/tmp/strangers-${tag}.png`, fullPage: true }); continue; }
   await b.click(); await page.waitForTimeout(600);

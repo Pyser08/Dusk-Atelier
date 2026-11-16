@@ -1,7 +1,10 @@
 // 인물 위키 화면: 리수폿의 배치(왼쪽 인물 목록 + 오른쪽 인물 문서)와 기능에 Dusk의 이야기 기록을 한 페이지로 합친다.
 // 생김새는 Dusk 토큰·카드 스타일, 배치·항목 순서·수정 규칙(고정·편집 중 변경 거절)은 리수폿을 따른다.
+import { wkLayoutOf } from "./memaddoncss.js";
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
+import { userLabel } from "./username.js";
+import { loverPairs } from "../../../engine/lover.js";
 import { btn, modal, promptDialog, confirmDialog, openMenu, note } from "../../kit.js";
 import { mem, fail, avatar, visibleRecords, potOn } from "./common.js";
 import { findDoc, cycleOf } from "../../../engine/personview.js";
@@ -124,7 +127,33 @@ export async function renderPeopleTab(env, host) {
   const autoSt = autoStatusOf(M, docs.length);
   // 리수폿·인물 화면의 고유 기능을 기존 위키 UI 아래에 추가한다. 기존 위키 조작부는 교체하지 않는다.
   const strip = () => h("div", { class: "rb-wk-auto" }, note(autoSt.kind, autoSt.text), h("span", { class: "rb-mem-rowact" }, plan.total && wikiEditable(env) ? btn(`AI로 빈칸 채우기 (${plan.total}명)`, { size: "sm", kind: "primary", title: "비어 있는 수치(와 본문·성격까지 빈 인물)만 채워요. 실행 전에 대상을 보여 드려요.", onClick: () => askFill().catch(fail(ctx)) }) : null, missing.length && wikiEditable(env) ? btn(`위키 없는 인물 ${missing.length}명 만들기`, { size: "sm", kind: "primary", onClick: () => makeMissing() }) : null, btn("위키 기록·다시 시도", { size: "sm", onClick: () => openWikiLog(env).catch(fail(ctx)) })));
-  const top = (n) => h("div", { class: "rb-wk-headwrap" }, h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "지금 채팅"), h("h2", null, "인물 문서")),
+  // 개편 시안(목업): A·B·C면 위 도구줄을 한 줄로(인물 n명 · 추가 · ⋯ 도구), 자동 상태는 얇은 줄로
+  const lay = wkLayoutOf(m);
+  const lovers = loverPairs(env.folder), isLoverOf = (n) => lovers.some((x) => x.a === n || x.b === n);
+  const toolsMenu = (e) => openMenu(ctx.win, e.currentTarget, [
+    { label: "빈 인물 직접 추가", onClick: addBlank },
+    docs.length && wikiEditable(env) ? { label: "로어북에 없는 인물 지우기", onClick: () => askStrangers().catch(fail(ctx)) } : null,
+    ...peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))].filter(Boolean));
+  // 개편 머리: [인물 n · 검색] [인물 칩 띠] [추가 · ⋯] 한 줄, 자동 상태는 접힌 한 줄(누르면 설명·버튼)
+  const stripMode = lay && !/^B[123]$/.test(lay);
+  const statusLine = () => {
+    const warn = autoSt.kind === "warn" || autoSt.kind === "danger";
+    const fill = plan.total && wikiEditable(env);
+    if (!warn && !fill) return null;
+    return h("details", { class: ["rb-wk4-status", warn && "warn"] }, h("summary", null,
+      h("span", { class: "dot", "aria-hidden": "true" }), h("span", { class: "t" }, warn ? "위키 자동 정리가 멈춰 있어요" : "빈칸이 있는 인물이 있어요"),
+      fill ? h("small", { class: "rb-wk2-chip" }, `빈칸 ${plan.total}명`) : null, h("span", { style: "flex:1" }), h("small", { class: "rb-muted" }, "자세히")), strip());
+  };
+  const top3 = (n) => h("div", { class: "rb-wk4-top" },
+    h("div", { class: "rb-wk4-bar" },
+      h("div", { class: "rb-wk4-lead" }, h("b", { class: "t" }, "인물"), h("span", { class: "rb-wk-n" }, String(n)),
+        h("label", { class: "rb-wk4-search" }, icon("search", 15), h("input", { type: "search", placeholder: "찾기", value: m.personSearch ?? "", "aria-label": "인물 검색", onChange: (e) => { m.personSearch = e.target.value; again(); } }))),
+      stripMode ? h("div", { class: "rb-wk4-people" }, peopleList) : h("span", { style: "flex:1" }),
+      h("div", { class: "rb-wk4-acts" }, btn("추가", { size: "sm", kind: "primary", icon: "plus", title: "인물 추가·가져오기", onClick: () => openImport(env).catch(fail(ctx)) }),
+        h("button", { type: "button", class: "rb-btn sm rb-wk4-ico", title: "도구", "aria-label": "도구", onClick: toolsMenu }, icon("more", 16)))),
+    statusLine());
+  let peopleList = null;
+  const top = (n) => lay ? top3(n) : h("div", { class: "rb-wk-headwrap" }, h("div", { class: "rb-wk-head" }, h("div", null, h("div", { class: "rb-wk-eyebrow rb-muted" }, "지금 채팅"), h("h2", null, "인물 문서")),
     h("span", { class: "rb-mem-rowact" }, h("span", { class: "rb-wk-n" }, `${n}명`), btn("인물 추가·가져오기", { size: "sm", onClick: () => openImport(env).catch(fail(ctx)) }), btn("빈 인물 직접 추가", { size: "sm", onClick: addBlank }),
       docs.length && wikiEditable(env) ? btn("로어북에 없는 인물 지우기", { size: "sm", title: "로어북·봇 설명에 이름이 없는 인물을 골라 지워요", onClick: () => askStrangers().catch(fail(ctx)) }) : null,
       btn("더보기", { size: "sm", icon: "more", onClick: (e) => openMenu(ctx.win, e.currentTarget, peopleMenuItems(env, Object.entries(people).filter(([, p]) => visibleRecords(p).length || p.digest))) }))), strip());
@@ -159,8 +188,12 @@ export async function renderPeopleTab(env, host) {
     // 인물 전환은 오른쪽 문서만 교체한다. 목록·검색·상단 상태와 무거운 설정 조회는 다시 실행하지 않는다.
     replace(main, top(rows.length), personPage(env, r, docs, commit));
   };
+  // 개편: 유저(플레이어)는 늘 맨 왼쪽, 따로 강조
+  const meOf = (r) => isUser(r.name) || (r.doc?.aliases ?? []).some(isUser) || String(r.name).trim() === String(userLabel()).trim();
+  if (lay) shown.sort((a, b) => meOf(b) - meOf(a));
   const list = h("div", { class: "rb-wk-list" }, ...shown.map((r) => {
-    const el = h("button", { type: "button", class: "rb-wk-row", "aria-pressed": r.id === sel.id ? "true" : "false", onClick: () => selectRow(r) },
+    const gk = env.folder.orient?.[String(r.name).toLowerCase().replace(/\s+/g, "")]?.g;   // 성별 색(Erosync에서 옮겨 온 값)
+    const el = h("button", { type: "button", class: ["rb-wk-row", lay && meOf(r) && "me", lay && (gk === "f" || gk === "m") && `g-${gk}`], "aria-pressed": r.id === sel.id ? "true" : "false", onClick: () => selectRow(r) },
       avatar(r.name, ""), h("span", { class: "txt" }, h("span", { class: "name" }, r.name), h("small", { class: "rb-muted" }, r.doc ? "인물정보 등록됨" : "이야기 기록만")));
     rowButtons.set(r.id, el);
     return el;
@@ -168,7 +201,12 @@ export async function renderPeopleTab(env, host) {
   const side = h("aside", { class: "rb-wk-side" },
     h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "이름·별칭·태그·본문", value: m.personSearch ?? "", "aria-label": "인물 검색", onChange: (e) => { m.personSearch = e.target.value; again(); } })),
     h("div", { class: "rb-wk-count" }, "등록 인물 ", h("b", null, String(rows.length))), list);
-  main = h("div", { class: "rb-wk-main" }, top(rows.length), personPage(env, sel, docs, commit));
+  main = h("div", { class: "rb-wk-main" }, lay ? null : top(rows.length), personPage(env, sel, docs, commit));
+  if (lay) {   // 개편 시안: 위 도구줄 → 인물 띠(B는 왼쪽 목록) → 인물 화면
+    for (const [id, el] of rowButtons) { const r = rows.find((x) => x.id === id); const lv = r && isLoverOf(r.name); if (lv) el.classList.add("lover"); }
+    peopleList = list;
+    return replace(host, h("div", { class: ["rb-wk", "rb-wk4", `lay-${lay.slice(0, 1)}`, `lay-${lay}`, stripMode && "strip"] }, top(rows.length), h("div", { class: "rb-wk4-body" }, stripMode ? null : h("aside", { class: "rb-wk-side" }, list), main)));
+  }
   replace(host, h("div", { class: "rb-wk" }, side, main));
 }
 

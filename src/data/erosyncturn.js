@@ -17,6 +17,10 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
   let last = null, running = null, off = null;
   const seen = [];   // 같은 응답 기록(key)은 한 번만
   const autoDone = new Set();   // 출발값 자동 만들기를 이미 시작한 채팅(+처음 본 인물) — 한 세션에 한 번씩만
+  // 2.2.6 호출 줄이기: 처음 보는 이름은 턴마다 세어 두고, 두 턴 넘게 나온 이름이 생겼을 때만 전체 분석을 한 번 한다(한 번 스친 엑스트라 때문에 전체 분석을 돌리지 않게).
+  // 한 번 돌린 채팅은 NEW_COOLDOWN턴 동안 다시 돌리지 않는다.
+  const NEW_MIN_TURNS = 2, NEW_COOLDOWN = 20;
+  const newSeen = new Map(), turnNo = new Map(), lastNewAt = new Map();   // scope → Map(이름 → 나온 턴 수) / 턴 수 / 마지막 시작 턴
 
   // 2.2.6 출발값 자동 만들기: 이 채팅에 Erosync 인물 값이 하나도 없거나(why "empty") 처음 보는 인물이 나왔을 때(why "new") 전체 분석을 한 번 시작한다.
   async function autoStart(why, scope, names = []) {
@@ -52,7 +56,14 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
       const r = await erosync.profile("turn", { people: info.people, rp: info.rp, groups: s.groups, signal: ctrl.signal, gauge: await readGauge(api) });
       if (!r?.ok) { last = { at: now(), phase: "error", message: r?.reason || "계산하지 못했어요" }; return r; }
       last = { at: now(), phase: "done", changed: r.changed ?? [], unmatched: r.unmatched ?? [] };
-      { const fresh = (r.unmatched ?? []).filter((n) => n && !/\{\{user\}\}/i.test(n)); if (s.autoStart && fresh.length && snap?.ok) void autoStart("new", snap.scope?.scopeKey, fresh); }
+      if (s.autoStart && snap?.ok) {
+        const sc = snap.scope?.scopeKey || "?", n = (turnNo.get(sc) ?? 0) + 1; turnNo.set(sc, n);
+        const seenHere = newSeen.get(sc) ?? new Map(); newSeen.set(sc, seenHere);
+        for (const nm of new Set((r.unmatched ?? []).filter((x) => x && !/\{\{user\}\}/i.test(x)))) seenHere.set(nm, (seenHere.get(nm) ?? 0) + 1);
+        const ready = [...seenHere].filter(([, c]) => c >= NEW_MIN_TURNS).map(([nm]) => nm);
+        const cool = lastNewAt.has(sc) && n - lastNewAt.get(sc) < NEW_COOLDOWN;
+        if (ready.length && !cool) { lastNewAt.set(sc, n); for (const nm of ready) seenHere.delete(nm); void autoStart("new", sc, ready); }
+      }
       if (r.changed?.length) {
         const log0 = await history();
         await write(TURN_LOG_KEY, [...r.changed.map((c) => ({ at: now(), id: c.id, name: c.name, before: c.before, after: c.after, reason: c.reason || "" })), ...log0].slice(0, TURN_LOG_MAX));
