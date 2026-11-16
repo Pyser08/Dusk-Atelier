@@ -1,12 +1,15 @@
 // 출처: risupot 2.3.0 src/chat-source.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
 import { CHAT_SCOPE_FIELD } from '../../engine/pot/chat-scope.js';
+import { cleanForMemory } from '../../engine/cleantext.js';
 import { STAGE_CONTEXT_MAX, stageContextCount } from '../../engine/pot/stage-context.js';
 import { chatTraceTurn } from './trace-turn.js';
 import { loadUserActor } from '../../engine/pot/user-identity.js';
 
 const WRITER_RECENT_CONTEXT_MAX_CHARS=16000;
 
-export function messageText(message) {
+// Dusk 2.2.4: 위키 기록기도 HTML 태그·생각 글을 뺀 글을 읽는다(근거 인용·비교가 모두 같은 함수를 거쳐 서로 맞는다)
+export const messageText = (message) => cleanForMemory(messageTextRaw(message));
+function messageTextRaw(message) {
   if (!message || typeof message !== 'object') return '';
   if (Array.isArray(message.swipes) && message.swipes.length) {
     const selected = message.swipes[Number.isInteger(message.swipeId) ? message.swipeId : message.swipes.length - 1];
