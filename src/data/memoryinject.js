@@ -2,7 +2,7 @@
 import { cleanForMemory } from "../engine/cleantext.js";
 import { logFailure } from "./memlog.js";
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
-import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
+import { buildBlock, insertBlock, wikiAware, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
 import { stateText } from "../engine/storytime.js";
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
@@ -109,7 +109,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       let send = messages, dropped = 0;
       if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped; }
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text, dropped };
-      return insertBlock(send, c.text, c.position);
+      return insertBlock(send, wikiAware(c.text, send), c.position);
     } catch (e) { log("주입 실패", e?.message ?? e); return messages; }
   }
   // 지금 열린 채팅에 다음 요청 때 들어갈 블록을 미리 만들어 본다. 저장 데이터·사용 횟수는 건드리지 않는다.
