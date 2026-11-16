@@ -60,3 +60,11 @@ test("리스 자체 Gemini 연결이면 마지막 사용자 말 앞의 바뀌는
   assert.deepEqual(await run("Dusk 자동"), msgs.map((m) => m.content));
   assert.deepEqual(await run("gpt-5"), msgs.map((m) => m.content));
 });
+test("캐시 배치(하이파 분리·이어붙이기)는 Gemini·Dusk 메인 요청에만", async () => {
+  const msgs = [{ role: "user", content: "1" }];
+  const run = async (aiModel, type = "model") => { let called = 0; const store = new Map(); const api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => void store.set(k, v) }, getDatabase: async () => ({ aiModel, subModel: aiModel }) };
+    const layout = { apply: async (m) => { called++; return { messages: [...m, { role: "system", content: "옮김" }] }; } };
+    const out = await createTurnInfo(api, { chip: false, layout }).beforeRequest(msgs, type); return { called, n: out.length }; };
+  assert.deepEqual(await run("Dusk 자동"), { called: 1, n: 2 }); assert.deepEqual(await run("gemini-2.5-pro"), { called: 1, n: 2 });
+  assert.deepEqual(await run("gpt-5"), { called: 0, n: 1 }); assert.deepEqual(await run("Dusk 자동", "submodel"), { called: 0, n: 1 });
+});

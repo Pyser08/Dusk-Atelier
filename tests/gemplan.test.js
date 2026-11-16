@@ -39,3 +39,17 @@ test("자동 캐시 앞부분 지키기: 사용자 말 앞 시스템 블록을 �
   assert.deepEqual(moveVolatileAfterUser(m).map((x) => x.content), ["s", "1", "2", "3", "기억"]);
   const same = [{ role: "system", content: "s" }, { role: "user", content: "1" }]; assert.equal(moveVolatileAfterUser(same), same);
 });
+import { storagePrice, storageCost, addRecord, summarize } from "../src/engine/provider/cost.js";
+import { createGeminiCache } from "../src/data/provider/gemcache.js";
+test("캐시 보관 비용: 단가 어림·계산·합계(호출 수엔 안 셈)", async () => {
+  assert.equal(storagePrice({}, "gemini-2.5-pro"), 4.5); assert.equal(storagePrice({ cstore: 2 }, "gemini-2.5-pro"), 2); assert.equal(storagePrice({ cstore: null }, "gemini-2.5-flash"), 1);
+  assert.equal(storageCost(1e6, 3600, 1), 1);
+  let log = addRecord([], { usage: { input: 10 }, cost: 0.5, saved: 0.3 }); log = addRecord(log, { usage: null, cost: 0.1, storeCost: 0.1, via: "cache-store" });
+  const t = summarize(log).total; assert.equal(t.calls, 1); assert.ok(Math.abs(t.store - 0.1) < 1e-9); assert.ok(Math.abs(t.all - 0.6) < 1e-9);
+  let now = 1e6; const gc = createGeminiCache({ now: () => now }); let k = 0;
+  const transport = { send: async (r) => (r.method === "GET" ? { ok: true, json: async () => ({ cachedContents: [] }) } : { ok: true, json: async () => ({ name: `cachedContents/${++k}` }) }) };
+  const conn = { id: "c", kind: "google", baseUrl: "https://g" }, profile = { model: "gemini-2.5-flash", cache: { gemini: "auto", geminiTtl: 600 } };
+  const big = "설정 ".repeat(3000), m = [{ role: "system", content: big }, { role: "user", content: "a" }, { role: "assistant", content: "b" }, { role: "user", content: "c" }];
+  await gc.prepare({ conn, profile, messages: m, cred: "K", transport }); const st = gc.takeStorage(); assert.equal(st.length, 1); assert.equal(st[0].seconds, 600); assert.ok(st[0].tokens > 2000);
+  assert.equal(gc.takeStorage().length, 0, "꺼내면 비움");
+});

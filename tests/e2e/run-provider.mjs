@@ -23,6 +23,9 @@ const browser = await chromium.launch(), errs = [];
   ok("[간단] 키 값은 화면에 없음", !(await page.content()).includes("AIza-test-key-9876"));
   const names0 = await page.evaluate(() => window.__providers);
   ok(`[간단] 리스에 Dusk 자동 등록: ${names0}`, names0.includes("Dusk 자동"));
+  ok("[간단] 캐시 배치 카드(하이파 분리 켜짐·이어붙이기 꺼짐)", (await vis0("#rb-prov-layout")) === 1 && (await page.locator("#rb-prov-layout [role=switch]").nth(0).getAttribute("aria-checked")) === "true" && (await page.locator("#rb-prov-layout [role=switch]").nth(1).getAttribute("aria-checked")) === "false");
+  await page.locator("#rb-prov-layout [role=switch]").nth(1).click(); await page.waitForTimeout(300);
+  ok("[간단] 이어붙이기 켜면 저장", await page.evaluate(async () => (await __app.ctx.cacheLayout.get()).append === true));
   await page.close();
 }
 for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { width: 390, height: 844 }]]) {

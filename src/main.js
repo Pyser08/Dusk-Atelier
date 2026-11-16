@@ -19,6 +19,7 @@ import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets
 import { createLoreRuntime } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
 import { createTurnInfo } from './data/turninfo.js';
+import { createCacheLayout } from './data/cachelayout.js';
 import { createReplacerWatch } from './data/replacerorder.js';
 import { createChatMenu } from './data/chatmenu.js';
 import { createStoryTime } from './data/storytime.js';
@@ -175,7 +176,8 @@ async function start() {
   // 로어북 로그: 응답마다 들어간 로어북을 남기고, 응답 아래에 버튼을 붙인다
   const loreLog = createLoreLog(api, { loreRuntime, above: (t) => mem()?.gauge?.onDisplay?.(t) ?? t });
   loreLog.start().catch((e) => console.log(`[${TITLE}] 로어북 로그 시작 실패: ${e?.message ?? e}`));
-  const turnInfo = createTurnInfo(api, { watchReplacers: replacerWatch?.onAdded ?? null, diceSource: () => fairPlay.lastDice(), loreFor: (t) => loreLog.recordFor(t), loreLast: () => loreLog.last() });   // 주사위 결과·모델 호출 표시 (1.8.3)
+  const cacheLayout = createCacheLayout(api);   // 2.2.6 하이파 분리·이어붙이기(캐시용 배치)
+  const turnInfo = createTurnInfo(api, { layout: cacheLayout, watchReplacers: replacerWatch?.onAdded ?? null, diceSource: () => fairPlay.lastDice(), loreFor: (t) => loreLog.recordFor(t), loreLast: () => loreLog.last() });   // 주사위 결과·모델 호출 표시 (1.8.3)
   turnInfo.start().catch((e) => console.log(`[${TITLE}] 호출 표시 시작 실패: ${e?.message ?? e}`));
   // 채팅 입력창 옆 메뉴의 빠른 설정 (1.8.3). 어디서 바꾸든(홈·시작 안내·메뉴) 버튼 이름이 따라 바뀌게 설정 함수를 감싼다.
   const chatMenu = createChatMenu(api, { fairPlay, turnInfo });   // 맨 위 '장기 기억'·'회귀' 바로가기는 장기기억 애드온이 addLink로 붙인다
@@ -219,6 +221,7 @@ async function start() {
   app.ctx.loreRuntime = loreRuntime;
   app.ctx.loreLog = loreLog;
   app.ctx.turnInfo = turnInfo;
+  app.ctx.cacheLayout = cacheLayout;
   app.ctx.chatMenu = chatMenu;
   for (const [k, id] of [["memory", "memory"], ["affhud", "affhud"], ["memoryButton", "memoryButton"]]) Object.defineProperty(app.ctx, k, { configurable: true, get: () => app.ctx.ext.get("svc", id) ?? null });
   Object.defineProperty(app.ctx, "provider", { configurable: true, get: () => app.ctx.ext.get("svc", "provider") ?? null });

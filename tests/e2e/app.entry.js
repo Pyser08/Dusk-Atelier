@@ -27,6 +27,7 @@ import { createApp } from "../../src/ui/app.js";
 import { createAiStopButton } from "../../src/ui/aistopbtn.js";
 import { trackedRunLLM } from "../../src/engine/aistop.js";
 import { createProvider } from "../../src/data/provider/index.js";
+import { createCacheLayout } from "../../src/data/cachelayout.js";
 import { createWidgetHome } from "../../src/data/widgethome.js";
 import { createProtLink } from "../../src/data/protlink.js";
 import { createStore as createBackupStore, backupSnapshot } from "../../src/engine/index.js";
@@ -110,6 +111,7 @@ window.bootApp = async (seed, opts = {}) => {
     const fairPlay = createFairPlay(api, { rng, saveMs: 20, log() {} }); await fairPlay.start(); app.ctx.fairPlay = fairPlay;
     const turnInfo = createTurnInfo(api, { chip: false, quietMs: 20, diceSource: () => fairPlay.lastDice(), log() {} }); await turnInfo.start(); app.ctx.turnInfo = turnInfo;
   }
+  app.ctx.cacheLayout = createCacheLayout(api);
   if (opts.provider) { app.ctx.provider = createProvider(api, { confirm: async () => false, createStore: createBackupStore, backupSnapshot }); }
   if (opts.widgetHome) {  // 위젯 홈 설정 카드·도구 행 시험: 실제 컨트롤러 + 가짜 화면
     window.__wh = { boots: 0, disposed: 0, opened: 0 };

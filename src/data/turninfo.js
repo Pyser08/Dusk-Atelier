@@ -28,7 +28,7 @@ const KEYFRAMES = "@keyframes dusk-dice-roll{0%{transform:rotate(-220deg) scale(
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
 
-export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => null, loreFor = () => null, loreLast = () => null, now = Date.now, chip = true, quietMs = 1500, watchReplacers = null, relastMs = 300, log = (...a) => console.log("[Dusk 호출표시]", ...a) } = {}) {
+export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSource = () => null, loreFor = () => null, loreLast = () => null, now = Date.now, chip = true, quietMs = 1500, watchReplacers = null, relastMs = 300, log = (...a) => console.log("[Dusk 호출표시]", ...a) } = {}) {
   let cacheAlert = true, prevMsgs = null, cacheLog = [], diceShow = false, callShow = false, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
   const supported = () => !isBardHost(api);
 
@@ -93,12 +93,14 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
   // ── 훅 ──
   async function beforeRequest(messages, type) {
     try {
-      if (!supported() || (!diceShow && !callShow && !cacheAlert)) return messages;
+      if (!supported() || (!diceShow && !callShow && !cacheAlert && !layout)) return messages;
       const aux = !!type && type !== "model";
       const prompt = (Array.isArray(messages) ? messages : []).map((m) => textOf(m?.content)).join("\n");
       const rec = { at: now(), startAt: now(), aux, model: await modelName(aux), inTok: estimateTokens(prompt), firstAt: 0, lastAt: 0 };
       // 2.2.6 리스 자체 Gemini 연결: 요청 본문은 못 바꾸지만 순서는 바꿀 수 있다 → 바뀌는 블록을 마지막 사용자 말 뒤로(자동 캐시 앞부분 지키기). 이 훅은 늘 맨 뒤라 다른 Dusk 블록이 다 들어온 뒤다.
       if (/gemini/i.test(rec.model) && !/dusk/i.test(rec.model)) messages = moveVolatileAfterUser(messages);
+      // 하이파 연관·랜덤 분리 · 이어붙이기(설정): 리스 자체 Gemini와 Dusk 프로바이더 요청에만(메인 요청)
+      if (!aux && layout && /gemini|dusk/i.test(rec.model)) messages = (await layout.apply(messages)).messages;
       if (aux) {   // 보조 호출은 끝을 알 수 없어(출력 훅이 안 불림) 잠깐 알려만 준다
         if (callShow && chip) { chipSet(`보조 · ${rec.model || "모델"} · 호출 중 · 입력 약 ${fmtTokens(rec.inTok)}`, ""); clearTimeout(ui.hide); ui.hide = setTimeout(chipRemove, 4e3); }
         return messages;
@@ -183,7 +185,7 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
     } catch (e) { log("훅 등록 실패", e?.message ?? e); }
     return hooked;
   }
-  async function start() { diceShow = await loadDiceShow(api); callShow = await loadCallShow(api); cacheAlert = await loadCacheAlert(api); if (supported() && (diceShow || callShow || cacheAlert)) await hook(); return supported(); }
+  async function start() { diceShow = await loadDiceShow(api); callShow = await loadCallShow(api); cacheAlert = await loadCacheAlert(api); if (supported() && (diceShow || callShow || cacheAlert || layout)) await hook(); return supported(); }
   async function setCacheAlert(v) { cacheAlert = !!v; await api.pluginStorage.setItem(CACHE_ALERT_KEY, cacheAlert ? "on" : "off"); if (cacheAlert) await hook(); return cacheAlert; }
   async function setDiceShow(v) { diceShow = !!v; await api.pluginStorage.setItem(DICE_SHOW_KEY, diceShow ? "on" : "off"); if (diceShow) await hook(); return diceShow; }
   async function setCallShow(v) { callShow = !!v; await api.pluginStorage.setItem(CALL_SHOW_KEY, callShow ? "on" : "off"); if (callShow) await hook(); else { stopTick(); chipRemove(); } return callShow; }

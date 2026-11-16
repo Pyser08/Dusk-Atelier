@@ -2,7 +2,7 @@
 // 설정은 pluginStorage(키 값 제외), 키 값은 이 기기의 로컬 저장소에만 있다. 계산은 data/provider, 여기서는 그리기만 한다.
 import { h, replace } from "../dom.js";
 import { icon } from "../icons.js";
-import { btn, confirmDialog, emptyState, openMenu, pageHead, segmented, statusCard, switchEl, advFold, note } from "../kit.js";
+import { btn, confirmDialog, emptyState, openMenu, pageHead, segmented, statusCard, switchEl, advFold, note, toggleRow } from "../kit.js";
 import { KINDS, kindOf, isReasoningModel } from "../../engine/provider/catalog.js";
 import { normalizeConnection, normalizeProfile } from "../../engine/provider/profile.js";
 import { field, text, num, area, select, grid } from "./provider/ui.js";
@@ -35,7 +35,7 @@ export async function renderProvider(ctx) {
     const body = h("div", { class: "rb-prov-body", style: "display:flex;flex-direction:column;gap:14px" });
     const tabs = segmented(TABS, st.tab, (v) => { st.tab = v; draw(); }, "프로바이더 메뉴");
     tabs.style.cssText = "flex-wrap:wrap";
-    if (st.tab === "home") body.append(...(await glancePanel({ P, cfg, mutate, draw, st })));
+    if (st.tab === "home") body.append(...(await glancePanel({ P, cfg, mutate, draw, st })), await layoutCard());
     else if (st.tab === "conn") body.append(...connPanel());
     else if (st.tab === "prof") body.append(...profPanel());
     else body.append(...(await renderMore(st.tab, { ctx, P, cfg, mutate, draw, toast, fail })));
@@ -45,6 +45,18 @@ export async function renderProvider(ctx) {
       !cfg.profiles.length && cfg.enabled ? note("warn", "프로필이 아직 없어요. ‘연결’에서 키를 넣고 모델을 골라 프로필을 만들어 주세요.") : null,
       tabs, body);
   };
+
+  // ───────── 캐시 배치(하이파 분리·이어붙이기): 리스 자체 Gemini·Dusk 요청에 적용 ─────────
+  async function layoutCard() {
+    const L = ctx.cacheLayout; if (!L) return null;
+    const c = await L.get();
+    const save = async (patch) => { try { await L.set(patch); toast("다음 요청부터 적용돼요"); } catch (e) { fail(e); } };
+    return h("section", { class: "rb-card", id: "rb-prov-layout", style: "display:flex;flex-direction:column;gap:8px;padding:14px" },
+      h("h3", { style: "margin:0" }, "캐시 배치"),
+      h("p", { class: "rb-muted", style: "margin:0" }, "매 턴 바뀌는 글을 프롬프트 뒤쪽으로 옮겨 앞부분이 그대로 맞게 해요. 리스 자체 Gemini와 ‘Dusk’ 모델 요청에만 적용돼요."),
+      toggleRow("하이파 연관·랜덤 메모리 분리", "하이파 V3의 중요·최근 요약은 제자리에 두고, 매 턴 바뀌는 연관·랜덤 요약만 마지막 내 말 바로 앞으로 옮겨요.", c.hypaSplit !== false, (v) => save({ hypaSplit: v })),
+      toggleRow("이어붙이기 모드 (실험)", "키워드로 켜진 로어북과 하이파 연관·랜덤 요약을 ‘이번 턴 참고’로 묶어 마지막 내 말 뒤에 붙여요. 지난 요청 전체가 다음 요청 앞부분과 같아져 자동 캐시(Gemini 4)가 가장 잘 맞지만, 프롬프트 순서가 바뀌어 답이 조금 달라질 수 있어요.", c.append === true, (v) => save({ append: v })));
+  }
 
   // ───────── 간단 모드: 쓰던 설정 그대로 빠른 시작 ─────────
   async function simplePanel() {
@@ -72,6 +84,7 @@ export async function renderProvider(ctx) {
       h("p", { class: "rb-muted", style: "margin:0" }, "리스에서 쓰던 온도·응답 길이·페널티는 그대로 가져와요. 리스는 플러그인에 API 키를 보여 주지 않아서 키만 한 번 넣어 주세요."),
       grid(field("공급자", kindSel), field("API 키", keyIn)), grid(field("메인 모델", mainIn), field("보조 모델", subIn)),
       h("div", { class: "rb-actions" }, go)));
+    out.push(await layoutCard());
     out.push(note("info", "연결·프로필·용도별 모델·캐시 세부·사용량 같은 모든 기능은 고급 모드에서 써요."));
     return out;
   }
@@ -191,7 +204,7 @@ export async function renderProvider(ctx) {
       field("프리필(답 앞부분)", area(p.prefill, (v) => set((q) => { q.prefill = v; }), { rows: 2 }), "모델이 이 글에 이어서 쓰게 해요. 지원하는 곳에서만 돼요", true)));
     card.append(advFold(ctx, "provprof", grid(
       field("입력 단가 ($/100만 토큰)", num(p.pricing.input, (v) => set((q) => { q.pricing.input = v ?? 0; }))), field("출력 단가", num(p.pricing.output, (v) => set((q) => { q.pricing.output = v ?? 0; }))),
-      field("캐시 읽기 단가", num(p.pricing.cached, (v) => set((q) => { q.pricing.cached = v; }))), field("캐시 쓰기 단가", num(p.pricing.cwrite, (v) => set((q) => { q.pricing.cwrite = v; }))),
+      field("캐시 읽기 단가", num(p.pricing.cached, (v) => set((q) => { q.pricing.cached = v; }))), field("캐시 쓰기 단가", num(p.pricing.cwrite, (v) => set((q) => { q.pricing.cwrite = v; }))), field("캐시 보관 단가 ($/100만 토큰·시간)", num(p.pricing.cstore, (v) => set((q) => { q.pricing.cstore = v; })), "비우면 Gemini 공시가로 어림(Pro 4.5 · 그 밖 1.0)"),
       field("생각 토큰 예산(직접)", num(p.thinking.budget, (v) => set((q) => { q.thinking.budget = v; q.thinking.mode = v ? "budget" : ""; }), { step: "1" }), "Claude(1024 이상)·Gemini 2.5용. 있으면 강도보다 먼저 쓰여요(Claude는 ‘끔’이면 안 써요)"),
       field("재시도 횟수", num(p.retry, (v) => set((q) => { q.retry = v; }), { step: "1" }), "비우면 공통 값"), field("서비스 등급(tier)", text(p.tier, (v) => set((q) => { q.tier = v.trim(); })), "예: priority, flex"),
       field("안전 필터", text(p.safety, (v) => set((q) => { q.safety = v.trim(); })), "Gemini: off · BLOCK_NONE 등"), field("Frequency / Presence", h("div", { style: "display:flex;gap:8px" }, num(p.sampling.frequencyPenalty, (v) => set((q) => { q.sampling.frequencyPenalty = v; }), { ph: "freq" }), num(p.sampling.presencePenalty, (v) => set((q) => { q.sampling.presencePenalty = v; }), { ph: "pres" }))),

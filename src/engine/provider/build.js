@@ -122,7 +122,7 @@ function buildGemini(conn, p, msgs, o) {
   return { path: `/models/${model}:${o.stream ? "streamGenerateContent?alt=sse" : "generateContent"}`, body: buildGeminiBody(p, msgs, o) };
 }
 export const vertexRoute = (conn, p) => (/^claude/i.test(p.model) || /anthropic/i.test(p.model) ? "claude" : "gemini");
-function vertexBase(conn) {
+export function vertexBase(conn) {
   const loc = conn.vertex?.location || "global", proj = conn.vertex?.projectId;
   const host = loc === "global" ? "aiplatform.googleapis.com" : `${loc}-aiplatform.googleapis.com`;
   return `https://${host}/v1/projects/${proj}/locations/${loc}`;

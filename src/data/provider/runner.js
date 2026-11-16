@@ -8,6 +8,7 @@ import { createKeyPool } from "../../engine/provider/keypool.js";
 import { classifyFailure, planAfterFailure, backoffMs } from "../../engine/provider/chain.js";
 import { costOf, savedByCache, summarize, budgetState } from "../../engine/provider/cost.js";
 import { applyRules, anatomy, orderForCache } from "../../engine/provider/transforms.js";
+import { storagePrice, storageCost } from "../../engine/provider/cost.js";
 import { enabledTools, parseArgs } from "../../engine/provider/tools.js";
 import { protect, restore, guideBlock, glossaryBlock } from "../../engine/provider/translate.js";
 import { HttpError, errorFromResponse, redact } from "./transport.js";
@@ -72,7 +73,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
   // 한 번 시도. 스트림이면 첫 이벤트까지 읽고(여기서 실패하면 대체 가능) 나머지는 넘겨 준다.
   async function once({ conn, profile, messages, signal, cfg, purpose, cha, aff, pool, wantStream, extra = {} }) {
     const c = await credential(conn, pool, signal, aff);
-    let gc = { messages }; if (gemcache && conn.kind === "google") gc = await gemcache.prepare({ conn, profile, messages, cred: c.cred, transport, signal, scope: `${cha?.chaId ?? ""}|${purpose}`, tools: profile.search === "auto" });
+    let gc = { messages }; if (gemcache && (conn.kind === "google" || conn.kind === "vertex")) gc = await gemcache.prepare({ conn, profile, messages, cred: c.cred, transport, signal, scope: `${cha?.chaId ?? ""}|${purpose}`, tools: profile.search === "auto" }); for (const x of gemcache?.takeStorage?.() ?? []) { const c2 = storageCost(x.tokens, x.seconds, storagePrice(profile.pricing, profile.model)); store.addUsage({ at: now(), purpose, profile: profile.id, model: profile.model, cha: cha?.chaId ?? "", usage: null, cost: c2, storeCost: c2, saved: 0, ms: 0, via: "cache-store" }).catch?.(() => {}); }
     const upstreamStream = wantStream !== "off";
     const learnKey = `${cha?.chaId ?? ""}|${purpose}|${profile.id}`, learnOn = !!profile.cache?.learn; const prevTurnHashes = learnOn ? prevTurns.get(learnKey) ?? null : null; if (learnOn) { try { prevTurns.set(learnKey, turnHashesOf(gc.messages)); } catch { /* 학습만 건너뜀 */ } }
     let reqObj = buildRequest({ conn, profile, messages: gc.messages, prevTurnHashes, stream: upstreamStream, cred: c.copilot ? "" : c.cred, cachedContent: gc.cachedContent, reasoningState: extra.reasoningState });

@@ -20,7 +20,7 @@
 ## 파일 목록
 ### src/
 - `addonlib.gen.js` (648줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
-- `main.js` (318줄) 
+- `main.js` (321줄) 
 
 ### src/cellar/
 - `node-entry.js` (9줄) Dusk Cellar(서버)에서 장기 기억 분석을 돌리는 Node용 진입점 (v1.9.3, Cella… — createMemoryRunner, createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX, callWriterModel
@@ -34,6 +34,7 @@
 - `affhud.js` (178줄) 호감도 HUD 프리셋 런타임: 응답이 끝나면 호감도를 채팅 변수($aff…)에 써 둔다. — createAffHud
 - `assetfix.js` (93줄) v1.8.2 에셋 태그 고치기(도구 탭, 사용자가 누를 때만): 지금 열린 채팅 읽기 · 고친 응답 … — UNDO_KEY, loadRange, applyFix, lastUndo, undoFix
 - `assetfolders.js` (65줄) — foldersOf, childFolders, folderPath, createFolder, renameFolder
+- `cachelayout.js` (34줄) 캐시용 프롬프트 배치 런타임 (2.2.6): 설정(dusk.cachelayout)과 지금 채팅의 하이… — LAYOUT_KEY, LAYOUT_DEFAULT, createCacheLayout
 - `cardassets.js` (6줄) 카드 에셋(자동 생성): 기본 프레임 1장(글자 제거·투명 처리, 1024x1536 WebP)과 Gi… — CARD_FRAME_DATA, CARD_FONT_DATA, CARD_FRAME_SIZE
 - `cardbot.js` (34줄) 카드로 새 봇 객체 만들기. 원본 봇은 수정하지 않고 새 객체만 반환한다. — buildCardCharacter
 - `cardflow.js` (78줄) 카드 만들기 흐름(AI 호출 3회: 카드·연결·첫 메시지)과 에셋 고르기. 화면 코드 없이 api만 … — roleNamesOf, generateCard, generateLink, listBotImages, pickIllustrations
@@ -119,7 +120,7 @@
 - `storytime.js` (44줄) 이야기 시간 훅 (v1.6.8). 장기기억을 켜든 끄든 독립으로 동작하고, 설정에서 켜고 끈다. 기본… — STORY_TIME_KEY, loadStoryTimeOn, createStoryTime
 - `themebuilder.js` (789줄) 테마 빌더: 고르기만 해서 채팅 테마(커스텀 HTML + CSS)를 만든다. — hexToOklch, oklch, contrast, ensureContrast, makePalette
 - `themes.js` (385줄) 테마 스튜디오: 일반 리스 / 포켓리스 계열 테마를 따로 만들고 저장·적용한다. — detectTarget, loadThemes, saveThemes, newTheme, duplicateTheme
-- `turninfo.js` (192줄) 응답 아래 표시 런타임 (1.8.3): ② 주사위 결과 · ③ 모델 호출 정보(+ 화면 구석 상태 칩… — DICE_SHOW_KEY, CALL_SHOW_KEY, CACHE_ALERT_KEY, TURN_LOG_KEY, loadDiceShow
+- `turninfo.js` (194줄) 응답 아래 표시 런타임 (1.8.3): ② 주사위 결과 · ③ 모델 호출 정보(+ 화면 구석 상태 칩… — DICE_SHOW_KEY, CALL_SHOW_KEY, CACHE_ALERT_KEY, TURN_LOG_KEY, loadDiceShow
 - `updatetoast.js` (38줄) 리스 화면(플러그인 밖) 오른쪽 아래에 뜨는 업데이트 알림. retrytoast.js와 같은 방식: … — createUpdateToast
 - `usermerge.js` (13줄) 페르소나 이름(·user·유저 등)으로 따로 쌓인 옛 기록을 {{user}} 하나로 자동으로 합친다 … — autoMergeUser
 - `usernames.js` (31줄) {{user}}(플레이어)를 가리키는 이름 모으기 (v1.9.3). db.username 하나만 보면… — userNameList, primaryUserName, loadPrimaryUserName, loadUserNames
@@ -132,7 +133,7 @@
 - `pot/*.js` 33개 — 리수폿 저장소·모델 클라이언트·훅·추적(자동 생성, prompts.json·MANIFEST.json 포함)
 
 ### src/data/provider/
-- `gemcache.js` (83줄) Gemini 캐시 (v1.9.3 → 캐시 개편): 자동 · 수동(마커 앞부분). — createGeminiCache, anatomy
+- `gemcache.js` (92줄) Gemini 캐시 (v1.9.3 → 캐시 개편): 자동 · 수동(마커 앞부분). — createGeminiCache, anatomy
 - `index.js` (85줄) 프로바이더 묶음 (v1.9.3): 저장소·키 보관·전송·실행기·리스 등록을 한곳에서 엮는다. 화면과 … — createProvider
 - `keyvault.js` (33줄) 프로바이더 키 보관 (v1.9.3): 로컬 저장소에만 둔다(기기 간 동기화·내보내기 없음). 값은 로… — tailOf, createKeyVault
 - `mailbox.js` (113줄) 다른 플러그인 창구 감시기(2.0.0): pluginStorage 우편함을 살펴 요청을 프로바이더 r… — collectText, createMailbox
@@ -141,7 +142,7 @@
 - `progress.js` (55줄) 프로바이더 진행 창(리스 화면, 2.0.0). 상태는 engine/provider/board.js가 … — createProgressWindow
 - `register.js` (24줄) 리스에 프로바이더 등록 (v1.9.3). addProvider가 없는 호스트에서는 꺼 둔다(suppo… — providerName, createRegistrar, AUTO_NAME, createProviderStore
 - `risutools.js` (51줄) 리스 데이터 도구 실행 (v1.9.3). 읽기는 자유, 쓰기는 안전장치 3단: ① 설정에서 따로 켬 … — MAX_WRITES_PER_REQUEST, createRisuTools
-- `runner.js` (266줄) 프로바이더 실행기 (v1.9.3): 요청 받기 → 프로필 고르기 → 키 고르기 → 보내기 → 해독 →… — toolPrompt, parseToolCalls, stripToolCalls, createProviderRunner
+- `runner.js` (267줄) 프로바이더 실행기 (v1.9.3): 요청 받기 → 프로필 고르기 → 키 고르기 → 보내기 → 해독 →… — toolPrompt, parseToolCalls, stripToolCalls, createProviderRunner
 - `store.js` (24줄) 프로바이더 설정·사용량 저장 (v1.9.3). 설정은 pluginStorage(기기 간 동기화 대상,… — CFG_KEY, createProviderStore
 - `toolexec.js` (30줄) 기본 도구 실행 (v1.9.3): 시간·계산·주사위·웹 검색·URL 가져오기. 리스 데이터 도구는 r… — createToolExec, prefetchSearch
 - `transport.js` (29줄) 전송 (v1.9.3): nativeFetch 우선 → 안 되면 risuFetch(통째로 받기). 사용… — HttpError, redact, proxied, createTransport, errorFromResponse
@@ -178,6 +179,7 @@
 - `autoscroll.js` (39줄) 오토 스크롤 (애드온 전용, 순수): 속도 단계·한 번에 내려갈 거리·마지막 AI 응답 찾기. — SPEED_MIN, SPEED_STEPS, SPEED_PRESETS, clampSpeed, nudgeSpeed
 - `auxlog.js` (40줄) 보조 호출 장부 (2.1.4): 플러그인·애드온이 부른 보조 모델 호출을 한곳에 알린다 → '모델 호… — noteAux, onAux, auxTok, msgsText, usageTokens
 - `bardwikiadapt.js` (98줄) 리스바드 BardWiki 문서 → 장기기억 폴더(§2.2 모양) 변환. 순수 함수. 필드가 없으면 건… — VIRTUAL_MARK, parseSections, bullets, SUMMARY_TITLES, eventBullets
+- `cachelayout.js` (57줄) 캐시용 프롬프트 배치 (순수, 2.2.6): 매 턴 바뀌는 글을 캐시 앞부분 밖(마지막 사용자 말 근… — PES, HYPA_MARK, dynamicHypa, splitHypa, appendLayout
 - `castfilter.js` (60줄) 로어북에 있는 인물만 위키에 새로 만들기 (장기기억 애드온 전용 — 코어가 import하지 않는다: … — loreCast, inCast, dropCreates, strangers
 - `character.js` (221줄) — characterAssetKeys, characterView, planCharacter, buildMergedCharacter, newCharacterBase
 - `chatkey.js` (11줄) 채팅 기억 폴더 키 규칙 — 화면·러너·리수폿 런타임이 모두 이 규칙 하나로 폴더를 연다(2.0.0 … — SCOPE_FIELD, chatKeyOf, legacyChatKeyOf, scopeMismatch
@@ -200,7 +202,7 @@
 - `erosyncview.js` (126줄) Erosync 값(읽기 전용 JSON, data/erosync.js의 read())을 인물 위키·관계… — AXIS_LABEL, AXIS_HINT, eroReady, eroPerson, eroAxes
 - `export.js` (44줄) 에셋 제작 애드온이 봇·모듈에 넣어 둔 설정 칸(dusk_sdstudio)은 배포 파일에서 뺀다(en… — rpackEncode, buildRisum, moduleJson
 - `fairplay.js` (129줄) 공정한 전개 (v1.6.8, 순수). AI가 사용자 쪽에 유리하게만 풀어 가는 편향을 줄이는 지침 블… — FAIR_MARK, FAIR_TEXT, DICE_COUNT, DICE_MODES, DICE_LEVEL_IDS
-- `featurefind.js` (125줄) 기능 찾기(순수): "이 기능 어디 있지?"를 낱말로 찾는다. 홈 화면 검색창이 쓴다. — FEATURES, findFeatures
+- `featurefind.js` (126줄) 기능 찾기(순수): "이 기능 어디 있지?"를 낱말로 찾는다. 홈 화면 검색창이 쓴다. — FEATURES, findFeatures
 - `firstrun.js` (29줄) 처음 쓰는 사람용(순수): 설정을 하나도 안 만져도 켜기만 하면 작동하도록 기본값을 정한다. — WIZARD, firstRunFeatures, isPotName, potInstalled, isBbName
 - `flowsteps.js` (19줄) 이번 턴 진행 점 5개(고르기 → 회상 → 정리 → 주입 → 저장). 순수 함수: 마지막 턴 기록만 … — STEP_LABELS, stepsOf
 - `gauge.js` (198줄) 사용자 정의 게이지(v1.8.1): 순수 로직. 정의(캐릭터별) · 현재값(채팅×인물별) · 변경 이… — EVERY_TURNS, LOG_CAP, SUGGEST, SHAPES, gkey
@@ -331,10 +333,10 @@
 ### src/engine/provider/
 - `batch.js` (29줄) 배치 (2.0.0, 순수): Anthropic Message Batches 요청·응답 다루기. 네트워… — batchKey, batchBaseOf, batchCreateRequest, batchStatusRequest, batchResultsRequest
 - `board.js` (39줄) 프로바이더 진행 창의 요청 상태(순수, 2.0.0). Provider Manager의 진행 창을 참고… — PHASES, createBoard, boardHtml
-- `build.js` (157줄) 요청 만들기 (v1.9.3, 순수): 연결+프로필+메시지 → {url, method, headers,… — safeExtra, turnHashesOf, vertexRoute, buildRequest
+- `build.js` (157줄) 요청 만들기 (v1.9.3, 순수): 연결+프로필+메시지 → {url, method, headers,… — safeExtra, turnHashesOf, vertexRoute, vertexBase, buildRequest
 - `catalog.js` (33줄) 프로바이더 카탈로그 (v1.9.3): 공급자별 기본 주소·요청 형식. 순수 데이터. — FORMATS, KINDS, kindOf, baseUrlOf, PURPOSES
 - `chain.js` (29줄) 실패 분류와 대체 사슬 (v1.9.3, 순수) — classifyFailure, RETRY_SAME, SWITCH_KEY, NEXT_TARGET, retryKindsOf
-- `cost.js` (37줄) 사용량·비용·예산 (v1.9.3, 순수). 가격 단위: 100만 토큰당 달러. — costOf, savedByCache, addRecord, summarize, budgetState
+- `cost.js` (41줄) 사용량·비용·예산 (v1.9.3, 순수). 가격 단위: 100만 토큰당 달러. — costOf, savedByCache, addRecord, summarize, budgetState
 - `errlog.js` (20줄) 오류 기록 (2.0.0, 순수): 재시도·실패를 하나씩 남기는 작은 링 버퍼. 키처럼 보이는 글자는 … — maskSecrets, createErrorLog, kindLabel, formatLog
 - `gemplan.js` (57줄) Gemini 캐시 계획 (순수): 모델별 방식 판정 · 캐시 경계 · 재사용/새로 만들기/자동 캐시 … — geminiCacheKind, minCacheTokens, GEMINI_DEFAULTS, cacheBoundary, prefixKey
 - `hooks.js` (16줄) 훅 (2.0.0, 순수): 모델별 요청 전(글 바꾸기)·응답 후(글 바꾸기) 처리. 정규식 찾아 바꾸… — normalizeHook, applyPre, applyPost, hasPost
@@ -477,7 +479,7 @@
 - `presets.js` (217줄) 
 - `promptstab.js` (128줄) 설정 → 기억·리수폿 프롬프트 (v1.7.0): 기억·리수폿을 쓸 때 기본 규칙 뒤에 덧붙는 '내 프…
 - `protlink.js` (172줄) 관리 → ProtLink+ (v1.9.2): Proton Drive 링크를 캐릭터·모듈·플러그인에 연…
-- `provider.js` (210줄) 프로바이더 (v1.9.3): 리스 모델 목록에 'Dusk 자동'과 'Dusk · 프로필' 을 더한다.…
+- `provider.js` (223줄) 프로바이더 (v1.9.3): 리스 모델 목록에 'Dusk 자동'과 'Dusk · 프로필' 을 더한다.…
 - `regress.js` (350줄) 회귀 창 (v1.9.2): 인물을 골라, 그 인물의 기억만 들고 새 채팅을 시작한다.
 - `relmap.js` (314줄) 인물 관계도 탭 (v1.9.3): {{user}}를 가운데 두고 인물을 거리(호감도)·높이(중요도)·…
 - `roulettepop.js` (64줄) 봇 편집 도구 → 룰렛: 범주별로 무작위 특징을 뽑아 복사하거나 설명 끝에 붙인다.
@@ -614,7 +616,7 @@
 - `style.js` (4줄) 주의: :host에 overflow:hidden/auto나 overscroll-behavior를 주면… — WH_CSS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(80), `getDatabase`(54), `getChatFromIndex`(34), `getCurrentCharacterIndex`(28), `setCharacterToIndex`(24), `getCurrentChatIndex`(24), `setDatabaseLite`(18), `nativeFetch`(15), `addRisuScriptHandler`(14), `setChatToIndex`(11), `addRisuReplacer`(8), `saveAsset`(8), `getRootDocument`(6), `readImage`(6), `hideContainer`(6), `registerButton`(5), `requestPluginPermission`(5), `toggle`(5), `getLocalPluginStorage`(4), `showContainer`(4), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
+`getCharacterFromIndex`(81), `getDatabase`(55), `getChatFromIndex`(35), `getCurrentCharacterIndex`(28), `setCharacterToIndex`(24), `getCurrentChatIndex`(24), `setDatabaseLite`(18), `nativeFetch`(15), `addRisuScriptHandler`(14), `setChatToIndex`(11), `addRisuReplacer`(8), `saveAsset`(8), `getRootDocument`(6), `readImage`(6), `hideContainer`(6), `registerButton`(5), `requestPluginPermission`(5), `toggle`(5), `getLocalPluginStorage`(4), `showContainer`(4), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.

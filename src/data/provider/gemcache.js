@@ -6,28 +6,33 @@
 // 실패해도 원래 요청을 그대로 보낸다.
 import { hashText, splitAtMarker, anatomy } from "../../engine/provider/transforms.js";
 import { estimateTokens, normalize, splitSystem, mergeSame } from "../../engine/provider/messages.js";
+import { vertexBase, vertexRoute } from "../../engine/provider/build.js";
 import { geminiCacheKind, cacheBoundary, planGemini, prefixKey, moveVolatileAfterUser, GEMINI_DEFAULTS } from "../../engine/provider/gemplan.js";
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("") : String(c ?? "");
 const TAG = "Dusk|";
 export function createGeminiCache({ now = () => Date.now() } = {}) {
-  const scopes = new Map(), stats = { created: 0, reused: 0, implicit: 0, bypass: 0, failed: 0, deleted: 0, extended: 0, restored: 0 };
+  const scopes = new Map(), pendingStore = [], stats = { created: 0, reused: 0, implicit: 0, bypass: 0, failed: 0, deleted: 0, extended: 0, restored: 0 };
   const restoredConn = new Set();
-  const base = (conn) => String(conn.baseUrl).replace(/\/+$/, "");
-  const hdr = (cred) => ({ "content-type": "application/json", "x-goog-api-key": cred });
+  // 연결 종류별 주소·인증: AI Studio(키 헤더) · Vertex(Bearer 토큰, 캐시 이름이 projects/…로 시작)
+  const isVertex = (conn) => conn.kind === "vertex";
+  const base = (conn) => isVertex(conn) ? vertexBase(conn) : String(conn.baseUrl).replace(/\/+$/, "");
+  const nameUrl = (conn, name) => isVertex(conn) ? `${vertexBase(conn).replace(/\/v1\/.*$/, "/v1")}/${name}` : `${base(conn)}/${name}`;
+  const modelName = (conn, model) => isVertex(conn) ? `projects/${conn.vertex?.projectId}/locations/${conn.vertex?.location || "global"}/publishers/google/models/${String(model).replace(/^google\//, "")}` : `models/${model}`;
+  const hdr = (conn, cred) => (isVertex(conn) ? { "content-type": "application/json", authorization: `Bearer ${cred}` } : { "content-type": "application/json", "x-goog-api-key": cred });
   const ttlOf = (profile) => Math.max(60, Math.min(86400, Number(profile.cache?.geminiTtl) || GEMINI_DEFAULTS.ttl));
-  async function call(transport, conn, cred, signal, req) { return transport.send({ headers: hdr(cred), ...req }, { signal, proxyUrl: conn.proxyUrl, secrets: [cred] }); }
+  async function call(transport, conn, cred, signal, req) { return transport.send({ headers: hdr(conn, cred), ...req }, { signal, proxyUrl: conn.proxyUrl, secrets: [cred] }); }
   async function createCache({ conn, profile, prefix, cred, transport, signal, name }) {
     const { system, rest } = splitSystem(mergeSame(normalize(prefix)));
-    const body = { model: `models/${profile.model}`, ttl: `${ttlOf(profile)}s`, displayName: name, contents: rest.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.text }] })), ...(system.length ? { systemInstruction: { parts: [{ text: system.join("\n\n") }] } } : {}) };
+    const body = { model: modelName(conn, profile.model), ttl: `${ttlOf(profile)}s`, displayName: name, contents: rest.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.text }] })), ...(system.length ? { systemInstruction: { parts: [{ text: system.join("\n\n") }] } } : {}) };
     if (!body.contents.length) body.contents = [{ role: "user", parts: [{ text: "(맥락)" }] }];
     const res = await call(transport, conn, cred, signal, { url: `${base(conn)}/cachedContents`, body });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const j = await res.json(); if (!j?.name) throw new Error("이름 없음");
     return j;
   }
-  const drop = (transport, conn, cred, name) => call(transport, conn, cred, undefined, { url: `${base(conn)}/${name}`, method: "DELETE" }).then((r) => { if (r.ok) stats.deleted++; }).catch(() => {});
-  const extend = (transport, conn, cred, ent, profile) => call(transport, conn, cred, undefined, { url: `${base(conn)}/${ent.name}?updateMask=ttl`, method: "POST", headers: { ...hdr(cred), "X-HTTP-Method-Override": "PATCH" }, body: { ttl: `${ttlOf(profile)}s` } })
-    .then((r) => { if (r.ok) { ent.expires = now() + ttlOf(profile) * 1000; stats.extended++; } }).catch(() => {});
+  const drop = (transport, conn, cred, name) => call(transport, conn, cred, undefined, { url: nameUrl(conn, name), method: "DELETE" }).then((r) => { if (r.ok) stats.deleted++; }).catch(() => {});
+  const extend = (transport, conn, cred, ent, profile) => call(transport, conn, cred, undefined, { url: `${nameUrl(conn, ent.name)}?updateMask=ttl`, method: "POST", headers: { ...hdr(conn, cred), "X-HTTP-Method-Override": "PATCH" }, body: { ttl: `${ttlOf(profile)}s` } })
+    .then((r) => { if (r.ok) { const was = ent.expires, nx = now() + ttlOf(profile) * 1000; ent.expires = nx; stats.extended++; if (ent.tokens) pendingStore.push({ tokens: ent.tokens, seconds: Math.max(0, (nx - Math.max(was, now())) / 1000) }); } }).catch(() => {});
   // 앱을 다시 켠 뒤 처음: 서버에 남은 Dusk 캐시를 범위별로 되찾는다(연결마다 한 번)
   async function restore({ conn, cred, transport, signal }) {
     if (restoredConn.has(conn.id)) return; restoredConn.add(conn.id);
@@ -42,7 +47,7 @@ export function createGeminiCache({ now = () => Date.now() } = {}) {
   }
   async function prepare({ conn, profile, messages, cred, transport, signal, scope = "", tools = false }) {
     const mode = profile.cache?.gemini ?? "off";
-    if (mode === "off" || conn.kind !== "google" || !Array.isArray(messages)) return { messages };
+    if (mode === "off" || !(conn.kind === "google" || (isVertex(conn) && vertexRoute(conn, profile) === "gemini")) || !Array.isArray(messages)) return { messages };
     if (mode === "manual") {
       const s = splitAtMarker(messages, profile.cache.geminiMarker); if (!s) return { messages };
       const key = hashText(`${conn.id}|${profile.model}|${JSON.stringify(s.prefix)}`), st = scopes.get(key) ?? {};
@@ -71,12 +76,16 @@ export function createGeminiCache({ now = () => Date.now() } = {}) {
     try {
       const prefix = messages.slice(0, plan.n), pk = prefixKey(hashes, plan.n), tok = tokens.slice(0, plan.n).reduce((a, b) => a + b, 0);
       const j = await createCache({ conn, profile, prefix, cred, transport, signal, name: `${TAG}${key}|${hashText(pk)}|${plan.n}|${tok}` });
-      const old = st2.cache?.name;
+      const old = st2.cache?.name, oldEnt = st2.cache;
+      pendingStore.push({ tokens: tok, seconds: ttlOf(profile) });
+      if (oldEnt?.tokens && oldEnt.expires > t) pendingStore.push({ tokens: oldEnt.tokens, seconds: -(oldEnt.expires - t) / 1000 });   // 일찍 지운 옛 캐시는 남은 시간만큼 빼서 어림
       scopes.set(key, { ...scopes.get(key), cache: { name: j.name, n: plan.n, prefix: pk, tokens: tok, expires: Date.parse(j.expireTime ?? "") || t + ttlOf(profile) * 1000 } }); stats.created++;
       if (old && old !== j.name) drop(transport, conn, cred, old);
       return { messages: messages.slice(plan.n), cachedContent: j.name };
     } catch { stats.failed++; return { messages }; }
   }
-  return { prepare, stats: () => ({ ...stats, active: [...scopes.values()].filter((s) => s.cache && s.cache.expires > now()).length }), clear: () => { scopes.clear(); restoredConn.clear(); } };
+  // 보관 비용 기록할 것(만들기·연장·일찍 지움): 꺼내면 비운다
+  const takeStorage = () => pendingStore.splice(0);
+  return { prepare, takeStorage, stats: () => ({ ...stats, active: [...scopes.values()].filter((s) => s.cache && s.cache.expires > now()).length }), clear: () => { scopes.clear(); restoredConn.clear(); } };
 }
 export { anatomy };

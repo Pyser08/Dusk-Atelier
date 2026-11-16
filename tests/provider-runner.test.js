@@ -261,3 +261,17 @@ test("MCP 도구: 읽기 전용은 바로, 쓰기는 확인을 거침", async ()
   const h = harness({ cfgOver: { mcp: { servers: [mcpSrv] } }, script: [sseRes([oa(toolText("mcp_m_get")), oaEnd()]), sseRes([oa(toolText("mcp_m_put")), oaEnd()]), sseRes([oa("끝"), oaEnd()])] }); delete harness.extra; await h.ready;
   const r = await h.runner.handle(req()); assert.equal(r.content, "끝"); assert.deepEqual(called, ["get"]); assert.equal(asked, 1);   // put은 거절되어 실행 안 됨
 });
+test("Gemini 명시적 캐시: Vertex 연결도 같은 방식(Bearer·projects 모델 이름·전체 캐시 이름으로 지우기)", async () => {
+  let t = 1e6; const gc = createGeminiCache({ now: () => t }); const reqs = []; let k = 0;
+  const transport = { send: async (r) => { reqs.push(r); if (r.method === "GET") return jsonRes({ cachedContents: [] }); if (r.method === "DELETE") return jsonRes({}); return jsonRes({ name: `projects/p1/locations/us-central1/cachedContents/${++k}` }); } };
+  const conn = { id: "v", kind: "vertex", vertex: { projectId: "p1", location: "us-central1" } }, profile = { model: "gemini-2.5-pro", cache: { gemini: "auto", geminiTtl: 600, geminiGrow: 4500 } };
+  const big = "설정 ".repeat(3000), chat = [];
+  const mk = () => [{ role: "system", content: big }, ...chat, { role: "user", content: `지금 ${t}` }];
+  const turn = async () => { const r = await gc.prepare({ conn, profile, messages: mk(), cred: "TOKEN", transport, scope: "s" }); chat.push({ role: "user", content: `말 ${t}` }, { role: "assistant", content: "답 ".repeat(1500) + t }); t += 120e3; return r; };
+  await turn(); const a = await turn(); assert.equal(a.cachedContent, "projects/p1/locations/us-central1/cachedContents/1");
+  const post = reqs.find((r) => r.method !== "GET" && r.method !== "DELETE"); assert.equal(post.url, "https://us-central1-aiplatform.googleapis.com/v1/projects/p1/locations/us-central1/cachedContents");
+  assert.equal(post.headers.authorization, "Bearer TOKEN"); assert.equal(post.body.model, "projects/p1/locations/us-central1/publishers/google/models/gemini-2.5-pro");
+  for (let i = 0; i < 5; i++) await turn();
+  assert.ok(reqs.some((r) => r.method === "DELETE" && r.url === "https://us-central1-aiplatform.googleapis.com/v1/projects/p1/locations/us-central1/cachedContents/1"));
+  const claude = await gc.prepare({ conn, profile: { ...profile, model: "claude-sonnet-4" }, messages: mk(), cred: "T", transport }); assert.equal(claude.cachedContent, undefined);
+});

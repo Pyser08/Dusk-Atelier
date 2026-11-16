@@ -39,7 +39,7 @@ export function normalizeProfile(p) {
     stream: pick(p?.stream, ["", "stream", "buffered", "off"], ""), cache: { claude: pick(c.claude, ["off", "5m", "1h"], "off"), breakpoints: numOrNull(c.breakpoints) ?? 2, grid: Math.max(0, Math.min(200, Math.floor(numOrNull(c.grid) ?? 0))), learn: !!c.learn, openai: pick(c.openai, ["off", "in_memory", "24h"], "off"), gemini: c.gv === 2 ? pick(c.gemini, ["off", "auto", "manual"], "auto") : (c.gemini === "manual" ? "manual" : "auto"), gv: 2, geminiTtl: c.gv === 2 ? numOrNull(c.geminiTtl) ?? 600 : 600, geminiGrow: numOrNull(c.geminiGrow) ?? 4500, geminiMarker: str(c.geminiMarker, "{{cache_marker}}") },
     tier: str(p?.tier), verbosity: str(p?.verbosity), safety: str(p?.safety), search: pick(p?.search, ["off", "auto"], "off"),
     repetition: pick(p?.repetition, ["inherit", "on", "off"], "inherit"), prefill: str(p?.prefill), pdf: pick(p?.pdf, ["off", "full"], "off"), mediaResolution: pick(p?.mediaResolution, ["", "low", "medium", "high"], ""), batch: pick(p?.batch, ["off", "wait", "create"], "off"),
-    pricing: { input: numOrNull(pr.input) ?? 0, output: numOrNull(pr.output) ?? 0, cached: numOrNull(pr.cached), cwrite: numOrNull(pr.cwrite) }, retry: numOrNull(p?.retry), params: obj(p?.params), headers: obj(p?.headers) };
+    pricing: { input: numOrNull(pr.input) ?? 0, output: numOrNull(pr.output) ?? 0, cached: numOrNull(pr.cached), cwrite: numOrNull(pr.cwrite), cstore: numOrNull(pr.cstore) }, retry: numOrNull(p?.retry), params: obj(p?.params), headers: obj(p?.headers) };
 }
 export function normalizeConfig(raw) {
   const d = defaultConfig(); if (!raw || typeof raw !== "object") return d;

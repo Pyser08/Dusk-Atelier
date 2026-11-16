@@ -14,16 +14,16 @@ export function savedByCache(usage, pricing) {
 const day = (t) => new Date(t).toISOString().slice(0, 10);
 export function addRecord(log, rec, { keepDays = 90, now = Date.now() } = {}) {
   const cut = day(now - keepDays * 864e5);
-  const rows = [...(log ?? []), { at: rec.at ?? now, d: day(rec.at ?? now), purpose: rec.purpose ?? "main", profile: rec.profile ?? "", model: rec.model ?? "", cha: rec.cha ?? "", input: n(rec.usage?.input), output: n(rec.usage?.output), cached: n(rec.usage?.cached), cwrite: n(rec.usage?.cacheWrite), cost: n(rec.cost), saved: n(rec.saved), ms: n(rec.ms), ok: rec.ok !== false, via: rec.via ?? "" }];
+  const rows = [...(log ?? []), { at: rec.at ?? now, d: day(rec.at ?? now), purpose: rec.purpose ?? "main", profile: rec.profile ?? "", model: rec.model ?? "", cha: rec.cha ?? "", input: n(rec.usage?.input), output: n(rec.usage?.output), cached: n(rec.usage?.cached), cwrite: n(rec.usage?.cacheWrite), cost: n(rec.cost), saved: n(rec.saved), store: n(rec.storeCost), ms: n(rec.ms), ok: rec.ok !== false, via: rec.via ?? "" }];
   return rows.filter((r) => r.d >= cut).slice(-5000);
 }
 export function summarize(log, { now = Date.now(), by = "purpose", days = 0 } = {}) {
-  const today = day(now), month = today.slice(0, 7), from = days > 0 ? day(now - (days - 1) * 864e5) : "", t = { today: 0, month: 0, all: 0, calls: 0, input: 0, output: 0, cached: 0, cwrite: 0, saved: 0 }, groups = {};
+  const today = day(now), month = today.slice(0, 7), from = days > 0 ? day(now - (days - 1) * 864e5) : "", t = { today: 0, month: 0, all: 0, calls: 0, input: 0, output: 0, cached: 0, cwrite: 0, saved: 0, store: 0 }, groups = {};
   for (const r of log ?? []) {
     if (from && r.d < from) continue;
-    t.all += r.cost; t.calls++; t.input += r.input; t.output += r.output; t.cached += r.cached; t.cwrite += n(r.cwrite); t.saved += r.saved;
+    t.all += r.cost; t.store += n(r.store); if (r.via !== "cache-store") t.calls++; t.input += r.input; t.output += r.output; t.cached += r.cached; t.cwrite += n(r.cwrite); t.saved += r.saved;
     if (r.d === today) t.today += r.cost; if (r.d.startsWith(month)) t.month += r.cost;
-    const k = r[by] || "-"; const g = groups[k] ?? (groups[k] = { calls: 0, cost: 0, input: 0, output: 0, cached: 0, cwrite: 0, saved: 0 }); g.calls++; g.cost += r.cost; g.input += r.input; g.output += r.output; g.cached += r.cached; g.cwrite += n(r.cwrite); g.saved += r.saved;
+    const k = r[by] || "-"; const g = groups[k] ?? (groups[k] = { calls: 0, cost: 0, input: 0, output: 0, cached: 0, cwrite: 0, saved: 0, store: 0 }); if (r.via !== "cache-store") g.calls++; g.cost += r.cost; g.store += n(r.store); g.input += r.input; g.output += r.output; g.cached += r.cached; g.cwrite += n(r.cwrite); g.saved += r.saved;
   }
   return { total: t, groups };
 }
@@ -34,3 +34,7 @@ export function budgetState(sum, budget) {
   for (const [name, used, l] of lim) { const r = used / l; if (r >= 1) return { state: "over", why: `${name} 예산 $${l} 초과`, used, limit: l }; if (r >= 0.8 && state === "ok") { state = "warn"; why = `${name} 예산의 ${Math.round(r * 100)}% 사용`; } }
   return { state, why };
 }
+
+// 명시적 캐시 보관 비용(2.2.6): 단가 = 100만 토큰·1시간당 달러. 프로필에 없으면 Gemini 공시가로 어림(Pro 4.5, 그 밖 1.0).
+export const storagePrice = (pricing, model) => (Number.isFinite(Number(pricing?.cstore)) && pricing?.cstore !== null && pricing?.cstore !== "" ? Number(pricing.cstore) : /pro/i.test(String(model ?? "")) ? 4.5 : 1.0);
+export const storageCost = (tokens, seconds, price) => (n(tokens) * (n(seconds) / 3600) * n(price)) / 1e6;
