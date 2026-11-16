@@ -3,7 +3,7 @@ import { autoRefreshCancellable, matchEditedDocument } from "./autorefresh.js";
 import { AXIS_KEYS, AXIS_SCALAR_KEYS, AXIS_DEFINITIONS, AXIS_OVERLAP_RULES, SEX_AXIS_KEYS, SEX_AXIS_SCALAR_KEYS, SEX_MOTIVE_TYPES, SEX_AXIS_COMMON_RULES, SEX_AXIS_OVERLAP_RULES, SEX_AXIS_DEFINITIONS, SEX_MOTIVE_DEFINITIONS, axisValueOf } from "./axes.js";
 import { PROMPT_TEXT_LIMIT, PROMPT_BRANCHES, PROMPT_PAGES, PROMPT_SECTION_INDEX, PROMPT_PAGE_INDEX, PROMPT_TEXT, PROMPT_DIRECTOR_IDS } from "./prompts.js";
 import { turnKeys, buildTurnSystem, buildTurnUser, parseTurnReply, matchProfile } from "./turnupdate.js";
-// addon-rebuild: 조각별로 모듈로 나누는 중(축 정의 → axes.js). Erosync V0.9.1 격리 이식 — 원작자에게 제공받은 플러그인(erosync, api 3.0)을 Dusk 안에서 켜고 끌 수 있게 감싼 것.
+// addon-rebuild: 조각별로 모듈로 나누는 중(축 정의 → axes.js, 지시문 등록부 → prompts.js). Erosync V0.9.1 격리 이식 — 원작자에게 제공받은 플러그인(erosync, api 3.0)을 Dusk 안에서 켜고 끌 수 있게 감싼 것.
 // 원본 대비 바뀐 곳: (1) //@ 머리말 제거 (2) 즉시 실행 함수 → bootErosync(api) (3) R을 주입받은 api의 프록시로(onUnload를 가로챔)
 // (4) 배경음 자료는 비움 (5) 끝에 Dusk 연결부(duskReadSnapshot, duskContent/Config/Prompts/Guard/Flags/Profile/Analysis/Behind) 추가 (6) 원래 설정 창·이펙트·소리·관계망 화면·열기 진입점은 tools/erosync-prune.mjs로 걷어냄(엔진만 남음) (7) bootErosync(api, host): host.runAI로 Dusk 모델 설정 사용. 그 밖의 본문은 원본 그대로이니 고칠 때는 원본과 비교할 것.
 
