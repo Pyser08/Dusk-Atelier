@@ -3,6 +3,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { bootErosync } from "../src/erosync/erosync.js";
+import * as pure from "../src/erosync/pure.js";
+// addon-rebuild: 엔진 순수 조각은 pure.js로 옮겨졌다. 엔진에 남은 함수는 글을 꺼내 pure를 범위로(with) 실행한다.
+const engineSrc = () => fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+function engineFns(names, inject = {}) {
+  const src = engineSrc();
+  const bodies = names.map((n) => { const i = src.search(new RegExp(`\\n  (?:async )?function ${n}\\(`)); assert.ok(i >= 0, n); return src.slice(i, src.indexOf("\n  }\n", i) + 4); }).join("\n");
+  const keys = Object.keys(inject);
+  return new Function("P", ...keys, `with (P) {\n${bodies}\nreturn { ${names.join(", ")} };\n}`)(pure, ...keys.map((k) => inject[k]));
+}
 
 function fakeApi() {
   const store = new Map(), calls = [];
@@ -148,14 +157,8 @@ test("관계 온도 연결부(실제 엔진): 읽기 값에 temp가 있고, 저�
 });
 
 test("관계 온도 기록·변화 문구(엔진 함수를 꺼내 실행): 같은 턴 이상은 덮어쓰고, 5 미만 변화는 steady, 되돌린 뒤 앞선 기록은 무시", () => {
-  const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
-  const a = src.indexOf("  function duskTempRecord(state)"), b = src.indexOf("  function selectedProfileSummary(");
-  const body = src.slice(a, b);
-  const clampInt = (v, d, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
-  const clampNumber = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
-  const isPlainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-  const make = new Function("clampInt", "clampNumber", "isPlainObject", "duskTempTrend", `${body}\nreturn { duskTempRecord, duskTempLine, duskTempSeries };`);
-  const { duskTempRecord, duskTempLine, duskTempSeries } = make(clampInt, clampNumber, isPlainObject, true);
+  const make = (trend) => ({ ...pure, ...engineFns(["duskTempLine"], { duskTempTrend: trend }) });
+  const { duskTempRecord, duskTempLine, duskTempSeries } = make(true);
   const st = { turnIndex: 1, relations: { k: { from: "a", to: "b", affection: 50, eroticAttraction: 50, hatred: 0 } } };
   assert.equal(duskTempLine(st, "a", "b"), "");
   duskTempRecord(st);
@@ -166,7 +169,7 @@ test("관계 온도 기록·변화 문구(엔진 함수를 꺼내 실행): 같�
   st.turnIndex = 2; duskTempRecord(st);   // 되돌린 뒤 같은 턴을 다시 쓰면 앞선 기록(3턴)은 버려진다
   assert.deepEqual(st.duskTemp.map((e) => e.turn), [1, 2]);
   st.turnIndex = 1; assert.deepEqual(duskTempSeries(st, "a", "b").map((p) => p.turn), [1]);
-  assert.equal(make(clampInt, clampNumber, isPlainObject, false).duskTempLine(st, "a", "b"), "");
+  assert.equal(make(false).duskTempLine(st, "a", "b"), "");
 });
 
 test("장면 되돌리기 연결부(실제 엔진): 채팅이 없으면 이유를 던지고, 컨트롤러는 off/이유를 { ok:false }로 돌려준다", async () => {
@@ -183,7 +186,7 @@ test("장면 되돌리기 연결부(실제 엔진): 채팅이 없으면 이유�
 });
 
 test("기본 성격 변화 반영은 표준 자동", async () => {
-  const src = (await import("node:fs")).readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
+  const src = fs.readFileSync(new URL("../src/erosync/pure.js", import.meta.url), "utf8");
   assert.match(src, /developmentMode:\s*'standard_auto'/);
 });
 
@@ -208,12 +211,9 @@ test("user 관찰(2.1.5): 켜면 플래그·저장 정리·장면 판단 입력�
   assert.ok(/next\.duskUser\s*=/.test(src.slice(i, src.indexOf("\n  }\n", i))), "저장 정리에서 duskUser가 떨어지면 안 된다");
   assert.ok(src.includes("...(duskUserTrack ? { userTracking: duskUserDirectorInput(state, sfw) } : {}),"));
   assert.ok(src.includes("if (duskUserTrack && !externalEvent) duskUserRecord(update, state, registry);"));
-  const a = src.indexOf("  const DUSK_USER_MAX"), b = src.indexOf("  async function duskReadSnapshot()");
-  const clampInt = (v, d, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
-  const isPlainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
   const truncate = (v, n) => String(v ?? "").slice(0, n);
   const resolveEntity = (_r, ref) => (String(ref).toLowerCase() === "user" ? "user" : ref);
-  const f = new Function("clampInt", "isPlainObject", "truncate", "resolveEntity", `${src.slice(a, b)}\nreturn { duskUserRecord, duskUserView, duskUserDirectorInput };`)(clampInt, isPlainObject, truncate, resolveEntity);
+  const f = { ...pure, ...engineFns(["duskUserNormalize", "duskUserRecord", "duskUserDirectorInput"], { truncate, resolveEntity, DUSK_USER_TRAITS: JSON.parse(/const DUSK_USER_TRAITS = (\[[^\]]*\]);/.exec(engineSrc())[1].replace(/'/g, '"')) }) };
   const st = { turnIndex: 1, scopeKey: "s" };
   f.duskUserRecord({ observedActions: [{ actor: "user", target: "a", summary: "손을 잡았다" }], userObservation: { state: "긴장함", signals: [{ trait: "initiative", direction: "increase", summary: "먼저 다가감" }], openness: { delta: 2, quote: "괜찮아" } } }, st, {});
   st.turnIndex = 2; f.duskUserRecord({ userObservation: { openness: { delta: 1, quote: "응" } } }, st, {});
