@@ -15,6 +15,7 @@
   - CSS 전부 memaddoncss.js(코어 styles.js·common.js 안 건드림). 미리보기: `.claude/launch.json` wiki-mock(5179) → `/?wiki=1&adv=1&light=1` 꽉 찬 시험 데이터(주인공 미오·선생님·NSFW·Erosync 가짜 스냅샷, 사진용으로 단추 없음, 시안은 `&lay=B1` 등 주소로).
   - Erosync: 프로필 지시문 descriptive value를 한국어로(erosync.js profile 언어 규칙). erosyncturn: 처음 보는 이름은 2턴 이상 나온 것만 모아 전체 분석 1번, 그 뒤 20턴 쉼(tests/erosync-turn 새 시험).
   - 시험: npm test 1699 pass, e2e wiki-strangers 12(도구 메뉴로 바꿈)·wiki-recorder 60·smoke(감정 카드 기대값 .rb-emo2로)·featurefind 통과, erosync-ui는 예전부터 실패하던 더보기 메뉴 1건.
+  - **11-16 커밋·main 머지(태그 없음, 미배포)**. 장기기억 애드온 0.3.0(사용자 지정), Erosync 0.1.8(dist만 바뀜). 아카 글 4편 `docs/arca/memory-0.3.0-1-emotion·2-romance·3-nsfw·4-ui.html` — 이미지 자리·*_POST_ID·MEMORY_0216_POST_ID 자리표시자 남음.
   - 시험판: test-addons/memory-test.js(0.2.22)·erosync-test.js(0.1.8). 공유 코어 모듈(memory 47·erosync 6)은 모두 v2.2.5와 같음 → v2.2.5 코어에 애드온만 올려도 됨.
   - 남은 일: [ ] 다크 테마 눈 확인 [ ] 실기기 [ ] Erosync 턴 계산을 장면 판단 호출과 합치는 건 미착수(턴 갱신은 이미 1번 호출)
 
