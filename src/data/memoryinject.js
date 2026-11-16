@@ -1,4 +1,5 @@
 // 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변).
+import { cleanForMemory } from "../engine/cleantext.js";
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
 import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
 import { stateText } from "../engine/storytime.js";
@@ -12,7 +13,7 @@ import { buildChunks, lexScores, rrf, assemble, RAW_TITLE } from "../engine/rawr
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
 // 2.2.2 의미 검색 질의: 사용자의 마지막 말이 중심이다(직전 응답까지 섞으면 질문의 뜻이 흐려진다). 말이 아주 짧으면 직전 응답 끝부분을 조금 붙인다.
 function semQuery(msgs, minLen = 40) {
-  const txt = (m) => extractMessageText(m);
+  const txt = (m) => cleanForMemory(extractMessageText(m));   // 2.2.4 태그·생각 글 빼고 찾기
   let u = -1; for (let i = msgs.length - 1; i >= 0; i--) if (isUserMessage(msgs[i])) { u = i; break; }
   const last = u >= 0 ? txt(msgs[u]).trim() : "";
   if (last.length >= minLen || u < 1) return last || msgs.slice(-2).map(txt).join("\n");
@@ -76,7 +77,8 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const scenes = (folder?.scenes ?? []).filter((x) => !x.orphan && Number.isInteger(x.at)).sort((a, b) => a.at - b.at);
     const dateOf = (mi) => { const sc = scenes.find((x) => x.at >= mi) ?? scenes.at(-1); return sc?.when ? String(sc.when).replace(/\s+/g, " ").slice(0, 40) : ""; };
     const from = Math.max(0, upto - Math.max(200, Number(s.rawMaxMessages ?? 3000)));   // 아주 긴 채팅은 최근 3000개 메시지까지만 조각낸다(모바일 계산량)
-    const list = []; for (let i = from; i < upto; i++) { const t = extractMessageText(msgs[i]); if (t.trim()) list.push({ text: t, who: isUserMessage(msgs[i]) ? "{{user}}" : String(character?.name ?? "{{char}}"), mi: i }); }
+    const list = []; for (let i = from; i < upto; i++) { const t = cleanForMemory(extractMessageText(msgs[i]));   // 2.2.4 태그·생각 글을 빼고 조각낸다(넣는 토큰도 줄어듦)
+      if (t.trim()) list.push({ text: t, who: isUserMessage(msgs[i]) ? "{{user}}" : String(character?.name ?? "{{char}}"), mi: i }); }
     const chunks = buildChunks(list, dateOf);
     const fid = folderIdOf(character.chaId, chatKeyOf(chat));
     // 응답을 오래 붙잡지 않는다: 원문 벡터가 아직 없으면 1.5초만 기다리고(그 사이 만든 만큼만 쓴다) 나머지는 뒤에서 계속 만든다
@@ -86,7 +88,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     // 2.2.4 재정렬(선택): 상위 후보를 고르기 모델(Jev 등)이 0~3점으로 매기고, 기준 넘는 것만 점수 순으로 넣는다 — 같은 정확도를 더 적은 토큰으로
     if (rerank && s.rawRerank !== false && ranked.length) {
       const byId = new Map(chunks.map((c) => [c.id, c])), pool = ranked.slice(0, Math.max(4, Number(s.rawRerankPool ?? 40))).map((id) => byId.get(id)).filter(Boolean);
-      const recent = msgs.slice(Math.max(0, msgs.length - 3)).map((m) => `${isUserMessage(m) ? "{{user}}" : String(character?.name ?? "{{char}}")}: ${extractMessageText(m)}`).join("\n").slice(-1500);
+      const recent = msgs.slice(Math.max(0, msgs.length - 3)).map((m) => `${isUserMessage(m) ? "{{user}}" : String(character?.name ?? "{{char}}")}: ${cleanForMemory(extractMessageText(m))}`).join("\n").slice(-1500);
       try {
         const sc = await rerank({ query, recent, items: pool.map((c) => ({ id: c.id, text: `${c.date ? `[${c.date}] ` : ""}${c.t}` })) });
         if (sc?.size) { const min = Number(s.rawRerankMin ?? 1.5), order = new Map(ranked.map((id, i) => [id, i])); ranked = [...sc].filter(([, v]) => v >= min).sort((a, b) => b[1] - a[1] || order.get(a[0]) - order.get(b[0])).map(([id]) => id); }

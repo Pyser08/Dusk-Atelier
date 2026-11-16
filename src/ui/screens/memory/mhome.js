@@ -38,9 +38,9 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     h("span", { class: "h" }, "설정"),
     srow("기억·인물 위키 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
     srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }),
-    M.jev ? srow("Jev 재정렬 (선택)", jevLine, () => openJevModal(ctx).catch(fail(ctx)), { id: "rb-mem-jev-row" }) : null,
     // 2.2.0 자동 기록 세부(인물 위키 설정 값): 임베딩 아래 줄 → 누르면 창으로
-    M.flow ? srow("자동 기록 세부", "장면 정리 역할 · 최근 대화 턴 · 서사관계 전용 모드", () => openWriterDetails(ctx).catch(fail(ctx)), { id: "rb-mem-writer-row" }) : null);
+    M.flow ? srow("자동 기록 세부", "장면 정리 역할 · 최근 대화 턴 · 서사관계 전용 모드", () => openWriterDetails(ctx).catch(fail(ctx)), { id: "rb-mem-writer-row" }) : null,
+    M.jev ? srow("Jev 재정렬 (선택)", jevLine, () => openJevModal(ctx).catch(fail(ctx)), { id: "rb-mem-jev-row" }) : null);
 
   // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
   const { S, save, num } = builders(ctx, idx, redraw, "");
@@ -55,6 +55,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
   // 2.2.4 기억 토큰 절약: 칸별 예산을 줄여 기억 블록 약 4,100 → 2,900토큰(LoCoMo 정답률 약 1~2점 손해)
   memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver === true, (o, v) => { o.saver = v; }));
+  memOptions.append(orow("분기한 채팅에 기억 이어받기", "채팅을 분기·복사하면 갈라지기 전까지의 기억을 원래 채팅에서 이어받아요(기억이 빈 채팅만). 갈라진 뒤의 기록은 들어오지 않아요.", inj.forkInherit !== false, (o, v) => { o.forkInherit = v; }));
   // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 꺼짐
   memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));

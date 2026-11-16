@@ -123,7 +123,9 @@ export function createMemoryStoreV3(api, { storage } = {}) {
     }),
     deleteFolder: (chaId, chatId) => serial(async () => {
       const idx = await readIndex(); const id = folderIdOf(chaId, chatId);
-      await rm(FOLDER_PREFIX + id); delete idx.folders[id]; await set(INDEX_KEY, idx);
+      await rm(FOLDER_PREFIX + id); delete idx.folders[id];
+      idx.noInherit = { ...(idx.noInherit ?? {}), [`${chaId}|${chatId}`]: true };   // 2.2.4 사용자가 지운 채팅 기억은 분기 원본에서 다시 가져오지 않는다
+      await set(INDEX_KEY, idx);
     }),
     deleteBot: (chaId) => serial(async () => {
       const idx = await readIndex();

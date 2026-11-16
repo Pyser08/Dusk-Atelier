@@ -1,5 +1,6 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
 import { effectiveTags, talkForPrompt, beliefsForPrompt, riftsForPrompt } from "../engine/memoryhuman.js";
+import { cleanForMemory, splitParts, mergeParts } from "../engine/cleantext.js";
 import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating, isChatStreaming } from "../engine/chattext.js";
 import { skillBlock } from "../engine/skillhook.js";
 import { appendToMessages } from "../engine/skillcfg.js";
@@ -39,7 +40,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
   const noRoll = (t) => String(t ?? "").replace(/<!--\s*dusk-roll:[\s\S]*?-->\s*/g, "");   // 주사위 판정 표식은 기억 분석에 안 보낸다(1.8.3)
-  const clean = (m, rx) => noRoll(rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m));  // v1.8.1 정규식 전처리(읽는 글 사본에만)
+  const clean = (m, rx) => cleanForMemory(noRoll(rx?.length ? applyRegex(extractMessageText(m), rx) : extractMessageText(m)));   // 2.2.4 HTML 태그·생각 글 정리  // v1.8.1 정규식 전처리(읽는 글 사본에만)
   const line = (m, i, n = 1500, rx = null) => `[${i}] ${isUserMessage(m) ? "{{user}}" : "{{char}}"}: ${clean(m, rx).trim().slice(0, n)}`;
   // 지금 페르소나 이름(리스가 {{user}}를 이 이름으로 바꿔 보낼 수 있음) → 분석 결과에서 {{user}}로 모은다
   let userCache = { at: 0, names: [] };
@@ -108,6 +109,18 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     return { h: g.h, ignore: [...(g.bot.ignore ?? [])], input: inputOf(g, existing, g.group) };
   }
 
+  // 2.2.4 긴 응답 나눠 읽기: 기록 모델은 새 응답을 6,000자까지만 읽어서 그 뒤 세부가 빠졌다 → 조각마다 따로 읽고 결과를 합친다(조각 수만큼 호출).
+  //   다음 조각을 읽을 때는 앞 조각 끝부분을 '최근 대화'로 같이 준다.
+  async function analyzeLong(call, input, opts) {
+    const parts = splitParts(input?.newest?.text ?? "", Number(input?.partChars ?? 6000));
+    if (parts.length <= 1) return analyze(call, input, opts);
+    const results = [];
+    for (let i = 0; i < parts.length && i < 6; i++) {
+      const recent = [...(input.recent ?? []), ...(i ? [`[앞부분] ${parts[i - 1].slice(-1500)}`] : [])];
+      results.push(await analyze(call, { ...input, recent, newest: { ...input.newest, text: parts[i] } }, opts));
+    }
+    return mergeParts(results);
+  }
   // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
   async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false, redo = false, shared = null } = {}) {
     const g = await gather(charIndex, chatIndex, group, shared);
@@ -128,7 +141,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const gx = gauge ? gauge.prepare(idx, existing, chaId, ordinalNow) : null;
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
-    try { if (!result) result = await analyze((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
+    try { if (!result) result = await analyzeLong((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
     catch (e) {
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });
