@@ -38,6 +38,11 @@ export const ADDON_GUIDE = `# Dusk Atelier 커스텀 애드온 만들기 (SDK v1
 
 ## ctx.dusk (쉬운 도구, 끌 때 자동 정리)
 - \`addPage({ title, render(el, dusk) })\` — Dusk 창 안에 애드온 화면 하나. 홈 애드온 상자의 이 애드온 줄에 ‘열기’가 생긴다. el에 그린다.
+- 자리 넣기(코어를 고치지 않고 Dusk 화면에 부품을 넣는다. 화면이 다시 그려지면 알아서 다시 넣고, 끄면 뗀다. sdkVersion 2부터 — 없으면 \`typeof ctx.dusk.place === "function"\`로 확인하고 건너뛴다):
+  \`addQuickSetting({ title, desc, on: () => bool, onChange(v) })\` — 홈 ‘빠른 설정’ 맨 아래 스위치 줄.
+  \`addQuickSetting({ title, desc, value: () => "켜짐 · 보통", settings(el, close) })\` — 유저 편향 없애기 줄처럼 상태 글자 + ›, 누르면 상세 창(켜기도 창 안에).
+  \`addSettingsCard({ title, render(el) })\` — 설정 탭 카드. \`ui.modal(build(done))\`, \`ui.dialog({ title, body })\` — 창.
+  \`place(자리 이름 | CSS 선택자, render(target) → Node, { position: "end"|"start"|"before"|"after" })\` — 아무 자리에나. 자리 이름: \`places\`(home.quickset·home.top·home.foot·settings.top·settings.end).
 - \`ui\`: \`h(tag, props, ...children)\`(DOM 만들기; props의 onClick 등은 이벤트, class는 문자열/배열, style 문자열), \`replace(el, ...nodes)\`,
   \`btn(label, { kind: "primary"|"ghost"|"danger", size: "sm", onClick })\`, \`switchEl(on, { label, onChange(v) })\`, \`toggleRow(title, text, on, onChange)\`,
   \`card(title, ...nodes)\`, \`note("info"|"warn"|"err", text)\`, \`chip(label, { pressed, onClick })\`, \`badge(text)\`, \`emptyState({ title, text })\`,
