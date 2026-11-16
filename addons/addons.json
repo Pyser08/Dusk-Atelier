@@ -58,8 +58,8 @@
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "6df7671e9a0e2fb55eebb35103c0ef45dc70655590174a1d2af0fc27f891b258",
-      "size": 1770454
+      "sha256": "8d8f4461240c373da7d06bd93e1bbb207ac8ab9870a0c93844e2bcc2db54b557",
+      "size": 1774913
     },
     {
       "id": "cards",

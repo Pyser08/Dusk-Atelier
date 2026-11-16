@@ -100,3 +100,18 @@ test("출발값 자동 만들기: 기본 켜짐, 출발값이 없으면 전체 �
   assert.deepEqual(calls.filter((c) => c[0] === "start"), [["start", "full"]]);
   assert.equal(calls.some((c) => c[0] === "turn"), false);
 });
+
+test("이성적 감정 관계도: 거리=나에게 끌림, 선=인물끼리 끌림·애인", () => {
+  const f = {
+    people: { a: { name: "민지", records: [{ act: "x", at: 1 }] }, b: { name: "유나", records: [{ act: "y", at: 1 }] }, c: { name: "철수", records: [{ act: "z", at: 1 }] } },
+    emo: { "민지>{{user}}": { from: "민지", to: "{{user}}", tags: { attraction: 8, affection: 2 }, log: [] }, "유나>철수": { from: "유나", to: "철수", tags: { attraction: 5 }, log: [] } },
+    ties: { t: { a: "민지", b: "{{user}}", kind: "girlfriend", at: 1 } }, scenes: [{ at: 1, who: [] }]
+  };
+  const m = buildRelMap(f, { mode: "romance" });
+  assert.equal(m.romance, true);
+  assert.equal(m.nodes.find((n) => n.name === "민지").aff, 80);
+  assert.match(m.nodes.find((n) => n.name === "민지").uLabel, /애인/);
+  const e = m.edges.find((x) => x.label === "끌림");
+  assert.ok(e && e.sp === 1);
+  assert.equal(buildRelMap(f).romance, undefined);
+});

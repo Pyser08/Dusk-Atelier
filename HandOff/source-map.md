@@ -19,7 +19,7 @@
 
 ## 파일 목록
 ### src/
-- `addonlib.gen.js` (572줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
+- `addonlib.gen.js` (574줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
 - `main.js` (318줄) 
 
 ### src/cellar/
@@ -271,7 +271,7 @@
 - `regexprep.js` (46줄) v1.8.1 정규식 전처리(순수): 기억 분석 입력과 임베딩 질의에서 상태창·HTML 같은 군더더기를… — DEFAULT_REGEX, normEntry, normEntries, parseRegexFile, collectEntries
 - `regexview.js` (28줄) 정규식 '바로 시험' 결과 보기 (v1.6.7 7단계): 입력 글을 일치 위치로 잘라 강조·요약한다.… — segments, describeMatch, summarize
 - `regress.js` (144줄) 회귀 (v1.9.2, 순수): 고른 인물 한 명의 기억만 들고 새 채팅을 시작한다. — detach, findPerson, regressWiki, regressSlice, regressCandidates
-- `relmap.js` (172줄) 인물 관계도(반3D) 데이터 계산 (v1.9.3, 순수 함수). 화면 코드 없음. — RM, STATUS_LABEL, affinityOf, importanceOf, buildRelMap
+- `relmap.js` (208줄) 인물 관계도(반3D) 데이터 계산 (v1.9.3, 순수 함수). 화면 코드 없음. — RM, STATUS_LABEL, affinityOf, importanceOf, buildRelMap
 - `retrycache.js` (26줄) 다시 요청(메인 모델이 검열·오류로 끊겨 같은 말을 다시 보냄)할 때 보조 모델을 또 부르지 않게 하… — routerKey, swapRequestRef, directionKey, boundedSet
 - `rpack.js` (13줄) — rpackDecode
 - `runai.js` (100줄) 보조 모델이 {type:"streaming", result: ReadableStream}로 답하면 끝… — drainStream, settleResponse, setUserPromptProvider, withUserPrompts, setCustomRunner
@@ -454,7 +454,7 @@
 - `lorelog.js` (107줄) 도구 → 로어북 로그: 응답마다 어떤 로어북이 들어갔는지
 - `managehubcss.js` (129줄) 2.2.0 관리(4번)·설정(5번) 글래스 배치: 관리 개요(통합 검색 + 숫자 타일) · 캐릭터 카…
 - `memhubcss.js` (148줄) 2.2.0 기억 개요(6번 안): 상태 줄 → 기능 타일 2×2(왼쪽 색띠 + 약한 네온 아이콘) →…
-- `memthemecss.js` (33줄) 2.2.0 라이트바 컨셉(UI-GLASS 맨 위) — 인물 관계도(.rb-rm, 파랑) · 코코아(.…
+- `memthemecss.js` (32줄) 2.2.0 라이트바 컨셉(UI-GLASS 맨 위) — 인물 관계도(.rb-rm, 파랑) · 코코아(.…
 - `modcompat.js` (110줄) 모듈 호환 화면(애드온 modcompat). 지금 연 봇에서 켜진 모듈의 이미지가 어떻게 처리되는지 …
 - `modlinks.js` (130줄) 모듈 연결 (v1.7.0 5단계): 전역 · 페르소나 · 캐릭터 · 지금 채팅.
 - `modules.js` (757줄) 
@@ -472,7 +472,7 @@
 - `protlink.js` (172줄) 관리 → ProtLink+ (v1.9.2): Proton Drive 링크를 캐릭터·모듈·플러그인에 연…
 - `provider.js` (178줄) 프로바이더 (v1.9.3): 리스 모델 목록에 'Dusk 자동'과 'Dusk · 프로필' 을 더한다.…
 - `regress.js` (350줄) 회귀 창 (v1.9.2): 인물을 골라, 그 인물의 기억만 들고 새 채팅을 시작한다.
-- `relmap.js` (296줄) 인물 관계도 탭 (v1.9.3): {{user}}를 가운데 두고 인물을 거리(호감도)·높이(중요도)·…
+- `relmap.js` (312줄) 인물 관계도 탭 (v1.9.3): {{user}}를 가운데 두고 인물을 거리(호감도)·높이(중요도)·…
 - `roulettepop.js` (64줄) 봇 편집 도구 → 룰렛: 범주별로 무작위 특징을 뽑아 복사하거나 설명 끝에 붙인다.
 - `sdstudio.js` (3줄) 에셋 제작 화면 입구(애드온 sdstudio 전용). 본체는 ./sdstudio/ 폴더(studio·…
 - `sectionhome.js` (150줄) 그룹 개요(기억·관리·작업실, 1.8.3 목업 1): 한 줄 안내 → (기억) 상태 카드 → 목록형 …
@@ -576,8 +576,8 @@
 - `ui.js` (11줄) 프로바이더 화면 부품: 입력칸·묶음. 값이 바뀌면 onChange(값)만 부른다(저장은 부르는 쪽).
 
 ### src/ui/screens/relmap/
-- `canvas.js` (422줄) 인물 관계도 그리기(반3D canvas). 데이터는 engine/relmap.js가 만들고, 여기서는…
-- `css.js` (45줄) 인물 관계도 전용 CSS. 색은 --rb-* 토큰만 쓴다(꾸미기 자동 적용).
+- `canvas.js` (453줄) 인물 관계도 그리기(반3D canvas). 데이터는 engine/relmap.js가 만들고, 여기서는…
+- `css.js` (65줄) 인물 관계도 전용 CSS. 색은 --rb-* 토큰만 쓴다(꾸미기 자동 적용).
 
 ### src/ui/screens/sdstudio/
 - `chooser.js` (94줄) 에셋 제작 — 대표 고르기: 씬마다 후보 그림을 펼쳐 놓고 ←/→로 넘기며 F로 즐겨찾기, Enter…

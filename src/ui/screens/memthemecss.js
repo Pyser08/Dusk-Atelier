@@ -8,7 +8,6 @@ export var MEMTHEME_CSS = `
 .rb-rm .rb-rm-panel::before,.rb-rm .rb-rm-stage::before{content:"";position:absolute;left:0;top:14px;width:4px;height:36px;border-radius:0 4px 4px 0;background:var(--k);box-shadow:0 0 10px var(--k);pointer-events:none;z-index:2}
 .rb-rm .rb-rm-panel h3{display:flex;align-items:center;gap:8px;color:var(--rb-sub);letter-spacing:.02em}
 .rb-rm .rb-rm-panel h3::before{content:"";width:3px;height:13px;border-radius:3px;background:var(--k);box-shadow:0 0 6px color-mix(in srgb,var(--k) 60%,transparent);flex:none}
-.rb-rm .rb-rm-turns{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}.rb-rm .rb-rm-turnlbl{font-size:12px;color:var(--rb-sub);padding:0 4px;white-space:nowrap}.rb-rm .rb-rm-ctrls .rb-chip:disabled{opacity:.4;cursor:default}.rb-rm.rb-rm-past .rb-rm-turnlbl{color:var(--rb-warn);font-weight:700}
 .rb-rm .rb-rm-ctrls .rb-chip{border-radius:999px;border:1px solid var(--rb-line2);background:color-mix(in srgb,var(--rb-win) 70%,transparent);backdrop-filter:blur(8px)}
 .rb-rm .rb-rm-ctrls .rb-chip:is([aria-pressed=true],.on){color:var(--rb-text);background:color-mix(in srgb,var(--k) 18%,transparent);border-color:color-mix(in srgb,var(--k) 60%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--k) 30%,transparent)}
 .rb-rm .rb-rm-legend span{border:1px solid var(--rb-line2);background:color-mix(in srgb,var(--rb-win) 70%,transparent);backdrop-filter:blur(8px)}
