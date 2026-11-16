@@ -142,6 +142,27 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
   // 이 애드온을 필요로 하며 켜져 있는 애드온들(다시 켤 때 새 버전을 보게 함께 다시 켠다)
   const dependents = (idx, id) => Object.entries(idx).filter(([o, v]) => o !== id && running.has(o) && (v.requires ?? []).includes(id)).map(([o]) => o);
 
+  // 저장된 코드 읽기. 기기 저장소 용량이 작은 환경(PocketRisu 등)에선 큰 애드온이 늘면 코드 저장이 조용히 실패해
+  // 빈 값이 돌아온다 → 'activate 함수가 없어요'로 꺼지던 문제(2.2.4). 비었으면 목록에서 다시 받아 그대로 쓴다.
+  const okCode = (c) => typeof c === "string" && c.trim().length > 0;
+  async function saveCode(id, code) {
+    try { await store.setItem(CODE(id), code); if (okCode(await store.getItem(CODE(id)))) return true; } catch { /* 아래로 */ }
+    // 공간 확보: 되돌리기용 예전 코드부터 지우고 한 번 더
+    try { const idx = await getIndex(); for (const k of Object.keys(idx)) await store.removeItem(PREV(k)).catch(() => {}); await store.setItem(CODE(id), code); return okCode(await store.getItem(CODE(id))); } catch { return false; }
+  }
+  async function codeOf(id, stored) {
+    const c = stored !== undefined ? stored : await store.getItem(CODE(id)).catch(() => null);
+    if (okCode(c)) return c;
+    let code;
+    try {
+      const a = (manifest ?? await loadManifest()).find((x) => x.id === id);
+      if (!a) return c;
+      code = await download(a);
+    } catch (e) { log(`${id}: 저장된 코드가 없고 다시 받지도 못했어요 ${e?.message ?? e}`); return c; }
+    log(`${id}: 저장된 코드가 없어서 다시 받았어요`);
+    if (!await saveCode(id, code)) log(`${id}: 기기 저장 공간이 부족해 코드를 저장하지 못했어요(다음 시작 때 다시 받아요)`);
+    return code;
+  }
   // 시작: 저장해 둔 코드로 바로 켠다(네트워크 기다리지 않음). 실패하면 전 버전으로.
   async function boot() {
     const idx = await getIndex();
@@ -159,7 +180,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
         const req = (v.requires ?? []).filter((r) => r !== id && !stack.has(r));
         const ok = await Promise.all(req.map((r) => (idx[r] && idx[r].on !== false && ids.includes(r) ? launch(r, new Set([...stack, id])) : Promise.resolve(false))));
         if (ok.some((x) => !x) || req.some((r) => !running.has(r))) { log(`${id}: 필요한 애드온(${v.requires.join(", ")})이 켜져 있지 않아 시작하지 않았어요`); return false; }
-        try { await start(id, codes.get(id), v.version); return true; }
+        try { await start(id, await codeOf(id, codes.get(id)), v.version); return true; }
         catch (e) {
           log(`${id} v${v.version} 시작 실패 ${e?.message ?? e}`);
           if (v.prev && await rollback(id, idx)) return running.has(id);
@@ -290,8 +311,8 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
       a = again; code = await download(a);
     }
     const idx = await getIndex(), cur = idx[id];
-    if (cur) { const old = await store.getItem(CODE(id)).catch(() => null); if (typeof old === "string") { await store.setItem(PREV(id), old); } }
-    await store.setItem(CODE(id), code);
+    if (cur) { const old = await store.getItem(CODE(id)).catch(() => null); if (typeof old === "string") { await store.setItem(PREV(id), old).catch(() => {}); } }
+    if (!await saveCode(id, code)) log(`${id}: 기기 저장 공간이 부족해 코드를 저장하지 못했어요(다음 시작 때 다시 받아요)`);
     idx[id] = { version: a.version, sha256: a.sha256, on: cur?.on ?? true, at: now(), prev: cur ? { version: cur.version, sha256: cur.sha256 } : undefined, requires: a.requires?.length ? a.requires : undefined };
     await setIndex(idx, [id]);
     const now_ = applyNow ?? true;   // 훅 애드온도 바로(addonscope가 예전 훅을 떼 준다)
@@ -301,7 +322,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
       await stop(id);
       try { await start(id, code, a.version); }
       catch (e) { if (!(await rollback(id, idx))) { idx[id].on = false; idx[id].error = String(e?.message ?? e); await setIndex(idx, [id]); } throw e; }
-      finally { for (const d of deps) { try { await start(d, await store.getItem(CODE(d)), idx[d]?.version); } catch (e) { log(`${d} 다시 켜기 실패 ${e?.message ?? e}`); } } }
+      finally { for (const d of deps) { try { await start(d, await codeOf(d), idx[d]?.version); } catch (e) { log(`${d} 다시 켜기 실패 ${e?.message ?? e}`); } } }
     } else if (idx[id].on) {
       idx[id].pendingRestart = true; await setIndex(idx, [id]);
       // 훅이 있는 애드온은 다음 시작부터 새 버전 → 새로고침을 부탁하는 안내(main.js)
@@ -329,7 +350,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     if (!on) for (const [other, v] of Object.entries(idx)) if (other !== id && v.on !== false && (v.requires ?? []).includes(id)) await setOn(other, false);
     idx[id] = { ...idx[id], on, error: undefined };
     await setIndex(idx, [id]);
-    if (on) await start(id, await store.getItem(CODE(id)), idx[id].version); else await stop(id);
+    if (on) await start(id, await codeOf(id), idx[id].version); else await stop(id);
     emit();
   }
 
