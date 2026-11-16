@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/runtime-hooks.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/runtime-hooks.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 export class RuntimeHookManager{
  constructor(api,auto,main,{scheduler=globalThis}={}){this.api=api;this.auto=auto;this.main=main;this.scheduler=scheduler;this.state='pending';this.permissionGranted=false;this.chat=false;this.replacer=false;this.worker=null;this.timer=null;this.retried=false;this.chatListener=arg=>{main.clearDirectorCache?.();auto.onOutput(arg)};this.beforeListener=(messages,type)=>main.listener(messages,type)}

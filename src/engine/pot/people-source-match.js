@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/people-source-match.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/people-source-match.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 export const peopleSourceNormalize=value=>String(value||'').normalize('NFC').toLocaleLowerCase().replace(/[^\p{L}\p{N}_]+/gu,' ').trim();
 export function peopleSourceIndex(source){return{label:peopleSourceNormalize(source.label),keys:(source.keys||[]).map(peopleSourceNormalize).filter(Boolean),content:peopleSourceNormalize(source.content)};}

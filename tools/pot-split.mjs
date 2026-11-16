@@ -17,6 +17,8 @@ import * as escope from 'eslint-scope';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const check = args.includes('--check');
+// addon-rebuild: src/*/pot은 이제 직접 고치는 Dusk 소스. 다시 생성하면 고친 내용이 사라지므로 --force 없이 쓰기는 막는다(--check는 원본과 차이 보기용).
+if (!check && !args.includes('--force')) { console.error('pot-split: src/*/pot은 직접 고치는 소스예요. 덮어쓰려면 --force (고친 내용이 사라져요).'); process.exit(1); }
 const file = args.find((a) => !a.startsWith('--'));
 const src = (file ? fs.readFileSync(file, 'utf8') : execFileSync('git', ['show', 'origin/ref/risupot:risupot_v2_3_0.js'], { cwd: root, encoding: 'utf8', maxBuffer: 64 << 20 })).replace(/\r\n/g, '\n');
 const version = /^\/\/@version (\S+)/m.exec(src)?.[1] ?? '?';

@@ -17,6 +17,8 @@ const original = (() => {
   } catch { return null; }
 })();
 const skip = original ? false : '원본 번들 없음 (git fetch origin ref/risupot)';
+// addon-rebuild: 리수폿 모듈은 이제 Dusk 소스(직접 고침). 원본과 '글자까지 같음'을 보던 시험은 끈다. 동작 비교 시험은 원본과 일부러 달라진 곳이 생기면 그때 바꾼다.
+const retired = 'addon-rebuild: 리수폿 모듈을 직접 고치므로 원본과 같음 검사는 끔';
 
 // 이식 모듈 전부 불러오기
 const ported = {};
@@ -86,7 +88,7 @@ test('상수·데이터 값이 원본과 같음', { skip }, () => {
 const PATCHES = JSON.parse(fs.readFileSync(path.join(root, 'tools/pot-patches.json'), 'utf8'));
 const unpatch = (text) => PATCHES.reduce((t, p) => t.split(p.to).join(p.from), text);
 const HISTORY = /^\s*\/\/ (?:(?:Release|Local|PersonaName|[A-Z][A-Za-z]*) )?V\d+\b.*$\n?/gm; // tools/pot-split.mjs와 같은 규칙
-test('함수 본문이 원본과 같음 (주석 이력만 제거)', { skip }, () => {
+test('함수 본문이 원본과 같음 (주석 이력만 제거)', { skip: retired }, () => {
   for (const [n, v] of Object.entries(ported)) {
     if (typeof v !== 'function' || DUSK_CHANGED.has(n)) continue;
     assert.equal(unpatch(String(v)), String(orig[n]).replace(HISTORY, ''), n);
@@ -163,6 +165,6 @@ test('프롬프트 라이브러리가 원본과 같음', { skip }, () => {
   assert.deepEqual(lib, JSON.parse(m[1]));
 });
 
-test('분리 도구 결과가 저장소와 같음 (원본이 바뀌면 다시 생성)', { skip }, () => {
+test('분리 도구 결과가 저장소와 같음 (원본이 바뀌면 다시 생성)', { skip: retired }, () => {
   execFileSync('node', ['tools/pot-split.mjs', '--check'], { cwd: root, stdio: 'pipe' });
 });

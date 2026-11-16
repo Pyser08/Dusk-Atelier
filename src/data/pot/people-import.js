@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/people-import.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/people-import.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { cbsReferenceContextIsCurrent, collectCbsReferenceContext, combineCbsSourceDiagnostics, hasCbsReferenceContent, projectCbsCharacter, projectCbsLoreEntries } from '../../engine/pot/cbs-source.js';
 import { OVERVIEW_UNKNOWN, isUnknownOverview, makeOverviewSection, overviewNeedsFill } from '../../engine/pot/character-overview.js';
 import { messageText } from './chat-source.js';

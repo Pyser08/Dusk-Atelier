@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/writer-output-guide.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/writer-output-guide.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 const writerGuideAxes={relationalInitiative:40,expressionDirectness:60,emotionalExpressiveness:35,guardedness:65,impulsivity:25,relationshipPersistence:70};
 const writerGuideSlots=slots=>(Array.isArray(slots)?slots:Object.values(slots||{})).map(slot=>({id:slot.id,kind:slot.write_kind??slot.kind,ops:slot.writer_operations??slot.ops??[],docs:slot.document_types??slot.docs??[],min:slot.target_min??slot.targets?.[0]??0,max:slot.target_max??slot.targets?.[1]??0,assertions:slot.writer_assertions??slot.assertions??[],context:slot.context_required??slot.context??false,label:slot.section_tag??slot.section??'Sample field'}));

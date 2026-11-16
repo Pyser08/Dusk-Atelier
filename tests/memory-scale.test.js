@@ -31,3 +31,10 @@ test("원문 회상 조각에서 [Status:…] 줄은 뺀다", () => {
   const c = buildChunks([{ text: "[Status:date=4월 2일|place=집]\n미나가 웃었다.", who: "char", mi: 3 }]);
   assert.equal(c.length, 1); assert.ok(!c[0].t.includes("Status")); assert.match(c[0].t, /미나가 웃었다/);
 });
+
+test("위키 정리 노트에 나온 수치는 척도를 한 줄로 덧붙인다", async () => {
+  const { renderDirectorNote, directorScaleLine } = await import("../src/data/pot/director-runtime.js");
+  const out = renderDirectorNote({ decision: "final", note: "미나 호감도 12 (무관심)", uncertainties: [] });
+  assert.match(out, /Scales: 호감도\(affinity\) −100~300 — wiki values/);
+  assert.equal(directorScaleLine("장면만 이어 가요"), "");
+});

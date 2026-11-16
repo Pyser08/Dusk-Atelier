@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/information-continuity.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/information-continuity.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { PERSONALITY_TEXT_KEYS, PROFILE_TEXT_FIELDS } from './people-field.js';
 
 export const INFORMATION_CONTINUITY_NOTE='기존 정보를 유지했습니다. 미확인이나 빈 내용으로 기존 기록을 덮어쓸 수 없습니다.';

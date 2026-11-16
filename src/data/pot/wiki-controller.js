@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/wiki-controller.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/wiki-controller.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { ensureOverviewInSections } from '../../engine/pot/character-overview.js';
 import { ChatScopeManager } from '../../engine/pot/chat-scope.js';
 import { deletePersonCandidate, updatePersonCandidateText } from '../../engine/pot/people-candidate-edit.js';

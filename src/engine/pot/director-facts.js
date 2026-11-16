@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/director-facts.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/director-facts.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 export const DIRECTOR_HANDOFF_LANGUAGE_CONTROL = 'Write final note, uncertainties and planning_notes text in concise English. Preserve person names, aliases, honorifics, forms of address and direct quotations verbatim in their source language, including Korean; do not romanize or translate them. Explain speech patterns and relationships in English. This runtime handoff-language rule overrides older template output-language directions. It does not change the language of Main RP or stored Wiki records.';
 const DIRECTOR_KNOWLEDGE_RULE = 'Do not have a character mention or act on a secret or fact they have not witnessed, learned, or otherwise demonstrably known. Never invent how they acquired information. Keep facts, beliefs, guesses, and misunderstandings distinct. Missing Wiki data does not prove ignorance: actual evidence in the Main conversation may establish knowledge.';

@@ -35,7 +35,7 @@
 | 플러그인 코드 수정(Cellar가 대신 고침, RisuBard) | `src/data/cellarplugins.js`, `src/ui/screens/pluginedit.js`, `src/ui/screens/plugins.js`(행 메뉴), Cellar 저장소 `plugins.cjs` |
 | 플러그인 매니저 기능(켜기/끄기·별칭·순서·삭제·등록·중복·백업복원·프리셋·메타·스토리지 편집) | `src/data/pluginmgr.js`, `storagemgr.js`, `ui/screens/pluginmgr.js`, `storageedit.js`, `plugins.js`, Cellar `plugins.cjs` mutate | tests/pluginmgr·storagemgr, e2e run-pluginmgr |
 | 설정 | `src/ui/screens/settingstab.js`, `src/ui/screens/settings.js` |
-| 리수폿 통합 (수정 금지 영역) | `tools/pot-split.mjs`, `tools/pot-patches.json` → 원본은 `ref/risupot` 브랜치 |
+| 리수폿 통합 (addon-rebuild부터 직접 고치는 소스) | `src/engine/pot/*`, `src/data/pot/*` 직접 수정. `tools/pot-split.mjs`는 `--check`(원본과 차이 보기)만, 덮어쓰기는 `--force`. `tools/pot-patches.json`은 예전 생성 때 패치 기록(이미 반영됨). 원본은 `ref/risupot` 브랜치 |
 | 스크립트 훅 합치기·호스트 부담 | `src/data/hookbus.js`(input·output·display 훅을 종류당 1개로), `src/main.js`(api 프록시), `src/ui/watch.js`(폴링 간격), `src/data/dbcache.js`(읽기 전용 DB 캐시 `dbRead`) |
 | 빌드·릴리스 (릴리스·버전은 사용자 지시 시만) | `tools/build.mjs`, `.github/workflows/release.yml`, `package.json`, `CHANGELOG.md` |
 

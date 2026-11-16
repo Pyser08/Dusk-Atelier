@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/event-chronology.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/event-chronology.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 const eventPad=value=>String(value).padStart(2,'0');
 function eventDateKey(value){const text=String(value||'').trim(),iso=text.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/),korean=text.match(/^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/),match=iso||korean;if(!match)return'';const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);if(year<1||month<1||month>12||day<1||day>31)return'';return`${String(year).padStart(4,'0')}-${eventPad(month)}-${eventPad(day)}`;}

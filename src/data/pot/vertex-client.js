@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/vertex-client.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/vertex-client.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { PDF_FULL_SYSTEM_CONTROL } from '../../engine/pot/pdf-reference.js';
 
 const VERTEX_TOKEN_URL='https://oauth2.googleapis.com/token';

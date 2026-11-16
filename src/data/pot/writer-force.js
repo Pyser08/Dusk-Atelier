@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/writer-force.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/writer-force.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { effectiveRelationshipSettings } from '../../engine/pot/relationship-mode.js';
 import { WRITER_MANUAL_IMPORT, WRITER_MANUAL_SOURCE, writerManualReason } from '../../engine/pot/writer-import-mode.js';
 import { preparePartialWriterProposal } from '../../engine/pot/writer-partial.js';

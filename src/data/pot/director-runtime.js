@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/director-runtime.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/director-runtime.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { customPromptBlock } from '../../engine/pot/custom-prompts.js';
 import { DIRECTOR_FACTS_PROMPT, DIRECTOR_HANDOFF_LANGUAGE_CONTROL, directorMainControl } from '../../engine/pot/director-facts.js';
 import { npcEmotionReference } from '../../engine/pot/npc-emotion.js';
@@ -144,8 +144,15 @@ export function parseDirectorResponse(raw, { requestRef, allowedRefs = new Set()
   return parseFinal(value, { requestRef, allowedRefs, documentRefs, rhythmEnabled });
 }
 
+// addon-rebuild 척도 표기: 노트에 나온 위키 수치의 범위를 한 줄로 덧붙인다(Dusk 기억 블록의 0~10 감정 게이지와 다른 척도).
+const DIRECTOR_SCALES = [[/호감도|affinity/i, '호감도(affinity) −100~300'], [/의심도|suspicion/i, '의심도(suspicion) 0~100'], [/음란도|openness|lewdness/i, '음란도(openness) 0~300']];
+export function directorScaleLine(note) {
+  const hit = DIRECTOR_SCALES.filter(([re]) => re.test(String(note || ''))).map(([, t]) => t);
+  return hit.length ? `\nScales: ${hit.join(' · ')} — wiki values; not the 0-10 gauges in [Dusk Memory].` : '';
+}
+
 export function renderDirectorNote(result, role = 'directing') {
   if (result?.decision !== 'final') throw new Error('최종 Director Note만 Main에 주입할 수 있습니다.');
   const uncertainty = result.uncertainties.length ? `\nUncertainties:\n- ${result.uncertainties.join('\n- ')}` : '';
-  return `<!-- RISUPOT_DIRECTOR_NOTE_START -->\n[CONTROL · DIRECTOR NOTE] ${directorMainControl(role)}\n${result.note}${uncertainty}\n<!-- RISUPOT_DIRECTOR_NOTE_END -->`;
+  return `<!-- RISUPOT_DIRECTOR_NOTE_START -->\n[CONTROL · DIRECTOR NOTE] ${directorMainControl(role)}\n${result.note}${uncertainty}${directorScaleLine(result.note)}\n<!-- RISUPOT_DIRECTOR_NOTE_END -->`;
 }
