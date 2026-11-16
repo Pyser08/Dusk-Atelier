@@ -122,3 +122,24 @@ export function diceStats(entries) {
   for (const e of entries ?? []) for (const r of e?.rolls ?? []) { n++; sum += r; verdicts[judgeRoll(r, (e.cuts ?? DEFAULT_CUTS).normal)]++; }
   return { n, avg: n ? Math.round(sum / n) : 0, verdicts };
 }
+
+// 캐시 진단: 어디서·왜 앞부분이 달라졌는지 어림한다. 깨지지 않았으면(뒤에 새 글만 붙음) null.
+// kind: dusk(Dusk 기능 블록) · dropped(옛 대화가 빠짐) · prompt(앞쪽 프롬프트·로어북 변화) · edited(대화 글 수정·리롤)
+const CAUSE_TEXT = {
+  dropped: "옛 대화가 빠졌어요(옛 대화 빼고 보내기·리스 최대 컨텍스트로 잘림). 매 턴 일어나면 캐시가 계속 깨져요.",
+  prompt: "앞쪽 프롬프트가 바뀌었어요. 키워드로 켜지는 로어북, 시간·랜덤 매크로, 상태 변수가 앞쪽에 있으면 매 턴 깨져요. 그런 항목은 프롬프트 뒤쪽(최근 대화 근처)으로 옮기세요.",
+  edited: "대화 글이 바뀌었어요(옛 메시지 수정·리롤·삭제). 가끔이면 자연스러운 일이에요.",
+};
+function snippet(s, k, w = 60) { const t = String(s ?? ""); if (!t) return ""; const a = Math.max(0, k - 20); return (a ? "…" : "") + t.slice(a, a + w).replace(/\s+/g, " ") + (a + w < t.length ? "…" : ""); }
+export function cacheCause(prev, cur, pi) {
+  if (!pi || pi.breakAt < 0 || !Array.isArray(prev) || pi.breakAt >= prev.length) return null;
+  const i = pi.breakAt, a = flat(prev[i]?.content), b = flat(cur[i]?.content);
+  let k = 0; while (k < a.length && k < b.length && a[k] === b[k]) k++;
+  const out = { at: i, prev: snippet(a, k), cur: snippet(b, k) };
+  if (pi.dusk) return { ...out, kind: "dusk", text: `Dusk ‘${pi.dusk}’ 블록이 앞쪽에서 바뀌었어요. 이 기능이 넣는 글이 매 턴 바뀌면 캐시가 깨져요.` };
+  const key = (m) => `${m?.role ?? ""}\n${flat(m?.content)}`, ck = key(cur[i]);
+  if (prev.slice(i + 1).some((m) => key(m) === ck)) return { ...out, kind: "dropped", text: CAUSE_TEXT.dropped };
+  const role = cur[i]?.role;
+  if (role === "system") return { ...out, kind: "prompt", text: CAUSE_TEXT.prompt };
+  return { ...out, kind: "edited", text: CAUSE_TEXT.edited };
+}

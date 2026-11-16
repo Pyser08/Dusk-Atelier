@@ -25,13 +25,16 @@ test("장소가 바뀌면 시각이, 자정을 넘기면 날짜가 따라 바뀐
   assert.equal(latestStoryState([bot("[2026-10-28 10:00 | a]"), bot("[2026-10-20 11:00 | b]")]).date, "2026-10-28"); // 과거 날짜 무시
   assert.equal(latestStoryState([bot("[2026-10-28 10:00 | a]"), user("[2030-01-01 11:00 | b]")]).date, "2026-10-28"); // 사용자 말 무시
 });
-test("요청 맨 위에 블록(현재 값 + 규칙)을 넣고 멱등이며 원본을 바꾸지 않는다", () => {
-  const msgs = [{ role: "system", content: "S" }, { role: "user", content: "hi" }];
+test("규칙은 맨 위(매 턴 같음), 지금 값은 마지막 사용자 말 바로 앞에 넣어 캐시를 깨지 않고, 멱등이며 원본을 바꾸지 않는다", () => {
+  const msgs = [{ role: "system", content: "S" }, { role: "user", content: "old" }, { role: "assistant", content: "a" }, { role: "user", content: "hi" }];
   const a = insertTime(msgs, { date: "2026-10-28", time: "15:30", place: "교실" });
-  assert.ok(a[0].content.startsWith(TIME_MARK) && a[0].content.includes("2026-10-28 15:30 · 교실") && a[0].content.includes("Rule:") && a.length === 3 && msgs.length === 2);
+  assert.equal(a.length, 6); assert.equal(msgs.length, 4);
+  assert.ok(a[0].content.startsWith(TIME_MARK) && a[0].content.includes("Rule:") && !a[0].content.includes("2026"));
+  assert.ok(a[4].content.startsWith(TIME_MARK) && a[4].content.includes("2026-10-28 15:30 · 교실")); assert.equal(a[5].content, "hi");
   const b = insertTime(a, { date: "2026-10-29", time: "01:00", place: "" });
-  assert.equal(b.length, 3); assert.ok(b[0].content.includes("2026-10-29 01:00"));
-  assert.ok(insertTime(msgs, null)[0].content.includes("not set yet")); // 값이 없어도 규칙은 보낸다
+  assert.equal(b.length, 6); assert.equal(b[0].content, a[0].content, "앞부분은 그대로"); assert.ok(b[4].content.includes("2026-10-29 01:00"));
+  assert.ok(insertTime(msgs, null)[4].content.includes("not set yet")); // 값이 없어도 규칙은 보낸다
+  assert.ok(insertTime([{ role: "system", content: "S" }], null).at(-1).content.includes("Now:"), "사용자 말이 없으면 맨 끝");
 });
 test("훅: 꺼져 있으면 통과, 켜면 삽입·채팅별 저장, 장기기억용 current", async () => {
   const store = new Map(); let hooks = 0;
@@ -46,7 +49,7 @@ test("훅: 꺼져 있으면 통과, 켜면 삽입·채팅별 저장, 장기기�
   await st.set(true); await st.set(false); await st.set(true);
   assert.equal(hooks, 1); assert.equal(store.get(STORY_TIME_KEY), "on");
   const out = await st.beforeRequest(m, "model");
-  assert.ok(out[0].content.includes("2026-10-28 15:30 · 교실"));
+  assert.ok(out.some((m) => String(m.content).includes("Now: 2026-10-28 15:30 · 교실")));
   assert.deepEqual(await st.current("c1", "t1"), { date: "2026-10-28", time: "15:30", place: "교실" });
   assert.equal(await st.beforeRequest(m, "memory"), m);
 });

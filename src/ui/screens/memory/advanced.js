@@ -41,11 +41,30 @@ export async function advancedGlobal(ctx, host, { redraw, st, apply }) {
       sec("리스 기본 메모리 참고 (Hypa)", "Dusk 기억이 대신하므로 보통은 꺼 두세요. 리스의 Hypa 요약을 같이 참고하고 싶을 때만 켜요.",
         segmented([["off", "안 씀"], ["hypa", "Hypa"], ["hypaplus", "Hypa+"]], s.hypaPlusReferenceEnabled ? "hypaplus" : s.hypaReferenceEnabled ? "hypa" : "off", (v) => ed((x) => { x.hypaReferenceEnabled = v === "hypa"; x.hypaPlusReferenceEnabled = v === "hypaplus"; }), "Hypa 참고"),
         num("참고할 항목 수", s.directorMemoryLimit ?? 16, (n) => ed((x) => { x.directorMemoryLimit = n; }), { min: 0, max: HYPA_REFERENCE_MAX_ITEMS, def: 16 })),
+      cacheDiag(ctx),
       transfer(ctx, st, redraw, apply),
     ];
     replace(host, adv);
   };
   paint();
+}
+
+// 캐시 진단: 최근 메인 요청이 직전 요청과 앞부분이 얼마나 같았는지, 깨졌다면 어디서·왜인지(코어 turnInfo.cacheLog).
+function cacheDiag(ctx) {
+  const box = h("div", { class: "rb-mem-cachediag" });
+  const paint = () => {
+    const log = typeof ctx.turnInfo?.cacheLog === "function" ? ctx.turnInfo.cacheLog() : null;
+    if (!log) return replace(box, note("이 버전의 Dusk 본체에서는 볼 수 없어요. 본체를 업데이트해 주세요."));
+    if (!log.length) return replace(box, note("아직 비교한 요청이 없어요. 채팅을 두 번 이상 보내면 보여요. (모델 호출 표시의 ‘캐시 깨짐 알림’이 꺼져 있으면 기록되지 않아요)"));
+    const tm = (t) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    replace(box, [...log].reverse().map((r) => h("div", { class: "rb-card rb-mem-cacherow" },
+      h("div", null, h("b", null, `${tm(r.at)} · 앞부분 약 ${Math.round(r.ratio * 100)}% 같음`), h("span", { class: "rb-muted" }, r.cause ? ` · ${r.of}개 중 ${r.cause.at + 1}번째 메시지부터 달라짐` : " · 캐시 유지")),
+      r.cause ? h("p", { class: "rb-muted" }, r.cause.text) : null,
+      r.cause && (r.cause.prev || r.cause.cur) ? h("div", { class: "rb-muted" }, h("div", null, "이전: ", r.cause.prev || "(없음)"), h("div", null, "이번: ", r.cause.cur || "(없음)")) : null)));
+  };
+  paint();
+  return sec(["캐시 진단", null], "최근 요청마다 직전 요청과 앞부분이 얼마나 같았는지 보여 줘요. 앞부분이 같을수록 프롬프트 캐시로 싸고 빨라져요. 낮게 나오면 어디서 달라졌는지 보고 그 부분을 프롬프트 뒤쪽으로 옮기세요.",
+    box, h("div", { class: "rb-mem-sact" }, btn("새로 보기", { icon: "refresh", onClick: paint })));
 }
 
 // 설정 내보내기·가져오기(키 제외). 파일은 JSON.

@@ -32,6 +32,7 @@ export const FEATURES = [
   { t: "자동 기록 입력 예산", k: "인물 위키 자동 기록 토큰 예산 writer input budget", path: `${M} › 설정 › 기억 옵션 › 자동 기록 입력 예산`, tab: "memory", mem: MSET, find: "자동 기록 입력 예산", addon: "memory" },
   { t: "관찰자 모드 · NPC끼리의 관계 기록", k: "observer 지켜보는 인물 기본 정보 자동 npc 감정", path: `${PA} › 무엇을 따라갈까요`, tab: "memory", mem: POTA, find: "무엇을 따라갈까요", addon: "memory" },
   { t: "실행 기록 (모델이 한 일 남기기)", k: "trace 로그 오류 디버그 inspector", path: `${PA} › 실행 기록`, tab: "memory", mem: POTA, find: "실행 기록", addon: "memory" },
+  { t: "캐시 진단 (프롬프트 캐시가 깨지는 곳)", k: "cache 캐싱 프롬프트캐시 깨짐 비용 토큰 절약", path: `${PA} › 캐시 진단`, tab: "memory", mem: POTA, find: "캐시 진단", addon: "memory" },
   { t: "리스 기본 메모리 참고 (Hypa)", k: "hypa hypaplus 하이파 요약 supa", path: `${PA} › 리스 기본 메모리 참고 (Hypa)`, tab: "memory", mem: POTA, find: "리스 기본 메모리 참고", addon: "memory" },
   { t: "기억 설정 내보내기·가져오기", k: "설정 파일 백업 옮기기 export import", path: `${PA} › 설정 내보내기·가져오기`, tab: "memory", mem: POTA, find: "설정 내보내기·가져오기", addon: "memory" },
   // 장기 기억 홈

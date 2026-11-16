@@ -6,7 +6,7 @@
 import { headKey, tailKey, midKey, matchRecord } from "../engine/lorelog.js";
 import { onAux, mergeSide } from "../engine/auxlog.js";
 import { parseRollMarks } from "../engine/fairplay.js";
-import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens, prefixInfo, cacheLine, promptParts } from "../engine/turninfo.js";
+import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens, prefixInfo, cacheLine, promptParts, cacheCause } from "../engine/turninfo.js";
 
 export const DICE_SHOW_KEY = "dusk.ui.diceShow";   // 기본 꺼짐
 export const CALL_SHOW_KEY = "dusk.ui.callShow";   // 기본 꺼짐
@@ -28,7 +28,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : String(c ?? "");
 
 export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => null, loreFor = () => null, loreLast = () => null, now = Date.now, chip = true, quietMs = 1500, watchReplacers = null, relastMs = 300, log = (...a) => console.log("[Dusk 호출표시]", ...a) } = {}) {
-  let cacheAlert = true, prevMsgs = null, diceShow = false, callShow = false, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
+  let cacheAlert = true, prevMsgs = null, cacheLog = [], diceShow = false, callShow = false, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
   const supported = () => !isBardHost(api);
 
   const ensure = async () => {
@@ -83,10 +83,10 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
   }
 
   // 캐시 깨짐 알림: 모델 호출 표시를 꺼 둬도 잠깐 띄운다
-  function alertCache(pi) {
+  function alertCache(pi, cause = null) {
     try { onCacheAlert?.(pi); } catch { /* 알림만 실패 */ }
     if (!chip || callShow) return;   // 호출 표시가 켜져 있으면 그 칩에 이미 캐시 %가 나온다
-    chipSet(`⚠ 캐시가 깨졌어요 · ${cacheLine(pi)}`, "<div style='opacity:.75'>앞부분이 바뀌면 그 뒤 전체를 새로 읽어서 비용·시간이 늘어요. 옛 메시지를 고쳤다면 자연스러운 일이에요.</div>");
+    chipSet(`⚠ 캐시가 깨졌어요 · ${cacheLine(pi)}`, `<div style='opacity:.75'>앞부분이 바뀌면 그 뒤 전체를 새로 읽어서 비용·시간이 늘어요. 옛 메시지를 고쳤다면 자연스러운 일이에요.</div>${cause ? `<div style='margin-top:2px'>${esc(cause.text)}</div>` : ""}<div style='opacity:.6;margin-top:2px'>자세히: 장기 기억 → 고급 → 캐시 진단</div>`);
     clearTimeout(ui.hide); ui.hide = setTimeout(chipRemove, 9e3);
   }
   // ── 훅 ──
@@ -102,10 +102,12 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       }
       // 캐시 어림: 직전 메인 요청과 앞부분 비교(글만 보관)
       const flatMsgs = (Array.isArray(messages) ? messages : []).map((m) => ({ role: m?.role, content: textOf(m?.content) }));
-      const pi = prefixInfo(prevMsgs, flatMsgs); prevMsgs = flatMsgs;
+      const pi = prefixInfo(prevMsgs, flatMsgs);
+      if (pi) { cacheLog.push({ at: rec.at, ratio: pi.ratio, same: pi.same, total: pi.total, of: pi.of, cause: cacheCause(prevMsgs, flatMsgs, pi) }); if (cacheLog.length > 12) cacheLog.shift(); }   // 캐시 진단(장기 기억 → 고급)
+      prevMsgs = flatMsgs;
       rec.parts = promptParts(messages).slice(0, 8).map((p) => ({ label: p.label, tok: p.tok }));   // 입력 내역(2.1.4)
       if (pi) rec.cache = { ratio: pi.ratio, same: pi.same, total: pi.total, breakAt: pi.breakAt, at: pi.at, of: pi.of, dusk: pi.dusk };
-      if (cacheAlert && pi && pi.total >= ALERT_MIN_TOKENS && pi.ratio < ALERT_RATIO) alertCache(pi);
+      if (cacheAlert && pi && pi.total >= ALERT_MIN_TOKENS && pi.ratio < ALERT_RATIO) alertCache(pi, cacheLog.at(-1)?.cause);
       if (auxBuf.length) { for (const e of auxBuf) rec.side = mergeSide(rec.side, e); auxBuf = []; }   // 첫 메인 요청 전에 나간 보조 호출
       if (diceShow || callShow) { pending = rec; chipRun(rec); } else pending = null;   // 캐시 알림만이면 응답 기록은 남기지 않는다
     } catch (e) { log("요청 확인 실패", e?.message ?? e); }
@@ -182,5 +184,5 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
   async function setCacheAlert(v) { cacheAlert = !!v; await api.pluginStorage.setItem(CACHE_ALERT_KEY, cacheAlert ? "on" : "off"); if (cacheAlert) await hook(); return cacheAlert; }
   async function setDiceShow(v) { diceShow = !!v; await api.pluginStorage.setItem(DICE_SHOW_KEY, diceShow ? "on" : "off"); if (diceShow) await hook(); return diceShow; }
   async function setCallShow(v) { callShow = !!v; await api.pluginStorage.setItem(CALL_SHOW_KEY, callShow ? "on" : "off"); if (callShow) await hook(); else { stopTick(); chipRemove(); } return callShow; }
-  return { start, setCacheAlert, isCacheAlert: () => cacheAlert, setDiceShow, setCallShow, isDiceShow: () => diceShow, isCallShow: () => callShow, supported, beforeRequest, onOutput, onDisplay, settle };
+  return { start, cacheLog: () => cacheLog.slice(), setCacheAlert, isCacheAlert: () => cacheAlert, setDiceShow, setCallShow, isDiceShow: () => diceShow, isCallShow: () => callShow, supported, beforeRequest, onOutput, onDisplay, settle };
 }

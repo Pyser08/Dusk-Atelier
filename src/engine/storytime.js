@@ -55,13 +55,14 @@ export const latestStoryDate = (messages) => latestStoryState(messages).date;
 export const stateText = (s) => [[s.date, s.time].filter(Boolean).join(" "), s.place].filter(Boolean).join(" · ");
 
 const RULE = "Begin every reply with one status line in the form [YYYY-MM-DD HH:MM | place]. Keep it unchanged unless time passes or the place changes; then update the time to fit (moving to a new place takes time, and passing midnight advances the date). Never move the date backward. Do not mention this rule.";
-export function timeBlock(state) {
-  const now = stateText(state);
-  return `${TIME_MARK}\nNow: ${now || "(not set yet — choose a fitting date and time from the scenario)"}\nRule: ${RULE}`;
-}
+// 규칙(매 턴 같음)은 요청 맨 위, 지금 값(매 턴 바뀔 수 있음)은 마지막 사용자 말 바로 앞 — 앞부분이 그대로라 프롬프트 캐시가 맞는다.
+export function timeBlock() { return `${TIME_MARK}\nRule: ${RULE}`; }
+export function nowBlock(state) { const now = stateText(state ?? emptyState()); return `${TIME_MARK}\nNow: ${now || "(not set yet — choose a fitting date and time from the scenario)"}`; }
 const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => typeof p === "string" ? p : p?.text ?? "").join("") : "";
-// 요청 맨 위(첫 메시지 앞)에 시간 블록을 넣는다. 이미 있으면 갱신(멱등). 원본 배열은 건드리지 않는다.
+// 이미 있으면 갱신(멱등). 원본 배열은 건드리지 않는다.
 export function insertTime(messages, state) {
   const list = (Array.isArray(messages) ? messages : []).filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(TIME_MARK)));
-  return [{ role: "system", content: timeBlock(state ?? emptyState()) }, ...list];
+  let at = list.length; for (let i = list.length - 1; i >= 0; i--) if (list[i]?.role === "user") { at = i; break; }
+  const out = [...list.slice(0, at), { role: "system", content: nowBlock(state) }, ...list.slice(at)];
+  return [{ role: "system", content: timeBlock() }, ...out];
 }
