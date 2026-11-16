@@ -32,6 +32,7 @@ import { scopeCtx } from './staleguard.js';
 import { renderHome } from './screens/home.js';
 import { installScrollGuard } from './scrollguard.js';
 import { createExt } from './ext.js';
+import { createPlacer } from './placer.js';
 import { renderSectionHome } from './screens/sectionhome.js';
 import { renderAiBot } from './screens/aibot.js';
 import { BASE_IDS, SEARCH, SECTION_IDS, SECTION_NAMES, TABS, subLabel, tabHidden, setAddonCheck } from './tabs.js';
@@ -681,6 +682,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     navLinks,
     go,
     refresh: () => render(),
+    placer: createPlacer({ root: () => win, ctx: () => ctx, log: (m) => console.log(`[Dusk Atelier] ${m}`) }),   // 애드온이 코어 수정 없이 화면 어디든 부품을 넣는 자리(ui/placer.js)
     ext: createExt((keys) => { if (keys.every((k) => k.startsWith("tab|") || k.startsWith("svc|"))) { refreshTabs(); if (MORE.has(state.tab)) render({ reuse: true }); } else render(); }),   // 애드온이 끼어드는 자리(ui/ext.js) — 탭만 바뀌면 메뉴만 고친다
     close: () => close(),
     reopen: () => open(),

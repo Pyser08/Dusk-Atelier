@@ -63,6 +63,14 @@ const { ui, storage, ai, toast } = ctx.dusk;
 - `ui.menu(anchorEl, [{ icon, label, onClick, danger }, "sep"])`
 - `ui.download(name, textOrBlob, type)`, `ui.copyText(text)`, `ui.pickFiles({ accept, multiple })` → `Promise<File[]>`
 
+**자리 넣기** (SDK 2, 2.2.4 다음 Dusk부터 — 코어를 고치지 않고 Dusk 화면에 부품을 넣어요. 화면이 다시 그려지면 알아서 다시 넣고, 끄면 떼요)
+- `addQuickSetting({ title, desc, on: () => bool, onChange(v) })` — 홈 ‘빠른 설정’ 맨 아래에 스위치 줄.
+- `addQuickSetting({ title, desc, value: () => "켜짐 · 보통", settings(el, close) })` — ‘유저 편향 없애기’ 줄처럼 오른쪽에 상태 글자 + ›, 줄을 누르면 상세 창이 열려요(켜고 끄기도 창 안에 둬요). 창을 닫으면 상태 글자를 다시 읽어요.
+- `addSettingsCard({ title, render(el) })` — 설정 탭에 카드 하나.
+- `place(자리, render(target) → Node, { position })` — 아무 자리에나. 자리는 이름(`places`: `home.quickset`·`home.top`·`home.foot`·`settings.top`·`settings.end`)이나 CSS 선택자, position은 `"end"`(안 맨 아래, 기본)·`"start"`·`"before"`·`"after"`. 이름으로 쓰면 코어 화면이 바뀌어도 코어가 자리를 맞춰 줘요.
+- `ui.modal((done) => Node)` → `Promise`(닫힐 때 `done(값)`의 값, 바깥·Esc는 null), `ui.dialog({ title, body })` — 기본 창.
+- 예전 Dusk(SDK 1)에선 이 함수들이 없어요. `typeof ctx.dusk.addQuickSetting === "function"`으로 확인하고, 없으면 건너뛰거나 다른 길(`addPage`)을 써요.
+
 **저장** (이 애드온 전용, JSON 값, 애드온을 지워도 남음)
 - `await storage.get(key, fallback)`, `await storage.set(key, value)`, `await storage.remove(key)`
 
@@ -72,7 +80,7 @@ const { ui, storage, ai, toast } = ctx.dusk;
   중지되면 오류를 던지므로 `catch`에서 조용히 넘어가요.
 
 **기타**
-- `toast(text, { error })`, `open()`, `coreVersion`, `sdkVersion`(1), `id`, `version`
+- `toast(text, { error })`, `open()`, `coreVersion`, `sdkVersion`(2), `id`, `version`
 - `onCleanup(fn)` — 끌 때 부를 함수 등록(deactivate 대신 써도 됨)
 - `lib` — 코어 모듈 전부(`lib["src/engine/hash.js"].sha256` 처럼 경로로). 코어 업데이트로 바뀔 수 있으니 꼭 필요할 때만, 없으면 대신하는 코드를 둬요.
 
@@ -157,6 +165,6 @@ export async function activate(api, ctx) {
 
 ## 7. 개발자 메모 (코어 쪽)
 
-- SDK: `src/data/addonsdk.js`(`createAddonSdk`), 불러오기·실행·내보내기: `src/data/addons.js`(`inspectCustom`·`importCustom`·`setCustomOn`·`removeCustom`·`exportCustom`, 저장 키 `dusk.addon.custom.index`·`dusk.addon.custom.code.<id>`), 검사: `src/engine/addons.js`(`parseCustomMeta`·`extractAddonCode`), 화면: `src/ui/screens/addonsui.js`(홈 상자)·`addonmaker.js`(만들기 창).
+- SDK: `src/data/addonsdk.js`(`createAddonSdk`), 자리 넣기: `src/ui/placer.js`(`PLACES` 이름 → 선택자 — 코어 화면이 바뀌면 여기만 고침), 불러오기·실행·내보내기: `src/data/addons.js`(`inspectCustom`·`importCustom`·`setCustomOn`·`removeCustom`·`exportCustom`, 저장 키 `dusk.addon.custom.index`·`dusk.addon.custom.code.<id>`), 검사: `src/engine/addons.js`(`parseCustomMeta`·`extractAddonCode`), 화면: `src/ui/screens/addonsui.js`(홈 상자)·`addonmaker.js`(만들기 창).
 - SDK는 **더하기만** 해요. 이름을 바꾸거나 빼면 사람들이 만든 애드온이 깨져요. 바꾸면 이 문서와 `addonguide.js`를 같이 고치고 `sdkVersion`을 올려요.
 - 공식 애드온도 같은 `ctx.dusk`를 받아요.
