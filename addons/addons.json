@@ -58,8 +58,8 @@
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "0b78a0b54165085cb277e15aa19b725d58e0055f36f57936b6018f7f6f540019",
-      "size": 1798093
+      "sha256": "00205170b0c01da3b5325604e2ed411d4f6d7d51c7a158775a666b2369b397f2",
+      "size": 1800451
     },
     {
       "id": "cards",
@@ -73,8 +73,8 @@
       ],
       "desc": "장기 기억으로 카드를 만들고 꾸미고, 그 카드로 새 봇을 이어 가요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/cards.js",
-      "sha256": "d125fece54e6735cd0827d68e515b3be17f120cf84ee0cb351652d8870e16406",
-      "size": 674545
+      "sha256": "5f266eeffec6d2405dc4c01770ff2fc76add3cc1f8f8708be68c8ff5ad9ae0f7",
+      "size": 674622
     },
     {
       "id": "erosync",

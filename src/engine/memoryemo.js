@@ -41,7 +41,8 @@ export function validateEmo(obj) {
 // isLover(from, to) → 애인 사이인가(소유욕·독점욕은 애인일 때만). 없으면 그 두 태그는 버린다.
 // gauge: 게이지 배수 {up, down}(gaugemult.js) — 변화량에 곱한다.
 // userGuard: 유저 편향 없애기(공정한 전개 + 코드 주사위)가 켜졌을 때 — {{user}}를 향한 이성적 호감이 오를 때는 반만, 약한 신호는 두 번 쌓여야, 관계 진도 상한 안에서만.
-export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false, ceilingOf = null, isLover = null, gauge = null, userGuard = false } = {}) {
+// attrCap(from, to, {big, tags, lover}) → 이성적 호감 상한(2.2.6, memoryhuman.attractionCap). 사용자가 정한 값은 낮추지 않는다.
+export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false, ceilingOf = null, isLover = null, gauge = null, userGuard = false, attrCap = null } = {}) {
   folder.emo ??= {};
   const src = srcOf(anchor);
   let changed = 0;
@@ -65,6 +66,7 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
       const before = pair.tags[tag];
       let v = clampG((before ?? 0) + d);
       if (d > 0 && ceilingOf && (tag === "affection" || tag === "trust" || guarded)) { const cap = ceilingOf(e.from, e.to); if (Number.isFinite(cap) && v > cap) v = Math.max(before ?? 0, cap); }   // 진도보다 앞서 가지 않게
+      if (d > 0 && attrCap && tag === "attraction") { const cap = attrCap(e.from, e.to, { big: Math.abs(e.t[tag]) >= 3, tags: pair.tags, lover }); if (Number.isFinite(cap) && v > cap) v = Math.max(before ?? 0, cap); }
       if (v === before) continue;
       prev[tag] = before ?? null; next[tag] = v; pair.tags[tag] = v; changed++;
     }

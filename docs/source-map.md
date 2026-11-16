@@ -196,6 +196,7 @@
 - `discover.js` (46줄) 기능 맛보기(2.0.0, 순수): 처음엔 딸깍으로 쓰다가, 쓰는 만큼 다음 기능을 하나씩 권한다. — DISCOVER, SNOOZE_MS, pickDiscover, needsAddon
 - `duskwriter.js` (36줄) v1.6.4 기록 호출 합치기(순수): 리수폿 Writer 프롬프트에 Dusk 기록 구획을 덧붙이고,… — SECTION_MARK, appendDuskSection, splitDusk, checkDusk
 - `embed.js` (59줄) v1.7.1 임베딩(순수): 요청·응답 모양, 벡터 압축, 유사도, 검색 가중치. 네트워크·저장은 d… — normCfg, endpointOf, isContextual, isReady, buildRequest
+- `emoseed.js` (47줄) 2.2.6 관계(tie)로 처음 감정 채우기(순수). 기록기가 "B는 A의 여자친구/언니/라이벌…"처… — tieSeedOf, seedFromTies
 - `erosyncview.js` (126줄) Erosync 값(읽기 전용 JSON, data/erosync.js의 read())을 인물 위키·관계… — AXIS_LABEL, AXIS_HINT, eroReady, eroPerson, eroAxes
 - `export.js` (44줄) 에셋 제작 애드온이 봇·모듈에 넣어 둔 설정 칸(dusk_sdstudio)은 배포 파일에서 뺀다(en… — rpackEncode, buildRisum, moduleJson
 - `fairplay.js` (129줄) 공정한 전개 (v1.6.8, 순수). AI가 사용자 쪽에 유리하게만 풀어 가는 편향을 줄이는 지침 블… — FAIR_MARK, FAIR_TEXT, DICE_COUNT, DICE_MODES, DICE_LEVEL_IDS
@@ -224,16 +225,16 @@
 - `lorerules.js` (788줄) Dusk 로어북 규칙 (DA Lore Rules v1) — RULE_VERSION, DONT_ACTIVATE, STATE_VAR, SET_OPS, MAX_HIST
 - `lover.js` (43줄) 애인 판정(순수). 기록기가 남긴 오래가는 관계(tie: "B는 A의 무엇") 중 연인·배우자처럼 명… — isLoverKind, pairKey, loverPairs, isLover, loverOf
 - `match.js` (60줄) — normalizeName, stripTrailingNumber, findCandidates
-- `memoryapply.js` (132줄) 분석 결과를 폴더에 반영하는 순수 함수. — findPersonKey, latestScene, applyAnalysis, DONE_MAX, doneHashes
+- `memoryapply.js` (135줄) 분석 결과를 폴더에 반영하는 순수 함수. — findPersonKey, latestScene, applyAnalysis, DONE_MAX, doneHashes
 - `memorycompose.js` (91줄) 새 봇 합성: 기록 선택 → 상황 블록 → 로어북 후보 → 생성 프롬프트. 순수 함수. — selectRecords, sceneBlocks, pickLore, relationshipPrompt, descPrompt
 - `memorydelete.js` (27줄) 기록 삭제 연쇄 처리 (v1.6.5 4단계, 순수): 같은 응답에서 나온 관계 변화·떡밥 찾기, di… — TOMB_MAX, tombKey, isTombed, relatedOf, deleteRecord
 - `memorydiag.js` (9줄) 자동 기록 진단 문구(순수 함수). 기억 탭 상태 카드에서 쓴다. — diagText
 - `memorydigest.js` (35줄) 인물별 digest(압축) 조건·프롬프트·반영. — DIGEST_MIN_RECORDS, undigested, needsDigest, digestTargets, digestMessages
 - `memoryedit.js` (121줄) v1.7.1 기억 편집기(순수): 화면에 보이는 값을 그 자리에서 고치면 원본 데이터에 반영한다. — locate, editTarget, undoLast, setAct, setKind
-- `memoryemo.js` (155줄) v1.7.1 2단계: 다차원 감정 태그(순수). 호감도 하나를 6태그로 나누고, 코드가 게이지와 종합… — EMO_TAGS, EMO_LABEL, LOVER_TAGS, tagsFor, GAUGE_MIN
+- `memoryemo.js` (157줄) v1.7.1 2단계: 다차원 감정 태그(순수). 호감도 하나를 6태그로 나누고, 코드가 게이지와 종합… — EMO_TAGS, EMO_LABEL, LOVER_TAGS, tagsFor, GAUGE_MIN
 - `memorygrade.js` (71줄) 장기기억 등급 D < C < B < A < S < EX. 모델은 p·s·r(0~3)만 내고 등급은 여… — GRADES, GRADE_WEIGHT, SCORE_TABLE, GRADE_CAP, MAX_PER_RESPONSE
 - `memoryguide.js` (10줄) 장기기억 첫 켜기 가이드 글(순수 데이터). 화면마다 작은 ? 버튼이 이걸 보여 준다. — GUIDE_ORDER, GUIDE
-- `memoryhuman.js` (432줄) v1.8.3 사람다운 기억(순수). 추가 AI 호출 없음. — COOL_HALF, COOL_FLOOR, effectiveTags, coolEmo, GAP_MIN
+- `memoryhuman.js` (444줄) v1.8.3 사람다운 기억(순수). 추가 AI 호출 없음. — COOL_HALF, COOL_FLOOR, effectiveTags, coolEmo, GAP_MIN
 - `memoryinject.js` (271줄) 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수. — MARKER, HEADER, stateLines, hasLiveMemory, injectVerdict
 - `memoryinner.js` (151줄) v1.7.1 3단계: 인물 관점과 내면(순수). 전부 '중요한 상황에만', 선택 기입. — IMPORTANT_MIN, POV_MAX, validateSelf, validateInner, isImportant
 - `memorykeys.js` (43줄) v1.7.1 2단계: 검색 키(순수). 기억을 만들 때 인물·장소·키워드를 함께 저장하고, 현재 장면… — KEYS_MAX, normText, validateKeys, keysOf, keyHits

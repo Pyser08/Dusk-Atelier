@@ -7,6 +7,8 @@ import { mergeWhen } from "./storydate.js";
 import { isTombed } from "./memorydelete.js";
 import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
 import { isLover } from "./lover.js";
+import { attractionCap } from "./memoryhuman.js";
+import { seedFromTies } from "./emoseed.js";
 import { applyPov, applyExp, takeSelf, isImportant, tensionKeys, noteTension, clearHints } from "./memoryinner.js";
 import { trustFields, mergeTrust, resolveConflicts, attrsForPrompt, currentState } from "./memorytrust.js";
 import { coolEmo, applyHuman, stageCeiling } from "./memoryhuman.js";
@@ -92,9 +94,10 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   }
   out.rel = applyRel(folder, result?.rel, anchor, now);
   out.ties = applyTies(folder, result?.ties, anchor, now);   // 2.2.4 오래가는 관계
+  out.tieSeed = seedFromTies(folder, anchor, now);   // 2.2.6 관계가 밝혀졌는데 감정이 비어 있으면 관계에 맞는 처음 값으로
   const tBefore = tensionKeys(folder);
   if (cool && anchor?.at != null) out.cooled = coolEmo(folder, anchor.at, now);   // v1.8.3: 시간이 지나 식은 감정을 먼저 반영(변화량이 식은 값에 더해지게)
-  out.emo = applyEmo(folder, result?.emo, anchor, now, { smooth, ceilingOf: smooth || userGuard ? (a, b) => stageCeiling(folder, a, b, anchor?.at ?? 0) : null, userGuard, isLover: (a, b) => isLover(folder, a, b), gauge });   // 2.2.6 소유욕·독점욕은 애인만, 게이지 배수   // 2.2.4 게이지 조화(단계별 분석 켠 기본 경로)
+  out.emo = applyEmo(folder, result?.emo, anchor, now, { smooth, ceilingOf: smooth || userGuard ? (a, b) => stageCeiling(folder, a, b, anchor?.at ?? 0) : null, userGuard, isLover: (a, b) => isLover(folder, a, b), gauge, attrCap: (a, b, o) => attractionCap(folder, a, b, anchor?.at ?? 0, o) });   // 2.2.6 소유욕·독점욕은 애인만, 게이지 배수   // 2.2.4 게이지 조화(단계별 분석 켠 기본 경로)
   if (important) { out.pov = applyPov(latestScene(folder), result?.pov, now); out.exp = applyExp(folder, result?.exp, anchor, now); }
   { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
   out.human = applyHuman(folder, result?.human, anchor, { important, now });   // v1.8.3: 호칭·말투, 둘만의 추억(중요할 때만), 잘못된 믿음

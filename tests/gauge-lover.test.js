@@ -225,3 +225,38 @@ test("Jev 공급자: 오픈라우터·Vercel, 기본 주소·모델은 공급자
   await J.test();
   assert.deepEqual(calls[0], [JEV_PROVIDERS.vercel.url, "Bearer vck"]);
 });
+
+import { attractionCap } from "../src/engine/memoryhuman.js";
+import { seedFromTies, tieSeedOf } from "../src/engine/emoseed.js";
+import { applyAnalysis } from "../src/engine/memoryapply.js";
+
+test("이성적 호감 상한: 처음 봄 3, 큰 사건은 한 단계 위, 인간적 호감+3, 적대 6↑이면 4, 애인 10", () => {
+  const f = { scenes: [] };
+  assert.equal(attractionCap(f, "민지", "유나", 0), 3);
+  assert.equal(attractionCap(f, "민지", "유나", 0, { big: true }), 5);
+  assert.equal(attractionCap(f, "민지", "유나", 0, { big: true, tags: { affection: 1 } }), 4);
+  assert.equal(attractionCap(f, "민지", "유나", 0, { big: true, tags: { hostility: 7 } }), 4);
+  assert.equal(attractionCap(f, "민지", "유나", 0, { lover: true }), 10);
+});
+
+test("첫 만남에 끌림이 마구 오르지 않는다(분석 경로 전체)", () => {
+  const f = { people: {}, scenes: [] };
+  for (let i = 0; i < 6; i++) applyAnalysis(f, { emo: [{ from: "민지", to: "유나", t: { attraction: 2 }, why: "설렘" }] }, { at: i, h: `h${i}` }, { smooth: true });
+  assert.equal(f.emo["민지>유나"].tags.attraction, 3);
+});
+
+test("관계로 처음 감정 채우기: 애인·가족·짝사랑·라이벌, 이미 있는 값은 그대로, 한 번만", () => {
+  assert.deepEqual(tieSeedOf("여자친구")[1], { affection: 7, attraction: 7, trust: 6 });
+  assert.equal(tieSeedOf("형사"), null);
+  const f = { ties: { a: { a: "민지", b: "유나", kind: "언니", at: 1 }, b: { a: "철수", b: "민지", kind: "짝사랑", at: 1 }, c: { a: "하린", b: "{{user}}", kind: "girlfriend", at: 1 } },
+    emo: { "유나>민지": { from: "유나", to: "민지", tags: { affection: 2 }, log: [] } } };
+  seedFromTies(f, { at: 2 });
+  assert.deepEqual(f.emo["민지>유나"].tags, { affection: 6, trust: 6 });
+  assert.deepEqual(f.emo["유나>민지"].tags, { affection: 2, trust: 6 });
+  assert.deepEqual(f.emo["철수>민지"].tags, { attraction: 5, affection: 5 });
+  assert.equal(f.emo["민지>철수"], undefined);
+  assert.equal(f.emo["하린>{{user}}"].tags.attraction, 7);
+  f.emo["민지>유나"].tags.affection = 1;
+  assert.equal(seedFromTies(f, { at: 3 }), 0);
+  assert.equal(f.emo["민지>유나"].tags.affection, 1);
+});
