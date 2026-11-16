@@ -47,7 +47,7 @@ test("턴 갱신기: 꺼져 있으면 부르지 않고, 켜면 그 턴 인물을
   await t.save({ on: false });
   assert.equal(await t.onTurn(info), null); assert.equal(calls.length, 0);
   await t.save({ on: true, groups: ["axes"] });
-  assert.deepEqual(JSON.parse(m.get(TURN_KEY)), { on: true, groups: ["axes"] });
+  assert.deepEqual(JSON.parse(m.get(TURN_KEY)), { on: true, groups: ["axes"], autoStart: true });
   await t.onTurn(info);
   assert.equal(calls.length, 1); assert.deepEqual(calls[0][1].groups, ["axes"]); assert.equal(calls[0][1].people[0].name, "앨리스");
   assert.equal(t.status().phase, "done"); assert.deepEqual(t.status().unmatched, ["밥"]);
@@ -72,8 +72,8 @@ test("턴 갱신기: 흐름에 붙고 떼기", () => {
 });
 
 test("설정 정리: 모르는 항목은 버린다", () => {
-  assert.deepEqual(normalizeTurnSettings({ on: "yes", groups: ["axes", "x", "axes"] }), { on: false, groups: ["axes"] });
-  assert.deepEqual(normalizeTurnSettings(null), { on: true, groups: ["axes", "sexual"] });
+  assert.deepEqual(normalizeTurnSettings({ on: "yes", groups: ["axes", "x", "axes"] }), { on: false, groups: ["axes"], autoStart: true });
+  assert.deepEqual(normalizeTurnSettings(null), { on: true, groups: ["axes", "sexual"], autoStart: true });
 });
 
 test("연결: 기록기 알림·엔진 연결부·애드온 붙이기", () => {

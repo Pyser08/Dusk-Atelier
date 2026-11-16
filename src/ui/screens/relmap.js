@@ -7,7 +7,7 @@ import { loadUserNames } from "../../data/usernames.js";
 import { autoMergeUser } from "../../data/usermerge.js";
 import { h, replace } from "../dom.js";
 import { chip, emptyState, loading, pageHead } from "../kit.js";
-import { buildRelMap, STATUS_LABEL } from "../../engine/relmap.js";
+import { buildRelMap, STATUS_LABEL, relmapTurns, folderAt } from "../../engine/relmap.js";
 import { mem } from "./memory/common.js";
 import { createRelMapCanvas } from "./relmap/canvas.js";
 import { eroLoad } from "./memory/erosyncwiki.js";
@@ -34,7 +34,7 @@ export async function renderRelMap(ctx) {
   if (st.view?.key === key) {
     replace(ctx.main, st.view.root); st.view.ctrl.start(); st.view.ctrl.resize();
     if (st.eroOnOpen) { st.eroOnOpen = false; st.view.ero?.(); }
-    M.store.getFolder(cur.chaId, cur.chatId).catch(() => null).then((f) => { const v = st.view; if (v?.key === key && ctx.state.tab === "relmap") v.update(buildRelMap(f)); });
+    M.store.getFolder(cur.chaId, cur.chatId).catch(() => null).then((f) => { const v = st.view; if (v?.key === key && ctx.state.tab === "relmap") v.update(buildRelMap(f), f); });
     return;
   }
   replace(ctx.main, h("div", { class: "rb-rm" }, loading("관계도를 불러오는 중")));
@@ -51,13 +51,13 @@ export async function renderRelMap(ctx) {
     return replace(ctx.main, h("div", { class: "rb-rm" }, pageHead("인물 관계도"), emptyState({ icon: "users", title: "아직 그릴 인물이 없어요", text: "대화가 쌓이고 장기 기억이 인물을 기록하면 여기에 관계도가 그려져요.", actions: [{ label: "장기 기억 열기", icon: "brain", onClick: () => ctx.go("memory") }] })));
   }
   st.view?.dispose();
-  st.view = buildView(ctx, win, cur, key, data, uname);
+  st.view = buildView(ctx, win, cur, key, data, uname, folder);
   replace(ctx.main, st.view.root);
   st.view.ctrl.start();
   if (st.eroOnOpen) { st.eroOnOpen = false; st.view.ero?.(); }
 }
 
-function buildView(ctx, win, cur, key, data, uname) {
+function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
   const adv = !!ctx.prefs.advanced;
   const canvas = h("canvas", { "aria-label": "인물 관계도" });
   const ctrlsEl = h("div", { class: "rb-rm-ctrls" });
@@ -117,7 +117,35 @@ function buildView(ctx, win, cur, key, data, uname) {
     eroOn = true; applyEro();
     if (probe.missing) toast(`위키에 없는 인물 ${probe.missing}명은 빠졌어요.`);
   } }) : null;
-  ctrlsEl.append(flatBtn, ...(spinBtn ? [spinBtn] : []), clearBtn, turnBtn, ...(eroBtn ? [eroBtn] : []));
+  // 2.2.6 이전 턴 보기: 지난 턴 시점의 관계도로 한 턴씩 되돌려 본다(저장은 그대로, 보기만).
+  let fullFolder = folder0, atTurn = null;
+  const turnLabel = h("span", { class: "rb-rm-turnlbl", id: "rb-rm-turnlbl", "aria-live": "polite" }, "지금");
+  const prevBtn = chip("◀ 이전 턴", { onClick: () => stepTurn(-1) }), nextBtn = chip("다음 턴 ▶", { onClick: () => stepTurn(1) }), nowBtn = chip("지금으로", { onClick: () => showTurn(null) });
+  prevBtn.id = "rb-rm-prev"; nextBtn.id = "rb-rm-next"; nowBtn.id = "rb-rm-now";
+  const turnsOf = () => relmapTurns(fullFolder);
+  function showTurn(at) {
+    const ts = turnsOf();
+    atTurn = at == null || !ts.length || at >= ts[ts.length - 1] ? null : at;
+    data0 = buildRelMap(atTurn == null ? fullFolder : folderAt(fullFolder, atTurn));
+    turnLabel.textContent = atTurn == null ? "지금" : `#${atTurn + 1} 응답 시점`;
+    root.classList.toggle("rb-rm-past", atTurn != null);
+    if (eroOn) { eroOn = false; }
+    applyEro(); syncTurn();
+    if (data0.empty) toast("그 시점엔 그릴 인물이 없어요.");
+  }
+  function stepTurn(d) {
+    const ts = turnsOf(); if (!ts.length) return;
+    const i = atTurn == null ? ts.length - 1 : ts.indexOf(atTurn);
+    const j = Math.max(0, Math.min(ts.length - 1, i + d));
+    showTurn(ts[j]);
+  }
+  function syncTurn() {
+    const ts = turnsOf(), i = atTurn == null ? ts.length - 1 : ts.indexOf(atTurn);
+    prevBtn.disabled = !fullFolder || i <= 0; nextBtn.disabled = atTurn == null; nowBtn.hidden = atTurn == null;
+  }
+  const turnBox = h("div", { class: "rb-rm-turns", role: "group", "aria-label": "이전 턴 보기" }, prevBtn, turnLabel, nextBtn, nowBtn);
+  ctrlsEl.append(flatBtn, ...(spinBtn ? [spinBtn] : []), clearBtn, turnBtn, ...(eroBtn ? [eroBtn] : []), turnBox);
+  syncTurn();
   function syncBtns() {
     flatBtn.firstChild.textContent = ctrl.flat ? "입체로 보기" : "정면으로 보기";
     flatBtn.setAttribute("aria-pressed", "false");
@@ -248,7 +276,9 @@ function buildView(ctx, win, cur, key, data, uname) {
 
   // 새 데이터가 있을 때만 다시 그림 (화면 유지 중 백그라운드 갱신)
   let sig = sigOf(data);
-  function update(next) {
+  function update(next, f = null) {
+    if (f) { fullFolder = f; syncTurn(); }
+    if (atTurn != null) return;   // 지난 턴을 보는 중이면 화면을 바꾸지 않는다
     if (next.empty || sigOf(next) === sig) return;
     sig = sigOf(next); data0 = next;
     if (eroOn) { applyEro(); return; }

@@ -4,6 +4,7 @@
 import { pairView, nowOf } from "./memoryhuman.js";
 import { STAGE_LABEL, USER } from "./memoryuser.js";
 import { liveTies } from "./memoryplus.js";
+import { isLoverKind } from "./lover.js";
 
 export const RM = Object.freeze({ RMIN: 70, RMAX: 300, HH: 120, MIN_GAP: 34, MAX_NODES: 40 });
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -89,14 +90,45 @@ export function buildRelMap(folder, { max = RM.MAX_NODES } = {}) {
   // 2.2.4 오래가는 관계(남매·연인 등): 있는 선은 이름으로 쓰고, 변화 기록이 없는 두 사람도 선으로 잇는다
   const ties = liveTies(folder);   // 리롤·삭제로 출처가 사라진 관계는 빼고(그 전 관계로)
   const tieOf = (x, y) => ties.find((t) => key(t.a) === x && key(t.b) === y) ?? ties.find((t) => key(t.a) === y && key(t.b) === x);
-  for (const e of edges) { const t = tieOf(e.a, e.b); if (t) e.label = cut(t.kind, 14); }
+  for (const e of edges) { const t = tieOf(e.a, e.b); if (t) { e.label = cut(t.kind, 14); if (isLoverKind(t.kind)) { e.lover = true; e.label = "💗 " + cut(t.kind, 12); } } }
   for (const t of ties) {
     const a = key(t.a), b = key(t.b); if (!keep.has(a) || !keep.has(b) || a === b || edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a))) continue;
-    edges.push({ id: `${a}~${b}`, k: `tie:${a}>${b}`, a, b, w: 0.3, s: 0.35, sp: 0, rc: 0, label: cut(t.kind, 14), items: [[t.at != null ? `#${t.at + 1}` : "", `${t.b}: ${t.a}의 ${t.kind}`]] });
+    const lv = isLoverKind(t.kind);
+    edges.push({ id: `${a}~${b}`, k: `tie:${a}>${b}`, a, b, w: lv ? 0.9 : 0.3, s: lv ? 0.7 : 0.35, sp: 0, rc: 0, ...(lv ? { lover: true } : {}), label: (lv ? "💗 " : "") + cut(t.kind, lv ? 12 : 14), items: [[t.at != null ? `#${t.at + 1}` : "", `${t.b}: ${t.a}의 ${t.kind}`]] });
   }
   // 나와의 관계: 'A에게 B는 kind'라서, 내가 A인 관계(그 인물이 나의 kind)를 먼저 쓰고, 반대 방향만 있으면 '나는 kind'로 보인다
   for (const n of nodes) { const t = tieOf(key(USER), n.id); if (t) n.uLabel = `${key(t.a) === key(USER) ? cut(t.kind, 10) : `나는 ${cut(t.kind, 8)}`} · ${n.uLabel}`; }
   return { nodes, edges, nowAt, empty: !nodes.length };
+}
+
+// 2.2.6 지난 턴 시점의 폴더(관계도 ‘이전 턴 보기’용, 원본은 건드리지 않음). at 이후에 생긴 기록·장면·관계·감정 변화를 뺀다.
+// 감정 게이지는 변화 이력(log)에서 그 시점의 마지막 값으로 되돌린다(이력이 없는 태그는 그때 없던 것으로 본다).
+export function relmapTurns(folder) {
+  const s = new Set();
+  for (const sc of folder?.scenes ?? []) if (!sc.orphan && sc.at != null) s.add(sc.at);
+  for (const p of Object.values(folder?.people ?? {})) for (const r of p?.records ?? []) if (live(r) && r.at != null) s.add(r.at);
+  return [...s].sort((a, b) => a - b);
+}
+export function folderAt(folder, at) {
+  if (!folder || at == null) return folder;
+  const ok = (x) => x?.at == null || x.at <= at;
+  const people = {};
+  for (const [k, p] of Object.entries(folder.people ?? {})) people[k] = { ...p, records: (p.records ?? []).filter((r) => r.at != null && r.at <= at) };
+  const rels = {};
+  for (const [k, r] of Object.entries(folder.rels ?? {})) { const items = (r.items ?? []).filter((i) => i.at != null && i.at <= at); if (items.length) rels[k] = { ...r, items }; }
+  const ties = {};
+  for (const [k, t] of Object.entries(folder.ties ?? {})) {
+    if (t.at != null && t.at <= at) ties[k] = t;
+    else if (t.prev && t.prev.at != null && t.prev.at <= at) ties[k] = { a: t.a, b: t.b, ...t.prev };
+  }
+  const emo = {};
+  for (const [k, pr] of Object.entries(folder.emo ?? {})) {
+    const tags = {};
+    for (const e of pr.log ?? []) if (!e.orphan && e.at != null && e.at <= at) for (const [t, v] of Object.entries(e.t ?? {})) { if (v == null) delete tags[t]; else tags[t] = v; }
+    if (Object.keys(tags).length) emo[k] = { ...pr, tags, log: (pr.log ?? []).filter((e) => e.at != null && e.at <= at) };
+  }
+  const list = (v) => (Array.isArray(v) ? v.filter(ok) : v);
+  return { ...folder, people, rels, ties, emo, scenes: (folder.scenes ?? []).filter((x) => x.at != null && x.at <= at), rifts: list(folder.rifts), bonds: list(folder.bonds), beliefs: list(folder.beliefs), cursor: { ...(folder.cursor ?? {}), at } };
 }
 
 // 위치(순수): 소속(없으면 전체)별 부채꼴 + 호감도 거리. 겹치면 서로 밀어낸다. 노드에 tx·tz·ty를 넣는다.

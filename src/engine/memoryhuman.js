@@ -13,8 +13,8 @@ const has = (rel, name) => !rel || rel.has(key(name));
 
 // ── ④ 감정 식기 ──
 // 반감기(메시지 수)와 바닥 비율. 신뢰·존경은 저절로 식지 않는다(행동으로만 바뀜). 원한은 바닥값만큼 남는다.
-export const COOL_HALF = Object.freeze({ hostility: 80, fear: 120, dependence: 240, affection: 400 });
-export const COOL_FLOOR = Object.freeze({ hostility: 0.3, fear: 0.3, dependence: 0.5, affection: 0.6 });
+export const COOL_HALF = Object.freeze({ hostility: 80, fear: 120, dependence: 240, affection: 400, attraction: 300, possess: 200, exclusive: 200 });
+export const COOL_FLOOR = Object.freeze({ hostility: 0.3, fear: 0.3, dependence: 0.5, affection: 0.6, attraction: 0.5, possess: 0.4, exclusive: 0.4 });
 function lastRealChange(pair, tag) {
   for (let i = (pair.log ?? []).length - 1; i >= 0; i--) {
     const e = pair.log[i];
@@ -83,7 +83,7 @@ export function stageOf(folder, a, b, now) {
     const pf = key(p.from), pt = key(p.to);
     if (!((pf === ka && pt === kb) || (pf === kb && pt === ka))) continue;
     const t = effectiveTags(p, now);
-    warmth = Math.max(warmth, t.affection ?? 0, t.trust ?? 0);
+    warmth = Math.max(warmth, t.affection ?? 0, t.trust ?? 0, t.attraction ?? 0);
   }
   // 장면 수만으로 보면 처음부터 친한 사이로 시작한 관계가 '처음 봄'이 된다 → 쌓인 추억·관계 변화·편한 말투도 친숙함 근거로 센다.
   const pair = (x, y) => (key(x) === ka && key(y) === kb) || (key(x) === kb && key(y) === ka);

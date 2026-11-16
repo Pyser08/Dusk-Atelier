@@ -2,9 +2,13 @@
 // 게이지: 정수 0~10. 키가 없으면 '미설정'(모름), 0은 '없음'(명시적으로 없다고 본 값)으로 구분한다. 태그끼리 공존한다.
 // 새 관계의 초기값은 비워 둔다(추측 금지). 모델은 변화량(±1~3)만 내고 코드가 병합·범위 제한한다.
 import { srcOf } from "./memoryreconcile.js";
+import { scaleDelta } from "./gaugemult.js";
 
-export const EMO_TAGS = Object.freeze(["trust", "affection", "hostility", "dependence", "respect", "fear"]);
-export const EMO_LABEL = Object.freeze({ trust: "신뢰", affection: "애정", hostility: "적대감", dependence: "의존", respect: "존경", fear: "두려움" });
+// 2.2.6: 호감을 인간적 호감(affection)과 이성적·성적 호감(attraction)으로 나눴다. 소유욕·독점욕(possess·exclusive)은 애인 사이(lover.js)에서만 움직인다.
+export const EMO_TAGS = Object.freeze(["trust", "affection", "attraction", "hostility", "dependence", "respect", "fear", "possess", "exclusive"]);
+export const EMO_LABEL = Object.freeze({ trust: "신뢰", affection: "인간적 호감", attraction: "이성적 호감", hostility: "적대감", dependence: "의존", respect: "존경", fear: "두려움", possess: "소유욕", exclusive: "독점욕" });
+export const LOVER_TAGS = Object.freeze(["possess", "exclusive"]);
+export const tagsFor = (lover) => lover ? EMO_TAGS : EMO_TAGS.filter((t) => !LOVER_TAGS.includes(t));
 export const GAUGE_MIN = 0, GAUGE_MAX = 10, STEP_MAX = 3, EMO_CAP = 40, HIGH = 4;  // HIGH: 종합 태그에 오르는 최소값
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
@@ -34,14 +38,19 @@ export function validateEmo(obj) {
 // smooth: 약한 신호(±1)는 같은 방향으로 두 번 쌓여야 한 칸 움직이고(반대 신호는 쌓인 것을 지운다), ±2 이상의 큰 사건은 바로 반영한다.
 // 약한 모델이 장면마다 관계를 오락가락 판단해도 게이지가 흔들리지 않게 한다.
 // ceilingOf(from, to) → 이 쌍의 관계 진도로 AI가 올릴 수 있는 애정·신뢰 상한(2.2.4 게이지 조화). 사용자가 정한 값은 낮추지 않는다.
-export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false, ceilingOf = null } = {}) {
+// isLover(from, to) → 애인 사이인가(소유욕·독점욕은 애인일 때만). 없으면 그 두 태그는 버린다.
+// gauge: 게이지 배수 {up, down}(gaugemult.js) — 변화량에 곱한다.
+export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false, ceilingOf = null, isLover = null, gauge = null } = {}) {
   folder.emo ??= {};
   const src = srcOf(anchor);
   let changed = 0;
   for (const e of emos ?? []) {
     const k = key(e.from) + ">" + key(e.to), pair = folder.emo[k] ??= { from: e.from, to: e.to, tags: {}, log: [] };
     const prev = {}, next = {};
+    const lover = !!isLover?.(e.from, e.to);
     for (let [tag, d] of Object.entries(e.t)) {
+      if (LOVER_TAGS.includes(tag) && !lover) continue;
+      if (gauge) { d = scaleDelta(d, gauge, { max: STEP_MAX }); if (!d) continue; }
       if (pair.lock?.[tag]) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; }   // 2.2.4: 사용자가 고친 값은 출발점 — 이후엔 대화에 따라 AI가 이어서 바꾼다(예전 잠금도 풀어 준다)
       if (smooth) {
         const pend = pair.pend?.[tag] ?? 0;

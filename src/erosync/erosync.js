@@ -23655,9 +23655,9 @@ Constraint: {{constraint}}
             overridden: isPlainObject(profile.userOverrides) && Object.keys(profile.userOverrides).length > 0,
             verdict: v.verdict?.status || '',
             // 2.2.4: 인물 위키 NSFW 칸을 채울 세부 항목(선호·체위·유혹·성적 농담·최근 행동)
-            detail: (() => { const e = isPlainObject(v.effective) ? v.effective : {}, lab = (x) => typeof x === 'string' ? x : (x?.label || x?.name || x?.text || ''), sty = (o) => isPlainObject(o) ? { frequency: o.frequency ?? null, directness: o.directness ?? null, styles: (o.styles || []).map(lab).filter(Boolean).slice(0, 6), situations: (o.typicalSituations || []).map(lab).filter(Boolean).slice(0, 5) } : null;
+            detail: (() => { const e = isPlainObject(v.effective) ? v.effective : {}, obj = (x) => { if (typeof x === 'string' && /^\s*\{/.test(x)) { try { return JSON.parse(x); } catch { const m = /"label"\s*:\s*"([^"]+)"/.exec(x); return m ? { label: m[1] } : x; } } return x; }, lab = (x0) => { const x = obj(x0); return typeof x === 'string' ? x : (x?.label || x?.name || x?.text || ''); }, pref = (x0) => { const x = obj(x0); const label = lab(x); return label ? { label, preference: typeof x === 'object' ? String(x.preference || '') : '', confidence: typeof x === 'object' && Number.isFinite(Number(x.confidence)) ? Math.round(Number(x.confidence)) : null, reason: typeof x === 'object' ? truncate(String(x.reason || ''), 160) : '' } : null; }, sty = (o) => isPlainObject(o) ? { frequency: o.frequency ?? null, directness: o.directness ?? null, styles: (o.styles || []).map(lab).filter(Boolean).slice(0, 6), situations: (o.typicalSituations || []).map(lab).filter(Boolean).slice(0, 5) } : null;
               const pos = Array.isArray(e.positionPreferences) ? e.positionPreferences : [];
-              return { prefs: (e.sexualPreferences || []).map(lab).filter(Boolean).slice(0, 14), likes: pos.filter((p) => p?.preference === 'preferred').map(lab).filter(Boolean).slice(0, 8), dislikes: pos.filter((p) => p?.preference === 'disliked').map(lab).filter(Boolean).slice(0, 8),
+              const posL = pos.map(obj); return { prefs: (e.sexualPreferences || []).map(pref).filter(Boolean).slice(0, 14), likes: posL.filter((p) => p?.preference === 'preferred').map(lab).filter(Boolean).slice(0, 8), dislikes: posL.filter((p) => p?.preference === 'disliked').map(lab).filter(Boolean).slice(0, 8),
                 seduction: sty(e.seduction), humor: sty(e.sexualHumor), lastAction: truncate(session?.actorStates?.[v.profileId]?.lastObservedAction?.summary || '', 200) }; })(),
           });
         });
@@ -23984,7 +23984,7 @@ Constraint: {{constraint}}
   // ── Dusk 매 턴 계산(HandOff/EROSYNC-TURN.md): 장기기억이 기록한 인물만, 원본 축 정의로 변화분 1번 호출 → 분석값(baseProfile)에 반영 ──
   // people: [{ name, aliases, memory }], rp: 이번 턴 글, groups: ['axes','sexual']. 사용자 수정값(userOverrides)·잠근 인물은 건드리지 않는다.
   const turnValueOf = (base, key) => key === 'eroticInterest' ? (Number.isFinite(base?.eroticInterest?.level) ? base.eroticInterest.level : null) : (Number.isFinite(base?.[key]) ? base[key] : null);
-  async function duskTurnUpdate({ people = [], rp = '', groups = null, signal = null } = {}) {
+  async function duskTurnUpdate({ people = [], rp = '', groups = null, signal = null, gauge = null } = {}) {
     const { context } = await duskProfileCtx('');
     const config = normalizeConfig(context.config);
     const keys = turnKeys(groups);
@@ -24008,7 +24008,7 @@ Constraint: {{constraint}}
     try {
       const system = buildTurnSystem({ keys, axisDefs: AXIS_DEFINITIONS, sexDefs: SEX_AXIS_DEFINITIONS, sexRules: SEX_AXIS_COMMON_RULES });
       const raw = await runJsonTask(system, truncate(buildTurnUser({ targets, rp, keys }), config.analysisProfileBatchChars), config, 'profile', 'dusk turn update', { requestGuard: guard });
-      const parsed = parseTurnReply(raw, targets, keys);
+      const parsed = parseTurnReply(raw, targets, keys, gauge);
       for (const t of targets) if (parsed[t.id]) for (const k of Object.keys(parsed[t.id].changes)) if (!t.own.includes(k)) delete parsed[t.id].changes[k];
       const ids = Object.keys(parsed).filter(id => Object.keys(parsed[id].changes).length);
       if (!ids.length) return { ok: true, changed: [], unmatched };

@@ -10,7 +10,8 @@ import { eroTagsCard } from "./erosynctagsui.js";
 import { eroTempCard } from "./erosynctempui.js";
 import { eroLoad, eroNsfwCard, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
 import { eroPerson, eroPersonByName } from "../../../engine/erosyncview.js";
-import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag } from "../../../engine/memoryemo.js";
+import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag, tagsFor } from "../../../engine/memoryemo.js";
+import { isLover, loverPairs, setLover, pairKey } from "../../../engine/lover.js";
 import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const STAGES = [["just met", "처음 봄"], ["acquaintances", "아는 사이"], ["close", "친한 사이"], ["very close", "아주 가까움"]];
@@ -78,21 +79,23 @@ export function personTabs(env, parts) {
     numCard,
     (() => { const e = eroSelf(); return e ? eroSumCard(ctx, card, ero, e) : null; })(),
     changesOf(person).length ? card("이전과 달라진 점", h("div", { class: "rb-wk2-chg" }, changesOf(person).map((c) => [h("small", null, c.label), h("span", null, h("s", null, c.from), h("i", { class: "arr", "aria-hidden": "true" }, "→"), h("b", null, c.to))]).flat())) : null,
-    people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, people.slice(0, 6).map((x) => h("button", { type: "button", class: "rb-wk2-gl", onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage))))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null,
+    people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, people.slice(0, 6).map((x) => h("button", { type: "button", class: ["rb-wk2-gl", selfNames.some((n) => isLover(f, n, x.name)) && "lover"], onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage))))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null,
     p ? card("기억에 남은 순간", h("div", { class: "rb-wk2-mom" }, momentsOf(person, now).map(({ r: rec, earlier, vague }) => h("div", { class: ["rb-wk2-mrow", vague && "vague"] }, h("span", { class: `rb-wk2-g g-${rec.g}`, title: GRADE_TIP[rec.g] ?? "" }, rec.g ?? "-"),
       h("span", { class: "t" }, rec.act, earlier ? h("small", { class: "tag old" }, "예전 모습") : null, vague ? h("small", { class: "tag" }, "흐릿한 기억 · 곧 잊혀요") : null)))),
       null, "rb-wk2-moments") : null);
 
   // ── 관계 ──
+  const loverWith = (other) => selfNames.some((n) => isLover(f, n, other));
   const feelCard = (v, other) => {
+    const TAGS = tagsFor(loverWith(other));   // 2.2.6 소유욕·독점욕은 애인일 때만
     const back = !!rev[pk + "|" + other], fv = back ? v.feel.ba : v.feel.ab, a = back ? shown(other) : me, b = back ? me : shown(other);
     const edit = () => run(modal(ctx.win, (done) => {
-      const ins = Object.fromEntries(EMO_TAGS.map((t) => [t, h("input", { class: "rb-input", type: "number", min: 0, max: GAUGE_MAX, placeholder: "비움", value: fv?.stored?.[t] ?? "", "aria-label": EMO_LABEL[t] })]));
-      return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(420px,94vw)" }, h("h3", null, `${subj(a)} ${b}에게 느끼는 감정`), h("p", { class: "rb-muted" }, "0~10. 고친 값은 잠겨서 AI가 바꾸지 않아요. 비우면 ‘모름’으로 돌아가요."),
-        h("div", { class: "rb-wk2-form" }, EMO_TAGS.map((t) => h("label", { class: "rb-mem-field" }, h("span", null, EMO_LABEL[t]), ins[t]))),
+      const ins = Object.fromEntries(TAGS.map((t) => [t, h("input", { class: "rb-input", type: "number", min: 0, max: GAUGE_MAX, placeholder: "비움", value: fv?.stored?.[t] ?? "", "aria-label": EMO_LABEL[t] })]));
+      return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(420px,94vw)" }, h("h3", null, `${subj(a)} ${b}에게 느끼는 감정`), h("p", { class: "rb-muted" }, "0~10. 고친 값은 출발점이 되고, 이후엔 대화에 따라 AI가 이어서 바꿔요. 비우면 ‘모름’으로 돌아가요. 소유욕·독점욕은 애인 사이에서만 보여요."),
+        h("div", { class: "rb-wk2-form" }, TAGS.map((t) => h("label", { class: "rb-mem-field" }, h("span", null, EMO_LABEL[t]), ins[t]))),
         h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done(ins) })));
-    }).then((ins) => ins && save((fo) => { for (const t of EMO_TAGS) { const raw = ins[t].value.trim(), cur = fv?.stored?.[t]; const val = raw === "" ? null : Math.max(0, Math.min(GAUGE_MAX, Math.round(Number(raw)))); if ((cur ?? null) !== val) setTag(fo, back ? other : me, back ? me : other, t, val); } }, "감정을 고쳤어요.")));
-    const rows = fv ? EMO_TAGS.filter((t) => fv.stored[t] != null).map((t) => {
+    }).then((ins) => ins && save((fo) => { for (const t of TAGS) { const raw = ins[t].value.trim(), cur = fv?.stored?.[t]; const val = raw === "" ? null : Math.max(0, Math.min(GAUGE_MAX, Math.round(Number(raw)))); if ((cur ?? null) !== val) setTag(fo, back ? other : me, back ? me : other, t, val); } }, "감정을 고쳤어요.")));
+    const rows = fv ? TAGS.filter((t) => fv.stored[t] != null).map((t) => {
       const val = fv.tags[t], was = fv.stored[t];
       return h("div", { class: "rb-wk2-bar" }, h("i", { class: `dot e-${t}`, "aria-hidden": "true" }), h("span", null, EMO_LABEL[t]),
         h("span", { class: "track", role: "progressbar", "aria-label": EMO_LABEL[t], "aria-valuemin": 0, "aria-valuemax": GAUGE_MAX, "aria-valuenow": val }, was > val ? h("i", { class: `ghost e-${t}`, style: { width: `${(was / GAUGE_MAX) * 100}%` } }) : null, h("i", { class: `e-${t}`, style: { width: `${(val / GAUGE_MAX) * 100}%` } })),
@@ -100,7 +103,7 @@ export function personTabs(env, parts) {
     }) : [];
     return card(`${subj(a)} ${b}에게 느끼는 감정`, [
       rows.length ? rows : h("p", { class: "rb-muted" }, "아직 기록된 감정이 없어요."),
-      rows.length && rows.length < EMO_TAGS.length ? h("small", { class: "rb-muted rb-wk2-unset" }, `아직 없음 · ${EMO_TAGS.filter((t) => fv.stored[t] == null).map((t) => EMO_LABEL[t]).join(" · ")}`) : null,
+      rows.length && rows.length < TAGS.length ? h("small", { class: "rb-muted rb-wk2-unset" }, `아직 없음 · ${TAGS.filter((t) => fv.stored[t] == null).map((t) => EMO_LABEL[t]).join(" · ")}`) : null,
       ...(fv?.cooled ?? []).map((c) => h("div", { class: "rb-wk2-note cool" }, `${subj(EMO_LABEL[c.tag])} 시간이 지나 ${c.from} → ${c.to}로 식었어요`)),
       h("button", { type: "button", class: "rb-wk2-link", onClick: () => { rev[pk + "|" + other] = !back; paint(); } }, back ? `${subj(me)} ${shown(other)}에게 느끼는 감정 보기` : `${subj(shown(other))} ${me}에게 느끼는 감정 보기`)],
       btn("고치기", { size: "sm", onClick: edit }));
@@ -159,16 +162,28 @@ export function personTabs(env, parts) {
       h("div", { class: "rb-wk2-acts" }, btn(x ? "고치기" : "직접 적기", { size: "sm", onClick: write }), x?.lock ? h("small", { class: "rb-muted", title: "잠김: AI가 바꾸지 않아요" }, "잠김") : null,
         x ? btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 태도 기록을 지울까요?", body: x.public, ok: "지우기", danger: true })) save((fo) => { deleteFace(fo, x.k); }, "지웠어요."); } }) : null));
   };
+  // 2.2.6 애인: 기록기가 남긴 관계(tie)에 연인·배우자처럼 명확한 말이 있을 때 자동으로. 직접 정하거나 끌 수도 있다.
+  const loverCard = (other) => {
+    const lp = loverPairs(f).find((x) => selfNames.some((n) => pairKey(x.a, x.b) === pairKey(n, other)));
+    const manual = f.lovers?.[pairKey(me, other)];
+    const set = (on) => save((fo) => { setLover(fo, me, other, on); }, on === true ? "애인으로 표시했어요." : on === false ? "애인이 아닌 것으로 표시했어요." : "자동 판정으로 돌렸어요.");
+    if (!lp) return card("애인", [h("p", { class: "rb-muted" }, manual === false ? "애인이 아닌 것으로 직접 정해 두었어요." : "애인으로 볼 만한 명확한 근거가 아직 없어요. 대화에서 연인·배우자 관계가 분명히 드러나면 자동으로 표시돼요."),
+      h("div", { class: "rb-wk2-acts" }, btn("애인으로 표시", { size: "sm", id: "rb-lover-on", onClick: () => set(true) }), manual === false ? btn("자동 판정으로", { size: "sm", onClick: () => set(null) }) : null)], null, "rb-wk2-lovercard off");
+    return card("💗 애인", [h("p", { class: "rb-wk2-p" }, `${shown(lp.b)} · ${shown(lp.a)}의 ${lp.kind}`),
+      h("small", { class: "rb-muted" }, lp.by === "user" ? "직접 정했어요." : "대화에서 확인된 관계예요. 소유욕·독점욕 게이지가 함께 움직여요."),
+      h("div", { class: "rb-wk2-acts" }, btn("애인 아님", { size: "sm", id: "rb-lover-off", onClick: () => set(false) }), manual ? btn("자동 판정으로", { size: "sm", onClick: () => set(null) }) : null)], null, "rb-wk2-lovercard");
+  };
   const relation = () => {
     if (!people.length) return h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "아직 함께 기록된 인물이 없어요. 대화가 이어지면 채워져요."), ...(eroSelf() ? [h("div", { class: "rb-wk2-cards" }, eroPartnerCards(ctx, card, ero, eroSelf()))] : []));
     const other = people.find((x) => x.name === withSel[pk])?.name ?? people[0].name;
     const v = pairView(f, selfNames, other, now), si = stageIdx(v.stage.stage);
     return h("div", { class: "rb-wk2-pane" },
       h("div", { class: "rb-wk2-pick", role: "group", "aria-label": "누구와의 관계를 볼까요?" }, h("small", { class: "rb-muted" }, "누구와의 관계를 볼까요?"),
-        h("div", { class: "rb-wk2-pickrow" }, people.slice(0, 12).map((x) => h("button", { type: "button", class: "rb-wk2-who", "aria-pressed": x.name === other ? "true" : "false", onClick: () => { withSel[pk] = x.name; paint(); } }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage)))))),
+        h("div", { class: "rb-wk2-pickrow" }, people.slice(0, 12).map((x) => h("button", { type: "button", class: ["rb-wk2-who", loverWith(x.name) && "lover"], title: loverWith(x.name) ? "애인" : null, "aria-pressed": x.name === other ? "true" : "false", onClick: () => { withSel[pk] = x.name; paint(); } }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage)))))),
       h("div", { class: "rb-wk2-cards" },
         card("관계 진도", [h("div", { class: "rb-wk2-steps", role: "img", "aria-label": `지금 ${STAGES[si][1]}` }, STAGES.map(([, l], i) => h("span", { class: ["st", i < si && "past", i === si && "now"] }, h("i", null), h("small", null, l)))),
           h("p", { class: "rb-muted" }, `함께한 장면 ${v.stage.shared}번${si <= 1 ? " · 아직 가깝지 않아서, AI가 갑자기 너무 친해지지 않게 해요." : ""}`)]),
+        loverCard(other),
         feelCard(v, other),
         ((ms) => ms.length ? card("수치", [...ms.map((x) => metricRow(x, true)), h("small", { class: "rb-muted" }, "이 상대가 대상인 수치만 보여요.")]) : null)(metrics.filter((x) => x.targets.some((t) => nk(t) === nk(other)))),
         card("호칭 · 말투", [talkRow(v.talk.ab, me, other), h("hr", { class: "rb-wk2-hr" }), talkRow(v.talk.ba, other, me)]),
@@ -186,7 +201,7 @@ export function personTabs(env, parts) {
   const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean), (() => { const e = eroSelf(); return e ? eroInfoCard(ctx, card, e) : null; })());
   // NSFW 탭: Dusk 성인 항목(월경·임신, 성적 욕망·이상성향 후보) + Erosync 성적 항목(켜져 있을 때만). 항상 보인다.
   const nsfw = () => {
-    const a = parts.adult ?? {}, e = eroSelf(), eroCard = e ? eroNsfwCard(ctx, card, e, () => { ero = null; eroLoad(ctx).then((snap) => { if (snap) { ero = snap; paint(); } }); }) : null;
+    const a = parts.adult ?? {}, e = eroSelf(), eroCard = e ? eroNsfwCard(ctx, card, e, () => { ero = null; eroLoad(ctx).then((snap) => { if (snap) { ero = snap; paint(); } }); }, ero) : null;
     const cyc = a.cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), a.cyc.lines.join(" · "), a.cyc.date ? h("small", { class: "rb-muted" }, ` (${a.cyc.date} 기준)`) : null) : null;
     const sumCard = e && ero ? eroSummaryCard(ctx, card, ero, e) : null;
     const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);

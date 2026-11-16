@@ -40,6 +40,7 @@ export function erosyncTurnCard(ctx) {
     replace(body,
       toggleField({ label: "매 턴 계산 켜기", hint: "기본 켜짐 · 장기기억 자동 기록이 켜져 있어야 해요", id: "rb-erosync-turn-on", on: s.on, onChange: async (v) => { await T.save({ on: v }); void draw(); } }),
       s.on ? groups : null,
+      s.on ? toggleField({ label: "출발값 자동으로 만들기", hint: "기본 켜짐 · 이 채팅에 Erosync 출발값이 없거나 처음 보는 인물이 나오면 성향 분석을 한 번 자동으로 돌려요(AI 호출이 늘어요)", id: "rb-erosync-turn-auto", on: s.autoStart, onChange: async (v) => { await T.save({ autoStart: v }); void draw(); } }) : null,
       p(statusText(T.status(), T.attached(), memOn), "rb-erosync-turn-status"),
       log.length ? h("div", { id: "rb-erosync-turn-log" }, h("b", null, "최근 바뀐 값"),
         h("ul", { class: "rb-muted", style: "white-space:normal;padding-left:18px;margin:6px 0 0" }, ...rows),

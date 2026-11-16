@@ -41,3 +41,8 @@ test("모든 항목은 실제 탭·하위 화면을 가리키고 이름·위치�
   }
   assert.equal(new Set(FEATURES.map((f) => f.t)).size, FEATURES.length);
 });
+
+test("2.2.6 게이지 배수·관계도 이전 턴을 찾는다", () => {
+  assert.equal(findFeatures("게이지 배수")[0].t, "게이지 배수 (오를 때 · 내릴 때)");
+  assert.ok(findFeatures("이전 턴").some((f) => f.t === "인물 관계도"));
+});

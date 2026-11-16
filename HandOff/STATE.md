@@ -8,6 +8,15 @@
 
 ## ▶ 다음 세션에서 이어갈 것 (11-15 기준)
 
+- **호감 분리·애인·게이지 배수·관계도 이전 턴·Erosync 정리 (11-16, 브랜치 claude/cool-ride-t4bbw2, 미커밋·미배포)**
+  - 호감 분리: `engine/memoryemo.js` EMO_TAGS에 attraction(이성적 호감)·possess(소유욕)·exclusive(독점욕) 추가, affection 라벨 ‘인간적 호감’. LOVER_TAGS·tagsFor(lover). 줄 기록 deed에 flirt·jealous, confess/touch는 attraction(memorylines DEED). JSON 지침(memoryprompt 27줄)·식기(memoryhuman COOL_HALF) 갱신.
+  - 애인: `engine/lover.js`(새) — liveTies의 kind가 연인·배우자류(isLoverKind, 전·짝사랑·썸·가짜 제외)면 애인. 사용자 설정 folder.lovers[pairKey]=({on,a,b}|false). applyEmo가 isLover 아닐 때 possess·exclusive 버림. 기록기 입력에 `lovers` 목록(memoryrunner). 위키 관계 탭(personv2) 애인 칸·분홍 표시(styles.js .lover/.rb-wk2-lovercard), 관계도 선 💗(relmap.js e.lover).
+  - 게이지 배수: `engine/gaugemult.js`(scaleDelta·scaleTarget)·`data/gaugemult.js`(pluginStorage `dusk.gauge.mult` {up,down}). 적용: applyEmo(gauge), recorder 위키 호감도 delta·성격 trait 세기(run.gauge, memoryturn), Erosync parseTurnReply(gauge; erosync.js duskTurnUpdate·data/erosyncturn.js가 넘김). 화면 `memory/gaugemultui.js`(+gaugemultcss.js) — mhome 오른쪽 열 NSFW 설정 줄과 설정 박스 사이.
+  - 관계도 이전 턴: `engine/relmap.js` relmapTurns·folderAt(그 시점 뒤 기록·관계·tie·감정 log 되감기), `ui/screens/relmap.js` ◀/▶/지금으로(#rb-rm-prev·next·now), 지난 턴 보는 중엔 백그라운드 갱신 무시.
+  - Erosync: erosync.js detail의 선호가 글자로 저장된 JSON이면 풀어서 {label,preference,confidence,reason}. erosyncwiki prefItem·좋아하는 것/싫어하는 것/성향 그룹·확신도·상대별 끌림(eroNsfwCard 5번째 인자 snap). 출발값 자동 만들기: erosyncturn settings.autoStart(기본 true) — 출발값 없으면 profile start full 한 번(채팅·세션당), 처음 보는 인물(unmatched, {{user}} 제외)도 한 번.
+  - 시험: tests/gauge-lover.test.js(8), erosync-turn 기대값 갱신, featurefind(+1). npm test 1672 pass. e2e relmap 22·smoke·wiki-strangers 12·featurefind 통과, erosync-ui는 예전부터 실패하던 더보기 메뉴 2건만.
+  - 남은 일: [ ] 애드온 dist(memory·erosync) 다시 빌드·버전은 지시 대기(지금 동작은 코어 소스만 바뀜 — 실제 사용엔 애드온 배포 필요) [ ] 새 화면(게이지 배수 카드·관계도 턴 버튼·애인 칸) e2e 없음·실기기 미확인 [ ] mepage·editor 감정 고치기 폼은 애인이 아니어도 소유욕·독점욕 칸이 보임 [ ] 위키 호감도(affinity.score)는 아직 하나(인간적/이성적 분리는 장기 기억 감정 쪽만)
+
 - **오토 스크롤 애드온 0.2.0 + 애드온 자리 자동 넣기 (11-16, 브랜치 claude/happy-dijkstra-wi2dza, 미배포)**
   - 동작: 켜면 리스 채팅의 마지막 AI 응답 맨 위에 ‘▼ 오토 스크롤’ 버튼(생성이 끝난 뒤 옮겨 감) → 누르면 정한 속도(px/초 10~400, 기본 60)로 내려감. 돌 때 화면 위 −/속도/+/■ 막대. 멈춤: ■·버튼 다시·채팅 누르기(pointerdown)·끝 도착.
   - 움직임(0.2.0, 버벅임 수정): 리스는 scrollTop을 안 줌(SafeElement에 scrollIntoView뿐). 예전엔 30ms마다 표식을 옮겨 scrollIntoView → 다리 지연 때문에 프레임의 64%가 멈췄다 뛰었음. 지금은 채팅 목록(.chat-message-container의 부모)에 `transform` linear 전환 하나를 걸어 브라우저가 그리게 하고, 멈추거나 구간이 끝나면 보이는 자리를 표식+scrollIntoView로 진짜 스크롤로 바꿈(commit). Chromium 흉내 화면에서 매 프레임 1px(60px/초) 고르게, 멈출 때 튐 없음. 주의: transform 동안 메시지 안 position:fixed 요소는 목록 기준이 됨.

@@ -24,7 +24,7 @@ export const SYSTEM_PROMPT = [
   "Optional trust fields per person entry (omit when n/a): `kd` f = stated/shown fact, i = your inference; `fc` certainty that the event really happened; `ic` soundness of your interpretation (only when kd=i). Scale: H = directly stated or explicitly shown; M = almost certain from context; L = a guess. Never upgrade a guess to a fact.",
   "`attr` only for a lasting state: {\"c\":\"pref|rel|job|home|belief|look|trait|status\",\"k\":\"short key (rel: trust→Name)\",\"v\":\"value\",\"cond\":\"only if situational\",\"tm\":\"past\" if no longer true}. Reuse c/k from `known[].attrs` for the same property. Not for one-off actions.",
   "`pat` (<=40): recurring pattern, only if seen in different situations. `mean` (<=60): probable meaning, only with kd=i and ic; omit if merely repeated. `keys`: up to 3 concrete words (objects, places, topics) a later scene would mention.",
-  "`emo` (max 3): feeling changes in this response. `t` = integer deltas -3..3 of trust, affection, hostility, dependence, respect, fear (they coexist); `why` = evidence (event importance, reaction, behavior change). Omit small shifts and unchanged tags; never absolute values (`emoState` = current 0-10 gauges).",
+  "`emo` (max 3): feeling changes in this response. `t` = integer deltas -3..3 of trust, affection (human warmth, liking as a person), attraction (romantic or sexual pull), hostility, dependence, respect, fear, possess (possessiveness), exclusive (wanting the partner only to themselves) (they coexist; possess and exclusive ONLY between confirmed lovers listed in `lovers`); `why` = evidence (event importance, reaction, behavior change). Omit small shifts and unchanged tags; never absolute values (`emoState` = current 0-10 gauges).",
   "Important moments only (scene changed or act B+), else omit: `pov` = two participants who really perceive the same event differently (view one line, why they differ). `self` in a people entry = {feel, cause (probable real reason, never certain), ic H|M|L required}, only if feel and cause differ. `exp` (max 1) = two characters' expectations: ae/be, as/bs = said aloud, gap true only if they clash, viol one line (only if gap). If `selfHint` names a character, consider `self` for them.",
   "{{user}} is the player: the real person reading and writing the user turns (the user's character / persona). Always write the player as exactly \"{{user}}\" in every name field (name, from, to, who, know), never as their persona name, \"user\", \"유저\" or \"나\". Everyone else is a story character.",
   COLLECTIVE_RULE,
@@ -45,11 +45,11 @@ export function withCustom(c, base = SYSTEM_PROMPT) {
   return [c.front, lines[0], c.middle, ...lines.slice(1), c.back].filter(Boolean).join("\n\n");
 }
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
-export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], emoState = [], selfHint = [], recent = [], newest, storyDate = "", custom = null, gauges = [], suggestGauge = false, talkState = [], rifts = [], beliefs = [], beliefsOn = false }) {
+export function buildMessages({ bot, known = [], ignore = [], previousScene = null, openItems = [], emoState = [], selfHint = [], recent = [], newest, storyDate = "", custom = null, gauges = [], suggestGauge = false, talkState = [], rifts = [], beliefs = [], beliefsOn = false, lovers = [] }) {
   // recent: 뒤에서부터 합계 4000자, newest.text ≤ 6000자
   const kept = []; let total = 0;
   for (let i = recent.length - 1; i >= 0; i--) { total += recent[i].length; if (total > 4000 && kept.length) break; kept.unshift(recent[i].slice(0, 4000)); }
-  const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), ...(emoState.length ? { emoState } : {}), ...(selfHint.length ? { selfHint } : {}), ...(talkState.length ? { talkState } : {}), ...(rifts.length ? { rifts } : {}), ...(beliefsOn && beliefs.length ? { beliefs } : {}), ...(gauges.length ? { gauges } : {}), ...(suggestGauge ? { suggestGauge: true } : {}), ...(storyDate ? { storyDate } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
+  const payload = { bot: cut(bot, 120), known, ignore, previousScene, ...(openItems.length ? { openItems } : {}), ...(emoState.length ? { emoState } : {}), ...(lovers.length ? { lovers } : {}), ...(selfHint.length ? { selfHint } : {}), ...(talkState.length ? { talkState } : {}), ...(rifts.length ? { rifts } : {}), ...(beliefsOn && beliefs.length ? { beliefs } : {}), ...(gauges.length ? { gauges } : {}), ...(suggestGauge ? { suggestGauge: true } : {}), ...(storyDate ? { storyDate } : {}), recent: kept, newest: { index: newest.index, text: cut(newest.text, 6000) } };
   return [{ role: "system", content: withCustom(custom, SYSTEM_PROMPT + "\n" + humanRules({ beliefs: beliefsOn }) + (gauges.length || suggestGauge ? "\n" + GAUGE_RULES : "")) }, { role: "user", content: JSON.stringify(payload) }];
 }
 
@@ -158,7 +158,7 @@ async function analyzeLines(call, input, { onWarn = () => {}, light = false, max
   const known = knownInText(input.known, source);
   const base = buildMessages({ ...input, known });
   let p1; try { p1 = JSON.parse(base[1].content); } catch { p1 = {}; }
-  for (const k of ["emoState", "talkState", "rifts", "beliefs", "selfHint", "gauges", "suggestGauge"]) delete p1[k];   // 떡밥 목록은 남긴다(close 줄로 닫게)
+  for (const k of ["emoState", "lovers", "talkState", "rifts", "beliefs", "selfHint", "gauges", "suggestGauge"]) delete p1[k];   // 떡밥 목록은 남긴다(close 줄로 닫게)
   const openIds = new Set((input.openItems ?? []).map((x) => String(x.id)));
   const sys1 = withCustom(input.custom, LINES_STAGE1);
   const m1 = [{ role: "system", content: sys1 }, { role: "user", content: JSON.stringify(p1) }];

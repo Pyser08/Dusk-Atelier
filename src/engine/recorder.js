@@ -7,6 +7,7 @@
 //         ③ 줄을 리수폿이 원래 받던 응답(JSON envelope)으로 바꿔 돌려준다 → 리수폿 검증·저장·화면은 그대로.
 //         같은 결과로 Dusk 기록(장면·인물·관계·떡밥·감정)도 만든다.
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
+import { scaleDelta } from "./gaugemult.js";
 import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
 import { validate } from "./memoryprompt.js";
 
@@ -383,7 +384,7 @@ export function buildEnvelope(run, rec) {
       const step = like ? coerceInt(String(like[0]).replace(/^\+/, ""), -3, 3, 0) : 0, q = like ? exactQuote(like[1], src) : "";
       const has = (doc?.metrics ?? []).some((x) => x.slot_id === "affinity.score" && (x.target_refs ?? [])[0] === "actor:user");
       if (!has && (pol.operations ?? []).includes("init")) metricOps.push({ document_ref: p.ref, slot_id: "affinity.score", target_refs: ["actor:user"], operation: "init", context_key: null, value: (pol.initial_values ?? [0]).includes(0) ? 0 : (pol.initial_values ?? [0])[0], evidence_refs: ["source:rp"], reason: "{{user}}와 처음 직접 상호작용함 — 기본값에서 시작" });
-      const amount = step ? nearest(pol.delta_values, LIKE_STEP[step]) : null;
+      const amount = step && scaleDelta(LIKE_STEP[step], run.gauge) ? nearest(pol.delta_values, scaleDelta(LIKE_STEP[step], run.gauge)) : null;   // 2.2.6 게이지 배수
       if (amount != null && q && (pol.operations ?? []).includes("delta")) metricOps.push({ document_ref: p.ref, slot_id: "affinity.score", target_refs: ["actor:user"], operation: "delta", context_key: null, events: [{ amount, evidence_refs: ["source:rp"], evidence_quote: q, reason: cut(`${p.name}의 {{user}}에 대한 감정 ${step > 0 ? "상승" : "하락"}`, 80) }] });
     }
     // 성격 프로필: 새 인물(또는 프로필이 빠진 기존 인물)만, 모델이 profile 줄을 줬을 때만
@@ -398,7 +399,8 @@ export function buildEnvelope(run, rec) {
     if (run.peopleOn && hasProfile) for (const f of L("trait").map((x) => x.f).slice(0, 2)) {
       const axis = TRAIT_AXES[String(f[0] ?? "").trim().toLowerCase()], up = /^(up|\+|increase)/i.test(String(f[1] ?? "").trim());
       const q = exactQuote(f[3], src); if (!axis || !q) continue;
-      const n = coerceInt(f[2], 1, 3, 1);
+      const n = Math.min(3, Math.abs(scaleDelta(coerceInt(f[2], 1, 3, 1) * (up ? 1 : -1), run.gauge)));   // 2.2.6 게이지 배수
+      if (!n) continue;
       peopleOps.push({ document_ref: p.ref, operation: "observe", axis, direction: up ? "increase" : "decrease", pattern: `${TRAIT_LABEL[axis]} ${up ? "높아지는" : "낮아지는"} 모습`, strength: [30, 60, 90][n - 1], confidence: 70, scene_key: String(run.requestRef ?? "").slice(0, 160) || "scene", evidence_refs: ["source:rp"], evidence_quote: q, reason: `${p.name}: 이번 응답에서 ${TRAIT_LABEL[axis]}이(가) ${up ? "높게" : "낮게"} 드러남` });
     }
     if (p.isNew) {
