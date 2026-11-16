@@ -5097,8 +5097,8 @@ The Director Note includes the necessary scene direction, payoff of existing flo
 .rb-rm-turnbar input[type=range]:active::-webkit-slider-thumb{transform:scale(1.25)}
 .rb-rm-turnbar input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--rb-acc)}
 .rb-rm-turnbar input[type=range]:disabled{opacity:.4;cursor:default}
-.rb-rm-turnlbl{font-size:12px;min-width:4.5em;text-align:right;color:var(--rb-sub);font-variant-numeric:tabular-nums}.rb-rm-past .rb-rm-turnlbl{color:var(--rb-warn);font-weight:700}
-.rb-rm-turnnow{border:0;background:none;color:var(--rb-acc);font:600 12px inherit;cursor:pointer;white-space:nowrap}
+.rb-rm-turnlbl{flex:none;width:6.2em;font-size:12px;text-align:right;white-space:nowrap;overflow:hidden;color:var(--rb-sub);font-variant-numeric:tabular-nums;font-weight:700}.rb-rm-past .rb-rm-turnlbl{color:var(--rb-warn)}
+.rb-rm-turnnow{flex:none;width:4.6em;border:0;background:none;color:var(--rb-acc);font:600 12px inherit;cursor:pointer;white-space:nowrap;text-align:center}.rb-rm-turnnow[hidden]{display:inline-block!important;visibility:hidden}   /* 시점 막대 폭이 바뀌어 떨리지 않게 글자 칸 폭 고정 */
 .rb-rm-stage .rb-rm-legend{bottom:56px}
 .rb-rm-stage.rb-rm-swap canvas{animation:rbRmSwap .55s cubic-bezier(.34,1.56,.64,1)}
 @keyframes rbRmSwap{0%{transform:scale(1)}30%{transform:scale(.94) rotate(-1.2deg);filter:saturate(1.6) brightness(1.08)}65%{transform:scale(1.025) rotate(.4deg)}100%{transform:none;filter:none}}
