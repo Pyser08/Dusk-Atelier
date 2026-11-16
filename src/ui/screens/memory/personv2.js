@@ -83,7 +83,7 @@ export function personTabs(env, parts) {
     h("button", { type: "button", class: "rb-wk2-link", onClick: () => { tabs[pk] = "info"; paint(); } }, "자세히"));
   numCard.hidden = !metrics.length;
   if (parts.gauges) Promise.resolve().then(parts.gauges).then((g) => { gauges = g ?? []; fillGauges(); }).catch(() => {});
-  const glanceCard = () => people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, people.slice(0, 6).map((x) => h("button", { type: "button", class: ["rb-wk2-gl", selfNames.some((n) => isLover(f, n, x.name)) && "lover", gcls(x.name)], "aria-pressed": lay === "B4" && x.name === (withSel[pk] ?? people[0]?.name) ? "true" : null, onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage))))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null;
+  const glanceCard = () => people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, (lay === "B4" ? people : people.slice(0, 6)).map((x) => h("button", { type: "button", class: ["rb-wk2-gl", selfNames.some((n) => isLover(f, n, x.name)) && "lover", gcls(x.name)], "aria-pressed": lay === "B4" && x.name === (withSel[pk] ?? people[0]?.name) ? "true" : null, onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage))))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null;
   // what: "all"(예전·모바일 요약 탭) | "side"(B4 PC 왼쪽 열: 수치·관계 한눈에) | "tab"(B4 PC 요약 탭: 나머지를 꾸며서)
   const summary = (what = "all") => {
     const prof = () => card(`지금의 ${me}`, [profileText ? h("p", { class: "rb-wk2-p" }, profileText) : h("p", { class: "rb-muted" }, "아직 요약이 없어요. 상세 정보에서 기본 성격을 만들거나 ‘요약 정리’를 눌러 보세요."),
@@ -93,7 +93,7 @@ export function personTabs(env, parts) {
     const mom = () => p ? card("기억에 남은 순간", h("div", { class: "rb-wk2-mom" }, momentsOf(person, now).map(({ r: rec, earlier, vague }) => h("div", { class: ["rb-wk2-mrow", vague && "vague"] }, h("span", { class: `rb-wk2-g g-${rec.g}`, title: GRADE_TIP[rec.g] ?? "" }, rec.g ?? "-"),
       h("span", { class: "t" }, rec.act, earlier ? h("small", { class: "tag old" }, "예전 모습") : null, vague ? h("small", { class: "tag" }, "흐릿한 기억 · 곧 잊혀요") : null)))),
       null, "rb-wk2-moments") : null;
-    if (what === "side") return h("div", { class: "rb-wk2-sum side" }, numCard, glanceCard());
+    if (what === "side") return h("div", { class: "rb-wk2-sum side" }, glanceCard(), numCard);   // 관계 한눈에(상대 고르기)를 프로필 바로 아래에
     if (what === "tab") return h("div", { class: "rb-wk2-sum rb-sum-tab" }, prof(), chg(), eroS(), mom());
     if (what === "log") return chg() || mom() ? h("div", { class: "rb-wk2-sum rb-sum-tab rb-sum-log" }, chg(), mom()) : null;   // B4 기록 탭 맨 위: 달라진 점·기억에 남은 순간
     return h("div", { class: ["rb-wk2-sum", lay === "B4" && "rb-sum-tab"] }, prof(), numCard, eroS(), chg(), glanceCard(), mom());
