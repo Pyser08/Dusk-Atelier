@@ -138,6 +138,18 @@
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/stealth.js",
       "sha256": "b2070730d6aca1d8fa081ae4e85654967021c9f5a1dfb9e7651c44bab10ee9d2",
       "size": 93432
+    },
+    {
+      "id": "autoscroll",
+      "name": "오토 스크롤",
+      "category": "etc",
+      "version": "0.1.0",
+      "minCore": "2.2.4",
+      "hooks": false,
+      "desc": "홈 빠른 설정에서 켜면 채팅의 마지막 AI 응답 맨 위에 ‘오토 스크롤’ 버튼이 생겨요. 누르면 정한 속도로 천천히 내려가요. 속도는 설정 탭에서 바꿔요.",
+      "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/autoscroll.js",
+      "sha256": "c9c636e6f449940e4ba8bbff1fb17fbe7e82a16142020dd4214393d34e696d1c",
+      "size": 12251
     }
   ]
 }
