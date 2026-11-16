@@ -27,3 +27,10 @@ test("깨지지 않았으면 null", () => {
   const prev = [S("sys"), U("1")], cur = [S("sys"), U("1"), A("2"), U("3")];
   assert.equal(cacheCause(prev, cur, prefixInfo(prev, cur)), null);
 });
+import { callHtml } from "../src/engine/turninfo.js";
+test("응답 아래 표시: 요약 줄에 캐시 %, 캐시 칸에 원인과 바뀐 글", () => {
+  const rec = { at: 0, startAt: 0, lastAt: 1000, model: "m", inTok: 10, outTok: 5, cache: { ratio: 0.12, same: 100, total: 900, breakAt: 0, at: 0, of: 4, dusk: "이야기 시간", cause: { kind: "dusk", text: "Dusk ‘이야기 시간’ 블록이 앞쪽에서 바뀌었어요.", prev: "Now: 10:00", cur: "Now: 11:00" } } };
+  const html = callHtml(rec);
+  assert.match(html, /<summary[^>]*>[^<]*캐시 12%/);
+  assert.match(html, /이야기 시간’ 블록이 앞쪽에서/); assert.match(html, /이번: Now: 11:00/);
+});

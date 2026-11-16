@@ -1,6 +1,6 @@
 ## cache-trim (2026-11-16, main 1beb6a2에서 분기)
 - 옛 대화 빼기 묶음화: `engine/historytrim.js` trimCovered에 `step`(경계를 step턴마다만 이동, 분석 미달이면 이전 묶음으로), `data/memoryinject.js`가 step=trimKeep 전달 → 남길 턴 2배 쌓이면 한 번에 줄임, 사이 턴은 캐시 적중. 시험 historytrim +2. 설정 문구(mhome.js)·안내서 memory.html·CHANGELOG 갱신. 미배포(애드온/본체 버전 그대로).
-- 캐시 2차: ① `engine/storytime.js` insertTime — 규칙 블록(고정)만 맨 위, `nowBlock`(지금 값)은 마지막 user 앞. ② `engine/turninfo.js` cacheCause(dusk·dropped·prompt·edited + 앞뒤 조각), `data/turninfo.js` cacheLog(최근 12개, `ctx.turnInfo.cacheLog()`)·캐시 알림에 원인 줄. ③ `ui/screens/memory/advanced.js` cacheDiag 섹션(고급 모드). featurefind 항목 추가. Dusk가 끼우는 다른 블록 점검 결과: 공정한 전개(고정)·주사위(마지막 user 앞)·이미지 태그 알림·Erosync(마지막 user 앞)·페르소나(고정)·기억(기본 맨 뒤) — 문제는 이야기 시간뿐이었음. 시험 cachediag(새 5)·storytime 수정. 본체 변경(turninfo·storytime)은 본체 릴리스 필요.
+- 캐시 2차: ① `engine/storytime.js` insertTime — 규칙 블록(고정)만 맨 위, `nowBlock`(지금 값)은 마지막 user 앞. ② `engine/turninfo.js` cacheCause(dusk·dropped·prompt·edited + 앞뒤 조각), `data/turninfo.js` cacheLog(최근 12개, `ctx.turnInfo.cacheLog()`)·캐시 알림에 원인 줄. ③ `ui/screens/memory/advanced.js` cacheDiag 섹션(고급 모드). featurefind 항목 추가. 응답 아래 상자(callHtml): 요약 줄 캐시 %, ‘캐시(어림)’ 칸에 rec.cache.cause(원인·이전/이번 조각). Dusk가 끼우는 다른 블록 점검 결과: 공정한 전개(고정)·주사위(마지막 user 앞)·이미지 태그 알림·Erosync(마지막 user 앞)·페르소나(고정)·기억(기본 맨 뒤) — 문제는 이야기 시간뿐이었음. 시험 cachediag(새 5)·storytime 수정. 본체 변경(turninfo·storytime)은 본체 릴리스 필요.
 
 # 현재 상태 — 2.2.0 브랜치 (main fd5fd34, v2.1.9 머지 뒤 분기 · 2026-11-13)
 

@@ -106,7 +106,7 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       if (pi) { cacheLog.push({ at: rec.at, ratio: pi.ratio, same: pi.same, total: pi.total, of: pi.of, cause: cacheCause(prevMsgs, flatMsgs, pi) }); if (cacheLog.length > 12) cacheLog.shift(); }   // 캐시 진단(장기 기억 → 고급)
       prevMsgs = flatMsgs;
       rec.parts = promptParts(messages).slice(0, 8).map((p) => ({ label: p.label, tok: p.tok }));   // 입력 내역(2.1.4)
-      if (pi) rec.cache = { ratio: pi.ratio, same: pi.same, total: pi.total, breakAt: pi.breakAt, at: pi.at, of: pi.of, dusk: pi.dusk };
+      if (pi) rec.cache = { ratio: pi.ratio, same: pi.same, total: pi.total, breakAt: pi.breakAt, at: pi.at, of: pi.of, dusk: pi.dusk, cause: cacheLog.at(-1)?.cause ?? null };
       if (cacheAlert && pi && pi.total >= ALERT_MIN_TOKENS && pi.ratio < ALERT_RATIO) alertCache(pi, cacheLog.at(-1)?.cause);
       if (auxBuf.length) { for (const e of auxBuf) rec.side = mergeSide(rec.side, e); auxBuf = []; }   // 첫 메인 요청 전에 나간 보조 호출
       if (diceShow || callShow) { pending = rec; chipRun(rec); } else pending = null;   // 캐시 알림만이면 응답 기록은 남기지 않는다
