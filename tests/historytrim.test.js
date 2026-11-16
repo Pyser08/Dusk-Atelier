@@ -26,3 +26,20 @@ test("요청 글이 조금 바뀌어도(앞뒤 공백·이름 치환 뒤 글) �
   const q = req(); q[3].content = "  " + q[3].content + "\n";
   assert.equal(trimCovered(q, chat, { keepTurns: 5, coveredAt: 29 }).dropped, 20);
 });
+test("묶음 빼기(step): 빼는 경계가 step턴마다만 움직여 요청 앞부분이 그대로 유지된다(캐시)", () => {
+  const mk = (n) => { const c = []; for (let i = 0; i < n * 2; i++) c.push({ role: i % 2 ? "char" : "user", data: `${i % 2 ? "봇" : "나"} 메시지 번호 ${i} 입니다. 충분히 긴 본문이 여기에 이어져요.` }); return c; };
+  const rq = (c) => c.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.data }));
+  const first = (n) => { const c = mk(n); return trimCovered(rq(c), c, { keepTurns: 5, step: 5, coveredAt: c.length - 1 }); };
+  assert.equal(first(9).dropped, 0, "keep+step 미만이면 안 뺌");
+  assert.equal(first(10).dropped, 10, "10턴이 되면 5턴을 한 번에 뺌");
+  const a = first(11), b = first(14);
+  assert.equal(a.dropped, 10); assert.equal(b.dropped, 10, "다음 묶음까지 경계 고정");
+  assert.equal(a.messages[0].content, b.messages[0].content);
+  assert.equal(first(15).dropped, 20);
+});
+test("묶음 빼기: 분석이 덜 된 경계는 이전 묶음으로 물러난다", () => {
+  const c = []; for (let i = 0; i < 30; i++) c.push({ role: i % 2 ? "char" : "user", data: `${i % 2 ? "봇" : "나"} 메시지 번호 ${i} 입니다. 충분히 긴 본문이 여기에 이어져요.` });
+  const rq = c.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.data }));
+  assert.equal(trimCovered(rq, c, { keepTurns: 5, step: 5, coveredAt: 15 }).dropped, 10, "경계 20 대신 10");
+  assert.equal(trimCovered(rq, c, { keepTurns: 5, step: 5, coveredAt: 8 }).dropped, 0);
+});

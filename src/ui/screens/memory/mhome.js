@@ -61,7 +61,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver === true, (o, v) => { o.saver = v; }));
   memOptions.append(orow("분기한 채팅에 기억 이어받기", "채팅을 분기·복사하면 갈라지기 전까지의 기억을 원래 채팅에서 이어받아요(기억이 빈 채팅만). 갈라진 뒤의 기록은 들어오지 않아요.", inj.forkInherit !== false, (o, v) => { o.forkInherit = v; }));
   // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 꺼짐
-  memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
+  memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요. 매 턴이 아니라 남길 턴만큼 쌓일 때마다 한꺼번에 빼서 그 사이엔 프롬프트 캐시가 그대로 맞아요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
   memOptions.append(orowS("지난 대화 분석에 Erosync도", "지난 대화 분석 끝에 이 채팅의 Erosync 인물 값이 비어 있으면 성향 분석을 한 번 돌려요. NSFW 채팅에서만 켜 두세요.", S.backfillErosync === true, (st, v) => { st.backfillErosync = v; }));
   memOptions.append(adultSeedRow(ctx));   // 2.2.6 처음 등장 때 성인 항목 무작위로(누르면 설정 창, 기본 꺼짐)
@@ -81,7 +81,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     replace(budgetRow, h("span", { class: "t" }, "자동 기록 입력 예산", defHint(96000, "토큰"), h("small", null, "인물 위키 자동 기록이 한 번에 읽는 글의 양(토큰)이에요. 기본값이면 충분해요.")), inp);
     budgetRow.hidden = false;
   })().catch(() => {});
-  memOptions.append(h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "‘요약된 옛 대화 빼고 보내기’를 켰을 때 이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요.")),
+  memOptions.append(h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "‘요약된 옛 대화 빼고 보내기’를 켰을 때 이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요. 두 배가 쌓이면 이만큼으로 한 번에 줄여요.")),
     num("턴", () => inj.trimKeep ?? 20, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
 
   return { memorySettings, memOptions };

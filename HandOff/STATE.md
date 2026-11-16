@@ -1,3 +1,6 @@
+## cache-trim (2026-11-16, main 1beb6a2에서 분기)
+- 옛 대화 빼기 묶음화: `engine/historytrim.js` trimCovered에 `step`(경계를 step턴마다만 이동, 분석 미달이면 이전 묶음으로), `data/memoryinject.js`가 step=trimKeep 전달 → 남길 턴 2배 쌓이면 한 번에 줄임, 사이 턴은 캐시 적중. 시험 historytrim +2. 설정 문구(mhome.js)·안내서 memory.html·CHANGELOG 갱신. 미배포(애드온/본체 버전 그대로).
+
 # 현재 상태 — 2.2.0 브랜치 (main fd5fd34, v2.1.9 머지 뒤 분기 · 2026-11-13)
 
 ## 목표: 글래스 UI 개편 — 배치 갈아엎기 → 새 테마

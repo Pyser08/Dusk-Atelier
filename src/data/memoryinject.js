@@ -107,7 +107,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       if (!c?.text) { last = { at: Date.now(), injected: false, manifest: c?.manifest ?? null, reason: c?.reason ?? "" }; return messages; }
       // 요약된 옛 대화 빼고 보내기(설정, 기본 꺼짐): 기억이 실제로 들어갈 때만, 분석이 끝난 옛 대화만 뺀다
       let send = messages, dropped = 0;
-      if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped; }
+      if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped; }
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text, dropped };
       return insertBlock(send, c.text, c.position);
     } catch (e) { log("주입 실패", e?.message ?? e); return messages; }
