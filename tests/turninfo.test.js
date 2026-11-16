@@ -51,3 +51,12 @@ test("RisuBard(bardWiki 있음)에서는 훅을 달지 않고 표시도 안 함"
   assert.equal(t.supported(), false); assert.equal(hooks, 0);
   assert.equal(await t.onDisplay("아무 글"), "아무 글");
 });
+
+test("리스 자체 Gemini 연결이면 마지막 사용자 말 앞의 바뀌는 블록을 뒤로 옮겨 앞부분을 지킨다(Dusk 프로바이더·다른 모델은 그대로)", async () => {
+  const msgs = [{ role: "system", content: "S" }, { role: "user", content: "1" }, { role: "assistant", content: "2" }, { role: "system", content: "[Dusk Memory] x" }, { role: "user", content: "3" }];
+  const run = async (aiModel) => { const store = new Map(); const api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => void store.set(k, v) }, getDatabase: async () => ({ aiModel, subModel: "" }) };
+    return (await createTurnInfo(api, { chip: false }).beforeRequest(msgs, "model")).map((m) => m.content); };
+  assert.deepEqual(await run("gemini-4-carbon"), ["S", "1", "2", "3", "[Dusk Memory] x"]);
+  assert.deepEqual(await run("Dusk 자동"), msgs.map((m) => m.content));
+  assert.deepEqual(await run("gpt-5"), msgs.map((m) => m.content));
+});

@@ -5,25 +5,31 @@ const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright")
 const r = await build({ entryPoints: ["tests/e2e/app.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"test"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json", ".md": "text", ".txt": "text" } });
 const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
 const browser = await chromium.launch(), errs = [];
-{ // 실험 기능이 꺼져 있으면: 작업실에 프로바이더가 없고 꾸미기가 원래 자리(큰 카드)에 있다
+{ // 2.2.6 프로바이더는 본체 기능: 실험 기능이 꺼져 있어도 보이고, 간단 모드는 빠른 시작 화면 + 홈 이어서 하기 밑 바로가기
   const page = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage(); page.setDefaultTimeout(5000);
+  page.on("pageerror", (e) => errs.push(e.message));
   await page.setContent("<!doctype html><body style='margin:0'></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
   await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99, onboardDone: true }) }, { provider: true }));
   await page.waitForTimeout(500);
-  await page.evaluate(() => __app.ctx.go("work-home")); await page.waitForTimeout(300);
   const vis0 = (sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((e) => e.offsetParent).length, sel);
-  ok("[꺼짐] 작업실에 프로바이더 없음 + 꾸미기 줄", (await vis0('[data-tab="provider"]')) === 0 && (await vis0('.rb-wgroup [data-tab="look"]')) === 1);
-  await page.evaluate(() => __app.ctx.go("provider")); await page.waitForTimeout(300);
-  ok("[꺼짐] 프로바이더로 직접 가도 작업실 개요로 돌아옴", (await vis0(".rb-prov")) === 0);
-  await page.evaluate(() => __app.ctx.go("tools")); await page.waitForTimeout(300);
-  ok("[꺼짐] 도구에 꾸미기 행 없음(원래 자리에 있으므로)", (await vis0("#rb-tool-look")) === 0);
+  await page.evaluate(() => __app.ctx.go("home")); await page.waitForTimeout(400);
+  ok("[간단] 홈 이어서 하기 밑에 ‘AI 연결·캐시 설정’ 버튼", (await vis0("#rb-home-prov")) === 1);
+  await page.locator("#rb-home-prov").click(); await page.waitForTimeout(500);
+  ok("[간단] 누르면 빠른 시작 화면", (await vis0(".rb-prov #rb-prov-qgo")) === 1 && (await vis0("#rb-prov-addconn")) === 0);
+  await page.locator("#rb-prov-qkey").fill("AIza-test-key-9876"); await page.locator("#rb-prov-qmain").fill("gemini-2.5-flash"); await page.locator("#rb-prov-qsub").fill("gemini-4-carbon");
+  await page.locator("#rb-prov-qgo").click(); await page.waitForTimeout(700);
+  const cfg = await page.evaluate(async () => { const c = await __app.ctx.provider.store.get(); return { en: c.enabled, models: c.profiles.map((p) => p.model), cache: c.profiles.map((p) => p.cache.gemini), main: c.purposes.main.profileId, sub: c.subProfileId, keys: c.connections[0]?.keyIds.length }; });
+  ok("[간단] 설정 만들기: 켜짐·메인/보조 프로필·캐시 자동·키 저장", cfg.en && cfg.models.join() === "gemini-2.5-flash,gemini-4-carbon" && cfg.cache.every((x) => x === "auto") && cfg.main && cfg.sub && cfg.keys === 1, JSON.stringify(cfg));
+  ok("[간단] 키 값은 화면에 없음", !(await page.content()).includes("AIza-test-key-9876"));
+  const names0 = await page.evaluate(() => window.__providers);
+  ok(`[간단] 리스에 Dusk 자동 등록: ${names0}`, names0.includes("Dusk 자동"));
   await page.close();
 }
 for (const [tag, vp] of [["PC", { width: 1280, height: 800 }], ["모바일", { width: 390, height: 844 }]]) {
   const page = await (await browser.newContext({ viewport: vp, ...tag === "모바일" ? { hasTouch: true, isMobile: true } : {} })).newPage(); page.setDefaultTimeout(5000);
   page.on("pageerror", (e) => errs.push(e.message));
   await page.setContent("<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\"><body style='margin:0'></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
-  await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99, onboardDone: true, experimental: true }) }, { provider: true }));
+  await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99, onboardDone: true, experimental: true, uiMode: "advanced" }) }, { provider: true }));
   await page.waitForTimeout(500);
   const vis = (sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((e) => e.offsetParent).length, sel);
   const go = (id) => page.evaluate((i) => window.__app?.ctx?.go?.(i) ?? window.app?.ctx?.go?.(i), id);

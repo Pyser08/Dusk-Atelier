@@ -6,6 +6,7 @@
 import { headKey, tailKey, midKey, matchRecord } from "../engine/lorelog.js";
 import { onAux, mergeSide } from "../engine/auxlog.js";
 import { parseRollMarks } from "../engine/fairplay.js";
+import { moveVolatileAfterUser } from "../engine/provider/gemplan.js";
 import { estimateTokens, diceHtml, callHtml, fmtSec, fmtTokens, prefixInfo, cacheLine, promptParts, cacheCause } from "../engine/turninfo.js";
 
 export const DICE_SHOW_KEY = "dusk.ui.diceShow";   // 기본 꺼짐
@@ -96,6 +97,8 @@ export function createTurnInfo(api, { onCacheAlert = null, diceSource = () => nu
       const aux = !!type && type !== "model";
       const prompt = (Array.isArray(messages) ? messages : []).map((m) => textOf(m?.content)).join("\n");
       const rec = { at: now(), startAt: now(), aux, model: await modelName(aux), inTok: estimateTokens(prompt), firstAt: 0, lastAt: 0 };
+      // 2.2.6 리스 자체 Gemini 연결: 요청 본문은 못 바꾸지만 순서는 바꿀 수 있다 → 바뀌는 블록을 마지막 사용자 말 뒤로(자동 캐시 앞부분 지키기). 이 훅은 늘 맨 뒤라 다른 Dusk 블록이 다 들어온 뒤다.
+      if (/gemini/i.test(rec.model) && !/dusk/i.test(rec.model)) messages = moveVolatileAfterUser(messages);
       if (aux) {   // 보조 호출은 끝을 알 수 없어(출력 훅이 안 불림) 잠깐 알려만 준다
         if (callShow && chip) { chipSet(`보조 · ${rec.model || "모델"} · 호출 중 · 입력 약 ${fmtTokens(rec.inTok)}`, ""); clearTimeout(ui.hide); ui.hide = setTimeout(chipRemove, 4e3); }
         return messages;

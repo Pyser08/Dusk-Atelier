@@ -49,7 +49,9 @@ export async function renderHome(ctx) {
   const nums = { n1: numEl("저장된 기억"), n2: numEl("이번에 넣음"), n3: numEl("인물"), n4: numEl("확인할 것") };
   const recentEl = h("aside", { class: "rb-hrecent", "aria-label": "최근 기록", "aria-busy": "true" }, h("div", { class: "rb-hw-head" }, h("h2", null, "최근 기록")), bar("85%"), h("div", { style: "height:8px" }), bar("55%", 12));
   const qsEl = h("div", { class: "rb-hqs", "aria-busy": "true" }, h("div", { class: "rb-hw-head" }, h("h2", null, "빠른 설정")), bar("80%"));
+  const provBtn = () => h("div", { class: "rb-actions", style: "margin-top:8px" }, h("button", { type: "button", class: "rb-btn ghost sm", id: "rb-home-prov", onClick: () => ctx.go("provider") }, icon("network", 14), "AI 연결·캐시 설정"));   // 2.2.6 프로바이더(본체) 바로가기 — 이어서 하기 밑
   const contEl = h("section", { class: "rb-hcont", "aria-label": "이어서 하기" }, h("div", { class: "rb-hw-head" }, h("h2", null, "이어서 하기")), h("div", { class: "rb-chips" }, h("button", { type: "button", class: "rb-chip rb-hcont-chip", onClick: () => ctx.legacy.open() }, "봇·모듈 가져오기")));
+  contEl.append(provBtn());
   const discEl = h("div", { class: "rb-discover-slot" });
   const addEl = addonBox(ctx);
   const widgets = {
@@ -175,7 +177,7 @@ export async function renderHome(ctx) {
   replace(contEl, h("div", { class: "rb-hw-head" }, h("h2", null, "이어서 하기")), h("div", { class: "rb-chips" },
     ...whoRecent.map((n) => chip(`${n} 인물 위키`, () => openWiki(n))),
     s.cur && s.M ? chip("지난 대화 분석", openMemHome, "rb-home-analyze") : null,
-    chip("봇·모듈 가져오기", () => ctx.legacy.open(), "rb-home-import2")));
+    chip("봇·모듈 가져오기", () => ctx.legacy.open(), "rb-home-import2")), provBtn());
   G.setAvail(availIds());
 }
 

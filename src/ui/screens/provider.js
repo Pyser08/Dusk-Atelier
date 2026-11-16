@@ -9,6 +9,7 @@ import { field, text, num, area, select, grid } from "./provider/ui.js";
 import { presetsFor, isOn, apply } from "../../engine/provider/presets.js";
 import { renderMore, MORE_TABS } from "./provider/more.js";
 import { glancePanel } from "./provider/glance.js";
+import { quickSetup, risuSampling, risuModels } from "../../engine/provider/quickstart.js";
 
 const TABS = [["home", "한눈에"], ["conn", "연결"], ["prof", "프로필"], ...MORE_TABS];
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -29,6 +30,7 @@ export async function renderProvider(ctx) {
     if (!alive()) return;
     cfg = await P.store.get();
     const sup = P.supported(), names = P.names();
+    if (!ctx.prefs.advanced) { replace(host, pageHead("AI 연결", { sub: "리스 모델 목록에 ‘Dusk 자동’을 더하고 캐시를 알아서 챙겨요", sw: { on: cfg.enabled, text: "사용", label: "프로바이더 사용", onChange: async (v) => { try { await mutate((c) => { c.enabled = v; }); toast(v ? "켰어요" : "껐어요"); draw(); } catch (e) { fail(e); } } } }), ...(await simplePanel())); return; }
     if (st.tab === "home" && !cfg.connections.length) st.tab = "conn";   // 연결이 없으면 연결부터
     const body = h("div", { class: "rb-prov-body", style: "display:flex;flex-direction:column;gap:14px" });
     const tabs = segmented(TABS, st.tab, (v) => { st.tab = v; draw(); }, "프로바이더 메뉴");
@@ -43,6 +45,36 @@ export async function renderProvider(ctx) {
       !cfg.profiles.length && cfg.enabled ? note("warn", "프로필이 아직 없어요. ‘연결’에서 키를 넣고 모델을 골라 프로필을 만들어 주세요.") : null,
       tabs, body);
   };
+
+  // ───────── 간단 모드: 쓰던 설정 그대로 빠른 시작 ─────────
+  async function simplePanel() {
+    let db = {}; try { db = (await ctx.api.getDatabase?.(["temperature", "maxResponse", "frequencyPenalty", "PresensePenalty", "aiModel", "subModel"])) ?? {}; } catch { db = {}; }
+    const rm = risuModels(db), prof = (id) => cfg.profiles.find((p) => p.id === id), main = prof(cfg.purposes.main.profileId), sub = prof(cfg.subProfileId);
+    const out = [];
+    if (main) out.push(statusCard(cfg.enabled ? "ok" : "warn", `메인 ${main.model}${sub ? ` · 보조 ${sub.model}` : " · 보조도 같은 모델"} · ${cfg.enabled ? "켜짐" : "꺼짐"}`),
+      note("info", "리스 설정 → 모델에서 메인 모델과 보조 모델을 ‘Dusk 자동’으로 골라 두면 아래 설정과 캐시 절약이 적용돼요. Gemini 2.5·3.x는 명시적 캐시, Gemini 4는 앞부분 지키기로 모델마다 알아서 골라요."));
+    const kindSel = select([["google", "Gemini (AI Studio)"], ["openai", "OpenAI"], ["anthropic", "Anthropic"], ["openrouter", "OpenRouter"]], "google", () => {}, "공급자");
+    const keyIn = h("input", { class: "rb-input", type: "password", id: "rb-prov-qkey", placeholder: "API 키 (이 기기에만 저장돼요)", autocomplete: "off" });
+    const mainIn = h("input", { class: "rb-input", id: "rb-prov-qmain", placeholder: "예: gemini-2.5-flash", value: main?.model || rm.main || "" });
+    const subIn = h("input", { class: "rb-input", id: "rb-prov-qsub", placeholder: "비우면 메인과 같은 모델", value: sub?.model || rm.sub || "" });
+    const go = btn(main ? "다시 설정" : "설정 만들기", { kind: "primary", icon: "check", id: "rb-prov-qgo", onClick: async () => {
+      try {
+        const model = mainIn.value.trim(); if (!model) throw new Error("메인 모델 이름을 적어 주세요");
+        const key = keyIn.value.trim(), kind = kindSel.value;
+        if (!key && !cfg.connections.some((c) => c.kind === kind && c.keyIds.length)) throw new Error("API 키를 넣어 주세요");
+        const keyId = key ? await P.vault.add(`${kindOf(kind).label} 키`, key) : "";
+        await mutate((x) => { Object.assign(x, quickSetup(x, { kind, keyId, mainModel: model, subModel: subIn.value.trim(), sampling: risuSampling(db) })); });
+        keyIn.value = ""; toast("설정했어요. 리스 모델에서 ‘Dusk 자동’을 골라 주세요.", { seconds: 8 }); draw();
+      } catch (e) { fail(e); }
+    } });
+    out.push(h("section", { class: "rb-card", style: "display:flex;flex-direction:column;gap:10px;padding:14px" },
+      h("h3", { style: "margin:0" }, main ? "다른 모델로 다시 설정" : "쓰던 설정 그대로 시작하기"),
+      h("p", { class: "rb-muted", style: "margin:0" }, "리스에서 쓰던 온도·응답 길이·페널티는 그대로 가져와요. 리스는 플러그인에 API 키를 보여 주지 않아서 키만 한 번 넣어 주세요."),
+      grid(field("공급자", kindSel), field("API 키", keyIn)), grid(field("메인 모델", mainIn), field("보조 모델", subIn)),
+      h("div", { class: "rb-actions" }, go)));
+    out.push(note("info", "연결·프로필·용도별 모델·캐시 세부·사용량 같은 모든 기능은 고급 모드에서 써요."));
+    return out;
+  }
 
   // ───────── 연결 ─────────
   function connPanel() {
