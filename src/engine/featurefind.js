@@ -36,7 +36,7 @@ export const FEATURES = [
   { t: "기억 설정 내보내기·가져오기", k: "설정 파일 백업 옮기기 export import", path: `${PA} › 설정 내보내기·가져오기`, tab: "memory", mem: POTA, find: "설정 내보내기·가져오기", addon: "memory" },
   // 장기 기억 홈
   { t: "지난 대화 분석", k: "백필 backfill 이전 대화 한꺼번에 분석 범위", path: `${M} › 지난 대화 분석`, tab: "memory", mem: { page: "home" }, find: "지난 대화", addon: "memory" },
-  { t: "처음 등장 때 성인 항목 무작위로", k: "랜덤 무작위 성적 욕망 이상성향 후보 성적 관심 성적 항목 월경 처음 등장 random 취향 맛", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "처음 등장 때 성인 항목 무작위로", addon: "memory" },
+  { t: "처음 등장 때 성인 항목 무작위로", k: "랜덤 무작위 성적 욕망 이상성향 이상성욕 후보 성적 관심 성적 항목 월경 처음 등장 random 취향 맛 커스텀 항목 분류", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "처음 등장 때 성인 항목 무작위로", addon: "memory" },
   { t: "게이지 배수 (오를 때 · 내릴 때)", k: "호감도 배수 감정 게이지 속도 올라가는 내려가는 배율 multiplier 성격 막대 erosync 소유욕 독점욕", path: `${M} › 설정 › 게이지 배수`, tab: "memory", mem: MSET, find: "게이지 배수", addon: "memory" },
   { t: "기억 넣기 토큰 · 남길 최근 턴", k: "주입 토큰 예산 inject 요약된 옛 대화 빼기 trim", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "기억 넣기", addon: "memory" },
   { t: "나에 대한 기억", k: "user 페르소나 내 정보 감정", path: `${M} › 나에 대한 기억`, tab: "memory", mem: { page: "me" }, addon: "memory" },
@@ -45,7 +45,7 @@ export const FEATURES = [
   { t: "임베딩 (의미 검색)", k: "embedding 의미 검색 voyage 보야지 벡터 뜻 비슷한 기억 원문 회상 raw recall api 키", path: `${M} › 설정 › 임베딩`, tab: "memory", mem: MSET, find: "임베딩", addon: "memory" },
   { t: "원문 회상 (지난 대화 원문 조각)", k: "raw recall 원문 회상 지난 대화 정확한 날짜 사소한 사실 임베딩", path: `${M} › 설정 › 임베딩`, tab: "memory", mem: MSET, find: "임베딩", addon: "memory" },
   { t: "기억 토큰 절약", k: "토큰 절약 줄이기 비용 아끼기 saver 기억 양 예산", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "기억 토큰 절약", addon: "memory" },
-  { t: "Jev 재정렬 (선택)", k: "jev 재정렬 rerank 고르기 모델 오픈라우터 토큰 절약 원문 회상", path: `${M} › 설정 › Jev 재정렬`, tab: "memory", mem: MSET, find: "Jev 재정렬", addon: "memory" },
+  { t: "Jev 재정렬 (선택)", k: "jev 재정렬 rerank 고르기 모델 오픈라우터 vercel 버셀 ai gateway 공급자 토큰 절약 원문 회상", path: `${M} › 설정 › Jev 재정렬`, tab: "memory", mem: MSET, find: "Jev 재정렬", addon: "memory" },
   { t: "사람다운 기억", k: "관계 진도 호칭 말투 추억 human", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "사람다운 기억", addon: "memory" },
   { t: "감정이 시간이 지나면 식어요", k: "식음 냉각 cooling 적대 두려움 애정 감정 감소", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "감정이 시간이", addon: "memory" },
   { t: "거짓말·오해 추적", k: "거짓말 오해 믿음 belief 잘못 믿는", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "거짓말", addon: "memory" },

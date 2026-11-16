@@ -179,3 +179,49 @@ test("Erosync 무작위 출발값: 처음 본 채팅의 기존 인물은 기준,
   assert.equal(await seedErosyncNow(api, er, snap([{ id: "p1", name: "민지" }, { id: "p2", name: "유나" }, { id: "p3", name: "고양이", nonPerson: true }])), 1);
   assert.equal(edits[0][0], "edit"); assert.equal(edits[0][1], "p2"); assert.ok(Number.isFinite(edits[0][2].eroticInterest));
 });
+
+import { normalizeSeedOpt, poolOf, pickable } from "../src/engine/adultseed.js";
+import { normCfg, JEV_PROVIDERS, createJev } from "../src/data/jev.js";
+
+test("무작위 설정: 고를 것 토글·끈 항목·직접 넣은 항목·분류별 묶음", () => {
+  const d = normalizeSeedOpt({});
+  assert.equal(d.on, false); assert.equal(d.cycle && d.sexual && d.desires && d.kinks, true);
+  const o = normalizeSeedOpt({ off: ["연상에게 끌린다"], custom: [{ kind: "desire", cat: "age", text: "동갑에게 끌린다" }, { kind: "kink", cat: "zzz", text: "가죽 옷에 끌린다" }, { kind: "kink", cat: "zzz", text: "가죽 옷에 끌린다" }] });
+  assert.equal(o.custom.length, 2);
+  const age = poolOf(o, "desire").find((g) => g.id === "age");
+  assert.deepEqual(age.on, ["연하를 챙기며 끌린다", "동갑에게 끌린다"]);
+  assert.equal(poolOf(o, "kink").at(-1).label, "직접 넣은 항목");
+  assert.ok(!pickable(o, "desire").includes("연상에게 끌린다"));
+  // 성적 욕망만 끄면 욕망은 비고, 이상성향 결과는 그대로
+  const all = rollAdult("민지"), noD = rollAdult("민지", null, { desires: false });
+  assert.deepEqual(noD.desires, []); assert.deepEqual(noD.kinks, all.kinks);
+  assert.equal(rollAdult("민지", null, { sexual: false }).sexual, null);
+  // 한 항목만 켜 두면 그것만 나온다
+  const only = normalizeSeedOpt({ off: pickable({}, "desire").filter((t) => t !== "역할극을 좋아한다" && t !== "눈을 맞추는 것만으로 설렌다") });
+  for (const n of ["가", "나", "다", "라"]) assert.ok(rollAdult(n, null, only).desires.every((x) => x === "눈을 맞추는 것만으로 설렌다"));
+});
+
+test("Erosync 월경: 여성 인물만 월경 추적을 켠다", async () => {
+  const store = new Map(), api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } };
+  const edits = [], er = { profile: async (op, id, patch) => { edits.push([id, patch]); return {}; } };
+  await saveSeedOpt(api, { on: true, sexual: false });
+  await seedErosyncNow(api, er, { ok: true, scope: { scopeKey: "s" }, people: [] });
+  await seedErosyncNow(api, er, { ok: true, scope: { scopeKey: "s" }, people: [{ id: "a", name: "민지", gender: "f" }, { id: "b", name: "철수", gender: "m" }] });
+  assert.deepEqual(edits, [["a", { cycle: "on" }]]);
+});
+
+test("Jev 공급자: 오픈라우터·Vercel, 기본 주소·모델은 공급자 따라, 키는 따로", async () => {
+  assert.equal(normCfg({}).provider, "openrouter");
+  const v = normCfg({ provider: "vercel", url: JEV_PROVIDERS.openrouter.url, model: JEV_PROVIDERS.openrouter.model });
+  assert.equal(v.url, JEV_PROVIDERS.vercel.url); assert.equal(v.model, JEV_PROVIDERS.vercel.model);
+  assert.equal(normCfg({ provider: "vercel", model: "my/model" }).model, "my/model");
+  const mem = new Map(), local = { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, val) => { mem.set(k, val); } };
+  mem.set("dusk.jev.cfg.v1", JSON.stringify({ cfg: { on: true }, key: "sk-or-old" }));   // 예전 저장분
+  const calls = [];
+  const J = createJev({ getLocalPluginStorage: async () => local, nativeFetch: async (url, o) => { calls.push([url, o.headers.Authorization]); return { ok: true, json: async () => ({ answers: { r0: { score: 3 }, r1: { score: 0 } } }) }; } }, { log: () => {} });
+  await J.load(); assert.equal(J.keyValue("openrouter"), "sk-or-old");
+  const s = await J.save({ provider: "vercel", key: "vck" });
+  assert.equal(s.persisted, true); assert.equal(J.keyValue("openrouter"), "sk-or-old"); assert.equal(J.keyValue(), "vck");
+  await J.test();
+  assert.deepEqual(calls[0], [JEV_PROVIDERS.vercel.url, "Bearer vck"]);
+});

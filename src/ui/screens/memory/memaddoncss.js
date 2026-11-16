@@ -28,6 +28,19 @@ export const MEM_ADDON_CSS = `.e-attraction{background:#ff6fae}.e-possess{backgr
 @keyframes rbRmSwap{0%{transform:scale(1)}30%{transform:scale(.94) rotate(-1.2deg);filter:saturate(1.6) brightness(1.08)}65%{transform:scale(1.025) rotate(.4deg)}100%{transform:none;filter:none}}
 .rb-rm-romance .rb-rm-stage{box-shadow:inset 0 0 80px rgba(255,79,154,.12)}
 @media (prefers-reduced-motion:reduce){.rb-rm-stage.rb-rm-swap canvas{animation:none}.rb-rm-mode{transition:none}}
+.rb-seed-dlg{width:min(640px,96vw);max-height:88vh;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.rb-seed-h4{margin:6px 0 0;font-size:13px;color:var(--rb-sub)}.rb-seed-sw{padding:8px 2px}
+.rb-seed-pools{display:flex;flex-direction:column;gap:12px}.rb-seed-kind{border:1px solid var(--rb-line2);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.rb-seed-kh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.rb-seed-cat{display:flex;flex-direction:column;gap:6px}
+.rb-seed-ch{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;color:var(--rb-sub)}
+.rb-seed-chips{display:flex;flex-wrap:wrap;gap:6px}
+.rb-seed-chip{display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--rb-line3);background:var(--rb-surf);opacity:.55;transition:opacity .15s,border-color .15s,background .15s}
+.rb-seed-chip.on{opacity:1;border-color:color-mix(in srgb,#ff6fae 60%,transparent);background:color-mix(in srgb,#ff6fae 12%,var(--rb-surf))}
+.rb-seed-chip.mine{border-style:dashed}
+.rb-seed-chip button{border:0;background:none;color:inherit;font:12.5px/1.3 inherit;padding:5px 10px;cursor:pointer;text-align:left}
+.rb-seed-chip button.x{padding:5px 9px 5px 0;color:var(--rb-mute)}
+.rb-seed-add{display:grid;grid-template-columns:minmax(110px,auto) 1fr auto;gap:6px}
+@media (max-width:560px){.rb-seed-add{grid-template-columns:1fr auto}.rb-seed-add select{grid-column:1/-1}}
 `;
 
 export function ensureMemAddonCss(ctx) {

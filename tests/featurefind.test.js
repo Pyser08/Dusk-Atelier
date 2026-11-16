@@ -46,4 +46,5 @@ test("2.2.6 게이지 배수·관계도 이전 턴을 찾는다", () => {
   assert.equal(findFeatures("게이지 배수")[0].t, "게이지 배수 (오를 때 · 내릴 때)");
   assert.ok(findFeatures("이전 턴").some((f) => f.t === "인물 관계도"));
   assert.equal(findFeatures("성인 항목 무작위")[0].t, "처음 등장 때 성인 항목 무작위로");
+  assert.equal(findFeatures("버셀")[0].t, "Jev 재정렬 (선택)");
 });

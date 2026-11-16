@@ -4,9 +4,12 @@ import { SEED_KEY, normalizeSeedOpt, seedWikiCandidates, rollAdult, SEX_KEYS } f
 const EROS_KEY = "dusk.adultSeed.ero";   // { [scopeKey]: [넣었거나 기준으로 본 Erosync 인물 id] }
 const readJ = async (api, k) => { try { const v = await api.pluginStorage.getItem(k); return typeof v === "string" ? JSON.parse(v) : v ?? null; } catch { return null; } };
 export const readSeedOpt = async (api) => normalizeSeedOpt(await readJ(api, SEED_KEY));
-export async function saveSeedOpt(api, on) {
+// patch: true/false(켜기·끄기, 예전 호출) 또는 설정 일부. 처음 켤 때 since를 지금으로.
+export async function saveSeedOpt(api, patch) {
   const cur = await readSeedOpt(api);
-  const next = { on: !!on, since: on ? (cur.on ? cur.since : Date.now()) : 0 };
+  const p = typeof patch === "boolean" ? { on: patch } : (patch ?? {});
+  const on = p.on ?? cur.on;
+  const next = normalizeSeedOpt({ ...cur, ...p, on, since: on ? (cur.on ? cur.since : Date.now()) : 0 });
   await api.pluginStorage.setItem(SEED_KEY, JSON.stringify(next));
   return next;
 }
@@ -21,7 +24,7 @@ export async function seedWikiNow(api, memory, log = () => {}) {
   await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => {
     if (!f.wiki?.people?.profiles) return;
     f.adultSeeded ??= [];
-    n = seedWikiCandidates(f.wiki, f.adultSeeded, { since: opt.since }).length;
+    n = (opt.desires || opt.kinks) ? seedWikiCandidates(f.wiki, f.adultSeeded, { since: opt.since, opt }).length : 0;
   });
   if (n) log(`처음 등장한 인물 ${n}명에게 성적 욕망·이상성향 후보를 무작위로 넣었어요`);
   return n;
@@ -41,8 +44,11 @@ export async function seedErosyncNow(api, erosync, snap, log = () => {}) {
     if (done.has(p.id)) continue;
     done.add(p.id);
     if (first || p.overridden) continue;   // 옵션을 켜기 전부터 있던 인물·사용자가 고친 인물은 그대로
-    const roll = rollAdult(p.name);
-    try { await erosync.profile("edit", p.id, Object.fromEntries(SEX_KEYS.map((k) => [k, roll.sexual[k]]))); n++; } catch (e) { log(`Erosync 성적 수치 넣기 실패 ${e?.message ?? e}`); }
+    const roll = rollAdult(p.name, null, opt), patch = {};
+    if (roll.sexual) Object.assign(patch, Object.fromEntries(SEX_KEYS.map((k) => [k, roll.sexual[k]])));
+    if (opt.cycle && (p.gender === "f" || p.gender === "female")) patch.cycle = "on";   // 월경: 여성 인물은 Erosync 월경 추적을 켠다(주기·날짜는 무작위로 정해짐)
+    if (!Object.keys(patch).length) continue;
+    try { await erosync.profile("edit", p.id, patch); n++; } catch (e) { log(`Erosync 성적 수치 넣기 실패 ${e?.message ?? e}`); }
   }
   all[scope] = [...done].slice(-300);
   await api.pluginStorage.setItem(EROS_KEY, JSON.stringify(all));
