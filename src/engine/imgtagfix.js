@@ -113,11 +113,11 @@ function fallbackOf(pool) {
 export function buildAssetIndex(names) {
   const input = Array.isArray(names) ? names : [];
   const groups = input.some((g) => Array.isArray(g)) ? input.filter(Array.isArray) : [input];
-  const seen = new Set(), raw = [], modes = new Set(), exact = new Set();   // exact: 실제 에셋 이름 전부(같은 이름이 확장자만 달라도 각각 — 그대로 쓴 태그는 안 고친다)
+  const seen = new Set(), raw = [], modes = new Set(), exact = new Set(), variants = new Map();   // variants: 확장자 뗀 이름 → 실제 이름들(모듈마다 확장자가 다를 수 있음)   // exact: 실제 에셋 이름 전부(같은 이름이 확장자만 달라도 각각 — 그대로 쓴 태그는 안 고친다)
   for (const g of groups) {
     // 이름 자체에 확장자가 든 에셋(`Gyeongja_smile.webp`)은 확장자를 떼고 읽되, 고칠 때는 실제 이름(확장자째)을 쓴다.
     const real = new Map();
-    for (const n0 of g) { const n = String(n0 ?? ""), b = n.replace(EXT, ""); if (n) exact.add(n); if (b && !real.has(b)) real.set(b, n); }
+    for (const n0 of g) { const n = String(n0 ?? ""), b = n.replace(EXT, ""); if (n) exact.add(n); if (b) { const v = variants.get(b) ?? variants.set(b, []).get(b); if (!v.includes(n)) v.push(n); } if (b && !real.has(b)) real.set(b, n); }
     const list = [...real.keys()].filter((n) => !seen.has(n));
     if (!list.length) continue;
     list.forEach((n) => seen.add(n));
@@ -127,7 +127,7 @@ export function buildAssetIndex(names) {
     raw.push(...r.raw);
   }
   const dotted = modes.size === 1 && modes.has(true);
-  return Object.assign(indexOf(raw, dotted, modes), { exact });
+  return Object.assign(indexOf(raw, dotted, modes), { exact, variants });
 }
 
 function parseGroup(list) {
@@ -289,6 +289,16 @@ function resolveIn(idx, t, inherit, state, dotted) {
   return { entry, kind, char, outfit };
 }
 
+// 같은 이름이 확장자만 달리 여러 개(모듈마다 다름)면 AI가 쓴 확장자(안 썼으면 확장자 없음)와 같은 쪽을 고른다. 없으면 색인 이름 그대로.
+function withExt(idx, payload, r) {
+  if (!r?.name || !r.entry) return r;
+  const v = idx.variants?.get(r.name.replace(EXT, ""));
+  if (!v || v.length < 2) return r;
+  const want = (EXT.exec(String(payload ?? "").trim())?.[0] ?? "").toLowerCase();
+  const hit = v.find((n) => (EXT.exec(n)?.[0] ?? "").toLowerCase() === want);
+  return hit && hit !== r.name ? { ...r, name: hit } : r;
+}
+
 const rarity = (idx, e) => (FALLBACK.includes(e.nk) ? Infinity : idx.kwCount.get(e.nk) ?? Infinity);
 
 // 태그 안쪽 글 → { name, kind, entry } | { remove: kind } | { keep: true }
@@ -338,7 +348,7 @@ export function fixImgTags(text, idx, opts = {}) {
     const payload = parts[3];
     if (skipPayload(payload)) continue;
     if (payload === payload.trim() && (idx.exact?.has(payload) || idx.byName.get(norm(payload)) === payload)) continue;   // 이미 정확함
-    const r = resolvePayload(idx, payload, opts.state);
+    const r = withExt(idx, payload, resolvePayload(idx, payload, opts.state));
     if (r.keep) continue;
     const from = m[0];
     if (r.name) {
@@ -422,5 +432,5 @@ export const renderTag = (span, name) => `<img${span.prefix ?? "="}${span.quote 
 export function resolveTag(idx, payload, state) {
   const p = String(payload ?? "");
   if (p === p.trim() && (idx.exact?.has(p) || idx.byName.get(norm(p)) === p)) return { name: p, kind: "exact", entry: idx.byEntryName.get(p) ?? idx.byEntryName.get(idx.byName.get(norm(p.replace(EXT, "")))) };
-  return resolvePayload(idx, p, state);
+  return withExt(idx, p, resolvePayload(idx, p, state));
 }

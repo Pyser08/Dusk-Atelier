@@ -46,3 +46,17 @@ test("같은 이름이 확장자만 달리 두 개 있으면 AI가 쓴 확장자
   assert.equal(fixImgTags('<img="Mina_smile.png">', buildAssetIndex(A)).changed, false);
   assert.equal(fix(A, '<img="Mina_smile.avif">'), '<img="Mina_smile.png">');
 });
+
+test("모듈 여러 개에 같은 이름이 확장자만 달리 있으면 AI가 쓴(또는 안 쓴) 확장자 쪽으로", () => {
+  const groups = [["Mina_smile.webp", "Mina_angry.webp", "Mina_default.webp"], ["Mina_smile", "Mina_angry", "Mina_cry", "Mina_default"]];
+  const f = (tag) => fixImgTags(`앞 ${tag} 뒤`, buildAssetIndex(groups)).text.replace(/^앞 | 뒤$/g, "");
+  assert.equal(f('<img="mina_smile">'), '<img="Mina_smile">');           // 확장자 없이 썼으면 확장자 없는 쪽
+  assert.equal(f('<img="mina_smile.WEBP">'), '<img="Mina_smile.webp">'); // .webp로 썼으면 .webp 쪽
+  assert.equal(f('<img="Mina_smiling">'), '<img="Mina_smile">');
+  assert.equal(f('<img="Mina_smiling.webp">'), '<img="Mina_smile.webp">');
+  const rev = [groups[1], groups[0]];
+  const g = (tag) => fixImgTags(`앞 ${tag} 뒤`, buildAssetIndex(rev)).text.replace(/^앞 | 뒤$/g, "");
+  assert.equal(g('<img="Mina_angry.png">'), '<img="Mina_angry">');       // 없는 확장자면 그대로 첫 묶음 기준
+  assert.equal(g('<img="mina_angry.webp">'), '<img="Mina_angry.webp">');
+  assert.equal(g('<img="Mina_smiling">'), '<img="Mina_smile">');
+});
