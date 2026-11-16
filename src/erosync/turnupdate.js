@@ -1,5 +1,6 @@
 // Dusk 2.2.0: Erosync 매 턴 계산(변화분 1번 호출). 원본 분석부의 축 정의(AXIS_DEFINITIONS·SEX_AXIS_DEFINITIONS)와
 // 성적 축 공통 규칙을 그대로 받아 채점 기준 글을 만들고, 응답(바뀐 항목만)을 정리한다. 엔진 연결부는 erosync.js duskTurnUpdate.
+import { scaleTarget } from "../engine/gaugemult.js";
 export const TURN_GROUPS = Object.freeze({
   axes: ["initiative", "spontaneity", "directness", "goalPersistence", "obsessiveness", "publicOpenness", "extremity"],
   sexual: ["eroticInterest", "sexualSpontaneity", "sexualOpenness", "sexualMomentum"]
@@ -41,7 +42,8 @@ export function buildTurnUser({ targets, rp, keys }) {
 }
 
 // 응답 → { id: { key: 값 } }. 모르는 인물·키는 버리고, 범위·한 턴 폭을 지킨다. 지금 값과 같으면 뺀다.
-export function parseTurnReply(raw, targets, keys) {
+// gauge: 게이지 배수 {up, down}(engine/gaugemult.js) — 지금 값에서 움직인 폭에 곱한다(2.2.6).
+export function parseTurnReply(raw, targets, keys, gauge = null) {
   const allowed = new Set(keys), byId = new Map(targets.map((t) => [String(t.id), t])), out = {};
   for (const item of Array.isArray(raw?.characters) ? raw.characters : []) {
     const t = byId.get(String(item?.id ?? "")); if (!t || !item?.changes || typeof item.changes !== "object") continue;
@@ -49,7 +51,8 @@ export function parseTurnReply(raw, targets, keys) {
     for (const [k, v] of Object.entries(item.changes)) {
       const n = Number(v); if (!allowed.has(k) || !Number.isFinite(n)) continue;
       const cur = Number.isFinite(t.values?.[k]) ? t.values[k] : 50;
-      const next = Math.round(Math.max(0, Math.min(100, Math.max(cur - TURN_STEP_MAX, Math.min(cur + TURN_STEP_MAX, n)))));
+      let next = Math.round(Math.max(0, Math.min(100, Math.max(cur - TURN_STEP_MAX, Math.min(cur + TURN_STEP_MAX, n)))));
+      if (gauge) next = scaleTarget(cur, next, gauge);
       if (next !== cur) changes[k] = next;
     }
     if (Object.keys(changes).length) out[t.id] = { changes, reason: String(item.reason ?? "").slice(0, 300) };

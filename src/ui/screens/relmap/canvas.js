@@ -4,6 +4,7 @@ import { RM, layoutNodes, findPath } from "../../../engine/relmap.js";
 
 const TAU = Math.PI * 2, { RMIN, RMAX, HH } = RM;
 const lerp = (a, b, t) => a + (b - a) * t;
+const easeBack = (t) => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };   // 0→1, 살짝 넘쳤다가 1로
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, win = window, onSelect, onOpenWiki, onToast, userName = "" }) {
@@ -49,23 +50,43 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
   const screen = {};
   let hotId = null, pathRes = null, curTS = {}, running = false, destroyed = false, lastTap = {};
 
-  const nodeColor = (n) => (n.faction && facAng[n.faction] != null ? TH.pal[facAng[n.faction] % TH.pal.length] : mix(TH.cool, TH.warm, n.aff / 100));
+  const PINK = "#ff4f9a";
+  let romance = false, ringLabel = "호감";
+  const nodeColor = (n) => (romance ? mix(TH.cool, PINK, n.aff / 100) : n.faction && facAng[n.faction] != null ? TH.pal[facAng[n.faction] % TH.pal.length] : mix(TH.cool, TH.warm, n.aff / 100));
   const facColor = (f) => TH.pal[(facAng[f] ?? 0) % TH.pal.length];
-  const warmth = (w) => mix(TH.cool, TH.warm, (w + 1) / 2);
+  const warmth = (w, e) => (e?.lover ? PINK : romance ? mix(TH.cool, PINK, Math.min(1, (w + 1) / 2)) : mix(TH.cool, TH.warm, (w + 1) / 2));
   const visibleN = (n) => n.user || !st.faction || n.faction === st.faction;
   const dispName = (n) => (n.status === "unknown" ? "???" : n.status === "missing" ? n.name + " (실종)" : n.name);
   const edgeById = (id) => edges.find((e) => e.id === id);
 
-  function setData(map) {
-    nodes = map.nodes.map((n) => ({ ...n, x: 0, y: 0, z: 0, tx: 0, tz: 0, ty: 0 }));
+  // animate: 관계도를 바꿀 때(호감도 ↔ 이성적 감정, 지난 턴) 인물이 제자리에서 새 자리로 튕기듯 날아가고(스프링·살짝 넘침),
+  // 가운데에서 물결이 퍼지며 화면이 한 번 휙 돈다. 처음 나온 인물은 가운데에서 솟아오른다. 움직임 줄이기 설정이면 바로 옮긴다.
+  let wave = null, lastRomance = false;
+  function setData(map, { animate = false } = {}) {
+    const old = {}; for (const n of nodes) old[n.id] = n;
+    romance = !!map.romance; ringLabel = map.ringLabel || "호감";
+    nodes = map.nodes.map((n) => ({ ...n, x: 0, y: 0, z: 0, tx: 0, tz: 0, ty: 0, vx: 0, vy: 0, vz: 0, pop: 1 }));
     const lay = layoutNodes(nodes);
     factions = lay.factions; facAng = {}; factions.forEach((f, i) => { facAng[f] = i; });
     const prev = {};
     byId = { u: user };
-    for (const n of nodes) { byId[n.id] = n; n.x = n.tx; n.z = n.tz; n.y = n.ty; }
+    // animate: true/"burst"(관계도 바꾸기) | "soft"(턴 이동: 제자리에서 부드럽게 옮기기만)
+    const soft = animate === "soft", anim = !!animate && !reduce && !soft;
+    for (const n of nodes) {
+      byId[n.id] = n;
+      const o = old[n.id];
+      if (anim && o) { n.x = o.x; n.y = o.y; n.z = o.z; n.vx = (n.tx - o.x) * 0.06; n.vz = (n.tz - o.z) * 0.06; n.vy = -14; }
+      else if (anim) { n.x = 0; n.z = 0; n.y = -60; n.pop = 0; }
+      else if (soft && o) { n.x = o.x; n.y = o.y; n.z = o.z; }
+      else if (soft && !reduce) { n.x = n.tx * 0.6; n.z = n.tz * 0.6; n.y = n.ty; n.pop = 0.6; }
+      else { n.x = n.tx; n.z = n.tz; n.y = n.ty; }
+    }
+    // 호감도 → 이성적 감정: 분홍 물결이 퍼진다 / 이성적 감정 → 호감도: 파란 물결이 가운데로 모인다
+    if (anim) { wave = { t0: performance.now(), col: romance ? PINK : "#4f8dff", inward: !romance && lastRomance }; st.springUntil = performance.now() + 1400; if (!st.flat) st.vyaw += romance ? 0.05 : -0.05; }
+    lastRomance = romance;
     void prev;
     edges = [];
-    if (!map.noUser) for (const n of nodes) edges.push({ id: "u~" + n.id, a: user, b: n, w: (n.aff - 50) / 50, s: n.uStrength, sp: n.uSpecial ? 1 : 0, rc: n.uRecent ? 1 : 0, user: true, label: n.uLabel });
+    if (!map.noUser) for (const n of nodes) if (!romance || n.aff > 0 || n.uLover) edges.push({ id: "u~" + n.id, a: user, b: n, w: romance ? n.aff / 50 - 1 : (n.aff - 50) / 50, s: n.uStrength, ...(n.uLover ? { lover: true } : {}), sp: n.uSpecial ? 1 : 0, rc: n.uRecent ? 1 : 0, user: true, label: n.uLabel });
     for (const e of map.edges) if (byId[e.a] && byId[e.b]) edges.push({ ...e, a: byId[e.a], b: byId[e.b] });
     st.sel = null; pathRes = null;
     st.faction = factions.includes(st.faction) ? st.faction : "";
@@ -127,7 +148,15 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     if ((frameN++ % 30) === 0) readTH();
     const r0 = stage.getBoundingClientRect();
     if (Math.abs(r0.width - W) > 1 || Math.abs(r0.height - H) > 1) resize();
-    for (const n of nodes) { n.x += (n.tx - n.x) * 0.12; n.z += (n.tz - n.z) * 0.12; n.y += (n.ty - n.y) * 0.12; }
+    if (st.springUntil && performance.now() < st.springUntil) {
+      for (const n of nodes) {   // 스프링(넘쳤다 돌아오는 찰진 움직임)
+        n.vx = (n.vx + (n.tx - n.x) * 0.075) * 0.8; n.vz = (n.vz + (n.tz - n.z) * 0.075) * 0.8; n.vy = (n.vy + (n.ty - n.y) * 0.075) * 0.8;
+        n.x += n.vx; n.z += n.vz; n.y += n.vy; if (n.pop < 1) n.pop = Math.min(1, n.pop + 0.06);
+      }
+    } else {
+      st.springUntil = 0;
+      for (const n of nodes) { n.x += (n.tx - n.x) * 0.12; n.z += (n.tz - n.z) * 0.12; n.y += (n.ty - n.y) * 0.12; n.pop = Math.min(1, (n.pop ?? 1) + 0.08); }
+    }
     st.flatT += (st.flat - st.flatT) * 0.12;
     let f = st.flatT; if (Math.abs(st.flat - f) < 0.002) f = st.flatT = st.flat;
     if (!st.flat && !st.drag) {
@@ -182,7 +211,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
       for (let i = 0; i <= 72; i++) { const q = proj({ x: r * Math.cos(i / 72 * TAU), y: 0, z: r * Math.sin(i / 72 * TAU) }, f, S, yaw, pitch); if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y); }
       ctx.strokeStyle = rgba(TH.text, 0.17); ctx.stroke();
       const lp = proj({ x: r * Math.cos(Math.PI * 0.5 + 0.05), y: 0, z: r * Math.sin(Math.PI * 0.5 + 0.05) }, f, S, yaw, pitch);
-      ctx.fillStyle = TH.mute; ctx.font = `12px ${FONT}`; ctx.textAlign = "left"; halo("호감 " + a, lp.x + 4, lp.y - 3);
+      ctx.fillStyle = TH.mute; ctx.font = `12px ${FONT}`; ctx.textAlign = "left"; halo(ringLabel + " " + a, lp.x + 4, lp.y - 3);
     }
     if (factions.length) {
       const sector = 360 / factions.length;
@@ -199,7 +228,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     for (const n of all) {
       const p = proj(n, f, S, yaw, pitch), fl = proj({ x: n.x, y: 0, z: n.z }, f, S, yaw, pitch);
       const rad = n.user ? 15 : 7 + (n.imp / 100) * 6;
-      screen[n.id] = { x: p.x, y: p.y, fx: fl.x, fy: fl.y, r: rad * (0.75 + 0.25 * p.k) * Math.sqrt(cam.zm * st.uz), d: p.d, n };
+      screen[n.id] = { x: p.x, y: p.y, fx: fl.x, fy: fl.y, r: rad * (0.75 + 0.25 * p.k) * Math.sqrt(cam.zm * st.uz) * (n.user ? 1 : 0.35 + 0.65 * easeBack(n.pop ?? 1)), d: p.d, n };
     }
     // 높이 눈금·기둥
     if (f < 0.95) {
@@ -217,7 +246,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     for (const e of edges) {
       const al = edgeAlpha(e, si); e._al = al;
       if (al <= 0.01) continue;
-      const A = screen[e.a.id], B = screen[e.b.id], col = warmth(e.w), lw = 1 + e.s * 4;
+      const A = screen[e.a.id], B = screen[e.b.id], col = warmth(e.w, e), lw = 1 + e.s * 4;
       ctx.globalAlpha = al;
       if (e.rc) {
         ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.strokeStyle = col; ctx.lineWidth = lw + 7;
@@ -227,6 +256,14 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
       ctx.setLineDash(e.sp ? [lw * 2.2 + 3, lw * 2 + 5] : []); ctx.globalAlpha = al * (e.user && si.none ? 0.85 : 0.95); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.globalAlpha = 1;
+    // 바꿀 때 가운데에서 퍼지는 물결 두 겹
+    if (wave) {
+      const k = (performance.now() - wave.t0) / 900;
+      if (k >= 1) wave = null;
+      else { const c0 = screen.u; for (const [d, w0] of [[0, 1], [0.18, 0.6]]) { const kk = Math.max(0, Math.min(1, (k - d) / (1 - d))); if (!kk) continue; const e = 1 - Math.pow(1 - kk, 3);
+        const rr = wave.inward ? 12 + (1 - e) * Math.max(W, H) * 0.55 : 12 + e * Math.max(W, H) * 0.55;
+        ctx.beginPath(); ctx.arc(c0.x, c0.y, rr, 0, TAU); const fade = wave.inward ? Math.sin(kk * Math.PI) : 1 - kk; ctx.strokeStyle = rgba(wave.col, fade * 0.6 * w0); ctx.lineWidth = wave.inward ? 2 + 10 * kk * w0 : 2 + 10 * (1 - kk) * w0; ctx.stroke(); } }
+    }
     // 노드(먼 것부터)
     all.slice().sort((a, b) => screen[a.id].d - screen[b.id].d).forEach((n) => {
       const s = screen[n.id], c = n.user ? TH.acc : nodeColor(n);
@@ -276,7 +313,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
       if (!(e._al >= 0.9) || (e.user && si.none)) continue;
       const A = screen[e.a.id], B = screen[e.b.id], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2;
       ctx.font = `600 13px ${FONT}`; const tw = ctx.measureText(e.label).width + 14;
-      ctx.fillStyle = TH.surf; ctx.strokeStyle = warmth(e.w); ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(mx - tw / 2, my - 11, tw, 22, 11); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = TH.surf; ctx.strokeStyle = warmth(e.w, e); ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(mx - tw / 2, my - 11, tw, 22, 11); ctx.fill(); ctx.stroke();
       ctx.fillStyle = TH.text; ctx.textAlign = "center"; ctx.fillText(e.label, mx, my + 4);
     }
     // 중요 / 덜 중요: 맨 위에 그리되 버튼줄·범례 영역 밖으로 민다

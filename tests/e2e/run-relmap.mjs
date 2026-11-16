@@ -42,6 +42,18 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const pathTxt = await page.locator(".rb-rm-panel").textContent();
   ok(`[${tag}] 경로 찾기: 리안 → 미라 1단계`, /1단계로 이어져요/.test(pathTxt), pathTxt.slice(0, 120));
   // 도움말
+  // 2.2.6 관계도 바꾸기(호감도 ↔ 이성적 감정)·아래 시점 막대
+  ok(`[${tag}] ? 아래 관계도 단추 2개`, (await page.locator(".rb-rm-modes .rb-rm-mode").count()) === 2);
+  await page.locator("#rb-rm-mode-romance").click(); await page.waitForTimeout(500);
+  ok(`[${tag}] 이성적 감정 관계도로 바뀜`, (await page.locator(".rb-rm.rb-rm-romance").count()) === 1 && (await page.locator("#rb-rm-mode-romance").getAttribute("aria-pressed")) === "true");
+  await page.screenshot({ path: `/tmp/relmap-${tag}-romance.png` });
+  await page.locator("#rb-rm-mode-affinity").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 호감도로 돌아옴`, (await page.locator(".rb-rm.rb-rm-romance").count()) === 0);
+  const tmax = Number(await page.locator("#rb-rm-turn").getAttribute("max"));
+  if (tmax > 0) { await page.locator("#rb-rm-turn").fill("0"); await page.waitForTimeout(300); }
+  ok(`[${tag}] 시점 막대로 지난 턴 보기`, tmax > 0 ? /응답/.test(await page.locator("#rb-rm-turnlbl").textContent()) && (await page.locator("#rb-rm-now").isVisible()) : true, `max ${tmax}`);
+  if (tmax > 0) { await page.screenshot({ path: `/tmp/relmap-${tag}-past.png` }); await page.locator("#rb-rm-now").click(); await page.waitForTimeout(300); }
+  ok(`[${tag}] 지금으로 돌아옴`, (await page.locator("#rb-rm-turnlbl").textContent()) === "지금");
   await page.locator(".rb-rm-help").click(); ok(`[${tag}] ? 도움말이 열린다`, await page.locator(".rb-rm-pop").isVisible());
   await page.keyboard.press("Escape"); ok(`[${tag}] Esc로 도움말이 닫힌다`, !(await page.locator(".rb-rm-pop").isVisible()));
   // 정면 보기 토글

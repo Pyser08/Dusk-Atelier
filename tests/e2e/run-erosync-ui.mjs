@@ -89,7 +89,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator(".rb-rm-panel .rb-btn.primary").click(); await page.waitForTimeout(1500);
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "sirokko", tab: "people", page: "detail" }); __app.ctx.go("relmap"); }); await page.waitForTimeout(300); await page.evaluate(() => __app.ctx.go("memory")); await page.waitForTimeout(1500);   // 시험 데이터의 폴더 키
   const body = async () => (await page.locator(".rb-wk2").first().textContent().catch(() => "")) ?? "";
-  ok(`[${tag}] 위키 요약에 '지금 노리는 목표'`, /지금 노리는 목표/.test(await body()) && /순찰 끝나고 둘이 남기/.test(await body()));
+  // 2.2.6: 요약 탭을 없애 노리는 목표는 NSFW 탭 ‘지금 상태’에서 보여 준다
+  { const nt = page.locator('.rb-wk2-tab[data-t="nsfw"]').first(); if (await nt.count()) { await nt.click(); await page.waitForTimeout(500); } }
+  ok(`[${tag}] 위키 NSFW ‘지금 상태’에 노리는 목표`, /지금 상태/.test(await body()) && /순찰 끝나고 둘이 남기/.test(await body()));
   await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(400);
   ok(`[${tag}] 상세 정보에 'Erosync 성향' 8축 게이지`, (await page.locator(".rb-wk2-ero").filter({ hasText: "Erosync 성향" }).count()) === 1 && /주도성/.test(await body()));
   ok(`[${tag}] 상세 정보에는 성적 항목이 없다`, !/성적 관심/.test(await body()));

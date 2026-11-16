@@ -7,7 +7,8 @@ import { loadUserNames } from "../../data/usernames.js";
 import { autoMergeUser } from "../../data/usermerge.js";
 import { h, replace } from "../dom.js";
 import { chip, emptyState, loading, pageHead } from "../kit.js";
-import { buildRelMap, STATUS_LABEL } from "../../engine/relmap.js";
+import { buildRelMap, STATUS_LABEL, relmapTurns, folderAt } from "../../engine/relmap.js";
+import { ensureMemAddonCss } from "./memory/memaddoncss.js";
 import { mem } from "./memory/common.js";
 import { createRelMapCanvas } from "./relmap/canvas.js";
 import { eroLoad } from "./memory/erosyncwiki.js";
@@ -15,7 +16,7 @@ import { eroRelmapData } from "../../engine/erosyncview.js";
 import { nameIndex } from "../../engine/identity.js";
 
 const sigOf = (m) => `${m.nowAt}|${m.nodes.map((n) => `${n.id}:${n.aff}:${n.imp}:${n.records}`).join(",")}|${m.edges.map((e) => `${e.id}:${e.w}:${e.items.length}`).join(",")}`;
-const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 가까이"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 파랗게"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
+const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 가까이 (이성적 감정 관계도에서는 나에게 끌릴수록)"], ["오른쪽 단추", "호감도 ↔ 이성적 감정 관계도 바꾸기"], ["아래 막대", "끌어서 지난 응답 시점의 관계도 보기"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 파랗게"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
 
 export async function renderRelMap(ctx) {
   const M = ctx.memory, st = (ctx.state.relmap ??= {});
@@ -34,7 +35,7 @@ export async function renderRelMap(ctx) {
   if (st.view?.key === key) {
     replace(ctx.main, st.view.root); st.view.ctrl.start(); st.view.ctrl.resize();
     if (st.eroOnOpen) { st.eroOnOpen = false; st.view.ero?.(); }
-    M.store.getFolder(cur.chaId, cur.chatId).catch(() => null).then((f) => { const v = st.view; if (v?.key === key && ctx.state.tab === "relmap") v.update(buildRelMap(f)); });
+    M.store.getFolder(cur.chaId, cur.chatId).catch(() => null).then((f) => { const v = st.view; if (v?.key === key && ctx.state.tab === "relmap") v.update(buildRelMap(f), f); });
     return;
   }
   replace(ctx.main, h("div", { class: "rb-rm" }, loading("관계도를 불러오는 중")));
@@ -51,14 +52,15 @@ export async function renderRelMap(ctx) {
     return replace(ctx.main, h("div", { class: "rb-rm" }, pageHead("인물 관계도"), emptyState({ icon: "users", title: "아직 그릴 인물이 없어요", text: "대화가 쌓이고 장기 기억이 인물을 기록하면 여기에 관계도가 그려져요.", actions: [{ label: "장기 기억 열기", icon: "brain", onClick: () => ctx.go("memory") }] })));
   }
   st.view?.dispose();
-  st.view = buildView(ctx, win, cur, key, data, uname);
+  st.view = buildView(ctx, win, cur, key, data, uname, folder);
   replace(ctx.main, st.view.root);
   st.view.ctrl.start();
   if (st.eroOnOpen) { st.eroOnOpen = false; st.view.ero?.(); }
 }
 
-function buildView(ctx, win, cur, key, data, uname) {
+function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
   const adv = !!ctx.prefs.advanced;
+  ensureMemAddonCss(ctx);
   const canvas = h("canvas", { "aria-label": "인물 관계도" });
   const ctrlsEl = h("div", { class: "rb-rm-ctrls" });
   const legendEl = h("div", { class: "rb-rm-legend" },
@@ -102,11 +104,12 @@ function buildView(ctx, win, cur, key, data, uname) {
   let eroOn = false, eroSnap = null, aliasIdx = null;
   ctx.memory.store.getFolder(cur.chaId, cur.chatId).then((f) => { aliasIdx = nameIndex(f, (n) => String(n ?? "").trim().toLowerCase().replace(/\s+/g, "")); }).catch(() => {});   // 2.2.2: Erosync 인물을 장기 기억 이름·별칭으로 찾는다
   const legendDefault = [...legendEl.childNodes];
+  const roLegend = [h("span", null, h("i", { style: "border-color:#ff4f9a" }), "애인 · 끌림"), h("span", null, h("i", { style: "border-color:#ff4f9a;border-top-style:dashed" }), "짝사랑 · 한쪽만"), h("span", null, h("i", { style: "border-color:var(--rb-blue);border-top-style:dashed" }), "연적 · 💔 전 애인"), h("span", null, "가까울수록 나에게 끌림 · 선을 누르면 연표")];
   const eroLegend = [h("span", null, h("i", { style: "border-color:var(--rb-rose)" }), "목표 (노리는 쪽 → 대상)"), h("span", null, h("i", { style: "border-color:var(--rb-blue);border-top-style:dashed" }), "경쟁"), h("span", null, "굵기 = 우선도·세기")];
-  const applyEro = () => {
+  const applyEro = (o = {}) => {
     const mapped = eroOn ? eroRelmapData(data0, eroSnap, aliasIdx) : data0;
-    ctrl.setData(mapped); buildFilters(); curSel = null; ctrl.select(null);
-    legendEl.replaceChildren(...(eroOn ? eroLegend : legendDefault));
+    ctrl.setData(mapped, o); buildFilters(); curSel = null; ctrl.select(null);
+    legendEl.replaceChildren(...(eroOn ? eroLegend : mode === "romance" ? roLegend : legendDefault));
     syncBtns(); paint();
   };
   const eroBtn = ctx.erosync?.isRunning?.() ? chip("Erosync 목표·경쟁만 보기", { onClick: async () => {
@@ -117,7 +120,49 @@ function buildView(ctx, win, cur, key, data, uname) {
     eroOn = true; applyEro();
     if (probe.missing) toast(`위키에 없는 인물 ${probe.missing}명은 빠졌어요.`);
   } }) : null;
+  // 2.2.6 관계도 두 가지(호감도 · 이성적 감정)와 지난 턴 보기. 아래 막대를 끌어 응답 시점을 고르고, ? 아래 단추로 관계도를 바꾼다.
+  let fullFolder = folder0, atTurn = null, mode = ctx.state.relmap?.mode === "romance" ? "romance" : "affinity";
+  const turnsOf = () => relmapTurns(fullFolder);
+  const turnLabel = h("output", { class: "rb-rm-turnlbl", id: "rb-rm-turnlbl", "aria-live": "polite" }, "지금");
+  const turnRange = h("input", { type: "range", id: "rb-rm-turn", min: 0, max: 0, step: 1, value: 0, "aria-label": "볼 응답 시점",
+    onInput: (e) => { const ts = turnsOf(), i = Number(e.target.value); showTurn(i >= ts.length - 1 ? null : ts[i], false); } });
+  const nowBtn = h("button", { type: "button", class: "rb-rm-turnnow", id: "rb-rm-now", hidden: true, onClick: () => showTurn(null, true) }, "지금으로");
+  const turnBar = h("div", { class: "rb-rm-turnbar", role: "group", "aria-label": "지난 턴 보기" }, h("small", { class: "rb-muted" }, "시점"), turnRange, turnLabel, nowBtn);
+  const build = () => buildRelMap(atTurn == null ? fullFolder : folderAt(fullFolder, atTurn), { mode });
+  function showTurn(at, animate) {
+    const ts = turnsOf();
+    const next = at == null || !ts.length || at >= ts[ts.length - 1] ? null : at;
+    if (next === atTurn && !animate) return;
+    atTurn = next;
+    data0 = build();
+    root.classList.toggle("rb-rm-past", atTurn != null);
+    eroOn = false; applyEro({ animate: "soft" }); syncTurn();   // 턴 이동은 부드럽게만
+    if (data0.empty) toast("그 시점엔 그릴 인물이 없어요.");
+  }
+  function syncTurn() {
+    const ts = turnsOf(), i = atTurn == null ? ts.length - 1 : ts.indexOf(atTurn);
+    turnRange.max = String(Math.max(0, ts.length - 1)); turnRange.value = String(Math.max(0, i)); turnRange.disabled = ts.length < 2;
+    turnRange.style.setProperty("--p", `${ts.length > 1 ? (Math.max(0, i) / (ts.length - 1)) * 100 : 100}%`);
+    turnLabel.textContent = atTurn == null ? "지금" : `#${atTurn + 1} 응답`;
+    nowBtn.hidden = atTurn == null;
+  }
+  const modeBtns = [["affinity", "호감도"], ["romance", "이성적 감정"]].map(([k, l]) => h("button", { type: "button", class: `rb-rm-mode m-${k}`, id: `rb-rm-mode-${k}`, "aria-pressed": String(mode === k), onClick: () => setMode(k) }, l));
+  const modeBox = h("div", { class: "rb-rm-modes", role: "group", "aria-label": "관계도 고르기" }, ...modeBtns);
+  function setMode(k) {
+    if (k === mode) return;
+    mode = k; ctx.state.relmap.mode = k;
+    modeBtns.forEach((b) => b.setAttribute("aria-pressed", String(b.id === `rb-rm-mode-${k}`)));
+    root.classList.toggle("rb-rm-romance", k === "romance");
+    stage.classList.remove("rb-rm-swap"); void stage.offsetWidth; stage.classList.add("rb-rm-swap");
+    data0 = build(); sig = sigOf(data0);
+    eroOn = false; applyEro({ animate: true });
+    if (data0.empty || (k === "romance" && !data0.nodes.some((n) => n.aff > 0) && !data0.edges.length)) toast("아직 이성적 감정이 기록된 인물이 없어요.");
+  }
+  stage.append(modeBox, turnBar);
+  root.classList.toggle("rb-rm-romance", mode === "romance");
+  if (mode === "romance") { data0 = build(); ctrl.setData(data0); legendEl.replaceChildren(...roLegend); }
   ctrlsEl.append(flatBtn, ...(spinBtn ? [spinBtn] : []), clearBtn, turnBtn, ...(eroBtn ? [eroBtn] : []));
+  syncTurn();
   function syncBtns() {
     flatBtn.firstChild.textContent = ctrl.flat ? "입체로 보기" : "정면으로 보기";
     flatBtn.setAttribute("aria-pressed", "false");
@@ -144,8 +189,8 @@ function buildView(ctx, win, cur, key, data, uname) {
     return [
       turn.length ? h("div", null, h("h3", { style: "margin-top:0" }, `이번 턴 등장 · ${turn.length}명`), h("ul", { class: "rb-rm-list row" }, ...turn.map((n) => li(rowBtn(h("span", null, dot(ctrl.nodeColor(n)), n.name), null, () => goNode(n.id), { style: `border-color:${ctrl.nodeColor(n)}` }))))) : null,
       h("p", { style: "color:var(--rb-muted);margin-top:14px" }, "인물이나 선을 누르면 위키 내용이 여기에 나와요. 읽는 법은 관계도 오른쪽 위 ? 버튼에 있어요."),
-      h("h3", null, "호감도 순"),
-      h("ul", { class: "rb-rm-list" }, ...byAff.map((n) => li(rowBtn(h("span", null, dot(ctrl.nodeColor(n)), dn(n)), `호감 ${n.aff}`, () => goNode(n.id)))))
+      h("h3", null, mode === "romance" ? "끌림 순" : "호감도 순"),
+      h("ul", { class: "rb-rm-list" }, ...byAff.map((n) => li(rowBtn(h("span", null, dot(ctrl.nodeColor(n)), dn(n)), `${mode === "romance" ? "끌림" : "호감"} ${n.aff}`, () => goNode(n.id)))))
     ];
   }
   function nodeView(n) {
@@ -155,7 +200,7 @@ function buildView(ctx, win, cur, key, data, uname) {
       h("h2", null, dn(n)),
       h("p", null, n.faction ? h("span", { class: "rb-rm-badge" }, n.faction) : null, n.thisTurn ? h("span", { class: "rb-rm-badge new" }, "이번 턴 등장") : null, n.status ? h("span", { class: "rb-rm-badge" }, STATUS_LABEL[n.status]) : null),
       n.sum ? h("p", null, n.sum) : null,
-      meter("호감도", n.aff), meter("중요도", n.imp),
+      meter(mode === "romance" ? "끌림" : "호감도", n.aff), meter("중요도", n.imp),
       ...(ue ? [h("h3", null, "{{user}}와의 관계"),
       h("ul", { class: "rb-rm-list" }, li(rowBtn(h("span", null, dot(ctrl.warmth(ue.w)), `${ue.label}${ue.sp ? " · 갈등 중" : ""}`), `${ue.rc ? "최근 변화 · " : ""}자세히`, () => goEdge(ue.id))))] : []),
       h("h3", null, "NPC 간 관계"),
@@ -171,7 +216,7 @@ function buildView(ctx, win, cur, key, data, uname) {
     if (e.user) {
       const n = e.b;
       return [h("h2", null, `{{user}} · ${n.name}`), h("p", null, h("span", { class: "rb-rm-badge" }, e.label), e.rc ? h("span", { class: "rb-rm-badge new" }, "최근 변화") : null, e.sp ? h("span", { class: "rb-rm-badge new" }, "풀리지 않은 갈등") : null),
-        h("p", null, `${n.name}이(가) {{user}}에게 느끼는 호감도예요. 거리와 선 색에 그대로 반영돼요.`), meter("호감도", n.aff),
+        h("p", null, `${n.name}이(가) {{user}}에게 느끼는 ${mode === "romance" ? "이성적 끌림" : "호감도"}예요. 거리와 선 색에 그대로 반영돼요.`), meter(mode === "romance" ? "끌림" : "호감도", n.aff),
         n.rec.length ? h("h3", null, "최근 기록") : null, ...recs(n.rec),
         h("div", { class: "rb-rm-act" }, h("button", { type: "button", class: "rb-btn primary", onClick: () => goNode(n.id) }, h("span", null, `${n.name} 보기`)))];
     }
@@ -248,7 +293,10 @@ function buildView(ctx, win, cur, key, data, uname) {
 
   // 새 데이터가 있을 때만 다시 그림 (화면 유지 중 백그라운드 갱신)
   let sig = sigOf(data);
-  function update(next) {
+  function update(next, f = null) {
+    if (f) { fullFolder = f; syncTurn(); }
+    if (atTurn != null) return;   // 지난 턴을 보는 중이면 화면을 바꾸지 않는다
+    if (mode !== "affinity" && fullFolder) next = buildRelMap(fullFolder, { mode });
     if (next.empty || sigOf(next) === sig) return;
     sig = sigOf(next); data0 = next;
     if (eroOn) { applyEro(); return; }

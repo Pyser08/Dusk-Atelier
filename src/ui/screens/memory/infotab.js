@@ -1,6 +1,7 @@
 // v1.8.3 인물 위키 '상세 정보' 탭(최종안): 바로가기 · 기본 성격(성향 2열) · 수치(값 있는 것만 막대, 미지정은 칩) · 감정(상대별 한 줄)
 // · 내용 있는 기록 묶음만 카드 · 비어 있는 항목은 맨 아래 칩(누르면 채우기 창). 넓은 화면(@container memwrap)은 왼쪽 바로가기 + 2열.
 // 기능은 예전 블록과 같다(고정·편집·삭제·AI 작성은 각 줄의 '…' 메뉴로 옮김).
+import { wkLayoutOf } from "./memaddoncss.js";
 import { h } from "../../dom.js";
 import { userLabel } from "./username.js";
 import { btn, modal, confirmDialog, openMenu } from "../../kit.js";
@@ -53,7 +54,7 @@ export function infoTab(env, B) {
     const open = !!openMore[doc.id];
     const axes = h("div", { class: "rb-wk3-axes" }, K.AXES.map((a) => { const v = profile.axes?.[a] ?? 50; return h("div", { class: "rb-wk3-ax" },
       h("div", { class: "l" }, h("span", null, K.AXIS_LABEL[a]), pinMark(`axis:${a}`), h("b", null, String(v))),
-      h("span", { class: "track", role: "progressbar", "aria-label": K.AXIS_LABEL[a], "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": v }, h("i", { style: { width: `${v}%` } })),
+      h("span", { class: "track", role: "progressbar", "aria-label": K.AXIS_LABEL[a], "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": v, style: { "--v": `${v}%` } }, h("i", { style: { width: `${v}%` } })),
       h("small", { class: "band" }, K.band(a, v))); }));
     const pins = ed ? h("div", { class: "rb-wk3-pins" }, h("small", { class: "rb-muted" }, "고정하면 AI가 그 칸을 고치지 않아요."),
       h("div", { class: "rb-wk2-chips" }, [["summary", "성격 요약"], ["coreTraits", "핵심 기질"], ...K.AXES.map((a) => [`axis:${a}`, K.AXIS_LABEL[a]]), ["values", "중요 가치"], ...K.TEXT_FIELDS.map(([k, l]) => [k, l])].map(([key, label]) => {
@@ -88,7 +89,8 @@ export function infoTab(env, B) {
         x.lastDelta ? h("small", { class: ["d", x.lastDelta > 0 ? "up" : "down"] }, `최근 ${x.lastDelta > 0 ? "+" : ""}${x.lastDelta}`) : h("span"),
         h("b", { class: "v" }, String(x.value), h("small", { class: "rb-muted" }, `/${max}`)),
         h("span", { class: "track", role: "progressbar", "aria-label": label, "aria-valuemin": min, "aria-valuemax": max, "aria-valuenow": x.value }, h("i", { style: { width: `${pct(x.value, min, max)}%` } }))];
-      return ed ? h("button", { type: "button", class: "rb-wk3-num", title: "눌러서 고치기·고정·삭제", onClick: (e) => openMenu(ctx.win, e.currentTarget, items) }, inner) : h("div", { class: "rb-wk3-num" }, inner);
+      const mk = { "data-slot": String(x.slotId).split(".")[0], style: { "--p": `${pct(x.value, min, max)}%` } };
+      return ed ? h("button", { type: "button", class: "rb-wk3-num", title: "눌러서 고치기·고정·삭제", onClick: (e) => openMenu(ctx.win, e.currentTarget, items), ...mk }, inner) : h("div", { class: "rb-wk3-num", ...mk }, inner);
     });
     const unset = K.METER_SLOTS.filter(([s]) => !doc.metrics.some((x) => x.slotId === s));
     const gbox = h("div", { class: "rb-wk3-nums" });
@@ -113,22 +115,39 @@ export function infoTab(env, B) {
   const mine = new Set([doc.title, ...(doc.aliases ?? []), p?.name, ...(p?.aliases ?? [])].map(nm).filter(Boolean)), now = nowOf(env.folder);
   const pairs = Object.values(env.folder.emo ?? {}).filter((x) => mine.has(nm(x.from)) && EMO_TAGS.some((t) => x.tags?.[t] != null)).sort((a, b) => (nm(b.to) === "{{user}}") - (nm(a.to) === "{{user}}"));
   const emoCard = () => card("emo", "감정", pairs.length ? h("div", { class: "rb-wk3-emo" }, pairs.map((x) => { const eff = effectiveTags(x, now);
+    const v = (t) => eff[t] ?? x.tags[t];
+    if (wkLayoutOf(m)) {   // 개편: 상대마다 작은 카드 — 인간적·이성적 호감은 굵은 막대, 나머지는 색 칩
+      const hos = v("hostility") ?? 0, crack = hos >= 6 ? "broken" : hos >= 3 ? "cracked" : null;   // 적대감 3+ 금 · 6+ 깨짐
+      const big = (t, l) => h("div", { class: ["rb-emo2-big", `e-${t}-c`, x.tags[t] == null && "empty", x.tags[t] != null && crack] }, h("small", null, l), h("span", { class: "track" }, h("i", { style: { width: `${(v(t) ?? 0) * 10}%` } })), h("b", null, x.tags[t] == null ? "—" : String(v(t))));
+      const rest = EMO_TAGS.filter((t) => t !== "affection" && t !== "attraction" && x.tags[t] != null);
+      return h("button", { type: "button", class: "rb-emo2", title: "관계 탭에서 보기", onClick: () => B.go("rel", x.to) },
+        h("div", { class: "hd" }, h("b", null, shown(x.to)), h("small", { class: "rb-muted" }, "관계 탭 ›")),
+        big("affection", "인간적 호감"), big("attraction", "이성적 호감"),
+        rest.length ? h("div", { class: "chips" }, rest.map((t) => h("span", { class: `rb-emo2-chip e-${t}-c` }, EMO_LABEL[t], h("b", null, String(v(t)))))) : null);
+    }
     return h("button", { type: "button", class: "rb-wk3-emorow", title: "관계 탭에서 보기", onClick: () => B.go("rel", x.to) }, h("span", { class: "to" }, `→ ${shown(x.to)}`),
       h("span", null, EMO_TAGS.filter((t) => x.tags[t] != null).map((t, i) => [i ? " · " : "", EMO_LABEL[t], " ", h("b", null, String(eff[t] ?? x.tags[t]))]).flat())); }))
     : h("p", { class: "rb-muted" }, "아직 기록된 감정이 없어요. 대화가 이어지면 기억 분석이 채워 줘요."),
   h("button", { type: "button", class: "rb-wk2-link", onClick: () => B.go("rel") }, "관계 탭에서 보기 ›"));
 
   // ── 기록 묶음 ──
-  const secItem = (s) => {
-    const targets = (s.provenance?.targetRefs ?? []).map(B.nameOf).filter(Boolean).map(shown).join(", ");
-    return h("div", { class: "rb-wk3-item" }, h("div", { class: "txt" }, s.heading || s.title ? h("b", null, s.heading || s.title, pinMark(sectionPinKey(s.id))) : pinMark(sectionPinKey(s.id)), targets ? h("small", { class: "rb-muted" }, `대상 · ${targets}`) : null, h("p", null, s.body)),
+  // 2.2.6 가독성: 본문이 먼저, 제목은 묶음 이름과 다를 때만, 대상은 ‘→ 이름’ 칩
+  const same = (a, b) => String(a ?? "").replace(/\s+/g, "") === String(b ?? "").replace(/\s+/g, "");
+  const secItem = (s, group) => {
+    const targets = (s.provenance?.targetRefs ?? []).map(B.nameOf).filter(Boolean).map(shown);
+    const head = s.heading || s.title, showHead = head && !same(head, group);
+    return h("div", { class: "rb-wk3-item" }, h("div", { class: "txt" },
+      showHead || targets.length ? h("div", { class: "rb-wk3-ihead" }, showHead ? h("b", null, head) : null, ...targets.map((t) => h("small", { class: "rb-wk3-to" }, `→ ${t}`)), pinMark(sectionPinKey(s.id))) : pinMark(sectionPinKey(s.id)),
+      h("p", null, s.body)),
       more(s.heading || "항목", [{ label: "고치기", onClick: () => run(editWikiText(env, st, { label: s.heading || "항목", body: s.body, sectionId: s.id })) }, pinItem(sectionPinKey(s.id)),
         { label: "AI로 다시 쓰기", onClick: () => run(openFieldAI(env, doc, `section:${s.id}`, `${s.heading || "항목"} AI 작성`)) },
         { label: "삭제", danger: true, onClick: async () => { if (!(await confirmDialog(ctx.win, { title: "이 항목을 지울까요?", body: s.heading || "", ok: "삭제", danger: true }))) return; commit((w) => deletePersonItem(w, doc.id, { id: s.id, kind: "section", expected: JSON.stringify(doc.sections.find((x) => x.id === s.id)), scopeKey: scopeKeyOf(w) }), "지웠어요."); } }]));
   };
   const addFor = (g) => ed ? btn("추가", { size: "sm", onClick: (e) => openMenu(ctx.win, e.currentTarget, [{ label: "직접 적기", onClick: () => run(openRecords(env, doc, { group: g })) }, { label: "AI가 대화 보고 채우기", onClick: () => run(B.aiNew(g)) }]) }) : null;
   const recIds = K.ORDER.filter((id) => id !== "PROFILE" && id !== "METRICS");
-  const secsOf = (id) => (K.MEMBERS[id] ?? [id]).flatMap((g) => groups[g] ?? []);
+  // 월경·임신 칸은 NSFW 탭에서 따로 보여 주므로 여기선 뺀다
+  const isCycle = (x) => x?.provenance?.slotId === "cycle.state" || x?.heading === "월경·임신";
+  const secsOf = (id) => (K.MEMBERS[id] ?? [id]).flatMap((g) => groups[g] ?? []).filter((x) => !isCycle(x));
   const filled = recIds.filter((id) => secsOf(id).length), empty = recIds.filter((id) => !secsOf(id).length && K.ALWAYS.has(id));
   const speechOpen = (m.wkSpeech ??= {});
   const recCards = filled.map((id, i) => {
@@ -137,7 +156,7 @@ export function infoTab(env, B) {
       const mineS = list.filter((s) => (s.provenance?.targetRefs ?? []).includes("actor:user")), rest = list.filter((s) => !mineS.includes(s)), open = !!speechOpen[doc.id];
       if (rest.length && mineS.length) { list = open ? [...mineS, ...rest] : mineS; foot = h("button", { type: "button", class: "rb-wk2-link", onClick: () => { speechOpen[doc.id] = !open; redraw(); } }, open ? "다른 인물 대상 말투 접기" : `다른 인물 대상 말투 ${rest.length}개 펼치기`); }
     }
-    return card(i === 0 ? "rec" : "rec-" + id, h("span", null, K.LABEL[id], h("small", { class: "rb-muted" }, ` ${secsOf(id).length}`)), [K.SUB[id] ? h("small", { class: "rb-muted" }, K.SUB[id]) : null, ...list.map(secItem), foot], addFor(id === "npc" ? "npc" : id));
+    return card(i === 0 ? "rec" : "rec-" + id, h("span", null, K.LABEL[id], h("small", { class: "rb-muted" }, ` ${secsOf(id).length}`)), [K.SUB[id] ? h("small", { class: "rb-muted" }, K.SUB[id]) : null, ...list.map((x) => secItem(x, K.LABEL[id])), foot], addFor(id === "npc" ? "npc" : id), "rb-wk3-rec rg-" + id);
   });
 
   // ── 비어 있는 항목 ──

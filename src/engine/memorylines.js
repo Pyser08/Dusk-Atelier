@@ -61,7 +61,8 @@ const SUBJ = "the focus character";
 function stage2Rules(N, { light, beliefs, wiki, extraLines }) {
   const r = ["Check first:"];
   if (wiki) r.push(`like|+1 +2 +3 or -1 -2 -3|exact quote      how ${N}'s feeling toward {{user}} moved in newest (1 slight, 2 clear, 3 strong). Omit if it did not move.`);
-  r.push(`to|Other|warm or cold or same|deed|exact quote      how ${N} treated Other (max 3 lines). deed: help attack confess refuse promise apologize touch none`);
+  r.push(`to|Other|warm or cold or same|deed|exact quote      how ${N} treated Other (max 3 lines). deed: help attack confess refuse promise apologize touch flirt jealous none (touch/flirt = romantic or sexual; jealous only between lovers)`);
+  r.push(`   Other can be ANY character, not only {{user}} — write romantic pull between other characters too. Judge it by ${N}'s own taste and the real chemistry: {{user}} is not special; never mark flirt/confess/touch toward {{user}} unless newest clearly shows ${N} doing it for a reason that fits ${N}.`);
   if (wiki) r.push(`now|${N}'s relationship with {{user}} right now, one sentence      only if it changed; it replaces card.relationship`);
   r.push("Quotes: 4-30 characters copied EXACTLY from newest. A line whose quote is not in the text is thrown away.");
   r.push("", "Only if newest shows it:");
@@ -365,11 +366,11 @@ export function fromStage1(lines, { known = [], source = "", openIds = null } = 
 
 // ── 2단계: 줄 → 그 인물의 세부 ──
 const DEED = {
-  help: { trust: 1, affection: 1 }, attack: { hostility: 2, trust: -2 }, confess: { affection: 2 }, refuse: { affection: -1 },
-  promise: { trust: 1 }, apologize: { hostility: -1, trust: 1 }, touch: { affection: 1 }, none: {},
+  help: { trust: 1, affection: 1 }, attack: { hostility: 2, trust: -2 }, confess: { affection: 1, attraction: 2 }, refuse: { affection: -1, attraction: -1 },
+  promise: { trust: 1 }, apologize: { hostility: -1, trust: 1 }, touch: { attraction: 1 }, flirt: { attraction: 1 }, jealous: { possess: 1, exclusive: 1 }, none: {},
 };
 const ATT = { warm: { affection: 1 }, cold: { affection: -1, hostility: 1 }, same: {} };
-const DEED_ALIAS = { 도움: "help", 공격: "attack", 고백: "confess", 거절: "refuse", 약속: "promise", 사과: "apologize", 스킨십: "touch", 없음: "none" };
+const DEED_ALIAS = { 도움: "help", 공격: "attack", 고백: "confess", 거절: "refuse", 약속: "promise", 사과: "apologize", 스킨십: "touch", 유혹: "flirt", 질투: "jealous", 없음: "none" };
 const START_ALIAS = { 친함: "close", 친한: "close", 가까움: "close", 가족: "close", 연인: "close", 아는: "friendly", 지인: "friendly", 안면: "friendly" };
 const ATT_ALIAS = { 따뜻: "warm", 따뜻함: "warm", 차가움: "cold", 차갑: "cold", 같음: "same", 보통: "same" };
 const ATTR_CATS = new Set(["pref", "rel", "job", "home", "belief", "look", "trait", "status"]);
@@ -398,7 +399,7 @@ export function fromStage2(lines, name, { known = [], source = "", light = false
       for (const src of [ATT[att], DEED[deed]]) for (const [tag2, d] of Object.entries(src)) t[tag2] = (t[tag2] ?? 0) + d;
       for (const k of Object.keys(t)) { t[k] = Math.max(-3, Math.min(3, t[k])); if (!t[k]) delete t[k]; }
       if (!q) for (const k of Object.keys(t)) t[k] = Math.max(-1, Math.min(1, t[k]));   // 근거가 없으면 약한 신호만
-      if (Object.keys(t).length) emo.push({ from: name, to, t, why: (q || `${att} ${deed}`).slice(0, 40) });
+      if (Object.keys(t).length || deed === "refuse" || deed === "confess") emo.push({ from: name, to, t, why: (q || `${att} ${deed}`).slice(0, 40), ...(["confess", "refuse", "flirt", "touch", "jealous"].includes(deed) ? { deed } : {}) });   // 2.2.6 deed: 고백·거절 같은 연애 사건을 알려고
     } else if (tag === "call" && talk.length < 2) {
       const to = targetName(f[0], known, source), call = (f[1] ?? "").slice(0, 20), tone = YN3(f[2], ["formal", "casual", "mixed"], ({ 존댓말: "formal", 존대: "formal", 반말: "casual" })[f[2]] ?? "");
       if (to && call && tone && nk(to) !== nk(name)) talk.push({ from: name, to, call, tone });

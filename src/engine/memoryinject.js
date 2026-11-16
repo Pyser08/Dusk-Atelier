@@ -1,4 +1,5 @@
 // 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수.
+import { romanceLines } from "./romancecue.js";
 import { regressLine } from "./regress.js";
 import { GRADE_WEIGHT } from "./memorygrade.js";
 import { injectable, trustTag, changeNote, currentState, isGoneState } from "./memorytrust.js";
@@ -202,6 +203,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     add("open", "Open threads (unresolved; do not resolve them early):", openLines(folder), settings.openTokens ?? 160);
     add("settled", "Promises settled recently (kept / broken — characters remember this):", settledLines(folder, { now: messageCount }), settings.settledTokens ?? 90);   // 2.2.4
     add("emo", "Feelings (current gauges 0-10):", emoLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.emoTokens ?? 160);
+    add("romance", "Romantic pull (how each shows it now):", romanceLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.romanceTokens ?? 200);   // 2.2.6 썸 행동 지침
     if (human) {
       add("stage", "Relationship stage (closeness should change gradually):", stageLines(folder, cur?.who ?? [], messageCount), settings.stageTokens ?? 90);
       if (rel.size) {   // 장면에 관련 인물이 있을 때만

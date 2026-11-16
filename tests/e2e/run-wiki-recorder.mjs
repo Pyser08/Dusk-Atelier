@@ -35,7 +35,8 @@ for (const [tag, vp, uiMode] of [["PC", { width: 1280, height: 860 }, "advanced"
   if (process.env.PROBE) { await page.waitForTimeout(2500); await page.screenshot({ path: "/tmp/probe3.png" }); console.log(await page.evaluate(() => document.querySelector(".rb-main, main, #rb-app")?.innerText?.slice(0, 800))); console.log(await page.evaluate(async () => JSON.stringify(Object.keys((await __app.ctx.memory.store.getFolder("c1","t1")).people)))); }
   ok(`[${tag}] 수아 위키가 열림`, (await page.locator(".rb-wk2").count()) >= 1, String(await page.locator(".rb-wk2").count()));
   const tabs = (await page.locator(".rb-wk2-tab").allTextContents()).map((x) => x.trim());
-  ok(`[${tag}] 탭 줄(요약·관계·상세 정보·기록)`, ["요약", "관계", "상세 정보", "기록"].every((t) => tabs.some((x) => x.includes(t))), tabs.join("|"));
+  // 2.2.6: 요약 탭은 없앴다(내용은 왼쪽 프로필 열·기록 탭·NSFW로)
+  ok(`[${tag}] 탭 줄(관계·상세 정보·NSFW·기록)`, ["관계", "상세 정보", "NSFW", "기록"].every((t) => tabs.some((x) => x.includes(t))) && !tabs.some((x) => x.includes("요약")), tabs.join("|"));
   // 탭을 모두 돌며 보이는 글을 모은다(위키 칸은 상세 정보의 '기록' 묶음 등 여러 곳에 나뉘어 보인다)
   const visitAll = async () => {
     let all = await body();

@@ -355,3 +355,16 @@ test("호스트가 어떤 주소에도 같은 응답을 줘도 모듈(export def
   await A.remove("a"); await A2.loadManifest();
   await assert.rejects(A2.install("a"), /확인값/);
 });
+test("저장 공간 부족으로 코드가 비면: 켜기·다시 시작 때 다시 받아 켠다(2.2.4 PocketRisu)", async () => {
+  const { A, kv, log, put } = await setup();
+  await put("1.0.0", "ok:1"); await A.loadManifest(); await A.install("a");
+  await A.setOn("a", false);
+  for (const k of [...kv.keys()]) if (k !== [...kv.keys()].find((x) => /index/i.test(x)) && kv.get(k) === "ok:1") kv.delete(k);
+  await A.setOn("a", true);
+  assert.ok(A.running("a")); assert.deepEqual(log.at(-1), ["on", "ok:1", "1.0.0"]);
+  await A.dispose();
+  for (const k of [...kv.keys()]) if (kv.get(k) === "ok:1") kv.delete(k);
+  await A.boot();
+  assert.ok(A.running("a")); assert.notEqual((await A.getIndex()).a.on, false);
+  await A.dispose();
+});

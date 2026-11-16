@@ -7,6 +7,8 @@
 //         ③ 줄을 리수폿이 원래 받던 응답(JSON envelope)으로 바꿔 돌려준다 → 리수폿 검증·저장·화면은 그대로.
 //         같은 결과로 Dusk 기록(장면·인물·관계·떡밥·감정)도 만든다.
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
+import { scaleDelta } from "./gaugemult.js";
+import { seedFirst, seedLewd } from "./adultseed.js";
 import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
 import { validate } from "./memoryprompt.js";
 
@@ -203,7 +205,10 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   // 가벼운 지침은 속마음·갈등·추억·비밀·평가 등 깊은 칸을 묻지 않는다 — 저장된 값은 그대로 남는다. 사용자가 '가벼운 모델'을 켰으면 그대로 따른다.
   const cap = light ? 3 : MAX_PEOPLE, people = [];
   let lite = light || (auto?.hold ?? 0) > 0, switched = false;
-  const askPerson = (t, payload, isNew, useLight, tries = 2) => ask(call, [{ role: "system", content: linesStage2(t.name, { light: useLight, beliefs, wiki: true, isNew, extraLines: deepMenu(run) }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+  // 2.2.6 첫인상이 아직 없는 기존 인물에게도 첫인상 줄을 묻는다(처음 등장 때 놓친 경우)
+  const noFirst = (t) => !!t.doc && !entryText(t.doc, "affinity.appraisal", "actor:user");
+  const firstLine = (who) => `first|${who}'s first impression of {{user}}, one sentence      only if it is not in the card yet`;
+  const askPerson = (t, payload, isNew, useLight, tries = 2) => ask(call, [{ role: "system", content: linesStage2(t.name, { light: useLight, beliefs, wiki: true, isNew, extraLines: [...deepMenu(run), ...(noFirst(t) ? [firstLine("the focus character")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
     if (isNoneReply(raw)) return { lines: [] };
     const lines = parseLines(raw); return lines.length ? { lines } : null;
   }, { tries });
@@ -229,7 +234,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const askGroup = async (chunk) => {
     const names = chunk.map((t) => t.name), anyNew = chunk.some((t) => !t.doc);
     const payload = { known: known.map((p) => p.name), overview: { scene: stage1.scene?.sum ?? "" }, people: chunk.map((t) => { const p = payloadOf(t); delete p.focus; delete p.known; delete p.newest; return { name: t.name, ...(t.doc ? {} : { new: true }), ...p, overview: undefined, act: t.act ?? "" }; }), newest: source.slice(0, 8000) };
-    return ask(call, [{ role: "system", content: linesStage2Group({ light: lite, beliefs, wiki: true, anyNew, extraLines: deepMenu(run) }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+    return ask(call, [{ role: "system", content: linesStage2Group({ light: lite, beliefs, wiki: true, anyNew, extraLines: [...deepMenu(run), ...(chunk.some(noFirst) ? [firstLine("each character whose card has no first impression")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
       const m = splitGroupReply(raw, names); if (!m || !m.size) return null;
       return new Map([...m].map(([n, block]) => [n, isNoneReply(block) ? [] : parseLines(block)]));
     }, { tries: 2 });
@@ -326,7 +331,7 @@ export function buildEnvelope(run, rec) {
     if (identity) { const e = entry(doc, "core.identity", [], identity, st ? `상태 변화: ${st.q}` : "새 인물의 기본 정보"); if (e) entries.push(e); }
     const nowRel = one("now")?.[0]; if (nowRel) { const e = entry(doc, "core.relationship", ["actor:user"], nowRel, "{{user}}와의 관계가 이번 응답에서 바뀜"); if (e) entries.push(e); }
     const view = one("view")?.[0]; if (view) { const e = entry(doc, "affinity.current_appraisal", ["actor:user"], view, "{{user}}에 대한 평가"); if (e) entries.push(e); }
-    const first = p.isNew ? one("first")?.[0] : null; if (first) { const e = entry(doc, "affinity.appraisal", ["actor:user"], first, "첫인상"); if (e) entries.push(e); }
+    const first = p.isNew || !entryText(doc, "affinity.appraisal", "actor:user") ? one("first")?.[0] : null; if (first) { const e = entry(doc, "affinity.appraisal", ["actor:user"], first, "첫인상"); if (e) entries.push(e); }
     const habit = one("habit")?.[0]; if (habit) { const e = entry(doc, "core.behavior", [], habit, "반복해서 보인 행동"); if (e) entries.push(e); }
     for (const f of L("know").slice(0, 3).map((x) => x.f)) { const e = entry(doc, "core.knowledge", [], f[0], "이번 응답에서 알게 됨", { fresh: true }); if (e && !doc?.entries.some((x) => x.slot_id === "core.knowledge" && nk(x.text) === nk(e.text))) entries.push(e); }
     for (const f of L("secret").slice(0, 2).map((x) => x.f)) { const e = entry(doc, "perception.secret", [], [f[0], f[1] ? `(${f[1]}에게 숨김)` : ""].filter(Boolean).join(" "), "숨기는 것", { fresh: true }); if (e && !doc?.entries.some((x) => x.slot_id === "perception.secret" && nk(x.text) === nk(e.text))) entries.push(e); }
@@ -353,16 +358,18 @@ export function buildEnvelope(run, rec) {
     for (const f of L("clue").slice(0, 2).map((x) => x.f)) { const e = entry(doc, "suspicion.clue", [], f[0], "단서", { fresh: true }); if (e && !doc?.entries.some((x) => x.slot_id === "suspicion.clue" && nk(x.text) === nk(e.text))) entries.push(e); }
     // 첫 끌림(상대별 첫인상 수치): 아직 없을 때 한 번만
     const taste = one("taste"), tpol = run.policies["affinity.taste_band"];
-    if (taste && tpol && slotOn("affinity.taste_band") && !(doc?.metrics ?? []).some((x) => x.slot_id === "affinity.taste_band" && (x.target_refs ?? [])[0] === "actor:user")) {
-      const v = coerceInt(String(taste[0]).replace(/^\+/, ""), -3, 3, 0), band = Object.entries(tpol.value_map ?? {}).find(([, n]) => n === v)?.[0];
-      if (band) metricOps.push({ document_ref: p.ref, slot_id: "affinity.taste_band", target_refs: ["actor:user"], operation: "derive", context_key: null, choices: { band }, evidence_refs: ["source:rp"], reason: "첫 만남의 끌림/거리감" });
+    // 2.2.6 첫인상 수치가 없으면 줄이 없어도 채운다: 기본 0(끌림도 거부감도 없음), 무작위 설정에서 ‘첫인상’을 켰으면 이름별 무작위(-3~+3)
+    if (tpol && slotOn("affinity.taste_band") && !p.failed && !(doc?.metrics ?? []).some((x) => x.slot_id === "affinity.taste_band" && (x.target_refs ?? [])[0] === "actor:user")) {
+      const v = taste ? coerceInt(String(taste[0]).replace(/^\+/, ""), -3, 3, 0) : seedFirst(run.seed, p.name), band = Object.entries(tpol.value_map ?? {}).find(([, n]) => n === v)?.[0];
+      if (band) metricOps.push({ document_ref: p.ref, slot_id: "affinity.taste_band", target_refs: ["actor:user"], operation: "derive", context_key: null, choices: { band }, evidence_refs: ["source:rp"], reason: taste ? "첫 만남의 끌림/거리감" : run.seed?.on && run.seed?.first ? "처음 등장 — 무작위 첫인상" : "처음 등장 — 기본값(특별한 끌림·거부감 없음)" });
     }
     // 개방(대상 없음): 처음이면 0에서 시작, 움직였으면 인용과 함께
     const lewd = one("lewd"), opol = run.policies["openness.score"];
-    if (lewd && opol && slotOn("openness.score")) {
-      const step = coerceInt(String(lewd[0]).replace(/^\+/, ""), -3, 3, 0), q = exactQuote(lewd[1], src);
+    // 2.2.6 음란도: 줄이 없어도 처음이면 채운다 — 기본 0, 무작위 설정에서 ‘음란도’를 켰으면 이름별 무작위
+    if (opol && slotOn("openness.score") && !p.failed) {
+      const step = lewd ? coerceInt(String(lewd[0]).replace(/^\+/, ""), -3, 3, 0) : 0, q = lewd ? exactQuote(lewd[1], src) : "";
       const has = (doc?.metrics ?? []).some((x) => x.slot_id === "openness.score");
-      if (!has && (opol.operations ?? []).includes("init")) metricOps.push({ document_ref: p.ref, slot_id: "openness.score", target_refs: [], operation: "init", context_key: null, value: 0, evidence_refs: ["source:rp"], reason: "기본값에서 시작" });
+      if (!has && (opol.operations ?? []).includes("init")) { const rv = seedLewd(run.seed, p.name, opol); metricOps.push({ document_ref: p.ref, slot_id: "openness.score", target_refs: [], operation: "init", context_key: null, value: rv ?? ((opol.initial_values ?? [0]).includes(0) ? 0 : (opol.initial_values ?? [0])[0]), evidence_refs: ["source:rp"], reason: rv != null ? "처음 등장 — 무작위 음란도" : "기본값에서 시작" }); }
       const amount = step ? nearest(opol.delta_values, LIKE_STEP[step]) : null;
       if (amount != null && q) metricOps.push({ document_ref: p.ref, slot_id: "openness.score", target_refs: [], operation: "delta", context_key: null, events: [{ amount, evidence_refs: ["source:rp"], evidence_quote: q, reason: "개방성 변화" }] });
     }
@@ -383,7 +390,7 @@ export function buildEnvelope(run, rec) {
       const step = like ? coerceInt(String(like[0]).replace(/^\+/, ""), -3, 3, 0) : 0, q = like ? exactQuote(like[1], src) : "";
       const has = (doc?.metrics ?? []).some((x) => x.slot_id === "affinity.score" && (x.target_refs ?? [])[0] === "actor:user");
       if (!has && (pol.operations ?? []).includes("init")) metricOps.push({ document_ref: p.ref, slot_id: "affinity.score", target_refs: ["actor:user"], operation: "init", context_key: null, value: (pol.initial_values ?? [0]).includes(0) ? 0 : (pol.initial_values ?? [0])[0], evidence_refs: ["source:rp"], reason: "{{user}}와 처음 직접 상호작용함 — 기본값에서 시작" });
-      const amount = step ? nearest(pol.delta_values, LIKE_STEP[step]) : null;
+      const amount = step && scaleDelta(LIKE_STEP[step], run.gauge) ? nearest(pol.delta_values, scaleDelta(LIKE_STEP[step], run.gauge)) : null;   // 2.2.6 게이지 배수
       if (amount != null && q && (pol.operations ?? []).includes("delta")) metricOps.push({ document_ref: p.ref, slot_id: "affinity.score", target_refs: ["actor:user"], operation: "delta", context_key: null, events: [{ amount, evidence_refs: ["source:rp"], evidence_quote: q, reason: cut(`${p.name}의 {{user}}에 대한 감정 ${step > 0 ? "상승" : "하락"}`, 80) }] });
     }
     // 성격 프로필: 새 인물(또는 프로필이 빠진 기존 인물)만, 모델이 profile 줄을 줬을 때만
@@ -398,7 +405,8 @@ export function buildEnvelope(run, rec) {
     if (run.peopleOn && hasProfile) for (const f of L("trait").map((x) => x.f).slice(0, 2)) {
       const axis = TRAIT_AXES[String(f[0] ?? "").trim().toLowerCase()], up = /^(up|\+|increase)/i.test(String(f[1] ?? "").trim());
       const q = exactQuote(f[3], src); if (!axis || !q) continue;
-      const n = coerceInt(f[2], 1, 3, 1);
+      const n = Math.min(3, Math.abs(scaleDelta(coerceInt(f[2], 1, 3, 1) * (up ? 1 : -1), run.gauge)));   // 2.2.6 게이지 배수
+      if (!n) continue;
       peopleOps.push({ document_ref: p.ref, operation: "observe", axis, direction: up ? "increase" : "decrease", pattern: `${TRAIT_LABEL[axis]} ${up ? "높아지는" : "낮아지는"} 모습`, strength: [30, 60, 90][n - 1], confidence: 70, scene_key: String(run.requestRef ?? "").slice(0, 160) || "scene", evidence_refs: ["source:rp"], evidence_quote: q, reason: `${p.name}: 이번 응답에서 ${TRAIT_LABEL[axis]}이(가) ${up ? "높게" : "낮게"} 드러남` });
     }
     if (p.isNew) {

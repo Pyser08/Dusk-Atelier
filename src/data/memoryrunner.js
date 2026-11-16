@@ -20,6 +20,9 @@ import { aiTask } from "../engine/aistop.js";
 import { applyRegex } from "../engine/regexprep.js";
 import { openForPrompt } from "../engine/memoryplus.js";
 import { emoForPrompt } from "../engine/memoryemo.js";
+import { loverPairs } from "../engine/lover.js";
+import { readGauge } from "./gaugemult.js";
+import { loadFairOn, loadDiceOn } from "./fairplay.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
 import { loadUserNames } from "./usernames.js";
@@ -98,7 +101,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   function inputOf(g, existing, group) {
     const recent = g.messages.slice(Math.max(0, group[0] - 6), group[0]).map((mm, k) => line(mm, Math.max(0, group[0] - 6) + k, 1500, g.rx));
     return { bot: g.character.name, known: existing ? knownPeople(existing, 40, group.map((i) => extractMessageText(g.messages[i])).join("\n")) : [], ignore: [...(g.bot.ignore ?? [])],
-      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], emoState: existing ? emoForPrompt(existing, 6, coolOf(g)) : [], talkState: existing ? talkForPrompt(existing, null) : [], rifts: existing ? riftsForPrompt(existing) : [], beliefsOn: g.idx.settings?.inject?.beliefs === true, beliefs: existing && g.idx.settings?.inject?.beliefs === true ? beliefsForPrompt(existing) : [], selfHint: existing ? hintsForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text }, storyDate: storyDateOf(g.text, existing) };
+      previousScene: existing ? (({ sum, facts, when } = {}) => sum ? { sum, facts, ...(when ? { when } : {}) } : null)([...(existing.scenes ?? [])].reverse().find((s) => !s.orphan)) : null, openItems: existing ? openForPrompt(existing) : [], emoState: existing ? emoForPrompt(existing, 6, coolOf(g)) : [], lovers: existing ? loverPairs(existing).map((p) => `${p.a} & ${p.b}`) : [], talkState: existing ? talkForPrompt(existing, null) : [], rifts: existing ? riftsForPrompt(existing) : [], beliefsOn: g.idx.settings?.inject?.beliefs === true, beliefs: existing && g.idx.settings?.inject?.beliefs === true ? beliefsForPrompt(existing) : [], selfHint: existing ? hintsForPrompt(existing) : [], recent, newest: { index: g.last, text: g.text }, storyDate: storyDateOf(g.text, existing) };
   }
   // 리수폿 Writer 호출에 같이 실을 때 쓰는 준비물. 기록 대상이 아니면 null.
   async function prepareLatest(charIndex, chatIndex) {
@@ -163,11 +166,13 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     }
     const names = nameOf(character, chat, chatIndex);
     const uNames = await userNames();
+    const gaugeMult = await readGauge(api);   // 2.2.6 게이지 배수(오를 때·내릴 때)
+    const userGuard = (await loadFairOn(api)) && (await loadDiceOn(api));   // 2.2.6 유저 편향 없애기가 켜졌으면 {{user}}를 향한 이성적 호감을 더 엄격하게
     let gaugeOut = null;
     const out = await store.updateFolder(chaId, chatId, (folder) => {
       Object.assign(folder, names, { chatIndex });
       reconcile(folder, messages);
-      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false, smooth: idx.settings?.staged !== false, userNames: uNames });
+      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false, smooth: idx.settings?.staged !== false, userNames: uNames, gauge: gaugeMult, userGuard });
       const ev = link?.takeCycle?.() ?? [];
       if (ev.length) res.cycle = addMilestones(folder, ev);
       if (gx) { try { gaugeOut = gauge.apply(folder, idx, chaId, result, anchor, { ordinal: ordinalNow, text }); } catch (e) { log("게이지 반영 실패", e?.message ?? e); } }
@@ -327,6 +332,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     }
     const shared = { character, chat };
     const failed = [], reasons = []; let n = 0;
+    if (groups.length && typeof link?.beforeBackfill === "function") { try { await link.beforeBackfill(); } catch (e) { log("지난 대화 분석 준비 실패", e?.message ?? e); } }   // 2.2.6 성적 지향 옮기기 등
     const extras = await backfillExtras(charIndex, chatIndex, shared, groups.length);
     for (const g of groups) {   // 2.2.4 batch: 일괄 처리는 인물을 묶어 묻는다(memoryprompt analyzeLines group)
       if (signal?.aborted) break;
@@ -346,6 +352,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       if (signal?.aborted) break;
       onProgress?.(++n, groups.length, failed.length);
     }
+    if (groups.length && typeof link?.afterBackfill === "function") { try { await link.afterBackfill({ turns: (chat.message ?? []).filter((m) => !isUserMessage(m)).length }); } catch (e) { log("지난 대화 분석 뒤처리 실패", e?.message ?? e); } }   // 2.2.6 처음 등장 성인 항목 무작위 등
     if (failed.length) {  // 실패한 응답은 기억해 두었다가 현황에 '실패'로 보여 준다(성공하면 applyAnalysis가 지운다)
       const msgs = chat.message ?? [], hs = failed.flat().map((i) => messageIdentity(msgs[i]));
       await store.updateFolder(String(character.chaId), chatKeyOf(chat, chatIndex), (f) => { f.failedBackfill = [...new Set([...(f.failedBackfill ?? []), ...hs])].slice(-500); }).catch(() => {});

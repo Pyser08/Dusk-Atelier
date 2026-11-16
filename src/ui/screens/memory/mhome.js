@@ -19,6 +19,8 @@ import { openFailLog, ensureFailLogStyle } from "./faillog.js";
 import { takePendingReason } from "../../../data/memlog.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
+import { gaugeMultCard } from "./gaugemultui.js";
+import { adultSeedRow } from "./adultseedmodal.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -62,6 +64,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
   memOptions.append(orowS("지난 대화 분석에 Erosync도", "지난 대화 분석 끝에 이 채팅의 Erosync 인물 값이 비어 있으면 성향 분석을 한 번 돌려요. NSFW 채팅에서만 켜 두세요.", S.backfillErosync === true, (st, v) => { st.backfillErosync = v; }));
+  memOptions.append(adultSeedRow(ctx));   // 2.2.6 처음 등장 때 성인 항목 무작위로(누르면 설정 창, 기본 꺼짐)
   // 숫자 칸(기억 넣기 토큰·남길 최근 턴)은 맨 아래(2.1.5). 리수폿 일괄 사용은 리수폿 화면에 있어 여기선 뺐다.
   memOptions.append(h("div", { class: "rb-srow rb-mem-tokens", id: "rb-mem-tokens" }, h("span", { class: "t" }, "기억 넣기 토큰", h("small", null, "응답마다 넣는 기억의 양이에요. 목표만큼 채우고, 중요한 게 많으면 상한까지 늘어나요.")),
     h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },
@@ -140,7 +143,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       actions: [{ label: "다른 채팅 보기", icon: "list", onClick: () => { m.page = "bots"; redraw(); } }] });
     const { tabs: tabRow, panels: panelEls } = memTabs(m, [["glance", "한눈에"], ["opt", "설정"]], {
       glance: h("div", { class: "rb-mem4-col" }, empty),
-      opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true)),
+      opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), gaugeMultCard(ctx), memorySettings)), ctx.prefs.advanced ? gHost : advFold(ctx, "memory", true)),
     });
     return replace(host, h("div", { class: "rb-mem3 rb-mem4-wrap" }, h("div", { class: "rb-mem2-main rb-mem4" }, memHead(ctx, redraw), tabRow, ...panelEls)));
   }
@@ -293,7 +296,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     // 기록 칸은 없앰: 한눈에 위쪽 = 바로가기 | 나·관계도, 아래 = 최근 기록(12건) 전체 폭
     // 나·관계도는 바로가기와 같은 칸 모양(조금 더 넓게, 설명 읽기)
     glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow))), failBtn, recFull),
-    opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), advEl),
+    opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), gaugeMultCard(ctx), memorySettings)), advEl),
   };
   const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);
   const main = h("div", { class: "rb-mem2-main rb-mem4" },

@@ -13,8 +13,8 @@ const has = (rel, name) => !rel || rel.has(key(name));
 
 // ── ④ 감정 식기 ──
 // 반감기(메시지 수)와 바닥 비율. 신뢰·존경은 저절로 식지 않는다(행동으로만 바뀜). 원한은 바닥값만큼 남는다.
-export const COOL_HALF = Object.freeze({ hostility: 80, fear: 120, dependence: 240, affection: 400 });
-export const COOL_FLOOR = Object.freeze({ hostility: 0.3, fear: 0.3, dependence: 0.5, affection: 0.6 });
+export const COOL_HALF = Object.freeze({ hostility: 80, fear: 120, dependence: 240, affection: 400, attraction: 300, possess: 200, exclusive: 200 });
+export const COOL_FLOOR = Object.freeze({ hostility: 0.3, fear: 0.3, dependence: 0.5, affection: 0.6, attraction: 0.5, possess: 0.4, exclusive: 0.4 });
 function lastRealChange(pair, tag) {
   for (let i = (pair.log ?? []).length - 1; i >= 0; i--) {
     const e = pair.log[i];
@@ -83,7 +83,7 @@ export function stageOf(folder, a, b, now) {
     const pf = key(p.from), pt = key(p.to);
     if (!((pf === ka && pt === kb) || (pf === kb && pt === ka))) continue;
     const t = effectiveTags(p, now);
-    warmth = Math.max(warmth, t.affection ?? 0, t.trust ?? 0);
+    warmth = Math.max(warmth, t.affection ?? 0, t.trust ?? 0);   // 2.2.6: 이성적 호감은 진도에 넣지 않는다(끌림이 진도를 올리고 진도가 끌림 상한을 올리는 되먹임 방지)
   }
   // 장면 수만으로 보면 처음부터 친한 사이로 시작한 관계가 '처음 봄'이 된다 → 쌓인 추억·관계 변화·편한 말투도 친숙함 근거로 센다.
   const pair = (x, y) => (key(x) === ka && key(y) === kb) || (key(x) === kb && key(y) === ka);
@@ -103,6 +103,19 @@ export function stageOf(folder, a, b, now) {
 // 관계 진도별 AI가 올릴 수 있는 애정·신뢰 상한(감정이 진도보다 훨씬 앞서 가지 않게). 진도가 오르면 상한도 오른다.
 export const STAGE_CEILING = Object.freeze({ "just met": 5, acquaintances: 7, close: 9, "very close": 10 });
 export const stageCeiling = (folder, a, b, now) => STAGE_CEILING[stageOf(folder, a, b, now).stage] ?? 10;
+// 2.2.6 이성적 호감 상한: 관계 진도(처음 봄 3 · 아는 사이 5 · 친한 사이 8 · 아주 가까운 사이 10)와 인간적 호감(+3까지)·적대감(6 이상이면 4)으로 묶는다.
+// big: 한 번에 +3인 큰 사건(첫눈에 반함처럼 원문 근거가 분명한 것)은 진도 상한을 한 단계 넘을 수 있다. lover: 애인이면 10.
+export const ATTR_CEILING = Object.freeze({ "just met": 3, acquaintances: 5, close: 8, "very close": 10 });
+const STAGE_RANK = ["just met", "acquaintances", "close", "very close"];
+export function attractionCap(folder, a, b, now, { big = false, tags = null, lover = false, orient = null } = {}) {
+  if (lover) return Number.isFinite(orient) ? Math.max(orient, 5) : 10;
+  const i = STAGE_RANK.indexOf(stageOf(folder, a, b, now).stage);
+  let cap = ATTR_CEILING[STAGE_RANK[Math.min(3, Math.max(0, i) + (big ? 1 : 0))]];
+  if (Number.isFinite(tags?.affection)) cap = Math.min(cap, Math.max(3, tags.affection + 3));   // 사람으로서 별로인데 이성적으로만 크게 끌리지 않게
+  if ((tags?.hostility ?? 0) >= 6) cap = Math.min(cap, 4);
+  if (Number.isFinite(orient)) cap = Math.min(cap, orient);   // 2.2.6 성적 지향(끌리지 않는 성별이면 낮게)
+  return cap;
+}
 export function stageLines(folder, names, now, limit = 3) {
   const list = [...new Map((names ?? []).filter(Boolean).map((n) => [key(n), n])).values()], out = [];
   for (let i = 0; i < list.length && out.length < limit; i++) for (let j = i + 1; j < list.length && out.length < limit; j++) {
