@@ -18,7 +18,10 @@ function semQuery(msgs, minLen = 40) {
   if (last.length >= minLen || u < 1) return last || msgs.slice(-2).map(txt).join("\n");
   return txt(msgs[u - 1]).slice(-400) + "\n" + last;
 }
-export function createMemoryInjector(api, { store, prep = null, storyNow = null, onRequest = null, embedder = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
+// 2.2.4 기억 토큰 절약: LoCoMo 233문항에서 기억 블록 약 4,100 → 2,900토큰(-29%), 정답률 약 1~2점 손해로 잰 예산
+export const SAVER_INJECT = Object.freeze({ eventTokens: 900, recentEventTokens: 500, recallTokens: 350, rawTokens: 700, rawPicks: 6 });
+export const effectiveInject = (s) => (s?.saver === true ? { ...(s ?? {}), ...SAVER_INJECT } : (s ?? {}));
+export function createMemoryInjector(api, { store, prep = null, storyNow = null, onRequest = null, embedder = null, rerank = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   let last = null, mode = "none";
 
   async function current() {
@@ -52,11 +55,12 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const tail = msgs.slice(-2).map((m) => rx.length ? prep.apply(extractMessageText(m), rx) : extractMessageText(m)).join("\n");
     let sem = null;  // 임베딩이 켜져 있으면 의미 유사도로 기억 고르기를 돕는다(실패하면 기존 방식 그대로)
     try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40)); } catch { sem = null; }
-    const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: idx.settings.inject, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
+    const inj = effectiveInject(idx.settings.inject);   // 2.2.4 토큰 절약이 켜져 있으면 칸별 예산을 줄인 값
+    const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: inj, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
     if (built.manifest && sem) built.manifest.sem = sem.size;
     // 2.2.2 원문 회상: 임베딩이 켜져 있으면 지난 대화 원문에서 지금 글과 관련 있는 조각을 날짜와 함께 덧붙인다(요약 기억이 놓친 사실을 받친다).
     if (built.text && embedder && idx.settings.inject.raw !== false && idx.settings.inject.plus !== false) {
-      try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.rawQueryMin ?? 0), idx.settings.inject); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); }
+      try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.rawQueryMin ?? 0), inj); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); }
     }
     const raw = built.text, manifest = built.manifest;
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
@@ -79,6 +83,15 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const sem = await embedder.rawScores(fid, chunks, query, { budgetMs: Number(s.rawBudgetMs ?? 1500) }).catch(() => null);
     const fused = rrf([sem, lexScores(chunks, query)]);
     let ranked = [...fused].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+    // 2.2.4 재정렬(선택): 상위 후보를 고르기 모델(Jev 등)이 0~3점으로 매기고, 기준 넘는 것만 점수 순으로 넣는다 — 같은 정확도를 더 적은 토큰으로
+    if (rerank && s.rawRerank !== false && ranked.length) {
+      const byId = new Map(chunks.map((c) => [c.id, c])), pool = ranked.slice(0, Math.max(4, Number(s.rawRerankPool ?? 40))).map((id) => byId.get(id)).filter(Boolean);
+      const recent = msgs.slice(Math.max(0, msgs.length - 3)).map((m) => `${isUserMessage(m) ? "{{user}}" : String(character?.name ?? "{{char}}")}: ${extractMessageText(m)}`).join("\n").slice(-1500);
+      try {
+        const sc = await rerank({ query, recent, items: pool.map((c) => ({ id: c.id, text: `${c.date ? `[${c.date}] ` : ""}${c.t}` })) });
+        if (sc?.size) { const min = Number(s.rawRerankMin ?? 1.5), order = new Map(ranked.map((id, i) => [id, i])); ranked = [...sc].filter(([, v]) => v >= min).sort((a, b) => b[1] - a[1] || order.get(a[0]) - order.get(b[0])).map(([id]) => id); }
+      } catch (e) { log("원문 재정렬 건너뜀", e?.message ?? e); }
+    }
     const out = assemble(chunks, ranked, { tokens: Number(s.rawTokens ?? 1500), neighbor: Number(s.rawNeighbor ?? 1), maxPicks: Number(s.rawPicks ?? 12), perDate: Number(s.rawPerDate ?? 0) });
     return out.lines.length ? { text: [RAW_TITLE, ...out.lines].join("\n"), tokens: out.tokens, count: out.lines.length } : null;
   }

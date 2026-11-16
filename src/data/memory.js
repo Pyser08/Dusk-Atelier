@@ -1,5 +1,6 @@
 // 장기기억 조립: 저장소·러너·주입·BardWiki 백엔드를 묶고, 선택된 백엔드에 따라 훅을 등록한다.
 import { reconcile } from "../engine/memoryreconcile.js";
+import { createJev } from "./jev.js";
 import { DEFAULT_PROMPT_BLOCKS } from "./memory-default-prompts.js";
 import { createMemoryStoreV3 as createMemoryStore } from "./memorystore3.js";
 import { createMemoryRunner } from "./memoryrunner.js";
@@ -27,9 +28,10 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   const cards = createCardStore(api);
   let runner = null;  // 아래에서 만든다. 요청 직전 훅은 이 시점 이후에만 불린다.
   const embedder = createEmbedder(api, { log });
+  const jev = createJev(api, { log });   // 2.2.4 선택: 원문 회상 재정렬(기본 꺼짐)
   const prep = createRegexPrep(api, { store, log });
   const hypa = createHypaImporter(api, { store });
-  const injector = createMemoryInjector(api, { store, prep, storyNow, log, embedder, onRequest: () => runner?.confirmNext() });
+  const injector = createMemoryInjector(api, { store, prep, storyNow, log, embedder, rerank: (x) => jev.rerank(x), onRequest: () => runner?.confirmNext() });
   const gauge = createGaugeService(api, { store, log });
   const link = {};  // 턴 흐름이 켜지면 채워진다(리수폿 Writer와 기록 호출을 합칠 때 러너가 쓴다)
   runner = createMemoryRunner(api, { store, prep, log, notify, gauge, server: createServerAnalysis(api, { cellar, remote }), prompts: async () => (await flow?.settings?.())?.rawSnapshot?.() ?? null, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
@@ -98,5 +100,5 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     const cur = await switches.currentChat({ fresh: true }).catch(() => null), sc = cur ? { characterId: cur.chaId, chatKey: cur.chatId } : {};
     return { front: customPromptPlain(s, "memory", sc, "front"), middle: customPromptPlain(s, "memory", sc, "middle"), back: customPromptPlain(s, "memory", sc, "back") };
   }
-  return { reconcile, store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, stop, ready, isReady: () => readyDone || !readyP, active: () => active };
+  return { reconcile, store, cellar, remote, userPrompts, gauge, link, cards, runner, injector, embedder, jev, prep, hypa, flow, lib: potLibrary, bardwiki, backend, capabilities: capabilitiesOf, switches, start, stop, ready, isReady: () => readyDone || !readyP, active: () => active };
 }

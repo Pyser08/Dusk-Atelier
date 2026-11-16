@@ -14,6 +14,7 @@ import { defHint } from "../../defhint.js";
 import { builders, renderGlobalSettings } from "./settings.js";
 import { tracked, scopeChip } from "./settingstools.js";
 import { writerDetails } from "./advanced.js";
+import { openJevModal } from "./jevmodal.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
@@ -29,13 +30,15 @@ export function usageCard(u) {
 
 // 설정 카드(한 줄 요약 목록 + 기억 옵션 3개). 열린 채팅이 없어도 쓸 수 있게 따로 뺐다(전체 설정이라 채팅과 무관).
 async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
-  let embedLine = "뜻이 비슷한 기억 찾기";
+  let embedLine = "뜻이 비슷한 기억 찾기", jevLine = "원문 회상 후보를 골라 토큰 줄이기 · 비싼 모델용";
+  try { if (M.jev) { await M.jev.load(); const j = M.jev.status(); jevLine += j.on ? (j.hasKey ? " · 켜짐" : " · 키 없음") : " · 꺼짐"; } } catch { /* 요약 없이 */ }
   try { if (M.embedder) { await M.embedder.load(); embedLine += M.embedder.status().on ? " · 켜짐" : " · 꺼짐"; } } catch { /* 요약 없이 */ }
   const srow = (title, sub, onClick, extra = {}) => h("button", { type: "button", class: "rb-srow", onClick, ...extra }, h("span", { class: "t" }, title, h("small", null, sub)), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
   const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
     h("span", { class: "h" }, "설정"),
     srow("기억·인물 위키 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
     srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }),
+    M.jev ? srow("Jev 재정렬 (선택)", jevLine, () => openJevModal(ctx).catch(fail(ctx)), { id: "rb-mem-jev-row" }) : null,
     // 2.2.0 자동 기록 세부(인물 위키 설정 값): 임베딩 아래 줄 → 누르면 창으로
     M.flow ? srow("자동 기록 세부", "장면 정리 역할 · 최근 대화 턴 · 서사관계 전용 모드", () => openWriterDetails(ctx).catch(fail(ctx)), { id: "rb-mem-writer-row" }) : null);
 
@@ -50,6 +53,8 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+  // 2.2.4 기억 토큰 절약: 칸별 예산을 줄여 기억 블록 약 4,100 → 2,900토큰(LoCoMo 정답률 약 1~2점 손해)
+  memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver === true, (o, v) => { o.saver = v; }));
   // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 꺼짐
   memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
