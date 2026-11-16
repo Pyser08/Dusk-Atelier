@@ -65,7 +65,7 @@
       "id": "cards",
       "name": "기억카드",
       "category": "memory",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "minCore": "2.2.4",
       "hooks": false,
       "requires": [
@@ -73,14 +73,14 @@
       ],
       "desc": "장기 기억으로 카드를 만들고 꾸미고, 그 카드로 새 봇을 이어 가요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/cards.js",
-      "sha256": "5f266eeffec6d2405dc4c01770ff2fc76add3cc1f8f8708be68c8ff5ad9ae0f7",
+      "sha256": "bde0a96e70eaa648727a014b5005fab97174d950b6697f724d0f5c81c496cab5",
       "size": 674622
     },
     {
       "id": "erosync",
       "name": "Erosync",
       "category": "memory",
-      "version": "0.1.8",
+      "version": "0.1.9",
       "minCore": "2.2.1",
       "hooks": true,
       "requires": [
@@ -88,7 +88,7 @@
       ],
       "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/erosync.js",
-      "sha256": "b3fccd7533d412f24935cb4fcb8ef16ba0b1f51fcc71e1165ee07abfedc5b869",
+      "sha256": "148c165bf0b33e29664fdf45e55d96d57f067a0c734d6effde2ff8b0af3bc848",
       "size": 878223
     },
     {
