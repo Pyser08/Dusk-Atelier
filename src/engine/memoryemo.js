@@ -40,7 +40,8 @@ export function validateEmo(obj) {
 // ceilingOf(from, to) → 이 쌍의 관계 진도로 AI가 올릴 수 있는 애정·신뢰 상한(2.2.4 게이지 조화). 사용자가 정한 값은 낮추지 않는다.
 // isLover(from, to) → 애인 사이인가(소유욕·독점욕은 애인일 때만). 없으면 그 두 태그는 버린다.
 // gauge: 게이지 배수 {up, down}(gaugemult.js) — 변화량에 곱한다.
-export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false, ceilingOf = null, isLover = null, gauge = null } = {}) {
+// userGuard: 유저 편향 없애기(공정한 전개 + 코드 주사위)가 켜졌을 때 — {{user}}를 향한 이성적 호감이 오를 때는 반만, 약한 신호는 두 번 쌓여야, 관계 진도 상한 안에서만.
+export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = false, ceilingOf = null, isLover = null, gauge = null, userGuard = false } = {}) {
   folder.emo ??= {};
   const src = srcOf(anchor);
   let changed = 0;
@@ -51,8 +52,10 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
     for (let [tag, d] of Object.entries(e.t)) {
       if (LOVER_TAGS.includes(tag) && !lover) continue;
       if (gauge) { d = scaleDelta(d, gauge, { max: STEP_MAX }); if (!d) continue; }
+      const guarded = userGuard && tag === "attraction" && d > 0 && key(e.to) === "{{user}}";
+      if (guarded) d = Math.max(1, Math.floor(d / 2));
       if (pair.lock?.[tag]) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; }   // 2.2.4: 사용자가 고친 값은 출발점 — 이후엔 대화에 따라 AI가 이어서 바꾼다(예전 잠금도 풀어 준다)
-      if (smooth) {
+      if (smooth || guarded) {
         const pend = pair.pend?.[tag] ?? 0;
         if (Math.abs(d) >= 2) { if (pend) delete pair.pend[tag]; }
         else if (pend && Math.sign(pend) !== Math.sign(d)) { delete pair.pend[tag]; continue; }
@@ -61,7 +64,7 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
       }
       const before = pair.tags[tag];
       let v = clampG((before ?? 0) + d);
-      if (d > 0 && ceilingOf && (tag === "affection" || tag === "trust")) { const cap = ceilingOf(e.from, e.to); if (Number.isFinite(cap) && v > cap) v = Math.max(before ?? 0, cap); }   // 진도보다 앞서 가지 않게
+      if (d > 0 && ceilingOf && (tag === "affection" || tag === "trust" || guarded)) { const cap = ceilingOf(e.from, e.to); if (Number.isFinite(cap) && v > cap) v = Math.max(before ?? 0, cap); }   // 진도보다 앞서 가지 않게
       if (v === before) continue;
       prev[tag] = before ?? null; next[tag] = v; pair.tags[tag] = v; changed++;
     }

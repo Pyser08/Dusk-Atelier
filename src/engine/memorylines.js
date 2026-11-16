@@ -62,6 +62,7 @@ function stage2Rules(N, { light, beliefs, wiki, extraLines }) {
   const r = ["Check first:"];
   if (wiki) r.push(`like|+1 +2 +3 or -1 -2 -3|exact quote      how ${N}'s feeling toward {{user}} moved in newest (1 slight, 2 clear, 3 strong). Omit if it did not move.`);
   r.push(`to|Other|warm or cold or same|deed|exact quote      how ${N} treated Other (max 3 lines). deed: help attack confess refuse promise apologize touch flirt jealous none (touch/flirt = romantic or sexual; jealous only between lovers)`);
+  r.push(`   Other can be ANY character, not only {{user}} — write romantic pull between other characters too. Judge it by ${N}'s own taste and the real chemistry: {{user}} is not special; never mark flirt/confess/touch toward {{user}} unless newest clearly shows ${N} doing it for a reason that fits ${N}.`);
   if (wiki) r.push(`now|${N}'s relationship with {{user}} right now, one sentence      only if it changed; it replaces card.relationship`);
   r.push("Quotes: 4-30 characters copied EXACTLY from newest. A line whose quote is not in the text is thrown away.");
   r.push("", "Only if newest shows it:");

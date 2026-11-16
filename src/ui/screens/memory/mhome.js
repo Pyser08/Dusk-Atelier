@@ -20,6 +20,7 @@ import { takePendingReason } from "../../../data/memlog.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
 import { gaugeMultCard } from "./gaugemultui.js";
+import { readSeedOpt, saveSeedOpt } from "../../../data/adultseed.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -63,6 +64,11 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
   memOptions.append(orowS("지난 대화 분석에 Erosync도", "지난 대화 분석 끝에 이 채팅의 Erosync 인물 값이 비어 있으면 성향 분석을 한 번 돌려요. NSFW 채팅에서만 켜 두세요.", S.backfillErosync === true, (st, v) => { st.backfillErosync = v; }));
+  // 2.2.6 처음 등장 때 성인 항목 무작위로(기본 꺼짐, pluginStorage — 장기기억·Erosync가 같이 읽는다)
+  { const sw = switchEl(false, { label: "처음 등장 때 성인 항목 무작위로", onChange: async (v, el) => { setSwitch(el, v); try { await saveSeedOpt(ctx.api, v); ctx.toast(v ? "이제부터 처음 나오는 인물에게 성인 항목을 무작위로 정해 줘요." : "무작위로 정하지 않아요."); } catch (e) { fail(ctx)(e); } } });
+    sw.id = "rb-adult-seed";
+    readSeedOpt(ctx.api).then((o) => setSwitch(sw, o.on)).catch(() => {});
+    memOptions.append(h("div", { class: "rb-srow" }, h("span", { class: "t" }, "처음 등장 때 성인 항목 무작위로", h("small", null, "켠 뒤 처음 나오는 인물에게 성적 욕망·이상성향 후보(검토 대기), Erosync 성적 관심·성적 항목 출발값을 무작위로 정해 줘요. 인물마다 다른 맛이 나요. 월경 주기는 원래부터 처음 등장 때 무작위예요.")), sw)); }
   // 숫자 칸(기억 넣기 토큰·남길 최근 턴)은 맨 아래(2.1.5). 리수폿 일괄 사용은 리수폿 화면에 있어 여기선 뺐다.
   memOptions.append(h("div", { class: "rb-srow rb-mem-tokens", id: "rb-mem-tokens" }, h("span", { class: "t" }, "기억 넣기 토큰", h("small", null, "응답마다 넣는 기억의 양이에요. 목표만큼 채우고, 중요한 게 많으면 상한까지 늘어나요.")),
     h("div", { class: "rb-mem-tokpair", style: "display:flex;gap:8px;flex-wrap:wrap" },

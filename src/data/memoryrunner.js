@@ -22,6 +22,7 @@ import { openForPrompt } from "../engine/memoryplus.js";
 import { emoForPrompt } from "../engine/memoryemo.js";
 import { loverPairs } from "../engine/lover.js";
 import { readGauge } from "./gaugemult.js";
+import { loadFairOn, loadDiceOn } from "./fairplay.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
 import { loadUserNames } from "./usernames.js";
@@ -166,11 +167,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const names = nameOf(character, chat, chatIndex);
     const uNames = await userNames();
     const gaugeMult = await readGauge(api);   // 2.2.6 게이지 배수(오를 때·내릴 때)
+    const userGuard = (await loadFairOn(api)) && (await loadDiceOn(api));   // 2.2.6 유저 편향 없애기가 켜졌으면 {{user}}를 향한 이성적 호감을 더 엄격하게
     let gaugeOut = null;
     const out = await store.updateFolder(chaId, chatId, (folder) => {
       Object.assign(folder, names, { chatIndex });
       reconcile(folder, messages);
-      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false, smooth: idx.settings?.staged !== false, userNames: uNames, gauge: gaugeMult });
+      const res = applyAnalysis(folder, result, anchor, { storyDate: input.storyDate, ignore: bot.ignore ?? [], covered: group.map((i) => messageIdentity(messages[i])), cool: idx.settings?.inject?.cool !== false, smooth: idx.settings?.staged !== false, userNames: uNames, gauge: gaugeMult, userGuard });
       const ev = link?.takeCycle?.() ?? [];
       if (ev.length) res.cycle = addMilestones(folder, ev);
       if (gx) { try { gaugeOut = gauge.apply(folder, idx, chaId, result, anchor, { ordinal: ordinalNow, text }); } catch (e) { log("게이지 반영 실패", e?.message ?? e); } }

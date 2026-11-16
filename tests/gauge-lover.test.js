@@ -115,3 +115,67 @@ test("이성적 감정 관계도: 거리=나에게 끌림, 선=인물끼리 끌�
   assert.ok(e && e.sp === 1);
   assert.equal(buildRelMap(f).romance, undefined);
 });
+
+import { rollAdult, seedWikiCandidates, DESIRES, KINKS } from "../src/engine/adultseed.js";
+import { romanceLines, styleOf } from "../src/engine/romancecue.js";
+import { seedErosyncNow, saveSeedOpt } from "../src/data/adultseed.js";
+import { buildMessages } from "../src/engine/memoryprompt.js";
+
+test("유저 편향 없애기: {{user}}를 향한 이성적 호감은 반만·두 번 쌓여야·진도 상한 안", () => {
+  const f = {};
+  const one = (t) => applyEmo(f, [{ from: "민지", to: "{{user}}", t, why: "x" }, { from: "민지", to: "유나", t, why: "x" }], { at: 1 }, 1, { userGuard: true, ceilingOf: () => 5 });
+  one({ attraction: 3 });
+  assert.equal(f.emo["민지>{{user}}"].tags.attraction, undefined);   // 3 → 반(1) → 약한 신호라 한 번엔 안 움직임
+  assert.equal(f.emo["민지>유나"].tags.attraction, 3);                // 인물끼리는 그대로
+  one({ attraction: 1 }); assert.equal(f.emo["민지>{{user}}"].tags.attraction, 1);   // 같은 방향 두 번째에 한 칸
+  one({ attraction: 3 }); one({ attraction: 3 }); one({ attraction: 3 }); one({ attraction: 3 });
+  assert.equal(f.emo["민지>{{user}}"].tags.attraction, 3);
+  for (let i = 0; i < 10; i++) one({ attraction: 3 });
+  assert.equal(f.emo["민지>{{user}}"].tags.attraction, 5);   // 관계 진도 상한
+});
+
+test("기록 지침: 인물끼리 끌림도 적고 {{user}}는 특별하지 않다", () => {
+  const sys = buildMessages({ bot: "b", newest: { index: 0, text: "t" } })[0].content;
+  assert.match(sys, /ANY two characters/);
+  assert.match(sys, /\{\{user\}\} is NOT special/);
+});
+
+test("썸 행동 지침: 단계·성격에 따라 다르게, 애인은 따로", () => {
+  const f = {
+    emo: { a: { from: "민지", to: "{{user}}", tags: { attraction: 7 } }, b: { from: "유나", to: "철수", tags: { attraction: 3 } }, c: { from: "철수", to: "{{user}}", tags: { attraction: 0 } } },
+    wiki: { documents: { d1: { title: "민지" } }, people: { profiles: { d1: { axes: { guardedness: 80, relationalInitiative: 20 } } } } }
+  };
+  const L = romanceLines(f);
+  assert.match(L[0], /Slow burn/);
+  assert.match(L.find((x) => x.includes("민지")), /charged ambiguity.*denial.*waits/);
+  assert.match(L.find((x) => x.includes("유나")), /curious/);
+  assert.equal(L.some((x) => x.includes("철수 →")), false);
+  f.ties = { t: { a: "민지", b: "{{user}}", kind: "여자친구", at: 1 } };
+  assert.match(romanceLines(f).find((x) => x.includes("민지")), /lovers/);
+  assert.equal(styleOf(null), "");
+});
+
+test("처음 등장 때 성인 항목 무작위: 이름마다 같고, 인물마다 다르고, 켜기 전 인물은 그대로", () => {
+  assert.deepEqual(rollAdult("민지"), rollAdult("민지"));
+  const names = ["민지", "유나", "서연", "하린", "지우", "예린", "수아", "다은"];
+  assert.ok(new Set(names.map((n) => rollAdult(n).desires.join())).size >= 5);
+  for (const n of names) { const r = rollAdult(n); assert.ok(r.desires.every((d) => DESIRES.includes(d)) && r.kinks.every((k) => KINKS.includes(k))); assert.ok(Object.values(r.sexual).every((v) => v >= 3 && v <= 97)); }
+  const wiki = { documents: { old: { id: "old", type: "Character", title: "옛" }, nw: { id: "nw", type: "Character", title: "새" } },
+    people: { profiles: { old: { createdAt: "2026-01-01T00:00:00Z" }, nw: { createdAt: "2026-11-16T00:00:00Z" } }, candidates: {} } };
+  const seeded = [];
+  assert.deepEqual(seedWikiCandidates(wiki, seeded, { since: Date.parse("2026-06-01") }), ["nw"]);
+  const c = Object.values(wiki.people.candidates);
+  assert.ok(c.length >= 1 && c.every((x) => x.documentId === "nw" && x.status === "review" && ["sexual_desire", "paraphilia"].includes(x.axis)));
+  assert.deepEqual(seedWikiCandidates(wiki, seeded, { since: 1 }), []);   // 한 번만
+});
+
+test("Erosync 무작위 출발값: 처음 본 채팅의 기존 인물은 기준, 뒤에 생긴 인물만 넣는다", async () => {
+  const store = new Map(), api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } };
+  const edits = [], er = { profile: async (op, id, patch) => { edits.push([op, id, patch]); return {}; } };
+  const snap = (people) => ({ ok: true, scope: { scopeKey: "s" }, people });
+  assert.equal(await seedErosyncNow(api, er, snap([{ id: "p1", name: "민지" }])), 0);   // 꺼져 있음
+  await saveSeedOpt(api, true);
+  assert.equal(await seedErosyncNow(api, er, snap([{ id: "p1", name: "민지" }])), 0);   // 처음 본 채팅 = 기준
+  assert.equal(await seedErosyncNow(api, er, snap([{ id: "p1", name: "민지" }, { id: "p2", name: "유나" }, { id: "p3", name: "고양이", nonPerson: true }])), 1);
+  assert.equal(edits[0][0], "edit"); assert.equal(edits[0][1], "p2"); assert.ok(Number.isFinite(edits[0][2].eroticInterest));
+});

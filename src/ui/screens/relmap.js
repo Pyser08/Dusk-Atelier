@@ -136,7 +136,7 @@ function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
     atTurn = next;
     data0 = build();
     root.classList.toggle("rb-rm-past", atTurn != null);
-    eroOn = false; applyEro({ animate: true }); syncTurn();
+    eroOn = false; applyEro({ animate: "soft" }); syncTurn();   // 턴 이동은 부드럽게만
     if (data0.empty) toast("그 시점엔 그릴 인물이 없어요.");
   }
   function syncTurn() {

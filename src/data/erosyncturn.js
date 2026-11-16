@@ -1,6 +1,7 @@
 // Dusk 2.2.0: Erosync 매 턴 계산(HandOff/EROSYNC-TURN.md). 장기기억 기록기가 턴을 기록하면(flow.onTurn) 그 턴의 인물만
 // Erosync 엔진(profile "turn")에 넘겨 변화분 1번 호출로 분석값을 갱신한다. 설정·기록은 pluginStorage에.
 import { readGauge } from "./gaugemult.js";
+import { seedErosyncNow } from "./adultseed.js";
 export const TURN_KEY = "dusk.erosync.turn", TURN_LOG_KEY = "dusk.erosync.turnlog", TURN_LOG_MAX = 30;
 export const TURN_DEFAULT = Object.freeze({ on: true, groups: ["axes", "sexual"], autoStart: true });   // 2.2.6 autoStart: 출발값 자동 만들기(기본 켜짐)
 
@@ -40,8 +41,9 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
     if (!info?.people?.length || !String(info.rp ?? "").trim()) return null;
     if (info.key) { if (seen.includes(info.key)) return null; seen.push(info.key); if (seen.length > 20) seen.shift(); }
     let snap = null;
+    try { snap = await erosync.read?.(); } catch { snap = null; }
+    try { await seedErosyncNow(api, erosync, snap, log); } catch { /* 무작위 출발값은 실패해도 계산은 이어서 */ }
     if (s.autoStart) {
-      try { snap = await erosync.read?.(); } catch { snap = null; }
       if (snap?.ok && !(snap.people ?? []).length) { await autoStart("empty", snap.scope?.scopeKey); return null; }   // 출발값이 없으면 변화분 계산 대신 처음 분석부터
     }
     const ctrl = new AbortController();

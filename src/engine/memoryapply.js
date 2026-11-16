@@ -53,7 +53,7 @@ export function findPersonKey(folder, name) {
 export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find((s) => !s.orphan) ?? null;
 
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
-export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true, userNames = [], smooth = false, gauge = null } = {}) {
+export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true, userNames = [], smooth = false, gauge = null, userGuard = false } = {}) {
   result = normalizeUserNames(result, userNames);   // 플레이어를 가리키는 이름은 모두 {{user}} 한 사람으로
   const named = normalizeKnownNames(result, folder); result = named.result;
   for (const [from, to] of named.moved) {   // 부른 이름을 별칭으로 남겨 다음부터 바로 찾고, 위키·Erosync·관계도도 같은 사람으로 본다
@@ -94,7 +94,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   out.ties = applyTies(folder, result?.ties, anchor, now);   // 2.2.4 오래가는 관계
   const tBefore = tensionKeys(folder);
   if (cool && anchor?.at != null) out.cooled = coolEmo(folder, anchor.at, now);   // v1.8.3: 시간이 지나 식은 감정을 먼저 반영(변화량이 식은 값에 더해지게)
-  out.emo = applyEmo(folder, result?.emo, anchor, now, { smooth, ceilingOf: smooth ? (a, b) => stageCeiling(folder, a, b, anchor?.at ?? 0) : null, isLover: (a, b) => isLover(folder, a, b), gauge });   // 2.2.6 소유욕·독점욕은 애인만, 게이지 배수   // 2.2.4 게이지 조화(단계별 분석 켠 기본 경로)
+  out.emo = applyEmo(folder, result?.emo, anchor, now, { smooth, ceilingOf: smooth || userGuard ? (a, b) => stageCeiling(folder, a, b, anchor?.at ?? 0) : null, userGuard, isLover: (a, b) => isLover(folder, a, b), gauge });   // 2.2.6 소유욕·독점욕은 애인만, 게이지 배수   // 2.2.4 게이지 조화(단계별 분석 켠 기본 경로)
   if (important) { out.pov = applyPov(latestScene(folder), result?.pov, now); out.exp = applyExp(folder, result?.exp, anchor, now); }
   { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
   out.human = applyHuman(folder, result?.human, anchor, { important, now });   // v1.8.3: 호칭·말투, 둘만의 추억(중요할 때만), 잘못된 믿음
