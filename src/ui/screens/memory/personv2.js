@@ -12,6 +12,7 @@ import { eroLoad, eroNsfwCard, eroInfoCard, eroSumCard, eroPairCard, eroPartnerC
 import { eroPerson, eroPersonByName } from "../../../engine/erosyncview.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag, tagsFor } from "../../../engine/memoryemo.js";
 import { isLover, loverPairs, setLover, pairKey } from "../../../engine/lover.js";
+import { ensureMemAddonCss } from "./memaddoncss.js";
 import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const STAGES = [["just met", "처음 봄"], ["acquaintances", "아는 사이"], ["close", "친한 사이"], ["very close", "아주 가까움"]];
@@ -32,6 +33,7 @@ const pct = (v, min, max) => Math.max(0, Math.min(100, ((v - min) / Math.max(1, 
 // parts: { r, doc, p, header(액션 버튼 묶음 또는 null), metrics:[{label,slot,value,min,max,stage,targets}], gauges:()=>Promise<[{name,icon,hue,v,min,max}]>, infoBlocks:[], logBlocks:[] }
 export function personTabs(env, parts) {
   const { ctx } = env, m = mem(ctx), f = env.folder;
+  ensureMemAddonCss(ctx);
   const { r, doc, p } = parts;
   const selfNames = [...new Set([r.name, doc?.title, ...(doc?.aliases ?? []), p?.name, ...(p?.aliases ?? [])].filter(Boolean))];
   const me = selfNames[0], now = nowOf(f), pk = r.id;

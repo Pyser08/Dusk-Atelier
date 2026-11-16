@@ -16,7 +16,8 @@
   - 이성적 감정 관계도: buildRelMap(folder, {mode:"romance"}) → romanceOf(거리=attraction×10, 선=인물끼리 attraction·애인 tie, ringLabel 끌림). ? 아래 단추 .rb-rm-modes(#rb-rm-mode-affinity·romance, ctx.state.relmap.mode 기억). 전환 애니메이션: canvas setData(map,{animate}) 스프링(넘침)·새 인물 솟기(pop·easeBack)·가운데 물결 2겹·yaw 킥 + CSS rbRmSwap. css는 relmap/css.js. e2e run-relmap 32.
   - Erosync: erosync.js detail의 선호가 글자로 저장된 JSON이면 풀어서 {label,preference,confidence,reason}. erosyncwiki prefItem·좋아하는 것/싫어하는 것/성향 그룹·확신도·상대별 끌림(eroNsfwCard 5번째 인자 snap). 출발값 자동 만들기: erosyncturn settings.autoStart(기본 true) — 출발값 없으면 profile start full 한 번(채팅·세션당), 처음 보는 인물(unmatched, {{user}} 제외)도 한 번.
   - 시험: tests/gauge-lover.test.js(8), erosync-turn 기대값 갱신, featurefind(+1). npm test 1672 pass. e2e relmap 22·smoke·wiki-strangers 12·featurefind 통과, erosync-ui는 예전부터 실패하던 더보기 메뉴 2건만.
-  - 남은 일: [ ] 애드온 dist(memory·erosync) 다시 빌드·버전은 지시 대기(지금 동작은 코어 소스만 바뀜 — 실제 사용엔 애드온 배포 필요) [ ] 새 화면(게이지 배수 카드·관계도 턴 버튼·애인 칸) e2e 없음·실기기 미확인 [ ] mepage·editor 감정 고치기 폼은 애인이 아니어도 소유욕·독점욕 칸이 보임 [ ] 위키 호감도(affinity.score)는 아직 하나(인간적/이성적 분리는 장기 기억 감정 쪽만)
+  - 코어 없이 애드온만으로: 새 CSS(애인 분홍·감정 색·게이지 배수·관계도 막대/단추)는 `ui/screens/memory/memaddoncss.js` ensureMemAddonCss가 화면 그릴 때 <style id=rb-memaddon-css>로 붙임(styles.js·relmap/css.js에서 뺌). memory 애드온이 쓰는 코어 공유 모듈 46개·erosync 3개 모두 v2.2.5 이후 안 바뀜 → v2.2.5 코어에서 애드온만 올려도 동작. 코어에 남은 건 기능 찾기 항목(featurefind)뿐.
+  - 남은 일: [ ] 애드온 버전 올려 배포는 지시 대기 [ ] 새 화면(게이지 배수 카드·관계도 턴 버튼·애인 칸) e2e 없음·실기기 미확인 [ ] mepage·editor 감정 고치기 폼은 애인이 아니어도 소유욕·독점욕 칸이 보임 [ ] 위키 호감도(affinity.score)는 아직 하나(인간적/이성적 분리는 장기 기억 감정 쪽만)
 
 - **오토 스크롤 애드온 0.2.0 + 애드온 자리 자동 넣기 (11-16, 브랜치 claude/happy-dijkstra-wi2dza, 미배포)**
   - 동작: 켜면 리스 채팅의 마지막 AI 응답 맨 위에 ‘▼ 오토 스크롤’ 버튼(생성이 끝난 뒤 옮겨 감) → 누르면 정한 속도(px/초 10~400, 기본 60)로 내려감. 돌 때 화면 위 −/속도/+/■ 막대. 멈춤: ■·버튼 다시·채팅 누르기(pointerdown)·끝 도착.

@@ -8,6 +8,7 @@ import { autoMergeUser } from "../../data/usermerge.js";
 import { h, replace } from "../dom.js";
 import { chip, emptyState, loading, pageHead } from "../kit.js";
 import { buildRelMap, STATUS_LABEL, relmapTurns, folderAt } from "../../engine/relmap.js";
+import { ensureMemAddonCss } from "./memory/memaddoncss.js";
 import { mem } from "./memory/common.js";
 import { createRelMapCanvas } from "./relmap/canvas.js";
 import { eroLoad } from "./memory/erosyncwiki.js";
@@ -59,6 +60,7 @@ export async function renderRelMap(ctx) {
 
 function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
   const adv = !!ctx.prefs.advanced;
+  ensureMemAddonCss(ctx);
   const canvas = h("canvas", { "aria-label": "인물 관계도" });
   const ctrlsEl = h("div", { class: "rb-rm-ctrls" });
   const legendEl = h("div", { class: "rb-rm-legend" },

@@ -5,10 +5,12 @@ import { icon } from "../../icons.js";
 import { btn } from "../../kit.js";
 import { readGauge, saveGauge } from "../../../data/gaugemult.js";
 import { GAUGE_MULT_MIN, GAUGE_MULT_MAX, normalizeGauge, isDefaultGauge } from "../../../engine/gaugemult.js";
+import { ensureMemAddonCss } from "./memaddoncss.js";
 
 const fmt = (v) => `×${Number(v).toFixed(1)}`;
 export function gaugeMultCard(ctx) {
   const api = ctx.api;
+  ensureMemAddonCss(ctx);
   const state = normalizeGauge(null);
   const row = (key, label, hint) => {
     const val = h("b", { class: "v" }, fmt(1));
