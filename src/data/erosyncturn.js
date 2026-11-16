@@ -41,6 +41,9 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
         try { const r = await erosync.profile("seed", { name: p.name, aliases: p.aliases ?? [], memory: p.memory ?? "" }); results.push({ name: p.name, ok: !!r?.ok, analyzed: !!r?.analyzed, reason: r?.reason || "" }); }
         catch (e) { results.push({ name: p.name, ok: false, reason: String(e?.message ?? e) }); }
       }
+      // 실패한 이름은 완료 표시를 풀어 다음에 다시 시도한다(채팅 상태가 아직 없을 때 등). 성공(임시값 포함)만 완료로 남는다.
+      const failed = results.filter((r) => !r.ok).map((r) => keyOf(r.name));
+      if (failed.length) { const st2 = await autoState(), sc2 = st2[scope] ?? { counts: {}, done: {} }; for (const k of failed) delete sc2.done[k]; st2[scope] = sc2; await write(AUTO_KEY, st2); }
       log(`Erosync 출발값 만들기(${why === "empty" ? "출발값 없음" : "새 인물"}): ${results.map((r) => `${r.name}${r.analyzed ? " 분석" : r.ok ? " 임시값" : " 실패"}`).join(", ")}`);
       await write(AUTO_LOG_KEY, [{ at: now(), why, scope, names: todo.map((p) => p.name), results }, ...(await autoHistory())].slice(0, TURN_LOG_MAX));
       return results;
@@ -70,7 +73,7 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
     try { snap = await erosync.read?.(); } catch { snap = null; }
     try { await seedErosyncNow(api, erosync, snap, log); } catch { /* 무작위 출발값은 실패해도 계산은 이어서 */ }
     if (s.autoStart) {
-      if (info.source !== "backfill" && snap?.ok && !(snap.people ?? []).length) { await seedPeople("empty", snap.scope?.scopeKey || "?", info.people.filter((p) => p?.name).slice(0, EMPTY_MAX)); return null; }   // 출발값이 없으면 이번 턴 인물만
+      if (info.source !== "backfill" && snap?.ok && !(snap.people ?? []).length) { await seedPeople("empty", snap.scope?.scopeKey || "?", info.people.filter((p) => p?.name && !/\{\{user\}\}/i.test(p.name)).slice(0, EMPTY_MAX)); return null; }   // 출발값이 없으면 이번 턴 인물만
     }
     const ctrl = new AbortController();
     const job = (async () => {

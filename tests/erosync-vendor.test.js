@@ -186,8 +186,7 @@ test("장면 되돌리기 연결부(실제 엔진): 채팅이 없으면 이유�
 });
 
 test("기본 성격 변화 반영은 표준 자동", async () => {
-  const src = fs.readFileSync(new URL("../src/erosync/pure.js", import.meta.url), "utf8");
-  assert.match(src, /developmentMode:\s*'standard_auto'/);
+  assert.equal(pure.DEFAULT_CONFIG.developmentMode, "standard_auto");
 });
 
 test("Dusk 인물 골라서 분석 연결부(실제 엔진): 채팅이 없으면 목록·시작 모두 이유를 알려 준다", async () => {

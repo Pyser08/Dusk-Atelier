@@ -79,7 +79,8 @@ test("설정 정리: 모르는 항목은 버린다", () => {
 test("연결: 기록기 알림·엔진 연결부·애드온 붙이기", () => {
   const turn = fs.readFileSync(new URL("../src/data/memoryturn.js", import.meta.url), "utf8");
   assert.ok(turn.includes("tellTurn({ rp: run.rp") && turn.includes("onTurn: (fn) =>"));
-  assert.ok(turn.includes('source: backfilling > 0 ? "backfill" : "live"') && turn.includes("backfilling = 1;") && turn.includes("backfilling = 0;"), "지난 대화 분석 기록엔 출처 표시");
+  assert.ok(turn.includes('source: Date.now() < backfillUntil ? "backfill" : "live"') && turn.includes("backfillUntil = Date.now() + BACKFILL_HOLD_MS;") && turn.includes("backfillUntil = 0;"), "지난 대화 분석 기록엔 출처 표시(취소돼도 시간이 지나면 풀림)");
+  assert.ok(!/backfilling/.test(turn), "끝 알림에만 기대는 옛 표시는 없음");
   assert.ok(!fs.readFileSync(new URL("../src/data/erosyncturn.js", import.meta.url), "utf8").includes('profile("start"'), "턴 갱신기는 전체 분석을 부르지 않는다");
   const eng = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.ok(eng.includes("async function duskTurnUpdate") && eng.includes("turn: duskTurnUpdate"));
@@ -143,4 +144,19 @@ test("출발값이 하나도 없으면 전체 분석 대신 이번 턴 인물만
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(calls.filter(([op]) => op === "seed").map(([, a]) => a.name), ["가", "나", "다"]);
   assert.equal(calls.filter(([op]) => op === "start").length, 0);
+});
+
+test("출발값 만들기가 실패한 이름은 완료로 남기지 않아 다음에 다시 시도, {{user}}는 빈 채팅에서도 뺀다", async () => {
+  const { api } = fakeApi(), calls = [];
+  let fail = true;
+  const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [] }),
+    profile: async (op, arg) => { calls.push([op, arg]); if (op === "seed") { if (fail) throw new Error("채팅 상태를 읽지 못했어요"); return { ok: true }; } return { ok: true, changed: [], unmatched: [] }; } };
+  const t = createErosyncTurn(api, { erosync: er });
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  await t.onTurn({ key: "f1", rp: "턴", people: [{ name: "{{user}}" }, { name: "세라" }] }); await tick(); await tick();
+  assert.deepEqual(calls.filter(([op]) => op === "seed").map(([, a]) => a.name), ["세라"]);
+  fail = false;
+  await t.onTurn({ key: "f2", rp: "턴", people: [{ name: "세라" }] }); await tick(); await tick();
+  assert.equal(calls.filter(([op]) => op === "seed").length, 2, "실패했던 세라를 다시 시도");
+  assert.equal((await t.autoHistory())[1].results[0].ok, false);
 });
