@@ -72,7 +72,7 @@ export function createProviderRunner({ api, store, vault, transport, gemcache = 
   // 한 번 시도. 스트림이면 첫 이벤트까지 읽고(여기서 실패하면 대체 가능) 나머지는 넘겨 준다.
   async function once({ conn, profile, messages, signal, cfg, purpose, cha, aff, pool, wantStream, extra = {} }) {
     const c = await credential(conn, pool, signal, aff);
-    let gc = { messages }; if (gemcache && conn.kind === "google") gc = await gemcache.prepare({ conn, profile, messages, cred: c.cred, transport, signal });
+    let gc = { messages }; if (gemcache && conn.kind === "google") gc = await gemcache.prepare({ conn, profile, messages, cred: c.cred, transport, signal, scope: `${cha?.chaId ?? ""}|${purpose}`, tools: profile.search === "auto" });
     const upstreamStream = wantStream !== "off";
     const learnKey = `${cha?.chaId ?? ""}|${purpose}|${profile.id}`, learnOn = !!profile.cache?.learn; const prevTurnHashes = learnOn ? prevTurns.get(learnKey) ?? null : null; if (learnOn) { try { prevTurns.set(learnKey, turnHashesOf(gc.messages)); } catch { /* 학습만 건너뜀 */ } }
     let reqObj = buildRequest({ conn, profile, messages: gc.messages, prevTurnHashes, stream: upstreamStream, cred: c.copilot ? "" : c.cred, cachedContent: gc.cachedContent, reasoningState: extra.reasoningState });

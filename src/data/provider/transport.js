@@ -5,7 +5,7 @@ export function proxied(url, proxyUrl) { if (!proxyUrl) return url; return proxy
 export function createTransport(api, { compat = () => false } = {}) {
   async function send(req, { signal, proxyUrl = "", secrets = [] } = {}) {
     const url = proxied(req.url, proxyUrl);
-    const init = { method: req.method ?? "POST", headers: req.headers, body: typeof req.body === "string" ? req.body : JSON.stringify(req.body), signal };
+    const init = { method: req.method ?? "POST", headers: req.headers, body: req.body == null ? undefined : typeof req.body === "string" ? req.body : JSON.stringify(req.body), signal };
     let res;
     if (!compat() && typeof api.nativeFetch === "function") {
       try { res = await api.nativeFetch(url, init); }
@@ -13,7 +13,7 @@ export function createTransport(api, { compat = () => false } = {}) {
     }
     if (!res) {
       if (typeof api.risuFetch !== "function") throw new HttpError("이 호스트에서는 외부 요청을 보낼 수 없어요", 0, { network: true });
-      const r = await api.risuFetch(url, { method: init.method, headers: init.headers, body: JSON.parse(init.body), rawResponse: false, abortSignal: signal });
+      const r = await api.risuFetch(url, { method: init.method, headers: init.headers, body: init.body === undefined ? undefined : JSON.parse(init.body), rawResponse: false, abortSignal: signal });
       const text = typeof r?.data === "string" ? r.data : JSON.stringify(r?.data ?? "");
       res = { ok: !!r?.ok, status: Number(r?.status) || (r?.ok ? 200 : 0), body: null, text: async () => text, json: async () => JSON.parse(text), headers: new Map() };
     }

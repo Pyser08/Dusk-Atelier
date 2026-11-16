@@ -158,12 +158,19 @@ test("Gemini 명시적 캐시: 수동 마커로 만들고 다음엔 재사용", 
   const off = await gc.prepare({ conn, profile: { ...profile, cache: { gemini: "off" } }, messages: msgs, cred: "K", transport }); assert.equal(off.cachedContent, undefined);
   const fail = createGeminiCache(); const f = await fail.prepare({ conn, profile, messages: msgs, cred: "K", transport: { send: async () => errRes(500, "x") } }); assert.equal(f.cachedContent, undefined); assert.equal(f.messages.length, 2);
 });
-test("Gemini 명시적 캐시: 자동 모드는 같은 앞부분이 반복돼야 만든다", async () => {
-  const gc = createGeminiCache(); const posts = []; const transport = { send: async (r) => { posts.push(r); return jsonRes({ name: "cachedContents/a" }); } };
-  const conn = { id: "c", kind: "google", baseUrl: "https://g/v1beta" }, profile = { model: "m", cache: { gemini: "auto", geminiTtl: 600, geminiMinRepeats: 3 } };
-  const big = "기억 ".repeat(2500); const mk = (q) => [{ role: "system", content: big }, { role: "user", content: q }];
-  const r = []; for (let i = 0; i < 3; i++) r.push(await gc.prepare({ conn, profile, messages: mk(`q${i}`), cred: "K", transport }));
-  assert.equal(r[0].cachedContent, undefined); assert.equal(r[1].cachedContent, undefined); assert.equal(r[2].cachedContent, "cachedContents/a"); assert.equal(posts.length, 1);
+test("Gemini 자동 캐시: 2.5는 앞부분을 만들어 재사용·늘면 새로 만들고 옛 캐시 지움, Gemini 4는 바뀌는 블록만 뒤로", async () => {
+  let t = 1e6; const gc = createGeminiCache({ now: () => t }); const reqs = []; let k = 0;
+  const transport = { send: async (r) => { reqs.push(r); if (r.method === "GET") return jsonRes({ cachedContents: [] }); if (r.method === "DELETE") return jsonRes({}); return jsonRes({ name: `cachedContents/c${++k}` }); } };
+  const conn = { id: "c", kind: "google", baseUrl: "https://g/v1beta" }, profile = { model: "gemini-2.5-flash", cache: { gemini: "auto", geminiTtl: 600, geminiGrow: 4500 } };
+  const big = "설정 ".repeat(3000), chat = [];
+  const mk = () => [{ role: "system", content: big }, ...chat, { role: "system", content: `[Dusk Memory] ${t}` }, { role: "user", content: `지금 ${t}` }];
+  const turn = async () => { const r = await gc.prepare({ conn, profile, messages: mk(), cred: "K", transport, scope: "bot|model" }); chat.push({ role: "user", content: `말 ${t}` }, { role: "assistant", content: "답 ".repeat(1500) + t }); t += 120e3; return r; };
+  assert.equal((await turn()).cachedContent, undefined, "첫 턴은 이름");
+  const a = await turn(); assert.equal(a.cachedContent, "cachedContents/c1"); assert.ok(!a.messages.some((m) => m.content === big), "캐시된 앞부분은 빼고 보냄");
+  const b = await turn(); assert.equal(b.cachedContent, "cachedContents/c1", "앞부분 같으면 재사용");
+  let c; for (let i = 0; i < 4; i++) c = await turn();
+  assert.notEqual(c.cachedContent, "cachedContents/c1"); assert.ok(reqs.some((r) => r.method === "DELETE" && /c1$/.test(r.url)), "옛 캐시 지움");
+  const g4 = await gc.prepare({ conn, profile: { ...profile, model: "gemini-4-carbon" }, messages: mk(), cred: "K", transport }); assert.equal(g4.cachedContent, undefined); assert.match(g4.messages.at(-1).content, /Dusk Memory/);
 });
 test("등록: 자동 + 프로필별 이름, 미지원 호스트는 꺼짐", async () => {
   const mem = new Map(), got = []; const api = { pluginStorage: { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => { mem.set(k, v); } }, addProvider: async (n, f, o) => got.push([n, f, o]) };

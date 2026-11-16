@@ -22,8 +22,8 @@
       "hooks": true,
       "desc": "리스 모델 목록에 ‘Dusk 자동’과 내 프로필을 등록하고, API 키 보관·모델 고르기·리스 도구 확인을 해요. 설정 → 실험 기능을 켜야 써요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/provider.js",
-      "sha256": "5a8648e465343f25801ba22b1ec0a0d5e5bafbb7e18ec55e6df1b6eb7630936f",
-      "size": 148928
+      "sha256": "b44b4ccca7d6f0ee0c78de2b933c9cd35730f60887de3da528200c66955b0e6d",
+      "size": 153185
     },
     {
       "id": "chattheme",
