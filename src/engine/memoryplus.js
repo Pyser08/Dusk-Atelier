@@ -1,4 +1,5 @@
 // v1.6.2 장기기억 확장(순수): 지식 경계·열린 항목·관계 변화·세계 시간선·기억 강화/망각·원문 발췌 복원.
+import { CLOSE_HOW } from "./memorylines.js";
 import { similarity } from "./memorygrade.js";
 import { extractMessageText, hashText } from "./chattext.js";
 import { srcOf } from "./memoryreconcile.js";
@@ -20,7 +21,8 @@ export function validatePlus(obj) {
   const rel = (Array.isArray(obj?.rel) ? obj.rel : []).map((x) => ({ from: cut(x?.from, 60), to: cut(x?.to, 60), d: cut(x?.d, 40), dir: x?.dir === "+" || x?.dir === "-" ? x.dir : "0" })).filter((x) => x.from && x.to && x.d && key(x.from) !== key(x.to)).slice(0, 4);
   const o = obj?.open ?? {};
   const add = (Array.isArray(o.add) ? o.add : []).map((x) => ({ text: cut(x?.text, 80), kind: OPEN_KINDS[x?.kind] ? x.kind : "question", who: names(x?.who, 4) })).filter((x) => x.text).slice(0, 3);
-  const close = names(o.close, 3);
+  // 2.2.4 닫기: id만(예전) 또는 {id, how, why}
+  const close = (Array.isArray(o.close) ? o.close : []).map((x) => typeof x === "string" ? { id: cut(x, 40) } : { id: cut(x?.id, 40), ...(CLOSE_HOW[x?.how] ? { how: x.how } : {}), ...(cut(x?.why, 60) ? { why: cut(x.why, 60) } : {}) }).filter((x) => x.id).slice(0, 3);
   const ties = (Array.isArray(obj?.ties) ? obj.ties : []).map((x) => ({ a: cut(x?.a, 60), b: cut(x?.b, 60), kind: cut(x?.kind, 24) })).filter((x) => x.a && x.b && x.kind && x.a !== x.b).slice(0, 6);
   return { rel, open: { add, close }, ...(ties.length ? { ties } : {}) };
 }
@@ -68,15 +70,20 @@ export function applyOpen(folder, open, anchor, now = Date.now()) {
   let added = 0, closed = 0;
   const src = srcOf(anchor);
   // 해결 닫기를 먼저 처리한다: 같은 응답에서 닫고 다시 쓴 항목이 새 항목으로 생기지 않게.
-  for (const id of open?.close ?? []) {
+  for (const c of open?.close ?? []) {
+    const id = typeof c === "string" ? c : c?.id;
     const x = folder.open.find((o) => o.id === id && !o.orphan && !isClosed(o));
     if (x) {
       x.closed = true; x.closedAt = anchor?.at ?? null; x.closed_ms = now; closed++;
+      if (c?.how) x.how = c.how; else delete x.how;   // 2.2.4 어떻게 끝났나(지킴·어김·일부만·취소·해결)
+      if (c?.why) x.why = c.why; else delete x.why;
       delete x.closedOrphan; if (src) x.closedBy = src; else delete x.closedBy;
     }
   }
   // 중복 판정: 열린 것뿐 아니라 이미 해결된 것과도 비교한다(같은 종류면 표현이 조금 달라도 같은 항목으로 본다).
-  const dup = (a) => folder.open.some((x) => !x.orphan && similarity(x.text, a.text) >= (x.kind === a.kind ? DUP_SAME_KIND : 0.8));
+  // 2.2.4: 닫힌 지 오래된 항목(20메시지 넘게)은 비교하지 않는다 — 지킨 약속을 나중에 또 하면 새 약속으로 남긴다(예전엔 영영 막혔다)
+  const fresh = (x) => !isClosed(x) || anchor?.at == null || x.closedAt == null || anchor.at - x.closedAt <= 20;
+  const dup = (a) => folder.open.some((x) => !x.orphan && fresh(x) && similarity(x.text, a.text) >= (x.kind === a.kind ? DUP_SAME_KIND : 0.8));
   for (const a of open?.add ?? []) {
     if (dup(a)) continue;
     folder.open.push({ id: rid("o"), text: a.text, kind: a.kind, who: a.who ?? [], at: anchor?.at ?? null, at_ms: now, closed: false, ...(src ? { src } : {}) }); added++;
@@ -127,6 +134,13 @@ export function knowLines(people, { limit = 4 } = {}) {
   for (const p of people) for (const r of p.records ?? []) if (!r.orphan && r.valid !== false && r.know?.length) rows.push({ r, who: p.name });
   rows.sort((a, b) => (lastTouch(b.r)) - (lastTouch(a.r)));
   return rows.slice(0, limit).map(({ r, who }) => `- ${oneLine(r.act)} (${who}) — only ${r.know.join(", ")} know this; others do not.`);
+}
+// 2.2.4 최근에 끝난 약속: 어긴 것·일부만 지킨 것이 먼저, 지킨 것·취소된 것. 의문·복선 해결은 넣지 않는다(이야기 요약에 이미 있다)
+export function settledLines(folder, { limit = 3, within = 60, now = null } = {}) {
+  const order = { broken: 0, partial: 1, kept: 2, cancelled: 3 };
+  return (folder?.open ?? []).filter((x) => !x.orphan && isClosed(x) && order[x.how] != null && (now == null || x.closedAt == null || now - x.closedAt <= within))
+    .sort((a, b) => order[a.how] - order[b.how] || (b.closedAt ?? 0) - (a.closedAt ?? 0)).slice(0, limit)
+    .map((x) => `- [${x.how}] ${oneLine(x.text)}${x.who?.length ? ` (${x.who.join(", ")})` : ""}${x.why ? ` — ${oneLine(x.why)}` : ""}`);
 }
 export function openLines(folder, { limit = 6 } = {}) {
   return openItems(folder).slice(-limit).map((x) => `- [${x.kind}] ${oneLine(x.text)}${x.who?.length ? ` (${x.who.join(", ")})` : ""}`);

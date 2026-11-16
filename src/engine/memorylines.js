@@ -12,7 +12,7 @@ const CORE_RULES = [
   "- Write facts, not impressions. Bad: \"분위기가 묘해졌다\". Good: \"민지가 {{user}}의 고백을 거절했다\".",
   "- Never invent people, motives, times or places. If the text does not show it, leave it out.",
   "- Use the exact spelling from `known` for existing characters. The player is always {{user}}.",
-  "- If the text calls a known character by surname only, given name only, a nickname or with an honorific (-san, -chan, -kun, -sama, -senpai, 씨, 쨩, 선배…), write their full `known` name — never create a second person for the same character.",
+  "- A known character called by surname, given name, nickname or honorific (-san, -chan, 씨, 선배…) → write the full `known` name, never a second person.",
   "- Someone whose `state` in `known` says dead/gone cannot act now unless the newest text clearly shows them back — then write a state line for it.",
   "- Write in the SAME language as `newest` (English text → English, Korean text → Korean). Never translate. Keep every field short.",
   "- Anchor relative times on the story date (`storyDate`, dates in the text, previousScene time). Exact only when certain: \"yesterday\" on 2023-05-08 → \"2023-05-07\". Otherwise keep the phrase with its anchor: \"last Tuesday\" → \"the Tuesday before 2023-07-20\", \"last week\" → \"the week before 2023-05-08\", \"지난주 화요일\" → \"2023-07-20 직전 화요일\". Never store a bare \"yesterday\", \"어제\" or \"two weeks ago\".",
@@ -35,9 +35,9 @@ export const LINES_STAGE1 = [
   "   Last field = when the event itself happened, ONLY if it differs from the scene's story date (past or planned events): \"2023-05-07\", \"the week before 2023-06-09\", \"2022\", \"next month (from 2023-04-03)\". Leave it empty otherwise.",
   "4. rel|A|B|what changed between them (<=40 chars)|+ or - or 0",
   "   tie|A|B|what B is to A (<=24 chars: sister, girlfriend, boss, childhood friend, rival, master)",
-  "   Write a tie line whenever newest states or clearly shows a lasting relationship between two people (family, romance, work, school, rivalry) — even if nothing changed. Use {{user}} for the player.",
-  "5. open|a new promise, plan, secret or unanswered question (<=60 chars)",
-  "6. close|id from openItems that newest resolved, kept or made pointless",
+  "   Write a tie for any lasting relationship newest shows (family, romance, work, school, rivalry), even if unchanged.",
+  "5. open|a new promise, plan, secret or unanswered question (<=60 chars)|promise or foreshadow or question",
+  "6. close|openItems id that newest settled|promise/plan: kept, broken, partial or cancelled; question/secret: resolved|why (<=40 chars)",
   "7. new|Name|who they are in one line (role, relation) — only for characters missing from `known`",
   "",
   CORE_RULES,
@@ -203,6 +203,14 @@ const YN3 = (v, ok, dflt) => { const s = String(v ?? "").trim().toLowerCase(); r
 const nk = (n) => String(n ?? "").toLowerCase().replace(/[\s'"“”‘’「」『』\[\]()（）<>.,!?~·]/g, "");
 
 // 이름 정리: 괄호·따옴표 제거 후, 기존 이름·별칭과 같은(또는 한 글자 차이) 사람이면 그 표기로 맞춘다.
+// 2.2.4 약속·떡밥이 어떻게 끝났나: kept 지킴 · broken 어김 · partial 일부만 · cancelled 취소 · resolved 해결(의문·복선)
+export const CLOSE_HOW = Object.freeze({ kept: "지킴", broken: "어김", partial: "일부만", cancelled: "취소", resolved: "해결" });
+export function closeHow(v) {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (!s) return "";
+  if (CLOSE_HOW[s]) return s;
+  return /^(keep|fulfil|done|지킴|지켰|완료)/.test(s) ? "kept" : /^(break|broke|fail|miss|어김|어겼|못 지)/.test(s) ? "broken" : /^(part|일부)/.test(s) ? "partial" : /^(cancel|void|moot|취소|무산)/.test(s) ? "cancelled" : /^(resolv|answer|reveal|해결|풀림|밝혀)/.test(s) ? "resolved" : "";
+}
 export function canonName(name, known = [], extra = []) {
   let n = String(name ?? "").replace(/[「」『』"“”'‘’*_`]/g, "").replace(/\s*[(（].*?[)）]\s*/g, "").trim();
   if (/^(user|유저|플레이어|player|나)$/i.test(n)) return "{{user}}";
@@ -328,11 +336,14 @@ export function fromStage1(lines, { known = [], source = "", openIds = null } = 
       const from = targetName(f[0], known, source), to = targetName(f[1], known, source), d = (f[2] ?? "").slice(0, 40);
       if (from && to && nk(from) !== nk(to) && d) raw.rel.push({ from, to, d, dir: /^[+\-0]$/.test((f[3] ?? "").trim()) ? f[3].trim() : "0" });
     } else if (tag === "open" && raw.open.add.length < 3) {
-      const text = (f[0] ?? "").slice(0, 80);
-      if (text) raw.open.add.push({ text, kind: "promise", who: [] });
+      const text = (f[0] ?? "").slice(0, 80), k = String(f[1] ?? "").trim().toLowerCase();
+      // 2.2.4 종류: 적어 주면 그대로, 없으면 글로 짐작(예전엔 모두 '약속'이라 의문·복선도 약속으로 보였다)
+      const kind = /^(promise|plan|약속|계획)/.test(k) ? "promise" : /^(foreshadow|secret|복선|비밀)/.test(k) ? "foreshadow" : /^(question|의문|질문)/.test(k) ? "question"
+        : /모른다|모름|궁금|\?|누가|왜|정체|비밀/.test(text) ? "question" : "promise";
+      if (text) raw.open.add.push({ text, kind, who: [] });
     } else if (tag === "close" && raw.open.close.length < 6) {
-      const id = (f[0] ?? "").trim().replace(/^#/, "");
-      if (id && (!openIds || openIds.has(id))) raw.open.close.push(id);
+      const id = (f[0] ?? "").trim().replace(/^#/, ""), how = closeHow(f[1]), why = (f[2] ?? "").trim().slice(0, 60);
+      if (id && (!openIds || openIds.has(id))) raw.open.close.push({ id, ...(how ? { how } : {}), ...(why ? { why } : {}) });
     } else if (tag === "state" && raw.states.length < 6) {
       const name = canonName(f[0], known), v = (f[1] ?? "").trim().slice(0, 40), q = (f[2] ?? "").trim();
       if (!name || name === "{{user}}" || !v || !realText(v)) continue;

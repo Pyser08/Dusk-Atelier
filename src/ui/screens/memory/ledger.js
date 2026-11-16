@@ -1,4 +1,5 @@
 // v1.6.2 장부 탭: 열린 항목 · 관계 변화 · 세계 시간선. 로컬 저장소일 때만 고칠 수 있다.
+import { CLOSE_HOW } from "../../../engine/memorylines.js";
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
 import { btn, badge, iconBtn, note, openMenu, promptDialog, confirmDialog } from "../../kit.js";
@@ -14,9 +15,9 @@ const readonlyNote = (env) => env.backend.id !== "local" ? note("info", "BardWik
 export async function renderOpen(env, host) {
   const { folder } = env, local = env.backend.id === "local", m = mem(env.ctx);
   const open = openItems(folder), done = openItems(folder, { closed: true });
-  const row = (x, closed) => h("li", { class: "rb-mem-rec" }, badge(OPEN_KINDS[x.kind] ?? "항목", x.kind === "promise" ? "acc" : x.kind === "foreshadow" ? "acc2" : "mute"),
-    h("div", { class: "txt" }, h("div", null, x.text), h("div", { class: "rb-muted" }, [x.at != null ? at(x.at) : "", (x.who ?? []).join(", "), closed && x.closedAt != null ? `해결 ${at(x.closedAt)}` : ""].filter(Boolean).join(" · "))), h("span", { style: "flex:1" }),
-    local ? btn(closed ? "다시 열기" : "해결", { size: "sm", onClick: () => editFolder(env, (f) => { const o = f.open.find((y) => y.id === x.id); if (o) { o.closed = !closed; delete o.closedBy; delete o.closedOrphan; if (!closed) { o.closedAt = f.cursor?.at ?? null; o.closed_ms = Date.now(); } } }) }) : null,
+  const row = (x, closed) => h("li", { class: ["rb-mem-rec", closed && x.how === "broken" && "is-broken"] }, badge(OPEN_KINDS[x.kind] ?? "항목", x.kind === "promise" ? "acc" : x.kind === "foreshadow" ? "acc2" : "mute"),
+    h("div", { class: "txt" }, h("div", null, x.text), h("div", { class: "rb-muted" }, [x.at != null ? at(x.at) : "", (x.who ?? []).join(", "), closed ? `${CLOSE_HOW[x.how] ?? "해결"}${x.closedAt != null ? ` ${at(x.closedAt)}` : ""}${x.why ? ` — ${x.why}` : ""}` : ""].filter(Boolean).join(" · "))), h("span", { style: "flex:1" }),
+    local ? btn(closed ? "다시 열기" : "해결", { size: "sm", onClick: () => editFolder(env, (f) => { const o = f.open.find((y) => y.id === x.id); if (o) { o.closed = !closed; delete o.closedBy; delete o.closedOrphan; delete o.how; delete o.why; if (!closed) { o.closedAt = f.cursor?.at ?? null; o.closed_ms = Date.now(); } } }) }) : null,
     local ? iconBtn("more", "더 보기", { onClick: (ev) => openMenu(env.ctx.win, ev.currentTarget, [{ label: "삭제", icon: "trash", danger: true, onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 항목을 지울까요?", body: "지운 항목은 되돌릴 수 없어요. 해결된 일이라면 지우지 말고 '해결'을 눌러 두세요.", ok: "삭제", danger: true }))) return; editFolder(env, (f) => { f.open = f.open.filter((y) => y.id !== x.id); }); } }]) }) : null);
   const add = local ? btn("항목 추가", { size: "sm", icon: "plus", onClick: async () => {
     const v = await promptDialog(env.ctx.win, { title: "열린 항목 추가", label: "약속·복선·의문 (80자)", ok: "추가" }); if (!v?.trim()) return;
