@@ -52,8 +52,55 @@ async function seedWiki() {
     f.bonds = [{ id: "bd1", a: "수아", b: "미오", moment: "장례식 뒤 편의점 앞에서 캔커피를 나눠 마셨다", hook: "캔커피, 편의점" }, { id: "bd2", a: "수아", b: "미오", moment: "비 오는 날 우산을 같이 썼다", hook: "비" }];
     f.rifts = [{ id: "rf1", a: "수아", b: "미오", about: "서진과 단둘이 만난 일", state: "apologized", grudge: "some", who: "수아" }];
     f.exp = { e1: { a: "수아", b: "미오", ae: "매일 연락해 주길 바란다", as: false, be: "혼자 있는 시간도 필요하다", bs: true } };
+    // ── 관계도 풍부하게: 인물 9명, 턴 1~32에 걸친 감정 기록(시점 막대), 장면, 관계 변화, 오래가는 관계, 인물끼리 끌림 ──
+    const cast = ["수아", "서진", "도윤", "시로코", "호시노", "유나", "하루", "나기"];
+    const lines = { 수아: [[1, "미오와 처음 만났다"], [5, "장례식장에서 오열했다"], [9, "미오에게 고백했다"], [14, "미오와 우산을 같이 썼다"], [22, "서진과 크게 다퉜다"], [31, "미오와 다시 만났다"]],
+      서진: [[2, "도윤과 몰래 만났다"], [6, "수아를 몰래 지켜봤다"], [16, "미오에게 다가갔다"], [24, "도윤과 헤어졌다"]],
+      도윤: [[3, "셔츠에 향수 냄새를 남겼다"], [12, "수아에게 사과했다"], [24, "서진과 헤어졌다"]],
+      시로코: [[4, "미오와 순찰을 돌았다"], [11, "호시노를 걱정했다"], [20, "미오에게 도시락을 줬다"], [28, "호시노와 화해했다"]],
+      호시노: [[7, "낮잠을 자다 미오에게 들켰다"], [11, "시로코와 말다툼을 했다"], [28, "시로코와 화해했다"]],
+      유나: [[8, "미오에게 길을 물었다"], [18, "하루와 다퉜다"], [26, "미오를 몰래 좋아하게 됐다"]],
+      하루: [[10, "유나의 언니라고 밝혔다"], [18, "유나와 다퉜다"], [30, "미오에게 고민을 털어놓았다"]],
+      나기: [[13, "미오를 경계했다"], [21, "미오에게 도움을 받았다"], [29, "미오를 믿기 시작했다"]] };
+    for (const n of cast) f.people[n] = { name: n, records: [...(f.people[n]?.records ?? []), ...lines[n].map(([at, act], i) => rec("r-" + n + "-" + i, act, i === 0 ? "B" : at % 3 ? "C" : "A", at))] };
+    f.scenes = Array.from({ length: 32 }, (_, i) => ({ id: "sc" + i, at: i + 1, sum: (i + 1) + "번째 장면", place: ["교실", "옥상", "복도", "카페", "장례식장"][i % 5], who: ["미오", cast[i % cast.length], cast[(i + 3) % cast.length]], orphan: false }));
+    // 미오(유저) 쪽 감정: 턴마다 조금씩 쌓인 기록(log) — 시점 막대를 움직이면 바뀐다
+    const arc = { 수아: [[1, { affection: 3, attraction: 2, trust: 2 }], [9, { affection: 6, attraction: 7, trust: 5 }], [14, { affection: 8, attraction: 9, trust: 7, possess: 6, exclusive: 5, dependence: 6, respect: 5, fear: 2 }]],
+      서진: [[2, { affection: 2, hostility: 1 }], [16, { affection: 3, attraction: 6, hostility: 3 }]],
+      도윤: [[3, { trust: 3, affection: 3 }], [12, { trust: 1, affection: 2, hostility: 5 }]],
+      시로코: [[4, { trust: 4, affection: 4, respect: 3 }], [20, { trust: 8, affection: 7, attraction: 4, respect: 6 }]],
+      호시노: [[7, { affection: 3, trust: 3 }], [28, { affection: 6, trust: 6, attraction: 2 }]],
+      유나: [[8, { affection: 2 }], [26, { affection: 5, attraction: 6, dependence: 3 }]],
+      하루: [[10, { trust: 2, respect: 3 }], [30, { trust: 6, affection: 5, respect: 5 }]],
+      나기: [[13, { fear: 3, hostility: 4 }], [21, { fear: 2, hostility: 2, trust: 3 }], [29, { trust: 6, affection: 4, hostility: 1 }]] };
+    const mkPair = (from, to, steps) => ({ from, to, tags: { ...steps.at(-1)[1] }, log: steps.map(([at, t]) => ({ at, t })) });
+    for (const [n, st] of Object.entries(arc)) f.emo[n + ">미오"] = mkPair(n, "미오", st);
+    Object.assign(f.emo, {
+      "미오>수아": mkPair("미오", "수아", [[1, { affection: 3 }], [10, { affection: 7, attraction: 6, trust: 6 }]]),
+      "서진>도윤": mkPair("서진", "도윤", [[2, { attraction: 7, affection: 5 }], [24, { attraction: 2, affection: 2, hostility: 6 }]]),
+      "도윤>서진": mkPair("도윤", "서진", [[2, { attraction: 6 }], [24, { attraction: 3, hostility: 4 }]]),
+      "서진>수아": mkPair("서진", "수아", [[6, { hostility: 3 }], [22, { hostility: 7, fear: 3, affection: 2, attraction: 1 }]]),
+      "수아>서진": mkPair("수아", "서진", [[22, { hostility: 7, fear: 3, affection: 2, attraction: 1 }]]),
+      "시로코>호시노": mkPair("시로코", "호시노", [[4, { affection: 6, respect: 7 }], [11, { affection: 5, hostility: 3 }], [28, { affection: 8, trust: 8 }]]),
+      "호시노>시로코": mkPair("호시노", "시로코", [[11, { affection: 6, hostility: 2 }], [28, { affection: 8, trust: 7, attraction: 3 }]]),
+      "유나>하루": mkPair("유나", "하루", [[10, { affection: 7, trust: 6 }], [18, { affection: 5, hostility: 4 }]]),
+      "하루>유나": mkPair("하루", "유나", [[10, { affection: 8, trust: 7 }], [18, { affection: 7, hostility: 2 }]]),
+      "유나>시로코": mkPair("유나", "시로코", [[20, { attraction: 4 }]]),
+    });
+    // 관계 변화 기록(선 이름)과 오래가는 관계(tie)
+    const it = (at, d, dir) => ({ at, d, dir });
+    f.rels = { "서진>도윤": { from: "서진", to: "도윤", items: [it(2, "몰래 만나는 사이", "+"), it(24, "헤어졌다", "-")] },
+      "시로코>호시노": { from: "시로코", to: "호시노", items: [it(4, "같은 위원회 선후배", "+"), it(11, "말다툼", "-"), it(28, "화해했다", "+")] },
+      "유나>하루": { from: "유나", to: "하루", items: [it(10, "자매", "+"), it(18, "다퉜다", "-")] },
+      "수아>서진": { from: "수아", to: "서진", items: [it(22, "크게 다퉜다", "-")] },
+      "나기>시로코": { from: "나기", to: "시로코", items: [it(13, "소꿉친구", "+")] } };
+    f.ties = { t1: { a: "유나", b: "하루", kind: "자매", at: 10 }, t2: { a: "시로코", b: "호시노", kind: "선후배", at: 4 }, t3: { a: "도윤", b: "서진", kind: "전 애인", at: 24, prev: { kind: "연인", at: 2 } }, t4: { a: "나기", b: "시로코", kind: "소꿉친구", at: 13 } };
+    f.orient = { ...(f.orient ?? {}), 시로코: { g: "f" }, 호시노: { g: "f" }, 유나: { g: "f" }, 하루: { g: "f" }, 나기: { g: "m" } };
     if (q.get("many") === "1") for (const n of ["하루", "나기", "카즈사", "요시미", "아이리", "레이사", "치세", "히나", "아코", "이로하", "츠루기", "하스미", "마시로", "코하루", "하나코", "아즈사"]) { f.people[n] = { name: n, records: [rec("m-" + n, n + "와 복도에서 마주쳤다", "C", 20)] }; f.emo["수아>" + n] = { from: "수아", to: n, tags: { affection: 3, trust: 2 }, log: [] }; }
     f.beliefs = [{ id: "bl1", who: "수아", by: "서진", thinks: "미오이 서진을 좋아한다", truth: "업무 때문에 만났을 뿐이다", open: true }];
+    // 장기기억 데이터에서 유저는 {{user}}로 저장된다(화면에는 페르소나 이름 미오로 보임)
+    for (const k of ["emo", "lovers", "romance", "talk", "faces", "bonds", "rifts", "exp", "beliefs", "rels", "ties"]) if (f[k]) f[k] = JSON.parse(JSON.stringify(f[k]).replaceAll("미오", "{{user}}"));
+    f.scenes = f.scenes.map((sc) => ({ ...sc, who: (sc.who ?? []).map((w) => (w === "미오" ? "{{user}}" : w)) }));
   }, { chaId: "c1", chatId: "t1" });
   // Erosync 가짜 스냅샷(성인 항목 카드가 채워지게)
   const snap = { ok: true, people: [
@@ -72,7 +119,7 @@ async function seedWiki() {
   await M.store.updateIndex((i) => { i.settings ??= {}; i.settings.flow = { ...(i.settings.flow ?? {}), on: true, advanced: true }; }).catch(() => {});
   Object.assign(__app.ctx.state.mem ??= {}, { botId: "c1", chatIndex: 0, personKey: q.get("who") || "수아", tab: "people", page: "detail" });
   __app.ctx.state.mem.wkLayout = q.get("lay") ?? "B4";
-  __app.ctx.go("memory");
+  __app.ctx.go(q.get("tab") === "relmap" ? "relmap" : "memory");
 }
 // 미리보기 전용: 오른쪽 위 ‘채팅 켬/끔’ 단추(지금 탭을 유지한 채 다시 불러온다)
 const chatOn = q.get("chat") !== "0", tg = document.createElement("button");
