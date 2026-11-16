@@ -87,7 +87,7 @@ test("Erosync 선호: 글자로 저장된 JSON도 이름·좋고 싫음·확신�
   assert.equal(prefItem("간단한 글").label, "간단한 글");
 });
 
-test("출발값 자동 만들기: 기본 켜짐, 출발값이 없으면 전체 분석을 한 번만 시작", async () => {
+test("출발값 자동 만들기: 기본 켜짐, 출발값이 없으면 그 턴 인물만 한 번 seed(전체 분석 안 함)", async () => {
   assert.equal(normalizeTurnSettings({}).autoStart, true);
   const calls = [];
   const store = new Map();
@@ -97,7 +97,9 @@ test("출발값 자동 만들기: 기본 켜짐, 출발값이 없으면 전체 �
   const T = createErosyncTurn(api, { erosync });
   await T.onTurn({ key: "k1", people: [{ name: "민지" }], rp: "본문" });
   await T.onTurn({ key: "k2", people: [{ name: "민지" }], rp: "본문" });
-  assert.deepEqual(calls.filter((c) => c[0] === "start"), [["start", "full"]]);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(calls.filter((c) => c[0] === "start").length, 0);
+  assert.deepEqual(calls.filter((c) => c[0] === "seed").map((c) => c[1].name), ["민지"]);
   assert.equal(calls.some((c) => c[0] === "turn"), false);
 });
 

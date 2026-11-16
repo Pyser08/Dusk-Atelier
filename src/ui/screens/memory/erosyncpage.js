@@ -2,7 +2,7 @@
 // 인물 값은 인물 위키의 NSFW 탭에서 보고 고친다.
 import { pickLoreEntries } from "./erosyncpick.js";
 import { h, replace } from "../../dom.js";
-import { btn, pageHead, segmented } from "../../kit.js";
+import { btn, pageHead, segmented, confirmDialog } from "../../kit.js";
 import { mem } from "./common.js";
 import { erosyncSection } from "./erosyncui.js";
 import { erosyncLevelCard } from "./erosynclevel.js";
@@ -23,6 +23,14 @@ import { flowSections } from "./flowsettings.js";
 export const TABS = [["home", "개요"], ["scene", "장면·수위"], ["manage", "분석·관리"]];
 const OLD_TAB = { safety: "scene", act: "scene", behind: "scene", ana: "manage", review: "manage", prompt: "manage", data: "manage" };
 export const scanLine = (s) => !s?.found ? "" : `원래 Erosync에서 쓰던 기록을 찾았어요 — 인물 프로필 ${s.profiles}개${s.canListSessions ? ` · 채팅 기록 ${s.sessions}개` : ""}${s.botSettings ? ` · 봇별 설정 ${s.botSettings}개` : ""}. 같은 저장 공간을 쓰니 따로 옮길 필요 없이 켜면 그대로 이어져요. 원래 플러그인은 끄고 쓰세요.`;
+// addon-rebuild: 전체 분석은 시작 전에 규모(자료·찾기 호출 수)를 보여 주고 확인받는다. 규모를 못 읽어도 확인은 받는다.
+export const fullEstimateText = (e) => e?.ok
+  ? `자료 ${e.documents}개(약 ${Math.round(e.chars / 1000)}천 자)를 처음부터 훑어 인물을 찾아요. 인물 찾기만 약 ${e.batches}번, 찾은 인물마다 점수·프로필 호출이 더 들어가요(인물이 많으면 수백 번). 대화에 나온 인물만 필요하면 끄고 두세요 — 매 턴 계산이 처음 보는 인물을 한 명씩 만들어요.`
+  : "자료 전체를 처음부터 훑어 인물을 찾아요. 자료가 길면 AI 호출이 수백 번 들어갈 수 있어요.";
+async function confirmFull(ctx) {
+  const e = await ctx.erosync?.profile?.("estimate").catch(() => null);
+  return confirmDialog(ctx.win, { title: "전체 인물로 만들까요?", body: fullEstimateText(e), ok: "시작" });
+}
 const p = (t, id) => h("p", { class: "rb-muted", style: "white-space:normal;margin:0", id }, t);
 
 export async function renderMemoryErosync(ctx, host, { redraw }) {
@@ -37,11 +45,11 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
 
   const analysisCard = () => {
     const line = analysisLine(ctx, () => {});
-    const run = btn("전체 인물로 만들기", { kind: "primary", id: "rb-erosync-analyze", disabled: !live, onClick: () => line.start("full", "") });
+    const run = btn("전체 인물로 만들기", { kind: "primary", id: "rb-erosync-analyze", disabled: !live, onClick: () => confirmFull(ctx).then((ok) => { if (ok) line.start("full", ""); }) });
     const pick = btn("인물 골라서 만들기", { id: "rb-erosync-analyze-pick", disabled: !live, onClick: async () => { const ids = await pickLoreEntries(ctx); if (ids?.length) line.start("lore", ids); } });
     line.watch();
     return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-analysis" }, h("h3", null, "출발값 만들기"),
-      p("처음 한 번, 로어북·캐릭터 카드로 인물의 출발값을 만들어요. 그다음부터는 위 ‘매 턴 계산’이 대화에 맞춰 고쳐요. ‘전체’는 자료 길이만큼 AI 호출이 들어가니(로어북이 길면 수십 번), 필요한 인물만 골라서 만드는 걸 권해요. 한 명만 다시 하려면 인물 위키의 NSFW 탭을 쓰세요."),
+      p("대화에 처음 나온 인물은 ‘매 턴 계산’이 그 인물만 출발값을 만들어요(‘출발값 자동으로 만들기’). 여기서는 로어북·캐릭터 카드로 직접 만들 수 있어요. ‘전체’는 자료 전체를 훑어 AI 호출이 많이 들어가니(시작 전에 규모를 보여 줘요), 필요한 인물만 골라서 만드는 걸 권해요. 한 명만 다시 하려면 인물 위키의 NSFW 탭을 쓰세요."),
       live ? h("div", { class: "rb-mem-sact" }, run, pick) : p("Erosync를 켜면 분석할 수 있어요."), line.el);
   };
   const dataCard = () => {

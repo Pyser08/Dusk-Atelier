@@ -79,6 +79,8 @@ test("설정 정리: 모르는 항목은 버린다", () => {
 test("연결: 기록기 알림·엔진 연결부·애드온 붙이기", () => {
   const turn = fs.readFileSync(new URL("../src/data/memoryturn.js", import.meta.url), "utf8");
   assert.ok(turn.includes("tellTurn({ rp: run.rp") && turn.includes("onTurn: (fn) =>"));
+  assert.ok(turn.includes('source: backfilling > 0 ? "backfill" : "live"') && turn.includes("backfilling = 1;") && turn.includes("backfilling = 0;"), "지난 대화 분석 기록엔 출처 표시");
+  assert.ok(!fs.readFileSync(new URL("../src/data/erosyncturn.js", import.meta.url), "utf8").includes('profile("start"'), "턴 갱신기는 전체 분석을 부르지 않는다");
   const eng = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.ok(eng.includes("async function duskTurnUpdate") && eng.includes("turn: duskTurnUpdate"));
   assert.ok(eng.includes("buildTurnSystem({ keys, axisDefs: AXIS_DEFINITIONS, sexDefs: SEX_AXIS_DEFINITIONS"), "원본 축 정의를 그대로 쓴다");
@@ -94,23 +96,51 @@ test("실제 엔진: 채팅이 없으면 매 턴 계산은 이유를 알리고 �
   const e = await bootErosync(api);
   assert.equal(typeof e.profiles.turn, "function");
   await assert.rejects(() => e.profiles.turn({ people: [{ name: "a" }], rp: "턴" }), /채팅/);
+  assert.equal(typeof e.profiles.seed, "function"); assert.equal(typeof e.profiles.estimate, "function");
+  await assert.rejects(() => e.profiles.seed({ name: "a" }), /채팅/);
+  assert.deepEqual(await e.profiles.seed({ name: " " }), { ok: false, reason: "이름이 없어요" });
+  await assert.rejects(() => e.profiles.estimate(), /채팅/);
   await e.dispose();
 });
 
-test("처음 보는 인물: 한 번 스친 이름으로는 전체 분석을 시작하지 않고, 두 턴 넘게 나온 이름만 모아서 한 번, 그 뒤 한동안은 다시 안 한다", async () => {
+test("처음 보는 인물: 전체 분석 대신 그 인물만 seed, 두 턴 나온 이름만, 카운터는 저장돼 다시 켜도 이어진다", async () => {
   const { api } = fakeApi(), calls = [];
   let un = ["점원"];
   const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [{ id: "a", name: "앨리스" }] }),
-    profile: async (op, arg) => { calls.push([op, arg]); if (op === "turn") return { ok: true, changed: [], unmatched: un }; if (op === "status") return { running: false }; return { ok: true }; } };
-  const t = createErosyncTurn(api, { erosync: er });
-  const turn = async (k) => { await t.onTurn({ key: k, rp: "턴", people: [{ name: "앨리스" }] }); await new Promise((r) => setTimeout(r, 0)); };
-  const starts = () => calls.filter(([op]) => op === "start").length;
+    profile: async (op, arg) => { calls.push([op, arg]); if (op === "turn") return { ok: true, changed: [], unmatched: un }; if (op === "status") return { running: false }; return { ok: true, analyzed: false }; } };
+  let t = createErosyncTurn(api, { erosync: er });
+  const turn = async (k, source) => { await t.onTurn({ key: k, rp: "턴", source, people: [{ name: "앨리스" }, { name: "세라", memory: "세라 기억" }] }); await new Promise((r) => setTimeout(r, 0)); };
+  const ops = (o) => calls.filter(([op]) => op === o);
   await turn("k1");
-  assert.equal(starts(), 0, "한 번 스친 점원은 분석 안 함");
+  assert.equal(ops("seed").length, 0, "한 번 스친 점원은 안 함");
   un = ["세라"]; await turn("k2");
-  assert.equal(starts(), 0, "세라도 아직 한 번");
-  un = ["세라", "유나"]; await turn("k3");
-  assert.equal(starts(), 1, "두 턴째 나온 세라 때문에 전체 분석 한 번");
-  un = ["유나", "카즈"]; await turn("k4"); un = ["카즈"]; await turn("k5");
-  assert.equal(starts(), 1, "쉬는 동안엔 새 이름이 쌓여도 다시 시작하지 않음");
+  t = createErosyncTurn(api, { erosync: er });   // 새로고침·애드온 다시 켜기
+  await turn("k3");
+  assert.deepEqual(ops("seed").map(([, a]) => a.name), ["세라"], "저장된 카운터로 두 턴째 세라만 seed");
+  assert.equal(ops("seed")[0][1].memory, "세라 기억", "장기기억 요약을 같이 넘김");
+  assert.equal(ops("start").length, 0, "전체 분석은 자동으로 부르지 않음");
+  await turn("k4"); await turn("k5");
+  assert.equal(ops("seed").length, 1, "한 번 만든 이름은 다시 안 함");
+  const log = await t.autoHistory();
+  assert.equal(log[0].why, "new"); assert.deepEqual(log[0].names, ["세라"]);
+});
+
+test("지난 대화 분석(backfill)에서 온 턴은 자동 출발값 집계에서 뺀다", async () => {
+  const { api } = fakeApi(), calls = [];
+  const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [] }),
+    profile: async (op, arg) => { calls.push([op, arg]); if (op === "turn") return { ok: true, changed: [], unmatched: ["세라"] }; return { ok: true }; } };
+  const t = createErosyncTurn(api, { erosync: er });
+  for (const k of ["b1", "b2", "b3"]) { await t.onTurn({ key: k, rp: "턴", source: "backfill", people: [{ name: "세라" }] }); await new Promise((r) => setTimeout(r, 0)); }
+  assert.equal(calls.filter(([op]) => op === "seed" || op === "start").length, 0);
+});
+
+test("출발값이 하나도 없으면 전체 분석 대신 이번 턴 인물만 seed(최대 3명)", async () => {
+  const { api } = fakeApi(), calls = [];
+  const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [] }),
+    profile: async (op, arg) => { calls.push([op, arg]); return { ok: true, changed: [], unmatched: [] }; } };
+  const t = createErosyncTurn(api, { erosync: er });
+  await t.onTurn({ key: "e1", rp: "턴", people: ["가", "나", "다", "라"].map((name) => ({ name })) });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(calls.filter(([op]) => op === "seed").map(([, a]) => a.name), ["가", "나", "다"]);
+  assert.equal(calls.filter(([op]) => op === "start").length, 0);
 });

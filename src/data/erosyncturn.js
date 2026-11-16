@@ -3,6 +3,7 @@
 import { readGauge } from "./gaugemult.js";
 import { seedErosyncNow } from "./adultseed.js";
 export const TURN_KEY = "dusk.erosync.turn", TURN_LOG_KEY = "dusk.erosync.turnlog", TURN_LOG_MAX = 30;
+export const AUTO_KEY = "dusk.erosync.auto", AUTO_LOG_KEY = "dusk.erosync.autolog";
 export const TURN_DEFAULT = Object.freeze({ on: true, groups: ["axes", "sexual"], autoStart: true });   // 2.2.6 autoStart: 출발값 자동 만들기(기본 켜짐)
 
 export function normalizeTurnSettings(v) {
@@ -16,23 +17,44 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
   const write = (k, v) => api.pluginStorage.setItem(k, JSON.stringify(v));
   let last = null, running = null, off = null;
   const seen = [];   // 같은 응답 기록(key)은 한 번만
-  const autoDone = new Set();   // 출발값 자동 만들기를 이미 시작한 채팅(+처음 본 인물) — 한 세션에 한 번씩만
-  // 2.2.6 호출 줄이기: 처음 보는 이름은 턴마다 세어 두고, 두 턴 넘게 나온 이름이 생겼을 때만 전체 분석을 한 번 한다(한 번 스친 엑스트라 때문에 전체 분석을 돌리지 않게).
-  // 한 번 돌린 채팅은 NEW_COOLDOWN턴 동안 다시 돌리지 않는다.
-  const NEW_MIN_TURNS = 2, NEW_COOLDOWN = 20;
-  const newSeen = new Map(), turnNo = new Map(), lastNewAt = new Map();   // scope → Map(이름 → 나온 턴 수) / 턴 수 / 마지막 시작 턴
+  // addon-rebuild 출발값 자동 만들기: 전체 인물 찾기(카드·로어·모듈 전체)는 자동으로 부르지 않는다. 장기기억이 알려 준 인물만 1명씩 seed.
+  // - 처음 보는 이름은 NEW_MIN_TURNS턴 나와야 seed(한 번 스친 엑스트라 제외). 한 번 seed한 이름은 다시 안 함.
+  // - 출발값이 하나도 없는 채팅은 이번 턴 인물만(최대 EMPTY_MAX명).
+  // - 지난 대화 분석(source "backfill")에서 온 턴은 세지 않는다.
+  // - 카운터·완료 표시는 pluginStorage(AUTO_KEY)에 저장해 새로고침해도 이어진다. 자동 실행 기록은 AUTO_LOG_KEY.
+  const NEW_MIN_TURNS = 2, EMPTY_MAX = 3, SEED_PER_TURN = 3;
+  const keyOf = (nm) => String(nm || "").trim().toLowerCase();
+  let seeding = null;
 
-  // 2.2.6 출발값 자동 만들기: 이 채팅에 Erosync 인물 값이 하나도 없거나(why "empty") 처음 보는 인물이 나왔을 때(why "new") 전체 분석을 한 번 시작한다.
-  async function autoStart(why, scope, names = []) {
-    const k = `${scope || "?"}|${why}|${why === "new" ? names.slice().sort().join(",") : ""}`;
-    if (autoDone.has(k)) return false;
-    autoDone.add(k);
-    try {
-      const st = await erosync.profile("status"); if (st?.running) return false;
-      const r = await erosync.profile("start", "full");
-      log(`Erosync 출발값 자동 만들기 시작(${why === "empty" ? "출발값 없음" : `새 인물 ${names.join(", ")}`})`);
-      return !!r;
-    } catch (e) { log(`Erosync 출발값 자동 만들기 실패 ${e?.message ?? e}`); return false; }
+  async function autoState() { const v = await read(AUTO_KEY); return v && typeof v === "object" ? v : {}; }
+  async function autoHistory() { const v = await read(AUTO_LOG_KEY); return Array.isArray(v) ? v : []; }
+  async function seedPeople(why, scope, people) {
+    if (seeding) return false;
+    const st = await autoState(), sc = st[scope] ?? { counts: {}, done: {} };
+    const todo = people.filter((p) => !sc.done[keyOf(p.name)]).slice(0, SEED_PER_TURN);
+    if (!todo.length) return false;
+    for (const p of todo) sc.done[keyOf(p.name)] = now();
+    st[scope] = sc; await write(AUTO_KEY, st);
+    seeding = (async () => {
+      const results = [];
+      for (const p of todo) {
+        try { const r = await erosync.profile("seed", { name: p.name, aliases: p.aliases ?? [], memory: p.memory ?? "" }); results.push({ name: p.name, ok: !!r?.ok, analyzed: !!r?.analyzed, reason: r?.reason || "" }); }
+        catch (e) { results.push({ name: p.name, ok: false, reason: String(e?.message ?? e) }); }
+      }
+      log(`Erosync 출발값 만들기(${why === "empty" ? "출발값 없음" : "새 인물"}): ${results.map((r) => `${r.name}${r.analyzed ? " 분석" : r.ok ? " 임시값" : " 실패"}`).join(", ")}`);
+      await write(AUTO_LOG_KEY, [{ at: now(), why, scope, names: todo.map((p) => p.name), results }, ...(await autoHistory())].slice(0, TURN_LOG_MAX));
+      return results;
+    })().catch((e) => { log(`Erosync 출발값 만들기 실패 ${e?.message ?? e}`); return null; }).finally(() => { seeding = null; });
+    return true;
+  }
+  async function countNew(scope, names, people) {
+    const st = await autoState(), sc = st[scope] ?? { counts: {}, done: {} };
+    for (const nm of new Set(names.filter((x) => x && !/\{\{user\}\}/i.test(x)))) { const k = keyOf(nm); if (!sc.done[k]) sc.counts[k] = (sc.counts[k] ?? 0) + 1; }
+    st[scope] = sc; await write(AUTO_KEY, st);
+    const ready = names.filter((nm) => !sc.done[keyOf(nm)] && (sc.counts[keyOf(nm)] ?? 0) >= NEW_MIN_TURNS);
+    if (!ready.length) return false;
+    const byName = new Map(people.map((p) => [keyOf(p.name), p]));
+    return seedPeople("new", scope, ready.map((nm) => byName.get(keyOf(nm)) ?? { name: nm }));
   }
 
   async function settings() { return normalizeTurnSettings(await read(TURN_KEY)); }
@@ -48,7 +70,7 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
     try { snap = await erosync.read?.(); } catch { snap = null; }
     try { await seedErosyncNow(api, erosync, snap, log); } catch { /* 무작위 출발값은 실패해도 계산은 이어서 */ }
     if (s.autoStart) {
-      if (snap?.ok && !(snap.people ?? []).length) { await autoStart("empty", snap.scope?.scopeKey); return null; }   // 출발값이 없으면 변화분 계산 대신 처음 분석부터
+      if (info.source !== "backfill" && snap?.ok && !(snap.people ?? []).length) { await seedPeople("empty", snap.scope?.scopeKey || "?", info.people.filter((p) => p?.name).slice(0, EMPTY_MAX)); return null; }   // 출발값이 없으면 이번 턴 인물만
     }
     const ctrl = new AbortController();
     const job = (async () => {
@@ -56,14 +78,7 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
       const r = await erosync.profile("turn", { people: info.people, rp: info.rp, groups: s.groups, signal: ctrl.signal, gauge: await readGauge(api) });
       if (!r?.ok) { last = { at: now(), phase: "error", message: r?.reason || "계산하지 못했어요" }; return r; }
       last = { at: now(), phase: "done", changed: r.changed ?? [], unmatched: r.unmatched ?? [] };
-      if (s.autoStart && snap?.ok) {
-        const sc = snap.scope?.scopeKey || "?", n = (turnNo.get(sc) ?? 0) + 1; turnNo.set(sc, n);
-        const seenHere = newSeen.get(sc) ?? new Map(); newSeen.set(sc, seenHere);
-        for (const nm of new Set((r.unmatched ?? []).filter((x) => x && !/\{\{user\}\}/i.test(x)))) seenHere.set(nm, (seenHere.get(nm) ?? 0) + 1);
-        const ready = [...seenHere].filter(([, c]) => c >= NEW_MIN_TURNS).map(([nm]) => nm);
-        const cool = lastNewAt.has(sc) && n - lastNewAt.get(sc) < NEW_COOLDOWN;
-        if (ready.length && !cool) { lastNewAt.set(sc, n); for (const nm of ready) seenHere.delete(nm); void autoStart("new", sc, ready); }
-      }
+      if (s.autoStart && snap?.ok && info.source !== "backfill" && r.unmatched?.length) await countNew(snap.scope?.scopeKey || "?", r.unmatched, info.people);
       if (r.changed?.length) {
         const log0 = await history();
         await write(TURN_LOG_KEY, [...r.changed.map((c) => ({ at: now(), id: c.id, name: c.name, before: c.before, after: c.after, reason: c.reason || "" })), ...log0].slice(0, TURN_LOG_MAX));
@@ -81,5 +96,5 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
     return true;
   }
   function detach() { try { off?.(); } catch {} off = null; running?.ctrl.abort(); }
-  return { settings, save, history, clearHistory: () => write(TURN_LOG_KEY, []), onTurn, attach, detach, attached: () => !!off, status: () => last, cancel: () => running?.ctrl.abort() };
+  return { settings, save, history, autoHistory, clearHistory: () => write(TURN_LOG_KEY, []), onTurn, attach, detach, attached: () => !!off, status: () => last, cancel: () => running?.ctrl.abort() };
 }

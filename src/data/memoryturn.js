@@ -57,6 +57,7 @@ const STASH_MAX = 8;
 export function createTurnFlow(api, { store, runner, injector, embedder = null, sourceLibrary, link = {}, onOpen = null, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
   // 2.2.0: 기록기가 한 턴(묶음)을 기록하면 알린다 — Erosync 매 턴 계산이 듣는다. 듣는 쪽 실패는 기록에 영향 없음.
   const turnListeners = new Set();
+  let backfilling = 0;   // addon-rebuild: 지난 대화 분석이 예약한 기록이면 턴 알림에 source "backfill"
   const tellTurn = (info) => { for (const fn of turnListeners) { try { Promise.resolve(fn(info)).catch((e) => log("턴 알림 처리 실패", e?.message ?? e)); } catch (e) { log("턴 알림 처리 실패", e?.message ?? e); } } };
   let rt = null, starting = null, lastTurn = null, cold = null, lastRecord = null, lastNote = null, retryHits = 0, lastSkipped = null;
   // pure: 기억 저장소가 '끔'이면 Dusk 자체 기억(기록·회상·주입)은 전부 빼고 리수폿 위키 정리만 돌린다
@@ -187,7 +188,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (cyc) { try { env = applyCycleReportObject({ ...env, cycle_report: rec.stage1?.cycle ?? [] }, wiki.snapshot(), cy).obj; } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
       if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
       lastRecord = { at: Date.now(), batch: run.batch, ...summarize(rec, env) };
-      tellTurn({ rp: run.rp, batch: run.batch, key: fullKey, people: rec.people.filter((p) => !p.failed).map((p) => ({ name: p.name, aliases: Array.isArray(p.doc?.aliases) ? p.doc.aliases : [], memory: (p.lines ?? []).map((l) => typeof l === "string" ? l : l?.text ?? "").join("\n").slice(0, 1200) })) });
+      tellTurn({ rp: run.rp, batch: run.batch, key: fullKey, source: backfilling > 0 ? "backfill" : "live", people: rec.people.filter((p) => !p.failed).map((p) => ({ name: p.name, aliases: Array.isArray(p.doc?.aliases) ? p.doc.aliases : [], memory: (p.lines ?? []).map((l) => typeof l === "string" ? l : l?.text ?? "").join("\n").slice(0, 1200) })) });
       return JSON.stringify(env);
     };
     // 기록하기: Dusk 구획을 같이 싣고, 돌아온 응답에서 떼어 낸다.
@@ -376,10 +377,11 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         const idx = await store.getIndex();
         return potState(idx, character?.chaId).on && r.auto.enabled();
       };
-      link.backfillPot = (ci, ti, messageIndex, shared) => r.auto.schedule({ chat: shared.chat, char: shared.character, characterIndex: ci, chatIndex: ti, messageIndex });
+      link.backfillPot = (ci, ti, messageIndex, shared) => { backfilling = 1; return r.auto.schedule({ chat: shared.chat, char: shared.character, characterIndex: ci, chatIndex: ti, messageIndex }); };
       link.backfillPotWait = (ci, ti, signal) => new Promise((res) => {
-        const p = r.auto.waitForScope(ci, ti, { timeoutMs: 10 * 60 * 1000 }).then(res, () => res(false));
-        signal?.addEventListener?.("abort", () => res(false), { once: true });
+        const done = (v) => { backfilling = 0; res(v); };
+        const p = r.auto.waitForScope(ci, ti, { timeoutMs: 10 * 60 * 1000 }).then(done, () => done(false));
+        signal?.addEventListener?.("abort", () => done(false), { once: true });
         return p;
       });
       rt = r; return r;

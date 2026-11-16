@@ -11,6 +11,7 @@ export async function bootErosync(api, hostArg) {
   if (!api) throw new Error('[Erosync] RisuAI Plugin API v3 is unavailable.');
   // Dusk 안에서 돌 때: 원본이 R.onUnload로 맡기는 정리 함수를 가로채 두었다가 끌 때 부른다. 나머지 api는 그대로 넘긴다.
   const unloadFns = [];
+  let duskRateUntil = 0;   // addon-rebuild: 429 뒤 모든 Erosync 호출이 함께 쉬는 시각
   const R = new Proxy(api, { get(target, key) {
     if (key === 'onUnload') return async (fn) => { if (typeof fn === 'function') unloadFns.push(fn); };
     const value = target[key];
@@ -5762,6 +5763,7 @@ export async function bootErosync(api, hostArg) {
         const abort = () => attemptGuard.abort(taskGuard.signal?.reason || staleLifecycleError('provider request cancelled'));
         taskGuard.signal?.addEventListener('abort', abort, { once: true });
         retry.attemptNumber += 1;
+        if (duskRateUntil > Date.now()) { let t0; const w = duskRateUntil - Date.now(); if (taskGuard.remainingMs() <= w) throw Object.assign(new Error('AI 사용량 한도로 잠시 쉬는 중이에요'), { code: 'EROSYNC_PROVIDER_HTTP', status: 429 }); try { await taskGuard.wait(new Promise(r => { t0 = setTimeout(r, w); }), 'provider rate wait'); } finally { clearTimeout(t0); } }
         retry.onStatus?.({ phase: 'requesting', attemptNumber: retry.attemptNumber, maxRetries, retriesUsed: retry.used, retryDelayMs: 0, errorCode: '', httpStatus: 0, errorSource: '' });
         let failure;
         try {
@@ -5784,7 +5786,10 @@ export async function bootErosync(api, hostArg) {
           || (failure.code === 'EROSYNC_PROVIDER_HTTP' && [408, 429, 500, 502, 503, 504].includes(failure.status));
         // Risu calls may keep running after our timeout: never overlap an orphan.
         if (!transient || retry.remaining <= 0 || (assignment.providerId === 'risu' && risuActiveCalls.size > 0)) throw failure;
-        const delay = Math.min(2000, 500 * (retry.used + 1));
+        // addon-rebuild: 429(용량 부족)는 메인 모델과 같은 용량을 쓰는 경우가 많아 간격을 크게 늘리고(5·10·20·30초), 그동안 다른 Erosync 호출도 함께 쉰다.
+        const rateLimited = failure.status === 429;
+        const delay = rateLimited ? Math.min(30000, 5000 * 2 ** retry.used) : Math.min(2000, 500 * (retry.used + 1));
+        if (rateLimited) duskRateUntil = Math.max(duskRateUntil, Date.now() + delay);
         if (taskGuard.remainingMs() <= delay) throw failure;
         retry.remaining -= 1; retry.used += 1;
         retry.onStatus?.({ phase: 'retry_wait', maxRetries, retriesUsed: retry.used, retryDelayMs: delay, errorCode: failure.code, httpStatus: failure.status || 0, errorSource: failure.source || '' });
@@ -23836,6 +23841,66 @@ Constraint: {{constraint}}
     return duskAnalysisStatus();
   }
 
+  // addon-rebuild: 전체 분석 전에 보여 줄 규모 — 자료 수·글자 수·인물 찾기 묶음 수(=찾기 호출 수). 인물 수는 찾기 전엔 알 수 없어 묶음 수로 어림.
+  async function duskFullEstimate() {
+    const { context } = await duskProfileCtx('');
+    const character = await R.getCharacter();
+    const live = character ? await resolveScope(character) : null;
+    if (!live) return { ok: false, reason: '열린 채팅이 없어요' };
+    const config = normalizeConfig(context.config);
+    const inventory = await collectSourceInventory(character, live, { force: true, maxSourceChars: config.analysisMaxSourceChars });
+    const docs = inventory.documents || [];
+    const batches = splitSourceDocuments(docs, config.analysisSourceChunkChars).length;
+    return { ok: true, documents: docs.length, chars: docs.reduce((n, d) => n + Number(d.chars || String(d.text || '').length || 0), 0), batches, known: contextProfiles(context).length };
+  }
+
+  // addon-rebuild: 장기기억이 알려 준 인물 1명만 출발값 만들기. 전체 인물 찾기(카드·로어·모듈 전체)는 부르지 않는다.
+  // 프로필이 없으면 이 채팅 소속 인물로 만들고(빠진 축은 임시값), 자료에 이름이 나오면 그 인물만 1인 분석(축→성적 축→프로필)을 돌린다.
+  async function duskProfileSeed({ name = '', aliases = [], memory = '' } = {}) {
+    const nm = truncate(String(name || ''), 160).trim();
+    if (!nm) return { ok: false, reason: '이름이 없어요' };
+    const { context } = await duskProfileCtx('');
+    const found = matchProfile({ name: nm, aliases }, contextProfiles(context));
+    let id = found?.id || '';
+    if (!id) {
+      const scopeKey = String(context.scope.scopeKey || ''), bundleKey = String(context.scope.sourceBundleKey || '');
+      const baseId = safeKeyPart(`mob_${fnv1a(scopeKey)}_${nm}`, `mob_${fnv1a(`${scopeKey}:${nm}`)}`);
+      const made = await mutateProfileRegistry('dusk profile seed', (profiles, registry) => {
+        let pid = baseId, n = 2;
+        while ((registry.entities?.[pid] && registry.entities[pid].name !== nm) || (profiles.profiles?.[pid] && profiles.profiles[pid].name !== nm)) pid = `${baseId}_${n++}`;
+        registry.entities = registry.entities || {}; profiles.profiles = profiles.profiles || {};
+        const prev = registry.entities[pid];
+        registry.entities[pid] = { ...(prev || {}), id: pid, name: nm, aliases: normalizeStringList([...(prev?.aliases || []), ...aliases], 16, 120), category: prev?.category || 'persistent_mob',
+          source: prev?.source || 'dusk_memory', scopeKey: prev?.scopeKey || scopeKey, profileId: pid, appearanceCount: (prev?.appearanceCount || 0) + 1, description: truncate(memory || prev?.description, 800) };
+        if (!profiles.profiles[pid]) {
+          profiles.profiles[pid] = { ...normalizeProfileRecord({ id: pid, name: nm, aliases, provisionalProfile: {}, ownerBundleKeys: bundleKey ? [bundleKey] : [],
+            entityVerdict: { status: 'unverified', entityType: 'person', confidence: 35, reason: 'named by Dusk memory', source: 'dusk_memory' }, confidence: 35,
+            evidence: memory ? [truncate(memory, 800)] : [] }, '', 'persistent_mob'),
+          category: 'persistent_mob', scopeOwnership: { scopeKey, sourceBundleKey: bundleKey, confidence: 'exact' } };
+        }
+        return pid;
+      });
+      id = made.outcome;
+      duskReadCache = null;
+    }
+    // 자료에 이름이 나오면 1인 분석. 근거가 없거나 다른 분석 중이면 임시값으로 두고 매 턴 계산이 이어서 움직인다.
+    try {
+      const fresh = await duskProfileCtx('');
+      const root = fresh.context.profiles?.profiles?.[id];
+      if (!root || root.analysisStatus === 'ready' || analysisRuntime.running) return { ok: true, id, created: !found, analyzed: false };
+      const character = await R.getCharacter();
+      const live = character ? await resolveScope(character) : null;
+      if (!live || live.scopeKey !== fresh.context.scope.scopeKey) return { ok: true, id, created: !found, analyzed: false };
+      const config = normalizeConfig(fresh.context.config);
+      const inventory = await collectSourceInventory(character, live, { force: true, maxSourceChars: config.analysisMaxSourceChars });
+      if (!singleReanalysisDocumentsByName(materializeProfileVariant(root, String(fresh.context.scope.variantKey || 'default')) || root, inventory).length) return { ok: true, id, created: !found, analyzed: false, reason: 'no_sources' };
+      const r = await startSingleProfileReanalysis(fresh.context, id, 'full', { config, label: '출발값 만들기', auditReason: '새 인물 출발값' });
+      return { ok: true, id, created: !found, analyzed: r?.status === 'success' };
+    } catch (e) {
+      return { ok: true, id, created: !found, analyzed: false, reason: String(e?.message || e) };
+    }
+  }
+
   // 비하인드(장면 뒷이야기) 읽기·지우기
   async function duskBehindList() {
     const context = await getUiContext();
@@ -24054,7 +24119,7 @@ Constraint: {{constraint}}
     content: { get: duskContentGet, set: duskContentSet, global: duskContentGlobal },
     config: { get: duskConfigGet, set: duskConfigSet },
     behind: { list: duskBehindList, remove: duskBehindRemove },
-    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, lore: duskLoreList, turn: duskTurnUpdate, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
+    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, seed: duskProfileSeed, estimate: duskFullEstimate, lore: duskLoreList, turn: duskTurnUpdate, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
     prompts: { get: duskPromptsGet, set: duskPromptSet },
     guard: { set: duskGuardSet },
     tags: { set: duskTagsSet },
