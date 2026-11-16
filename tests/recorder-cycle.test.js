@@ -52,3 +52,23 @@ test("월경 추적이 켜진 채팅: 1단계에 월경 줄 지침이 붙고, �
   const dump = JSON.stringify(minji);
   assert.ok(/생리|월경|주기|cycle|임신/i.test(dump), "월경 추적 칸이 생김: " + dump.slice(0, 400));
 });
+
+test("1단계가 형식 오류로 짧은 지침 재시도까지 가도 월경 줄 안내가 빠지지 않는다(됐다 안됐다 제보)", async () => {
+  const settings = await cycleSettings();
+  const scope0 = createEmptyWikiScope({ characterId: "c1", chatKey: "k1" });
+  const run = parseWriterRun(assembleWriterPrompt({ sourceLibrary: LIB, settings, wikiScope: scope0, rpText: RP, requestRef: "r0" }).prompt);
+  const stage1 = [];
+  let n = 0;
+  const fake = async (msgs) => {
+    if (/memory recorder|scene\|/i.test(msgs[0].content) && !/^id\|/m.test(msgs[0].content) && n < 3) {
+      stage1.push(msgs[0].content); n++;
+      if (n < 3) return "형식이 틀린 답";
+      return /woman\|Name/.test(msgs[0].content) ? "scene|밤|민지의 방|밤|yes\nwho|민지|{{user}}와 밤을 보냈다|2\nwoman|민지\nsex|민지|{{user}}|none" : "scene|밤|민지의 방|밤|yes\nwho|민지|{{user}}와 밤을 보냈다|2";
+    }
+    return "id|대학원생";
+  };
+  const rec = await recordTurn(fake, run, { cycle: true });
+  assert.equal(stage1.length, 3, "세 번째(짧은 지침)까지 감");
+  assert.ok(/woman\|Name/.test(stage1[2]), "짧은 지침에도 월경 줄 안내");
+  assert.equal(rec.stage1.cycle?.[0]?.name, "민지");
+});
