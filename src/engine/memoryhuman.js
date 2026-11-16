@@ -107,12 +107,13 @@ export const stageCeiling = (folder, a, b, now) => STAGE_CEILING[stageOf(folder,
 // big: 한 번에 +3인 큰 사건(첫눈에 반함처럼 원문 근거가 분명한 것)은 진도 상한을 한 단계 넘을 수 있다. lover: 애인이면 10.
 export const ATTR_CEILING = Object.freeze({ "just met": 3, acquaintances: 5, close: 8, "very close": 10 });
 const STAGE_RANK = ["just met", "acquaintances", "close", "very close"];
-export function attractionCap(folder, a, b, now, { big = false, tags = null, lover = false } = {}) {
-  if (lover) return 10;
+export function attractionCap(folder, a, b, now, { big = false, tags = null, lover = false, orient = null } = {}) {
+  if (lover) return Number.isFinite(orient) ? Math.max(orient, 5) : 10;
   const i = STAGE_RANK.indexOf(stageOf(folder, a, b, now).stage);
   let cap = ATTR_CEILING[STAGE_RANK[Math.min(3, Math.max(0, i) + (big ? 1 : 0))]];
   if (Number.isFinite(tags?.affection)) cap = Math.min(cap, Math.max(3, tags.affection + 3));   // 사람으로서 별로인데 이성적으로만 크게 끌리지 않게
   if ((tags?.hostility ?? 0) >= 6) cap = Math.min(cap, 4);
+  if (Number.isFinite(orient)) cap = Math.min(cap, orient);   // 2.2.6 성적 지향(끌리지 않는 성별이면 낮게)
   return cap;
 }
 export function stageLines(folder, names, now, limit = 3) {

@@ -1,6 +1,7 @@
 // 2.2.6 썸 행동 지침(순수): 이성적 호감(attraction 0~10) 단계와 그 인물의 성격(위키 기본 성격 6축)에 맞춰
 // 응답 모델이 끌림을 ‘자연스럽게, 천천히’ 보여 주게 하는 줄을 만든다. 기억 블록(memoryinject)에 들어간다.
-import { isLover, strayRisk } from "./lover.js";
+import { isLover, strayRisk, loverPairs } from "./lover.js";
+import { unrequited, triangles, isSecret, awkwardLeft, exPairs } from "./romance.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 export const ROMANCE_RULE = "Slow burn: show attraction only through small, natural behaviour that fits the stage and the character's personality. Never skip a stage or confess early; keep ambiguity, mixed signals and plausible deniability; one-sided pull stays one-sided. Low or no attraction toward {{user}} means no romantic behaviour toward {{user}}.";
@@ -68,6 +69,20 @@ export function romanceLines(folder, { relevant = null, now = null, eff = null, 
     const [, name, act] = STAGES.find(([min]) => v >= min);
     return `- ${p.from} → ${p.to}: ${name} (attraction ${v}): ${act}${style ? ` — as this person: ${style}` : ""}`;
   });
+  // 2.2.6 연애 흐름 줄: 짝사랑 · 고백 거절 뒤 어색함 · 질투 · 연적 · 헤어진 뒤 미련 · 비밀 연애
+  const at = folder?.cursor?.at ?? 0, rel = (n) => !relevant || relevant.has(key(n)), R = folder?.romance ?? {};
+  for (const u of unrequited(folder)) if (rel(u.from) || rel(u.to)) {
+    const i = lines.findIndex((l) => l.startsWith(`- ${u.from} → ${u.to}:`));
+    const note = ` [one-sided: ${u.to} does not return it (attraction ${u.back}) — ${u.to} may not notice, or notices and keeps a polite distance]`;
+    if (i >= 0) lines[i] += note; else if (lines.length < limit + 2) lines.push(`- ${u.from} → ${u.to}: unrequited (attraction ${u.v})${note}`);
+  }
+  for (const e of (R.events ?? []).filter((x) => x.kind === "reject")) { const left = awkwardLeft(folder, e.a, e.b, at); if (left > 0 && (rel(e.a) || rel(e.b))) lines.push(`- ${e.a} & ${e.b}: awkward after ${e.by} turned down ${e.a}'s confession (${left} more turns): avoid eye contact, overly polite, short talks; feelings have not simply vanished`); }
+  for (const j of Object.values(R.jealous ?? {})) if (at - (j.at ?? -99) <= 6 && (rel(j.a) || rel(j.b))) lines.push(`- ${j.a}: jealous that ${j.b} grew close to ${j.c} — shows it in their own way (sulking, teasing, clinging or pretending not to care)`);
+  for (const t of triangles(folder).slice(0, 2)) if (rel(t.a) || rel(t.c)) lines.push(`- ${t.a} vs ${t.c}: rivals in love over ${t.over} — wary of each other, competing for attention, may clash`);
+  for (const x of exPairs(folder).slice(-2)) {
+    for (const [p, q] of [[x.a, x.b], [x.b, x.a]]) { const t = folder?.emo?.[key(p) + ">" + key(q)]?.tags ?? {}; if ((t.possess ?? 0) + (t.exclusive ?? 0) > 0 && rel(p)) lines.push(`- ${p} → ${q}: ex — lingering attachment (possessive ${t.possess ?? 0}, exclusive ${t.exclusive ?? 0}) mixed with hurt; it fades slowly`); }
+  }
+  for (const lp of loverPairs(folder)) if (isSecret(folder, lp.a, lp.b) && (rel(lp.a) || rel(lp.b))) lines.push(`- ${lp.a} & ${lp.b}: secret relationship — act like ordinary acquaintances in front of others; affection only when alone; fear of being found out`);
   for (const sr of strayed.values()) lines.push(`- ${sr.name} → ${sr.partner}: lovers, but the spark has ${sr.why === "faded" ? "faded" : "soured into resentment"}${sr.attraction != null ? ` (attraction ${sr.attraction})` : ""}: may be drawn to someone else — wandering eyes, comparing, excuses to be away; strays only if a real chance comes and it fits their personality, never suddenly`);
   return lines.length ? [ROMANCE_RULE, ...lines] : [];
 }

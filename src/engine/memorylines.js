@@ -399,7 +399,7 @@ export function fromStage2(lines, name, { known = [], source = "", light = false
       for (const src of [ATT[att], DEED[deed]]) for (const [tag2, d] of Object.entries(src)) t[tag2] = (t[tag2] ?? 0) + d;
       for (const k of Object.keys(t)) { t[k] = Math.max(-3, Math.min(3, t[k])); if (!t[k]) delete t[k]; }
       if (!q) for (const k of Object.keys(t)) t[k] = Math.max(-1, Math.min(1, t[k]));   // 근거가 없으면 약한 신호만
-      if (Object.keys(t).length) emo.push({ from: name, to, t, why: (q || `${att} ${deed}`).slice(0, 40) });
+      if (Object.keys(t).length || deed === "refuse" || deed === "confess") emo.push({ from: name, to, t, why: (q || `${att} ${deed}`).slice(0, 40), ...(["confess", "refuse", "flirt", "touch", "jealous"].includes(deed) ? { deed } : {}) });   // 2.2.6 deed: 고백·거절 같은 연애 사건을 알려고
     } else if (tag === "call" && talk.length < 2) {
       const to = targetName(f[0], known, source), call = (f[1] ?? "").slice(0, 20), tone = YN3(f[2], ["formal", "casual", "mixed"], ({ 존댓말: "formal", 존대: "formal", 반말: "casual" })[f[2]] ?? "");
       if (to && call && tone && nk(to) !== nk(name)) talk.push({ from: name, to, call, tone });

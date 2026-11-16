@@ -111,7 +111,7 @@ test("이성적 감정 관계도: 거리=나에게 끌림, 선=인물끼리 끌�
   assert.equal(m.romance, true);
   assert.equal(m.nodes.find((n) => n.name === "민지").aff, 80);
   assert.match(m.nodes.find((n) => n.name === "민지").uLabel, /애인/);
-  const e = m.edges.find((x) => x.label === "끌림");
+  const e = m.edges.find((x) => x.label === "짝사랑");   // 유나 → 철수 5, 철수는 안 끌림 = 짝사랑(점선)
   assert.ok(e && e.sp === 1);
   assert.equal(buildRelMap(f).romance, undefined);
 });
@@ -288,4 +288,50 @@ test("바람 가능성: 애인에게 끌림이 식으면 지침에 나오고, �
   applyAnalysis(f, { emo: [{ from: "민지", to: "유나", t: { attraction: 2 }, why: "끌림" }] }, { at: 1, h: "h1" }, { smooth: true });
   assert.equal(f.emo["민지>유나"].tags.attraction, 5);   // 처음 봄 상한 3 → 한 단계 위 5
   assert.equal(strayRisk({ ties: f.ties, emo: { "민지>철수": { tags: { attraction: 8 } } } }, "민지"), null);
+});
+
+import { applyRomance, unrequited as unreq, triangles as tris, timeline as tl, orientCap, orientFromErosync, setSecret as setSec } from "../src/engine/romance.js";
+
+test("성적 지향: 끌리지 않는 성별이면 끌림 상한이 낮다", () => {
+  const f = { scenes: [], orient: orientFromErosync({ people: [{ name: "민지", gender: "f", pref: { f: 5, m: 90, x: 5, total: 100 } }, { name: "유나", gender: "f" }, { name: "철수", gender: "m" }] }) };
+  assert.equal(orientCap(f, "민지", "유나"), 1);
+  assert.equal(orientCap(f, "민지", "철수"), null);
+  assert.equal(orientCap(f, "민지", "{{user}}"), null);
+  applyAnalysis(f, { emo: [{ from: "민지", to: "유나", t: { attraction: 3 }, why: "x" }] }, { at: 1, h: "a" }, { smooth: true });
+  assert.equal(f.emo["민지>유나"].tags.attraction, 1);
+});
+
+test("고백 → 거절이면 어색한 기간, 고백 → 사귐이면 사귄 날, 헤어지면 미련이 식는다", () => {
+  const f = { people: {}, scenes: [{ at: 1, who: ["민지", "철수"], iso: "2024-03-01" }] };
+  applyAnalysis(f, { emo: [{ from: "민지", to: "철수", t: { attraction: 2 }, why: "좋아해", deed: "confess" }] }, { at: 1, h: "1" }, {});
+  applyAnalysis(f, { emo: [{ from: "철수", to: "민지", t: {}, why: "미안", deed: "refuse" }] }, { at: 2, h: "2" }, {});
+  assert.ok(f.romance.events.some((e) => e.kind === "reject" && e.by === "철수"));
+  assert.ok(f.romance.awkward);
+  assert.match(romanceLines(f).join("\n"), /awkward after 철수 turned down 민지/);
+  applyAnalysis(f, { ties: [{ a: "민지", b: "철수", kind: "남자친구" }] }, { at: 5, h: "5" }, {});
+  assert.ok(f.romance.events.some((e) => e.kind === "accept"));
+  f.emo["민지>철수"].tags.possess = 4;
+  applyAnalysis(f, { ties: [{ a: "민지", b: "철수", kind: "전 남자친구" }] }, { at: 6, h: "6" }, {});
+  assert.ok(f.romance.events.some((e) => e.kind === "breakup"));
+  for (let i = 7; i < 11; i++) applyAnalysis(f, {}, { at: i, h: String(i) }, {});
+  assert.ok(f.emo["민지>철수"].tags.possess < 4);
+  const T = tl(f, "민지", "철수").map((e) => e.kind);
+  assert.deepEqual(T.slice(0, 1), ["met"]); assert.ok(T.includes("confess") && T.includes("accept") && T.includes("breakup"));
+});
+
+test("질투·연적·짝사랑·재회·비밀 연애", () => {
+  const f = { people: {}, ties: { t: { a: "민지", b: "철수", kind: "남자친구", at: 0 } }, scenes: [{ at: 0, who: ["민지", "철수"] }, { at: 20, who: ["민지", "철수", "유나"] }],
+    emo: { "유나>철수": { from: "유나", to: "철수", tags: { attraction: 5 }, log: [] }, "하린>유나": { from: "하린", to: "유나", tags: { attraction: 6 }, log: [] } } };
+  applyAnalysis(f, { emo: [{ from: "철수", to: "유나", t: { affection: 1 }, why: "웃음" }] }, { at: 20, h: "20" }, {});
+  assert.ok((f.emo["민지>철수"].tags.possess ?? 0) >= 1);
+  assert.ok(f.romance.events.some((e) => e.kind === "jealous" && e.a === "민지" && e.c === "유나"));
+  assert.ok(f.romance.events.some((e) => e.kind === "reunion"));
+  assert.ok(tris(f).some((t) => [t.a, t.c].sort().join() === ["민지", "유나"].sort().join()));
+  assert.ok(unreq(f).some((u) => u.from === "하린"));
+  setSec(f, "민지", "철수", true);
+  const L = romanceLines(f).join("\n");
+  assert.match(L, /secret relationship/); assert.match(L, /rivals in love/); assert.match(L, /jealous/); assert.match(L, /one-sided|unrequited/);
+  const m = buildRelMap({ ...f, people: { a: { name: "민지", records: [{ act: "x", at: 20 }] }, b: { name: "철수", records: [{ act: "x", at: 20 }] }, c: { name: "유나", records: [{ act: "x", at: 20 }] }, d: { name: "하린", records: [{ act: "x", at: 20 }] } } }, { mode: "romance" });
+  const labels = m.edges.map((e) => e.label);
+  assert.ok(labels.includes("🤫 비밀 연애") && labels.some((l) => /^연적/.test(l)) && labels.includes("짝사랑"), labels.join("|"));
 });

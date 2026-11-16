@@ -41,6 +41,8 @@ export const MEM_ADDON_CSS = `.e-attraction{background:#ff6fae}.e-possess{backgr
 .rb-seed-chip button.x{padding:5px 9px 5px 0;color:var(--rb-mute)}
 .rb-seed-add{display:grid;grid-template-columns:minmax(110px,auto) 1fr auto;gap:6px}
 @media (max-width:560px){.rb-seed-add{grid-template-columns:1fr auto}.rb-seed-add select{grid-column:1/-1}}
+.rb-wk2-tl{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px;border-left:2px solid color-mix(in srgb,#ff6fae 50%,transparent);padding-left:12px}
+.rb-wk2-tl li{display:flex;flex-direction:column;gap:1px;position:relative}.rb-wk2-tl li::before{content:"";position:absolute;left:-17px;top:6px;width:8px;height:8px;border-radius:50%;background:#ff6fae}
 `;
 
 export function ensureMemAddonCss(ctx) {

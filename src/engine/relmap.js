@@ -4,7 +4,8 @@
 import { pairView, nowOf } from "./memoryhuman.js";
 import { STAGE_LABEL, USER } from "./memoryuser.js";
 import { liveTies } from "./memoryplus.js";
-import { isLoverKind } from "./lover.js";
+import { isLoverKind, strayRisk } from "./lover.js";
+import { unrequited, triangles, exPairs, isSecret, timeline, eventText } from "./romance.js";
 
 export const RM = Object.freeze({ RMIN: 70, RMAX: 300, HH: 120, MIN_GAP: 34, MAX_NODES: 40 });
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -126,10 +127,25 @@ function romanceOf(folder, nodes, keep, tieOf, nowAt) {
     const t = lover(n.id, m.id); if (!t) continue;
     edges.push({ id: `${n.id}~${m.id}`, k: `ro:${n.id}~${m.id}`, a: n.id, b: m.id, w: 1, s: 0.8, sp: 0, rc: 0, lover: true, label: "💗 " + cut(t.kind, 12), items: [["", `${t.b}: ${t.a}의 ${t.kind}`]] });
   }
+  // 2.2.6 연애 흐름: 짝사랑·연적·전 애인·비밀 연애·흔들림을 선 이름에, 연표를 선 설명에
+  const eid = (a, b) => [a, b].sort().join("~"), byId = new Map(edges.map((e) => [eid(e.a, e.b), e]));
+  const ensure = (a, b, base) => { const id = eid(a, b); let e = byId.get(id); if (!e) { e = { id, k: `ro:${id}`, a, b, w: 0.3, s: 0.4, sp: 0, rc: 0, label: "", items: [], ...base }; edges.push(e); byId.set(id, e); } return e; };
+  for (const u of unrequited(folder)) { const a = key(u.from), b = key(u.to); if (keep.has(a) && keep.has(b)) { const e = ensure(a, b, {}); e.label = "짝사랑"; e.sp = 1; e.unrequited = true; } }
+  for (const t of triangles(folder)) { const a = key(t.a), c = key(t.c); if (keep.has(a) && keep.has(c) && a !== c) { const e = ensure(a, c, { w: -0.8, s: 0.6, sp: 1 }); if (!e.label || e.label === "") e.label = `연적 · ${cut(t.over, 6)}`; e.rival = true; } }
+  for (const x of exPairs(folder)) { const a = key(x.a), b = key(x.b); if (keep.has(a) && keep.has(b)) { const e = ensure(a, b, { w: -0.2, s: 0.5 }); e.label = "💔 전 애인"; e.ex = true; delete e.lover; } }
+  for (const e of edges) {
+    const A = nodes.find((n) => n.id === e.a)?.name, B = nodes.find((n) => n.id === e.b)?.name;
+    if (!A || !B) continue;
+    if (e.lover && isSecret(folder, A, B)) e.label = "🤫 비밀 연애";
+    if (e.lover && (strayRisk(folder, A)?.partner && key(strayRisk(folder, A).partner) === key(B) || strayRisk(folder, B)?.partner && key(strayRisk(folder, B).partner) === key(A))) e.label = "💗 흔들리는 연인";
+    const tl = timeline(folder, A, B);
+    if (tl.length) e.items = [...(e.items ?? []), ...tl.slice(-4).map((x) => [x.when || (x.at != null ? `#${x.at + 1}` : ""), eventText(x)])];
+  }
   const uk = key(USER);
   for (const n of nodes) {
     const t = lover(uk, n.id), v = Math.round(n.aff / 10);
-    n.uLabel = t ? `💗 애인 · 끌림 ${v}` : v ? `끌림 ${v}` : "끌림 없음";
+    n.uLabel = t ? `${isSecret(folder, USER, n.name) ? "🤫 비밀 연애" : "💗 애인"} · 끌림 ${v}` : v ? `끌림 ${v}` : "끌림 없음";
+    if (!t && exPairs(folder).some((x) => key(x.a) === n.id && key(x.b) === uk || key(x.b) === n.id && key(x.a) === uk)) n.uLabel = `💔 전 애인 · 끌림 ${v}`;
     n.uStrength = clamp(0.2 + v * 0.08, 0.2, 1);
     n.uSpecial = false;
     if (t) n.uLover = true;

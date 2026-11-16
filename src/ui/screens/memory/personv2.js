@@ -12,6 +12,7 @@ import { eroLoad, eroNsfwCard, eroInfoCard, eroSumCard, eroPairCard, eroPartnerC
 import { eroPerson, eroPersonByName } from "../../../engine/erosyncview.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag, tagsFor } from "../../../engine/memoryemo.js";
 import { isLover, loverPairs, setLover, pairKey } from "../../../engine/lover.js";
+import { timeline, eventText, isSecret, setSecret, unrequited } from "../../../engine/romance.js";
 import { ensureMemAddonCss } from "./memaddoncss.js";
 import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
@@ -173,7 +174,8 @@ export function personTabs(env, parts) {
       h("div", { class: "rb-wk2-acts" }, btn("애인으로 표시", { size: "sm", id: "rb-lover-on", onClick: () => set(true) }), manual === false ? btn("자동 판정으로", { size: "sm", onClick: () => set(null) }) : null)], null, "rb-wk2-lovercard off");
     return card("💗 애인", [h("p", { class: "rb-wk2-p" }, `${shown(lp.b)} · ${shown(lp.a)}의 ${lp.kind}`),
       h("small", { class: "rb-muted" }, lp.by === "user" ? "직접 정했어요." : "대화에서 확인된 관계예요. 소유욕·독점욕 게이지가 함께 움직여요."),
-      h("div", { class: "rb-wk2-acts" }, btn("애인 아님", { size: "sm", id: "rb-lover-off", onClick: () => set(false) }), manual ? btn("자동 판정으로", { size: "sm", onClick: () => set(null) }) : null)], null, "rb-wk2-lovercard");
+      h("div", { class: "rb-wk2-acts" }, btn(isSecret(f, me, other) ? "🤫 비밀 연애 · 풀기" : "비밀 연애로", { size: "sm", id: "rb-lover-secret", title: "비밀 연애면 남들 앞에서는 아는 사이처럼 굴어요", onClick: () => save((fo) => { setSecret(fo, me, other, !isSecret(f, me, other)); }, isSecret(f, me, other) ? "비밀 연애를 풀었어요." : "비밀 연애로 표시했어요.") }),
+        btn("애인 아님", { size: "sm", id: "rb-lover-off", onClick: () => set(false) }), manual ? btn("자동 판정으로", { size: "sm", onClick: () => set(null) }) : null)], null, "rb-wk2-lovercard");
   };
   const relation = () => {
     if (!people.length) return h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "아직 함께 기록된 인물이 없어요. 대화가 이어지면 채워져요."), ...(eroSelf() ? [h("div", { class: "rb-wk2-cards" }, eroPartnerCards(ctx, card, ero, eroSelf()))] : []));
@@ -186,6 +188,8 @@ export function personTabs(env, parts) {
         card("관계 진도", [h("div", { class: "rb-wk2-steps", role: "img", "aria-label": `지금 ${STAGES[si][1]}` }, STAGES.map(([, l], i) => h("span", { class: ["st", i < si && "past", i === si && "now"] }, h("i", null), h("small", null, l)))),
           h("p", { class: "rb-muted" }, `함께한 장면 ${v.stage.shared}번${si <= 1 ? " · 아직 가깝지 않아서, AI가 갑자기 너무 친해지지 않게 해요." : ""}`)]),
         loverCard(other),
+        ((tl) => tl.length ? card("관계 연표", h("ol", { class: "rb-wk2-tl", id: "rb-rel-timeline" }, tl.map((e) => h("li", null, h("small", { class: "rb-muted" }, e.when || (e.at != null ? `#${e.at + 1} 응답` : "")), h("span", null, eventText(e))))), null, "rb-wk2-tlcard") : null)(selfNames.flatMap((n) => timeline(f, n, other)).filter((e, i, a) => a.indexOf(e) === i)),
+        ((u) => u ? card("짝사랑", h("p", { class: "rb-wk2-p" }, `${subj(shown(u.from))} ${shown(u.to)}에게 끌리지만(끌림 ${u.v}) 상대는 아직 아니에요(끌림 ${u.back}).`), null, "rb-wk2-lovercard off") : null)(unrequited(f).find((x) => selfNames.some((n) => (nk(x.from) === nk(n) && nk(x.to) === nk(other)) || (nk(x.to) === nk(n) && nk(x.from) === nk(other))))),
         feelCard(v, other),
         ((ms) => ms.length ? card("수치", [...ms.map((x) => metricRow(x, true)), h("small", { class: "rb-muted" }, "이 상대가 대상인 수치만 보여요.")]) : null)(metrics.filter((x) => x.targets.some((t) => nk(t) === nk(other)))),
         card("호칭 · 말투", [talkRow(v.talk.ab, me, other), h("hr", { class: "rb-wk2-hr" }), talkRow(v.talk.ba, other, me)]),

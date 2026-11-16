@@ -104,7 +104,7 @@ function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
   let eroOn = false, eroSnap = null, aliasIdx = null;
   ctx.memory.store.getFolder(cur.chaId, cur.chatId).then((f) => { aliasIdx = nameIndex(f, (n) => String(n ?? "").trim().toLowerCase().replace(/\s+/g, "")); }).catch(() => {});   // 2.2.2: Erosync 인물을 장기 기억 이름·별칭으로 찾는다
   const legendDefault = [...legendEl.childNodes];
-  const roLegend = [h("span", null, h("i", { style: "border-color:#ff4f9a" }), "애인 · 끌림"), h("span", null, h("i", { style: "border-color:#ff4f9a;border-top-style:dashed" }), "한쪽만 끌림"), h("span", null, "가까울수록 나에게 끌림")];
+  const roLegend = [h("span", null, h("i", { style: "border-color:#ff4f9a" }), "애인 · 끌림"), h("span", null, h("i", { style: "border-color:#ff4f9a;border-top-style:dashed" }), "짝사랑 · 한쪽만"), h("span", null, h("i", { style: "border-color:var(--rb-blue);border-top-style:dashed" }), "연적 · 💔 전 애인"), h("span", null, "가까울수록 나에게 끌림 · 선을 누르면 연표")];
   const eroLegend = [h("span", null, h("i", { style: "border-color:var(--rb-rose)" }), "목표 (노리는 쪽 → 대상)"), h("span", null, h("i", { style: "border-color:var(--rb-blue);border-top-style:dashed" }), "경쟁"), h("span", null, "굵기 = 우선도·세기")];
   const applyEro = (o = {}) => {
     const mapped = eroOn ? eroRelmapData(data0, eroSnap, aliasIdx) : data0;

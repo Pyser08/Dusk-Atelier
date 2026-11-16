@@ -1,5 +1,6 @@
 // 2.2.6 ‘처음 등장 때 성인 항목 무작위로’ 옵션(pluginStorage) + 장기기억 위키 후보 넣기 + Erosync 성적 수치 넣기.
 import { SEED_KEY, normalizeSeedOpt, seedWikiCandidates, rollAdult, SEX_KEYS } from "../engine/adultseed.js";
+import { orientFromErosync } from "../engine/romance.js";
 
 const EROS_KEY = "dusk.adultSeed.ero";   // { [scopeKey]: [넣었거나 기준으로 본 Erosync 인물 id] }
 const readJ = async (api, k) => { try { const v = await api.pluginStorage.getItem(k); return typeof v === "string" ? JSON.parse(v) : v ?? null; } catch { return null; } };
@@ -54,4 +55,16 @@ export async function seedErosyncNow(api, erosync, snap, log = () => {}) {
   await api.pluginStorage.setItem(EROS_KEY, JSON.stringify(all));
   if (n) log(`Erosync: 새 인물 ${n}명의 성적 수치를 무작위 출발값으로 넣었어요`);
   return n;
+}
+
+// 2.2.6 성적 지향 옮기기: Erosync가 켜져 있으면 인물별 성별·끌리는 성별 비율을 지금 채팅 장기기억 폴더(folder.orient)에 옮겨 둔다(끌림 상한에 씀).
+export async function syncOrientNow(memory, erosync) {
+  if (!erosync?.isRunning?.()) return 0;
+  let snap = null; try { snap = await erosync.read(); } catch { return 0; }
+  if (!snap?.ok || !(snap.people ?? []).length) return 0;
+  const cur = await memory.switches?.currentChat?.().catch?.(() => null);
+  if (!cur) return 0;
+  const orient = orientFromErosync(snap);
+  await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { f.orient = orient; });
+  return Object.keys(orient).length;
 }
