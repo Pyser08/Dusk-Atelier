@@ -15,6 +15,8 @@ import { builders, renderGlobalSettings } from "./settings.js";
 import { tracked, scopeChip } from "./settingstools.js";
 import { writerDetails } from "./advanced.js";
 import { openJevModal } from "./jevmodal.js";
+import { openFailLog, ensureFailLogStyle } from "./faillog.js";
+import { takePendingReason } from "../../../data/memlog.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
 
@@ -272,15 +274,25 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   // 2.2.0 B안: 상태·분석은 늘 위, 아래는 [한눈에 · 기록 · 옵션 · 설정] 칸. 리수폿·Erosync는 옵션 칸.
   const recAll = recentOf(folder, 12);
+  ensureFailLogStyle();
+  let failCount = 0, failLast = "";
+  try { const fl = M.failLog ? await M.failLog.list() : []; failCount = fl.length; failLast = fl[0] ? `${fl[0].area} · ${fl[0].title}` : ""; } catch { /* 목록 없이 */ }
+  // 오른쪽 아래 알림의 '이유 보기'로 열렸으면 그 항목을 바로 띄운다
+  const pendingReason = takePendingReason();
+  if (pendingReason) setTimeout(() => openFailLog(ctx, { focus: pendingReason }).catch(() => {}), 80);
   const recFull = h("section", { class: "rb-card bordered rb-mem-recentbox rb-mem-recfull" }, h("div", { class: "rb-mem-rechead" }, h("b", null, "최근 기록"), recAll.length ? h("button", { type: "button", class: "rb-textlink", onClick: () => openDetail() }, "전체 보기") : null),
     h("ul", { class: "rb-mem-reclist rb-mem-recent" }, recAll.length
       ? recAll.map((r) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("div", null, h("b", null, r.who), " ", r.act), h("div", { class: "rb-muted" }, at(r.at))), gradeBadge(r.g)))
       : h("li", { class: "rb-muted" }, "아직 쌓인 기록이 없어요.")));
+  // 2.2.4 실패 기록 보기(한눈에: 바로가기·인물과 최근 기록 사이, 전체 폭). 실패가 있으면 개수와 마지막 실패를 보여 준다
+  const failBtn = M.failLog ? h("button", { type: "button", class: "rb-card bordered rb-mem-failbtn", id: "rb-mem-failbtn", onClick: () => openFailLog(ctx).then(() => redraw()).catch(fail(ctx)) },
+    h("span", { class: "t" }, h("b", null, "실패 기록 보기"), h("small", { class: "rb-muted" }, failCount ? `최근 실패 ${failCount}건 · 마지막: ${failLast}` : "실패한 기록이 없어요")),
+    failCount ? h("span", { class: "rb-mem-failn" }, String(failCount)) : null, h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))) : null;
   const TABS4 = [["glance", "한눈에"], ["opt", "설정"]];
   const panels = {
     // 기록 칸은 없앰: 한눈에 위쪽 = 바로가기 | 나·관계도, 아래 = 최근 기록(12건) 전체 폭
     // 나·관계도는 바로가기와 같은 칸 모양(조금 더 넓게, 설명 읽기)
-    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow))), recFull),
+    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow))), failBtn, recFull),
     opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), memorySettings)), advEl),
   };
   const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);

@@ -6,6 +6,7 @@
 //  [응답 뒤] 기록하기(Writer): 리수폿 Writer 호출에 Dusk 기록 구획(dusk)을 같이 실어 한 번에 받는다.
 //    - 두 구획은 따로 검증한다. dusk 구획이 없거나 틀리면 기존 방식(따로 한 번 더 호출)으로 대신한다.
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
+import { logFailure } from "./memlog.js";
 import { potState } from "../engine/memoryswitch.js";
 import { aiTask, describeAi, trackAi } from "../engine/aistop.js";
 import { folderIdOf } from "./memorystore.js";
@@ -241,7 +242,14 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (st.phase === "completed") lastKey = "";
       let scope = null; try { scope = wiki.snapshot(); } catch { /* 아직 준비 전 */ }
       const verdict = judgeAutoResult({ phase: st.phase, message: st.message, scope, names: lastRecord && !lastRecord.error ? lastRecord.names ?? null : null });
-      if (verdict) toast.show(verdict.text, { retry: verdict.retry !== false }).catch(() => {}); else toast.hide().catch(() => {});
+      if (verdict) {
+        // 2.2.4 실패 기록에 남기고, 알림에 '이유 보기'를 단다
+        const TITLE = { failed: "인물 위키 자동 기록 실패", manual: "이 응답은 자동 기록하지 않았어요", conflict: "직접 고친 문서와 겹쳐서 자동 기록을 멈췄어요", empty: "인물 문서가 만들어지지 않았어요", nometric: "수치가 빈 인물이 있어요" };
+        Promise.resolve(logFailure({ area: "인물 위키 기록", title: TITLE[verdict.kind] ?? verdict.text.slice(0, 80), error: st.message || verdict.text, fallback: verdict.retry !== false ? "알림의 ‘다시 시도’로 다시 기록할 수 있어요" : "",
+          ...(verdict.kind === "empty" || verdict.kind === "nometric" ? { why: verdict.text.replace(/ 다시 시도할까요\?$/, ""), todo: "‘다시 시도’를 눌러 보세요. 계속되면 보조 모델을 더 강한 것으로 바꿔 보세요." } : {}),
+          ctx: { 단계: st.phase, 종류: verdict.kind, ...(lastRecord?.error ? { "Dusk 기록기": String(lastRecord.error).slice(0, 300) } : {}) } }))
+          .then((e) => toast.show(verdict.text, { retry: verdict.retry !== false, reason: e?.id ?? null })).catch(() => {});
+      } else toast.hide().catch(() => {});
     });
     const main = new MainWikiHook(api, settings, wiki, keys, libFor("fast"), auto, null, trace);
     // 2.0.0 Dusk 정리 노트: 리수폿 정리 노트 지침(8만 자 안팎)을 보내지 않고, 저장된 위키 값으로 인물 정리표를 프로그램이 만든다(늘 같은 값).

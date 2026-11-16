@@ -7,7 +7,7 @@ import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bo
 import { keyHits, keyBoost } from "./memorykeys.js";
 import { semBoost, semHit } from "./embed.js";
 import { povLines, innerLines, expLines } from "./memoryinner.js";
-import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime, tieLines } from "./memoryplus.js";
+import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime, tieLines, settledLines } from "./memoryplus.js";
 
 export const MARKER = "[Dusk Memory";
 export const HEADER = "[Dusk Memory — story so far. Newer facts win; recent messages take priority.]";
@@ -200,6 +200,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
       if (keep.length) { lines.push(title, ...keep); used += n; manifest.included.push({ kind, tokens: n, count: keep.length }); }
     };
     add("open", "Open threads (unresolved; do not resolve them early):", openLines(folder), settings.openTokens ?? 160);
+    add("settled", "Promises settled recently (kept / broken — characters remember this):", settledLines(folder, { now: messageCount }), settings.settledTokens ?? 90);   // 2.2.4
     add("emo", "Feelings (current gauges 0-10):", emoLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.emoTokens ?? 160);
     if (human) {
       add("stage", "Relationship stage (closeness should change gradually):", stageLines(folder, cur?.who ?? [], messageCount), settings.stageTokens ?? 90);

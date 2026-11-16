@@ -7,7 +7,7 @@
 //         ③ 줄을 리수폿이 원래 받던 응답(JSON envelope)으로 바꿔 돌려준다 → 리수폿 검증·저장·화면은 그대로.
 //         같은 결과로 Dusk 기록(장면·인물·관계·떡밥·감정)도 만든다.
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
-import { JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
+import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
 import { validate } from "./memoryprompt.js";
 
 // '변화 없음' 판단: 코어 2.0.7의 isNoneReply는 JSON 꼴({"lines":[]})을 모르므로 애드온 쪽에서도 받는다.
@@ -68,17 +68,7 @@ export function cardOf(doc) {
   }).filter(([, v]) => v));
 }
 
-// 2.1.5: 사고 출력이 켜진 모델은 <Thoughts>…</Thoughts>(provider-manager)·<think>…</think>를 본문 앞에 붙인다.
-// 생각 글을 지우고, {"lines":…} 객체가 첫 줄이 아니어도 찾아 그 JSON만 남긴다(못 찾으면 생각 글만 지운 글).
-export function stripThoughts(raw) {
-  let t = String(raw ?? "").replace(/<(Thoughts|think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, "").replace(/^[\s\S]*?<\/(?:Thoughts|think|thinking|reasoning)>/i, "").trim();
-  if (/^[[{]/.test(t.replace(/^```(?:json)?\s*/i, ""))) return t;
-  const at = t.search(/\{\s*"lines"\s*:/);
-  if (at < 0) return t;
-  const end = t.lastIndexOf("}");
-  const body = end > at ? t.slice(at, end + 1) : t.slice(at);
-  try { JSON.parse(body); return body; } catch { return t; }
-}
+export { stripThoughts } from "./memorylines.js";   // 2.2.4 공용으로 옮김(장기 기억 기록 경로도 같이 씀)
 
 // call(messages) → 원문. 형식이 틀리면 종류에 맞게 다시 묻는다(빈 답·잘림·형식). 끝내 안 되면 던진다.
 // 3.0.8: 호출층(llm-client)은 빈 응답을 예외(code empty-model-response)로 던진다 — 추론만 하다 끝난 경우라 다시 묻는다(다른 오류는 그대로 던짐).

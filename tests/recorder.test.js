@@ -61,7 +61,7 @@ test("상태 줄은 본문 인용이 있어야 받는다 · close는 열린 항�
   const lines = parseLines("scene|x|y|z|yes\nstate|민준|사망|지어낸 인용\nstate|민지|부상|팔을 다쳤다\nclose|o1\nclose|o9");
   const r = fromStage1(lines, { known: [{ name: "민준" }, { name: "민지" }], source: "민지는 팔을 다쳤다.", openIds: new Set(["o1"]) });
   assert.deepEqual(r.states.map((s) => s.name), ["민지"]);
-  assert.deepEqual(r.open.close, ["o1"]);
+  assert.deepEqual(r.open.close.map((c) => c.id), ["o1"]);   // 2.2.4: {id, how, why}
   assert.ok(r.people.some((p) => p.attr?.c === "status" && p.attr.v === "부상"));
 });
 

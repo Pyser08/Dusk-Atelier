@@ -1,6 +1,7 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
 import { effectiveTags, talkForPrompt, beliefsForPrompt, riftsForPrompt } from "../engine/memoryhuman.js";
 import { cleanForMemory, splitParts, mergeParts } from "../engine/cleantext.js";
+import { logFailure } from "./memlog.js";
 import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating, isChatStreaming } from "../engine/chattext.js";
 import { skillBlock } from "../engine/skillhook.js";
 import { appendToMessages } from "../engine/skillcfg.js";
@@ -122,7 +123,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     return mergeParts(results);
   }
   // 한 메시지(또는 묶음)를 분석해 반영. group: 같은 입력에 합칠 메시지 인덱스들(마지막이 앵커).
-  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false, redo = false, shared = null } = {}) {
+  async function analyzeAt(charIndex, chatIndex, group, { signal, manual = false, redo = false, shared = null, batch = false } = {}) {
     const g = await gather(charIndex, chatIndex, group, shared);
     group = g.group;   // 앞 사용자 말이 붙었을 수 있다
     const { character, chat, chaId, chatId, messages, last, text, h, anchor, idx, bot } = g;
@@ -141,10 +142,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const gx = gauge ? gauge.prepare(idx, existing, chaId, ordinalNow) : null;
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
-    try { if (!result) result = await analyzeLong((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
+    try { if (!result) result = await analyzeLong((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), group: batch, onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
     catch (e) {
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });
+      logFailure({ area: "장기 기억 기록", title: `‘${character.name}’ 응답 기록 실패`, error: e, fallback: fails >= MAX_FAILS ? "이 봇의 자동 기록을 멈췄어요" : "다음 응답 때 다시 기록해요",
+        ctx: { 봇: character.name, 채팅: chat?.name ?? "", "응답 위치": last, "연속 실패": fails, 모델: (() => { try { const mo = modelOf(idx.settings); return [mo?.provider, mo?.model].filter(Boolean).join(" / "); } catch { return ""; } })(), "응답 길이": text?.length ?? 0 } });
       if (fails >= MAX_FAILS) { await bump(chaId, (b) => { b.paused = true; }); notify(`"${character.name}"의 장기 기억 분석이 ${MAX_FAILS}번 연속 실패해서 이 봇의 자동 기록을 멈췄어요. 기억 탭에서 다시 켤 수 있어요.`); }
       lastTried.delete(tryKey);
       throw e;
@@ -325,13 +328,13 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const shared = { character, chat };
     const failed = [], reasons = []; let n = 0;
     const extras = await backfillExtras(charIndex, chatIndex, shared, groups.length);
-    for (const g of groups) {
+    for (const g of groups) {   // 2.2.4 batch: 일괄 처리는 인물을 묶어 묻는다(memoryprompt analyzeLines group)
       if (signal?.aborted) break;
       // 생성 중인지는 현재 채팅 하나만 5묶음마다 확인한다(캐릭터 전체 복사 금지).
       if (n > 0 && n % 5 === 0 && isChatStreaming(await api.getChatFromIndex(charIndex, chatIndex))) throw new Error("응답을 생성하는 중이에요. 끝난 뒤 다시 시도해 주세요.");
       // 요청 한도·시간 초과·서버 오류 같은 일시적 오류는 간격을 늘려 가며 2번까지 다시 시도한다(실패 원인은 reasons로 돌려준다).
       for (let attempt = 0; ; attempt++) {
-        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo, shared }); if (extras) extras.pot(g.at(-1)); break; }
+        try { await analyzeAt(charIndex, chatIndex, g, { signal, manual: true, redo, shared, batch: true }); if (extras) extras.pot(g.at(-1)); break; }
         catch (e) {
           const msg = String(e?.message ?? e).slice(0, 160);
           if (signal?.aborted) { failed.push(g); break; }

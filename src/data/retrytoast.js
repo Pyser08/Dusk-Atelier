@@ -1,5 +1,6 @@
 // 채팅 화면 오른쪽 아래에 뜨는 작은 알림. 자동 위키 기록이 막혔을 때 플러그인을 열지 않고 바로 다시 시도·열기를 누를 수 있다.
 // 리스 본문 DOM에 붙이므로 mainDom 권한이 필요하다(진행 패널이 이미 받는 권한). 권한이 없거나 DOM을 못 만들면 아무것도 하지 않는다.
+import { setPendingReason } from "./memlog.js";
 const ATTR = "x-dusk-retry-toast";
 const CARD = "pointer-events:auto;box-sizing:border-box;width:min(340px,calc(100vw - 24px));padding:12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(24,26,34,.97);color:#eef0f6;box-shadow:0 12px 32px rgba(0,0,0,.45);font-family:Inter,system-ui,sans-serif;";
 const BTN = (primary) => `cursor:pointer;min-height:36px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid ${primary ? "transparent" : "rgba(255,255,255,.2)"};background:${primary ? "linear-gradient(135deg,#8a7bff,#c07bff)" : "transparent"};color:${primary ? "#fff" : "#dfe3ee"};`;
@@ -23,15 +24,19 @@ export function createRetryToast(api, { onRetry, onOpen, scheduler = globalThis,
       const row = await root.createElement("div"); await row.setStyleAttribute("display:flex;gap:8px;flex-wrap:wrap;");
       const mk = async (label, primary, fn) => { const b = await root.createElement("button"); await b.setTextContent(label); await b.setStyleAttribute(BTN(primary)); await b.addEventListener("click", fn); await row.appendChild(b); return b; };
       const retryBtn = await mk("다시 시도", true, async () => { if (busy) return; busy = true; try { await hide(); await onRetry?.(); } finally { busy = false; } });
+      // 2.2.4 이유 보기: 플러그인을 열면서 실패 기록의 그 항목을 바로 보여 준다
+      const reasonBtn = await mk("이유 보기", false, async () => { setPendingReason(reasonId); await hide(); await onOpen?.(); });
       await mk("기억 열기", false, async () => { await hide(); await onOpen?.(); });
       await mk("닫기", false, () => hide());
       await card.appendChild(title); await card.appendChild(text); await card.appendChild(row); await wrap.appendChild(card); await host.appendChild(wrap);
-      return { wrap, text, retryBtn };
+      return { wrap, text, retryBtn, reasonBtn };
     } catch { return null; }
   };
-  const show = async (message, { retry = true } = {}) => {
+  let reasonId = null;
+  const show = async (message, { retry = true, reason = null } = {}) => {
     clear(); if (!ui) ui = await build(); if (!ui) return false;
-    try { await ui.text.setTextContent(String(message).slice(0, 220)); await ui.retryBtn.setStyleAttribute(retry ? BTN(true) : "display:none;"); } catch { return false; }
+    reasonId = reason;
+    try { await ui.text.setTextContent(String(message).slice(0, 220)); await ui.retryBtn.setStyleAttribute(retry ? BTN(true) : "display:none;"); await ui.reasonBtn.setStyleAttribute(reason ? BTN(false) : "display:none;"); } catch { return false; }
     timer = scheduler.setTimeout(() => { hide(); }, seconds * 1000);
     return true;
   };
