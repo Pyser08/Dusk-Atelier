@@ -1,4 +1,5 @@
 ## cache-trim (2026-11-16, main 1beb6a2에서 분기)
+- **v2.2.6 릴리스(11-16)**: main에 머지(d9f4ab7)·v2.2.6 태그·GitHub 릴리스(dusk_atelier.js 첨부) 확인. 본체 대기 항목(이야기 시간·캐시 진단 기록·리스 자체 Gemini 순서·캐시 배치 연결·.dka) 모두 반영됨.
 - 애드온 배포(11-16): 장기기억 0.3.1·프로바이더 0.2.8·Erosync 0.1.10(Erosync는 공유 모듈만 바뀜). 본체는 v2.2.5 그대로(이야기 시간·캐시 진단 기록·리스 자체 Gemini 순서·캐시 배치 연결은 본체 릴리스 필요).
 - 커스텀 애드온 확장자 `.dka`: engine/addons.js ADDON_EXT·ADDON_ACCEPT(.dka,.js,.mjs…), customFileName → `<id>-<버전>.dka`, 빈 틀 my-addon.dka, tools/custom-addon·build-autoscroll-custom 출력 .dka(기존 .dusk-addon.js 파일은 그대로 두고 e2e는 둘 다 찾음). 본체 기능 — 본체 릴리스 필요.
 - 프로바이더는 다시 실험 애드온(본체 통합 bf3a126 되돌림, 사용자 지시 11-16): 실험 게이트·ADOPT·BUILTIN 원래대로. 캐시 배치(data/cachelayout.js)는 애드온이 `ext svc cachelayout`로 달고, 코어 turninfo는 `layout: () => ext.get('svc','cachelayout')`로 찾아 씀(애드온 없으면 배치 안 함, 리스 자체 Gemini 순서 바꾸기는 코어 그대로). 홈 `#rb-home-prov`는 ctx.provider && 실험 기능일 때만. 간단 모드 simplePanel·quickstart는 애드온 화면에 그대로.
