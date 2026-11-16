@@ -359,3 +359,9 @@ test("위키 무작위 다시 뽑기: 검토 대기 무작위 후보만 바뀌�
   assert.ok(first.slice(1).every((id) => !ids.includes(id)));
   assert.ok(ids.some((id) => id.includes("_1_")));
 });
+
+test("애인·끌림이 있어도 입력 없이 갑자기 성적으로 굴지 않게 하는 지침", () => {
+  const L = romanceLines({ emo: { a: { from: "민지", to: "{{user}}", tags: { attraction: 8 } } }, ties: { t: { a: "민지", b: "{{user}}", kind: "여자친구", at: 1 } } });
+  assert.match(L.join("\n"), /NOT a reason for sexual behaviour/);
+  assert.match(L.join("\n"), /everyday non-sexual/);
+});

@@ -4,6 +4,8 @@ import { isLover, strayRisk, loverPairs } from "./lover.js";
 import { unrequited, triangles, isSecret, awkwardLeft, exPairs } from "./romance.js";
 
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
+// 2.2.6 애인·끌림이 있어도 갑자기 성적으로 굴지 않게: 성적인 행동은 {{user}}의 입력이나 이야기가 분명히 그쪽으로 갈 때만
+export const NO_SUDDEN_LUST = "Attraction and being lovers are NOT a reason for sexual behaviour. Most moments are ordinary life — talking, teasing, small touches, care. Never start sexual or lewd acts on your own; only when {{user}}'s input asks for it or the scene has clearly and gradually led there.";
 export const ROMANCE_RULE = "Slow burn: show attraction only through small, natural behaviour that fits the stage and the character's personality. Never skip a stage or confess early; keep ambiguity, mixed signals and plausible deniability; one-sided pull stays one-sided. Low or no attraction toward {{user}} means no romantic behaviour toward {{user}}.";
 
 // 단계: [최소값, 이름, 행동]
@@ -65,7 +67,7 @@ export function romanceLines(folder, { relevant = null, now = null, eff = null, 
       const [, name, act] = STAGES.find(([min]) => v >= min);
       return `- ${p.from} → ${p.to}: ${name} (attraction ${v}) while still with ${sr.partner}: tempted, guilty, hides it; ${act}${style ? ` — as this person: ${style}` : ""}`;
     }
-    if (lover) return `- ${p.from} → ${p.to}: lovers (attraction ${v}); shows love in their own way${style ? ` — ${style}` : ""}`;
+    if (lover) return `- ${p.from} → ${p.to}: lovers (attraction ${v}); shows love in their own way, mostly in everyday non-sexual moments${style ? ` — ${style}` : ""}`;
     const [, name, act] = STAGES.find(([min]) => v >= min);
     return `- ${p.from} → ${p.to}: ${name} (attraction ${v}): ${act}${style ? ` — as this person: ${style}` : ""}`;
   });
@@ -84,5 +86,5 @@ export function romanceLines(folder, { relevant = null, now = null, eff = null, 
   }
   for (const lp of loverPairs(folder)) if (isSecret(folder, lp.a, lp.b) && (rel(lp.a) || rel(lp.b))) lines.push(`- ${lp.a} & ${lp.b}: secret relationship — act like ordinary acquaintances in front of others; affection only when alone; fear of being found out`);
   for (const sr of strayed.values()) lines.push(`- ${sr.name} → ${sr.partner}: lovers, but the spark has ${sr.why === "faded" ? "faded" : "soured into resentment"}${sr.attraction != null ? ` (attraction ${sr.attraction})` : ""}: may be drawn to someone else — wandering eyes, comparing, excuses to be away; strays only if a real chance comes and it fits their personality, never suddenly`);
-  return lines.length ? [ROMANCE_RULE, ...lines] : [];
+  return lines.length ? [ROMANCE_RULE, NO_SUDDEN_LUST, ...lines] : [];
 }
