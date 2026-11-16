@@ -181,7 +181,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
       const got = fromStage1(lines, { known, source, openIds });
       if (cycle) got.cycle = cycleFrom(raw, known);
       return got.scene || got.people.length ? got : null;
-    }, { minimal: LINES_STAGE1_MIN });
+    }, { minimal: cycle ? LINES_STAGE1_MIN + CYCLE_STAGE1 : LINES_STAGE1_MIN });   // 2.2.8: 짧은 지침 재시도에도 월경 줄(빠지면 그 턴만 월경 보고가 비었다)
     stage1.states ??= []; stage1.fresh ??= []; stage1.open ??= { add: [], close: [] };   // 예전 코어(fromStage1)와 섞여도 깨지지 않게
     cache?.set(ckey, stage1);
   }
