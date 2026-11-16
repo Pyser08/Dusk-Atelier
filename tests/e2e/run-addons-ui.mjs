@@ -31,7 +31,7 @@ for (const mobile of [false, true]) {
   ok(`[${tag}] 지우기 → 다시 받을 수 있어요`, /받기 전/.test(await row.textContent()));
   await page.getByRole("button", { name: "업데이트 확인" }).click(); await page.waitForTimeout(400);
   const sc = () => page.evaluate(() => { const n = [...document.querySelectorAll(".rb-main,.rb-main .rb-scroll")].sort((a, b) => b.scrollHeight - a.scrollHeight)[0]; return { top: n.scrollTop, id: (n.__tid ??= Math.random()) }; });
-  for (const aid of ["hello", "chattheme"]) {
+  for (const aid of (process.env.SKIP_CHATTHEME ? ["hello"] : ["hello", "chattheme"])) {
     const row = page.locator(`[data-addon=${aid}]`);
   // 켜고 끌 때 창을 다시 불러오지 않고 스크롤도 그대로
   await page.evaluate((aid) => document.querySelector(`[data-addon=${aid}]`).scrollIntoView({ block: "center" }), aid); await page.waitForTimeout(300);
@@ -51,7 +51,7 @@ for (const mobile of [false, true]) {
   ok(`[${tag}] 커스텀 묶음 안내(자유 공유·공식 제안)`, /자유롭게 공유/.test(await page.locator("#rb-addon-custom-note").textContent()) && /공식 기능/.test(await page.locator("#rb-addon-custom-note").textContent()));
   const tpl = (v) => `export const meta = { id: "e2e-hi", name: "E2E 애드온", version: "${v}", desc: "시험", author: "나", minCore: "2.1.0" };\nexport async function activate(api, ctx) { ctx.dusk.addPage({ title: "E2E 화면", render(el) { ctx.dusk.ui.replace(el, ctx.dusk.ui.card("안녕", ctx.dusk.ui.btn("눌러 보기", { onClick: () => ctx.dusk.toast("눌렀어요") }))); } }); return { deactivate() {} }; }`;
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.locator("#rb-addon-import").click()]);
-  await fc.setFiles({ name: "e2e-hi.dusk-addon.js", mimeType: "text/javascript", buffer: Buffer.from(tpl("1.0.0")) });
+  await fc.setFiles({ name: "e2e-hi.dka", mimeType: "text/javascript", buffer: Buffer.from(tpl("1.0.0")) });
   await page.getByRole("button", { name: "확인했어요" }).click(); await page.waitForTimeout(300);
   await page.getByRole("button", { name: "넣기", exact: true }).click(); await page.waitForTimeout(500);
   const crow = page.locator("[data-addon=custom-e2e-hi]");
@@ -61,7 +61,7 @@ for (const mobile of [false, true]) {
   ok(`[${tag}] 열기 → 애드온 화면`, (await page.getByRole("button", { name: "눌러 보기" }).count()) === 1);
   await page.evaluate(() => window.__app.ctx.go("home")); await page.waitForTimeout(500);
   const [dl] = await Promise.all([page.waitForEvent("download"), (async () => { await page.locator("[data-addon=custom-e2e-hi] [aria-label$='메뉴']").click(); await page.getByRole("menuitem", { name: /내보내기/ }).click(); })()]);
-  ok(`[${tag}] ··· → 내보내기 파일`, dl.suggestedFilename() === "e2e-hi-1.0.0.dusk-addon.js", dl.suggestedFilename());
+  ok(`[${tag}] ··· → 내보내기 파일`, dl.suggestedFilename() === "e2e-hi-1.0.0.dka", dl.suggestedFilename());
   await page.locator("#rb-addon-make").click(); await page.waitForTimeout(300);
   ok(`[${tag}] 만들기 창(요청 복사·여기서 만들기·코드 넣기)`, (await page.locator("#rb-addon-maker #rb-amk-copy").count()) === 1 && (await page.locator("#rb-amk-run").count()) === 1 && (await page.locator("#rb-amk-code").count()) === 1);
   ok(`[${tag}] 만들기 창이 화면 밖으로 안 넘침`, await page.evaluate(() => { const b = document.querySelector("#rb-addon-maker").getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth + 1; }));

@@ -50,7 +50,7 @@ export function openAddonMaker(ctx, { existing = "", onDone } = {}) {
         makeHere),
       h("div", { class: "rb-amk-row" },
         btn("안내서 받기", { size: "sm", kind: "ghost", icon: "book", onClick: () => download("dusk-addon-guide.md", `${ADDON_GUIDE}\n\n## 빈 틀\n\`\`\`js\n${ADDON_TEMPLATE}\`\`\`\n`, "text/markdown") }),
-        btn("빈 틀 받기", { size: "sm", kind: "ghost", icon: "download", onClick: () => download("my-addon.dusk-addon.js", ADDON_TEMPLATE, "text/javascript") }))),
+        btn("빈 틀 받기", { size: "sm", kind: "ghost", icon: "download", onClick: () => download("my-addon.dka", ADDON_TEMPLATE, "text/javascript") }))),
     h("div", { class: "rb-amk-step" }, h("b", null, "2. 만든 코드 넣기"), code),
     msg,
     note("warn", RISK_TEXT),

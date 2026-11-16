@@ -6,7 +6,7 @@ const req = createRequire(import.meta.url);
 const { build } = await import(fs.existsSync("/opt/npm-tools/node_modules/esbuild") ? "/opt/npm-tools/node_modules/esbuild/lib/main.js" : "esbuild");
 const { chromium } = fs.existsSync("/opt/npm-tools/node_modules/playwright") ? createRequire("/opt/npm-tools/node_modules/")("playwright") : req("playwright");
 const r = await build({ entryPoints: ["tests/e2e/app.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"2.2.4"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json" } });
-const addonPath = process.env.ADDON ?? `addons/autoscroll/${fs.readdirSync("addons/autoscroll").find((f) => f.endsWith(".dusk-addon.js"))}`;
+const addonPath = process.env.ADDON ?? `addons/autoscroll/${fs.readdirSync("addons/autoscroll").filter((f) => f.endsWith(".dka") || f.endsWith(".dusk-addon.js")).sort((a, b) => Number(b.endsWith(".dka")) - Number(a.endsWith(".dka")))[0]}`;
 const file = addonPath.split("/").at(-1), code = fs.readFileSync(addonPath, "utf8");
 const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
 const shots = process.env.SHOTS;

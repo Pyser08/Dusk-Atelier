@@ -3,7 +3,7 @@
 // 데이터는 data/addons.js(공식 목록 + 커스텀), 묶음은 engine/addons.js(groupByCategory).
 import { h, replace, download, pickFiles } from "../dom.js";
 import { btn, switchEl, iconBtn, openMenu, confirmDialog, note } from "../kit.js";
-import { rowState, groupByCategory } from "../../engine/addons.js";
+import { rowState, groupByCategory, ADDON_ACCEPT } from "../../engine/addons.js";
 import { openAddonMaker, confirmCustomImport } from "./addonmaker.js";
 import { TABS } from "../tabs.js";
 
@@ -33,7 +33,7 @@ export function addonBox(ctx) {
 
   // 커스텀 애드온 불러오기: 파일 고르기 → 안내 → 확인 → 넣기
   async function importFile() {
-    const [f] = await pickFiles({ accept: ".js,.mjs,text/javascript" });
+    const [f] = await pickFiles({ accept: ADDON_ACCEPT });   // .dka(기본)·.js·.mjs
     if (!f) return;
     const code = await f.text();
     const meta = await confirmCustomImport(ctx, code);

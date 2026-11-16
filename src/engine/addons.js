@@ -107,5 +107,8 @@ export function extractAddonCode(text) {
   const pick = blocks.find((b) => /export\s+(async\s+)?function\s+activate|export\s*\{[^}]*activate/.test(b)) ?? blocks[0] ?? t;
   return pick.trim() + "\n";
 }
-// 파일 이름: <id>-<버전>.dusk-addon.js
-export const customFileName = (m) => `${m.id}-${m.version}.dusk-addon.js`;
+// 파일 이름: <id>-<버전>.dka
+// 커스텀 애드온 파일 확장자(2.2.6): .dka(Dusk Atelier Addon). 내용은 그대로 JS — 불러오기는 .js·.mjs도 계속 받는다.
+export const ADDON_EXT = ".dka";
+export const ADDON_ACCEPT = ".dka,.js,.mjs,text/javascript,text/plain,application/octet-stream";
+export const customFileName = (m) => `${m.id}-${m.version}${ADDON_EXT}`;

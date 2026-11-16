@@ -77,8 +77,8 @@ test("내보내기는 넣은 코드 그대로·파일 이름은 id-버전, 지�
   const code = addon("hi", "1.2.0");
   await A.importCustom(code);
   const ex = await A.exportCustom("hi");
-  assert.equal(ex.code, code); assert.equal(ex.name, "hi-1.2.0.dusk-addon.js");
-  assert.equal(customFileName({ id: "a", version: "1.0.0" }), "a-1.0.0.dusk-addon.js");
+  assert.equal(ex.code, code); assert.equal(ex.name, "hi-1.2.0.dka");
+  assert.equal(customFileName({ id: "a", version: "1.0.0" }), "a-1.0.0.dka");
   await A.removeCustom("hi");
   assert.deepEqual(await A.customs(), {});
   assert.ok(![...kv.keys()].some((k) => k.startsWith("dusk.addon.custom.code.")));
