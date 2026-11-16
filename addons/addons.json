@@ -142,7 +142,7 @@
     {
       "id": "autoscroll",
       "name": "오토 스크롤",
-      "category": "etc",
+      "category": "manage",
       "version": "0.2.0",
       "minCore": "2.2.4",
       "hooks": false,

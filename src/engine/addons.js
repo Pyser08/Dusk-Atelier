@@ -79,7 +79,7 @@ export const ADDON_CATS = [
   { id: "custom", name: "커스텀 애드온" }
 ];
 const CAT_IDS = ADDON_CATS.map((c) => c.id);
-const CAT_OF = { memory: "memory", cards: "memory", erosync: "memory", aibuild: "make", chattheme: "make", manage: "manage", protlink: "manage", widgets: "look", stealth: "look", provider: "lab", autoscroll: "etc" };
+const CAT_OF = { memory: "memory", cards: "memory", erosync: "memory", aibuild: "make", chattheme: "make", manage: "manage", protlink: "manage", widgets: "look", stealth: "look", provider: "lab", autoscroll: "manage" };
 export const categoryOf = (a) => (a?.custom ? "custom" : a?.category || CAT_OF[a?.id] || "etc");
 // [{ cat, items }] — 빈 카테고리는 뺀다(커스텀은 keepCustom이면 비어도 남긴다: 불러오기 안내 자리)
 export function groupByCategory(items, { keepCustom = false } = {}) {
