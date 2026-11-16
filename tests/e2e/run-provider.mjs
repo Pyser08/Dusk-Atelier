@@ -5,11 +5,11 @@ const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright")
 const r = await build({ entryPoints: ["tests/e2e/app.entry.js"], bundle: true, write: false, format: "iife", platform: "browser", logLevel: "error", define: { __VERSION__: '"test"', __CHANGELOG__: '""' }, alias: { fflate: process.cwd() + "/src/vendor/fflate.js" }, loader: { ".json": "json", ".md": "text", ".txt": "text" } });
 const out = [], ok = (n, c, x = "") => { out.push(c); console.log((c ? "✔ " : "✘ ") + n + (c ? "" : "  → " + x)); };
 const browser = await chromium.launch(), errs = [];
-{ // 2.2.6 프로바이더는 본체 기능: 실험 기능이 꺼져 있어도 보이고, 간단 모드는 빠른 시작 화면 + 홈 이어서 하기 밑 바로가기
+{ // 프로바이더(실험 애드온): 실험 기능을 켜면 간단 모드는 빠른 시작 화면 + 홈 이어서 하기 밑 바로가기
   const page = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage(); page.setDefaultTimeout(5000);
   page.on("pageerror", (e) => errs.push(e.message));
   await page.setContent("<!doctype html><body style='margin:0'></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
-  await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99, onboardDone: true }) }, { provider: true }));
+  await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99, onboardDone: true, experimental: true }) }, { provider: true }));
   await page.waitForTimeout(500);
   const vis0 = (sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((e) => e.offsetParent).length, sel);
   await page.evaluate(() => __app.ctx.go("home")); await page.waitForTimeout(400);

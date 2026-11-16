@@ -19,15 +19,15 @@
 
 ## 파일 목록
 ### src/
-- `addonlib.gen.js` (648줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
-- `main.js` (321줄) 
+- `addonlib.gen.js` (574줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
+- `main.js` (320줄) 
 
 ### src/cellar/
 - `node-entry.js` (9줄) Dusk Cellar(서버)에서 장기 기억 분석을 돌리는 Node용 진입점 (v1.9.3, Cella… — createMemoryRunner, createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX, callWriterModel
 
 ### src/data/
 - `addcharacter.js` (46줄) 새 봇을 DB에 추가하는 공용 흐름 (legacy.js의 '캐릭터 추가'에서 추출, 동작 동일). — insertCharacter, createBotDraft
-- `addons.js` (485줄) 애드온 로더(2.0.0 시험): 우리 저장소 목록(addons.json)의 애드온 ESM을 nativ… — ADDON_MANIFEST_URL, ADDON_URL_KEY, ADOPT_KEY, SEEN_KEY, CUSTOM_INDEX_KEY
+- `addons.js` (483줄) 애드온 로더(2.0.0 시험): 우리 저장소 목록(addons.json)의 애드온 ESM을 nativ… — ADDON_MANIFEST_URL, ADDON_URL_KEY, ADOPT_KEY, SEEN_KEY, CUSTOM_INDEX_KEY
 - `addonscope.js` (52줄) 애드온마다 따로 쓰는 api: 애드온이 호스트에 단 훅(요청·스크립트·채팅 리스너)을 기록해 두었다가… — BASE, baseApi, createProviderRelay, scopeApi
 - `addonsdk.js` (134줄) 애드온 SDK(2.1.0): 모든 애드온의 activate(api, ctx)에 ctx.dusk로 넘겨… — SDK_VERSION, createAddonSdk
 - `adultseed.js` (73줄) 2.2.6 ‘처음 등장 때 성인 항목 무작위로’ 옵션(pluginStorage) + 장기기억 위키 후… — readSeedOpt, saveSeedOpt, seedWikiNow, seedErosyncNow, syncOrientNow
@@ -120,7 +120,7 @@
 - `storytime.js` (44줄) 이야기 시간 훅 (v1.6.8). 장기기억을 켜든 끄든 독립으로 동작하고, 설정에서 켜고 끈다. 기본… — STORY_TIME_KEY, loadStoryTimeOn, createStoryTime
 - `themebuilder.js` (789줄) 테마 빌더: 고르기만 해서 채팅 테마(커스텀 HTML + CSS)를 만든다. — hexToOklch, oklch, contrast, ensureContrast, makePalette
 - `themes.js` (385줄) 테마 스튜디오: 일반 리스 / 포켓리스 계열 테마를 따로 만들고 저장·적용한다. — detectTarget, loadThemes, saveThemes, newTheme, duplicateTheme
-- `turninfo.js` (194줄) 응답 아래 표시 런타임 (1.8.3): ② 주사위 결과 · ③ 모델 호출 정보(+ 화면 구석 상태 칩… — DICE_SHOW_KEY, CALL_SHOW_KEY, CACHE_ALERT_KEY, TURN_LOG_KEY, loadDiceShow
+- `turninfo.js` (195줄) 응답 아래 표시 런타임 (1.8.3): ② 주사위 결과 · ③ 모델 호출 정보(+ 화면 구석 상태 칩… — DICE_SHOW_KEY, CALL_SHOW_KEY, CACHE_ALERT_KEY, TURN_LOG_KEY, loadDiceShow
 - `updatetoast.js` (38줄) 리스 화면(플러그인 밖) 오른쪽 아래에 뜨는 업데이트 알림. retrytoast.js와 같은 방식: … — createUpdateToast
 - `usermerge.js` (13줄) 페르소나 이름(·user·유저 등)으로 따로 쌓인 옛 기록을 {{user}} 하나로 자동으로 합친다 … — autoMergeUser
 - `usernames.js` (31줄) {{user}}(플레이어)를 가리키는 이름 모으기 (v1.9.3). db.username 하나만 보면… — userNameList, primaryUserName, loadPrimaryUserName, loadUserNames
@@ -383,7 +383,7 @@
 ### src/ui/
 - `aifix.js` (52줄) 로어북 '고칠 부분' 공유 상태 (v1.6.8): 편집기 글칸에서 고른 부분 ↔ AI 창 '고칠 부분…
 - `aistopbtn.js` (90줄) '생성 중지' 버튼 (2.1.0): AI 호출(engine/aistop.js)이 하나라도 돌면 화면 …
-- `app.js` (720줄) 
+- `app.js` (725줄) 
 - `assets.js` (187줄) 
 - `cbs.js` (80줄) 
 - `codeedit.js` (514줄) 가벼운 코드 편집기: 투명한 textarea 뒤에 색을 입힌 pre를 겹쳐 VS Code처럼 보이게 …

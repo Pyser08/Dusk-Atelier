@@ -5,6 +5,7 @@ import { setDuskRoute } from "../../src/engine/runai.js";
 import { setDuskServerModel } from "../../src/data/modelhub.js";
 import { createStore, backupSnapshot } from "../../src/engine/index.js";
 import { renderProvider } from "../../src/ui/screens/provider.js";
+import { createCacheLayout } from "../../src/data/cachelayout.js";
 
 export async function activate(api, ctx) {
   const ext = ctx.ext, app = ctx.app;
@@ -19,6 +20,7 @@ export async function activate(api, ctx) {
       const f = await memory.store.getFolder(cur.chaId, cur.chatId), want = String(q ?? "").trim().toLowerCase(); if (!f?.people || !want) return [];
       return Object.values(f.people).filter((p) => String(p.name ?? "").toLowerCase().includes(want) || JSON.stringify(p.records ?? []).toLowerCase().includes(want)).slice(0, 5).map((p) => ({ name: p.name, records: (p.records ?? []).slice(-6).map((r) => (typeof r === "string" ? r : r?.text ?? r?.summary ?? JSON.stringify(r)).slice(0, 300)) }));
     } },
+    allowed: () => !!app.prefs?.ui?.experimental,
     createStore, backupSnapshot, log
   });
   setDuskRoute(() => provider.analysisPick(), (a, msgs, pick, signal) => provider.run(msgs, pick, signal));
@@ -26,6 +28,7 @@ export async function activate(api, ctx) {
   const unsub = provider.store.subscribe(() => provider.sync().catch(() => {}));
   provider.store.get().then(() => provider.sync()).catch((e) => log(`프로바이더 시작 실패: ${e?.message ?? e}`));
   provider.mailbox?.start().catch((e) => log(`다른 플러그인 창구 시작 실패: ${e?.message ?? e}`));   // 설정에서 켠 경우에만 살핀다(기본 꺼짐)
-  const off = [ext.add("svc", "provider", provider), ext.add("tab", "provider", renderProvider)];
+  const layout = createCacheLayout(api, { log });   // 하이파 분리·이어붙이기: 코어 요청 훅(turninfo)이 이 서비스를 찾아 쓴다
+  const off = [ext.add("svc", "provider", provider), ext.add("svc", "cachelayout", layout), ext.add("tab", "provider", renderProvider)];
   return { async deactivate() { off.forEach((f) => f()); try { provider.mailbox?.stop(); } catch { /* 이미 멈춤 */ } try { await provider.progress?.stop?.(); } catch { /* 창 없음 */ } try { unsub?.(); } catch { /* 이미 해제 */ } setDuskRoute(null, null); setDuskServerModel(null); } };
 }

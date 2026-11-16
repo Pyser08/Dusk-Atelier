@@ -100,7 +100,8 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
       // 2.2.6 리스 자체 Gemini 연결: 요청 본문은 못 바꾸지만 순서는 바꿀 수 있다 → 바뀌는 블록을 마지막 사용자 말 뒤로(자동 캐시 앞부분 지키기). 이 훅은 늘 맨 뒤라 다른 Dusk 블록이 다 들어온 뒤다.
       if (/gemini/i.test(rec.model) && !/dusk/i.test(rec.model)) messages = moveVolatileAfterUser(messages);
       // 하이파 연관·랜덤 분리 · 이어붙이기(설정): 리스 자체 Gemini와 Dusk 프로바이더 요청에만(메인 요청)
-      if (!aux && layout && /gemini|dusk/i.test(rec.model)) messages = (await layout.apply(messages)).messages;
+      const L = typeof layout === "function" ? layout() : layout;
+      if (!aux && L && /gemini|dusk/i.test(rec.model)) messages = (await L.apply(messages)).messages;
       if (aux) {   // 보조 호출은 끝을 알 수 없어(출력 훅이 안 불림) 잠깐 알려만 준다
         if (callShow && chip) { chipSet(`보조 · ${rec.model || "모델"} · 호출 중 · 입력 약 ${fmtTokens(rec.inTok)}`, ""); clearTimeout(ui.hide); ui.hide = setTimeout(chipRemove, 4e3); }
         return messages;
