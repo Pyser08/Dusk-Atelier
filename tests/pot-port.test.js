@@ -159,7 +159,7 @@ test('말투 다변화·CBS 보임 판정이 원본과 같음', { skip }, async 
   assert.deepEqual(await outcome(() => run(ported)), await outcome(() => run(orig)));
 });
 
-test('프롬프트 라이브러리가 원본과 같음', { skip }, () => {
+test('프롬프트 라이브러리가 원본과 같음', { skip: retired }, () => {   // addon-rebuild: prompts.json도 직접 고침(지시문의 adult 표현 뺌)
   const lib = JSON.parse(fs.readFileSync(path.join(root, 'src/data/pot/prompts.json'), 'utf8'));
   const m = /^const RISUPOT_CONTENT = (.*);\s*$/m.exec(original);
   assert.deepEqual(lib, JSON.parse(m[1]));

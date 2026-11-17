@@ -242,7 +242,7 @@ test("여러 명 출발값(seedMany): 축 2명씩·프로필 묶음 1번·한글
   assert.equal((body.match(/promptProfileSystem\(\)/g) || []).length, 1, "프로필 작성은 묶음당 1번");
   assert.ok(body.includes("scoreSexualAxesForGroup({ group: scored") && body.includes("axisKoreanForBatch(scored, entries"));
   assert.ok(body.includes("await duskKoFillMany(analyzedIds)"), "화면 글 한글은 전체 한 번");
-  assert.ok(body.includes("JSON.stringify(root) !== g.baseline"), "그 사이 바뀐 인물은 덮지 않음");
+  assert.ok(body.includes("seedUserMark(root) !== g.baseline"), "그 사이 사용자가 고친 인물은 덮지 않음(매 턴 계산 변화로는 버리지 않음)");
   assert.ok(body.includes("analysisRuntime.running || profileCompilePromises.size"), "다른 분석 중이면 안 함");
   assert.ok(eng.includes("seedMany: duskProfileSeedMany"));
   const { api } = fakeApi(); const e = await bootErosync(api);

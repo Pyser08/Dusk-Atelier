@@ -6,16 +6,15 @@ import { userLabel } from "./username.js";
 import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
-import { eroTagsCard } from "./erosynctagsui.js";
-import { eroTempCard } from "./erosynctempui.js";
-import { eroLoad, eroNsfwCard, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
+import { nsfwCard, nsfwStatusCard, nsfwTempCard, nsfwTagsCard } from "./nsfwcard.js";
+import { adultCandCard } from "./adultcands.js";
+import { eroLoad, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
 import { eroPerson, eroPersonByName } from "../../../engine/erosyncview.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag, tagsFor } from "../../../engine/memoryemo.js";
 import { isLover, loverPairs, setLover, pairKey } from "../../../engine/lover.js";
 import { timeline, eventText, isSecret, setSecret, unrequited } from "../../../engine/romance.js";
 import { ensureMemAddonCss, wkLayoutOf } from "./memaddoncss.js";
 import { parseCycleBody } from "../../../engine/pot/cycle-tracking.js";
-import { adultRerollCard } from "./adultreroll.js";
 import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const STAGES = [["just met", "처음 봄"], ["acquaintances", "아는 사이"], ["close", "친한 사이"], ["very close", "아주 가까움"]];
@@ -354,21 +353,14 @@ export function personTabs(env, parts) {
       h("div", { class: "rb-cyc-legend" }, h("span", { class: "p" }, "생리"), h("span", { class: "f" }, "가임기"), h("span", { class: "ov" }, "배란일"), h("small", { class: "rb-muted" }, st.date ? `${st.date} 기준` : "")));
   };
   const nsfw = () => {
-    const a = parts.adult ?? {}, e = eroSelf(), eroCard = e ? eroNsfwCard(ctx, card, e, () => { ero = null; eroLoad(ctx).then((snap) => { if (snap) { ero = snap; paint(); } }); }, ero) : null;
+    // addon-rebuild: 성인 프로필은 이 채팅 장기기억(folder.nsfw) 값만 쓴다(Erosync 프로필·요약·임시값·태그 카드는 뺌)
+    const a = parts.adult ?? {};
     const cyc = a.cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), a.cyc.lines.join(" · "), a.cyc.date ? h("small", { class: "rb-muted" }, ` (${a.cyc.date} 기준)`) : null) : null;
-    const sumCard = e && ero ? eroSummaryCard(ctx, card, ero, e) : null;
     const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
-    const er = ctx.erosync, live = !!(er?.on?.() && er?.isRunning?.());
-    // 값이 없어도 기본 칸은 보인다: 월경·임신 / 성적 욕망·이상성향 후보 / Erosync 성적 항목 / 선호·금기 태그
+    // 값이 없어도 기본 칸은 보인다: 월경·임신 / 성적 욕망·이상성향 후보 / 성인 프로필
     const cv = lay && a.cyc ? cycleViz() : null;
     const cycCard = card("월경·임신", [cv ?? cyc ?? note("아직 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.")], null, "rb-nsfw-base");
-    const candCard = a.panel ?? card("성적 욕망 · 이상성향 후보", [note("후보가 없어요. 대화에서 성적 욕망이나 취향이 드러나면 여기에 쌓여요.")], null, "rb-nsfw-base");
-    const openEro = () => { (ctx.state.mem ??= {}).page = "erosync"; ctx.go("memory"); };
-    const eroBase = eroCard ?? card("Erosync 성적 항목", [
-      note(!live ? "Erosync가 꺼져 있어요. 켜면 인물의 성적 항목을 읽고 직접 고치거나 다시 분석할 수 있어요." : "이 인물의 Erosync 값이 아직 없어요. 인물 분석을 하면 채워져요."),
-      h("div", { class: "rb-mem-sact" }, btn(live ? "Erosync 분석 열기" : "Erosync 켜러 가기", { size: "sm", id: "rb-ero-open", onClick: openEro }))], h("small", { class: "rb-wk2-badge" }, "Erosync"), "rb-wk2-ero rb-nsfw-base");
-    const tagBase = e ? eroTagsCard(ctx, card, e) : card("선호·금기 태그", [note("Erosync가 이 인물을 읽으면 선호·금기 태그를 적을 수 있어요.")], h("small", { class: "rb-wk2-badge" }, "Erosync"), "rb-wk2-ero rb-nsfw-base");
-    const kids = [sumCard, cycCard, candCard, eroBase, e && ero ? eroTempCard(ctx, card, ero, e) : null, tagBase, adultRerollCard(env, card, doc, e, () => env.redraw?.())].filter(Boolean);
+    const kids = [nsfwStatusCard(env, card, doc), cycCard, adultCandCard(env, card, doc), nsfwCard(env, card, doc), nsfwTempCard(env, card, doc), nsfwTagsCard(env, card, doc)].filter(Boolean);   // addon-rebuild: 후보 카드 새로(다시 뽑기·직접 추가는 그 카드 우상단)
     return h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, kids);
   };
   const log = () => h("div", { class: "rb-wk2-pane" }, lay === "B4" ? summary("log") : null, ...(parts.logBlocks ?? []).filter(Boolean));

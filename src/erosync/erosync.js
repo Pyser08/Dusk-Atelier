@@ -1,4 +1,5 @@
 import { createLookaheadDelay, LOOKAHEAD_CANCELLED } from "./lookaheaddelay.js";
+import { refusalText, blockedError, censorMessage, problemMessage, isCensored } from '../engine/refusal.js';
 import { autoRefreshCancellable, matchEditedDocument } from "./autorefresh.js";
 import { AXIS_KEYS, AXIS_SCALAR_KEYS, AXIS_DEFINITIONS, AXIS_OVERLAP_RULES, SEX_AXIS_KEYS, SEX_AXIS_SCALAR_KEYS, SEX_MOTIVE_TYPES, SEX_AXIS_COMMON_RULES, SEX_AXIS_OVERLAP_RULES, SEX_AXIS_DEFINITIONS, SEX_MOTIVE_DEFINITIONS, axisValueOf } from "./axes.js";
 import { PROMPT_TEXT_LIMIT, PROMPT_BRANCHES, PROMPT_PAGES, PROMPT_SECTION_INDEX, PROMPT_PAGE_INDEX, PROMPT_TEXT, PROMPT_DIRECTOR_IDS } from "./prompts.js";
@@ -2358,9 +2359,14 @@ export async function bootErosync(api, hostArg) {
     const search = options.webSearch === true && webSearchAllowed(assignment.providerId, assignment.profile);
     const system = search ? `${systemPrompt}\n\n${WEB_SEARCH_NOTE}` : systemPrompt;
     const messages = webSearchMark([{ role: 'system', content: system }, { role: 'user', content: userPrompt }], search);
-    const firstText = await runProvider(messages, config, role, requestGuard, executionRole, retryContext);
+    // addon-rebuild: 검열이면 검열이라고(제공자 안전 필터 차단 / 거절 문장). 거절 문장엔 고쳐 달라는 재호출도 하지 않는다(같은 거절이라 호출만 낭비)
+    let firstText;
+    try { firstText = await runProvider(messages, config, role, requestGuard, executionRole, retryContext); }
+    catch (error) { if (blockedError(error) && !isCensored(error)) throw Object.assign(new Error(censorMessage(`제공자가 안전 필터로 막았어요 — ${truncate(error?.message || error, 200)}`)), { code: 'EROSYNC_CENSORED', cause: error }); throw error; }
     options.onResponseInfo?.({ resultChars: String(firstText || '').length });
     requestGuard?.throwIfAborted(label);
+    { const refused = refusalText(firstText); if (refused) throw Object.assign(new Error(censorMessage(`모델이 거절했어요 — “${refused}”`)), { code: 'EROSYNC_CENSORED' }); }
+    if (!String(firstText || '').trim()) throw Object.assign(new Error(problemMessage('모델이 빈 답을 보냈어요(출력 한도 부족·일시 오류일 수 있음)')), { code: 'EROSYNC_EMPTY' });
     try {
       const parsed = extractJsonObject(firstText);
       return ['profile', 'director'].includes(executionRole)
@@ -2376,6 +2382,7 @@ export async function bootErosync(api, hostArg) {
       ], search);
       const repairedText = await runProvider(repairMessages, config, role, requestGuard, executionRole, retryContext);
       requestGuard?.throwIfAborted(label);
+      { const refused = refusalText(repairedText); if (refused) throw Object.assign(new Error(censorMessage(`모델이 거절했어요 — “${refused}”`)), { code: 'EROSYNC_CENSORED' }); }
       const repaired = extractJsonObject(repairedText);
       return ['profile', 'director'].includes(executionRole)
         ? correctFractionalConfidenceScale(repaired, { role, executionRole, label })
@@ -13684,6 +13691,12 @@ export async function bootErosync(api, hostArg) {
   }
 
   // addon-rebuild: 장기기억 기록으로 만든 1인 분석 자료. 임시 인물(mob)이고 기록이 있을 때만.
+  // 장기기억 글 → 줄 목록(정리 단계 한도: 12줄·줄당 400자)
+  function duskMemoryLines(memory) {
+    const out = [];
+    for (const line of String(memory || '').split('\n').map(x => x.trim()).filter(Boolean)) { for (let i = 0; i < line.length && out.length < 12; i += 400) out.push(line.slice(i, i + 400)); }
+    return out;
+  }
   function duskMemorySource(profile) {
     if (!['temporary_mob', 'persistent_mob'].includes(profile?.category)) return null;
     const notes = normalizeStringList(profile.evidence, 8, 1200).filter(Boolean);
@@ -16348,6 +16361,8 @@ export async function bootErosync(api, hostArg) {
   // 축 채점 2명씩(출력 한도, 전체 분석과 같음) · 성적 축 2명씩 · 프로필 작성 묶음(최대 SEED_GROUP명)당 1번 · 축 답 한글 묶음 · 화면 글 한글 전체 1번.
   // 예: 4명 → 축 2 + 성적 2 + 프로필 1 + 한글 1(+화면 0~1) ≈ 6~7번(한 명씩이면 16~20번). 자료가 없는 인물은 임시값으로 둔다.
   const SEED_GROUP = 4;
+  const seedUserMark = root => JSON.stringify({ o: root?.userOverrides || null, l: root?.locked === true });
+  const seedHasPositions = root => [root?.baseProfile, ...Object.values(root?.variants || {}).map(v => v?.baseProfile)].some(b => Array.isArray(b?.positionPreferences) && b.positionPreferences.length);
   async function duskProfileSeedMany(people = []) {
     const list = (Array.isArray(people) ? people : []).filter(p => truncate(String(p?.name || ''), 160).trim()).slice(0, 12);
     if (!list.length) return { ok: false, reason: '이름이 없어요', results: [] };
@@ -16377,11 +16392,13 @@ export async function bootErosync(api, hostArg) {
       const items = [];
       for (const x of ensured) {
         const root = store.profiles?.[x.id];
-        if (!root || root.analysisStatus === 'ready') continue;
+        // 분석이 끝났고 체위·장소까지 있으면 건너뛴다. 예전에 ready로만 만들어지고 분석은 안 된 인물(체위 없음)은 이번에 분석한다
+        if (!root || root.locked || (root.analysisStatus === 'ready' && seedHasPositions(root))) continue;
         let profile, input;
         try { profile = singleReanalysisTarget(store, x.id, scope); input = singleReanalysisSource(profile, store, inventory, scope, selection, config); }
         catch (error) { results.get(x.id).reason = 'no_sources'; continue; }
-        items.push({ candidate: { id: x.id, name: profile.name, aliases: profile.aliases || [] }, profile, input, baseline: JSON.stringify(root) });
+        // addon-rebuild: 비교 기준은 사용자 수정(고친 값·잠금)만. 예전엔 프로필 전체를 비교해, 분석하는 1~2분 사이 매 턴 계산이 값을 조금만 바꿔도 결과를 통째로 버렸다
+        items.push({ candidate: { id: x.id, name: profile.name, aliases: profile.aliases || [] }, profile, input, baseline: seedUserMark(root) });
       }
       for (let gi = 0; gi < items.length; gi += SEED_GROUP) {
         check('dusk seed many group');
@@ -16418,11 +16435,15 @@ export async function bootErosync(api, hostArg) {
         for (const c of scored) {
           const g = group.find(x => x.candidate === c), value = returned.filter(item => item?.id === c.id).length === 1 ? returned.find(item => item?.id === c.id) : null;
           const confidence = value?.profileConfidence?.overall ?? value?.confidence;
-          if (!value || !isPlainObject(value.eroticProfile) || !finiteScore(confidence)) { const r = results.get(c.id); r.ok = false; r.reason = '프로필 응답 형식이 맞지 않음'; continue; }
+          if (!value || !isPlainObject(value.eroticProfile) || !finiteScore(confidence)) { const r = results.get(c.id); r.ok = false;
+            // addon-rebuild: 왜 안 됐는지 구체적으로(답에 이 인물이 없음 / 거절·빈 답 / 숫자 빠짐)
+            r.reason = problemMessage(!returned.length ? '프로필 답에 인물 목록(characters)이 비었어요' : !value ? '프로필 답에 이 인물이 없어요' : !isPlainObject(value.eroticProfile) ? '프로필 답에 성적 항목(eroticProfile)이 빠졌어요' : '프로필 답의 확신도 숫자가 빠졌어요'); continue; }
+          { const rawPos = Array.isArray(value.eroticProfile.positionPreferences) ? value.eroticProfile.positionPreferences : [], kept = normalizePositionPreferences(rawPos);
+            const r = results.get(c.id); r.positions = kept.length; if (!kept.length) r.note = problemMessage(rawPos.length ? `체위·장소 ${rawPos.length}개가 왔지만 형식이 안 맞아 버렸어요(preference 값: ${[...new Set(rawPos.map(x => String(x?.preference ?? '')))].slice(0, 3).join(', ')})` : '모델이 체위·장소를 비워서 보냈어요(나머지 항목은 왔음)'); }
           const axisEntry = entries.get(c);
           await mutateProfileRegistry('dusk seed many', fresh => {
             const root = fresh.profiles?.[c.id];
-            if (!root || JSON.stringify(root) !== g.baseline) return false;   // 그 사이 바뀌었으면(사용자 수정 등) 덮지 않는다
+            if (!root || seedUserMark(root) !== g.baseline) return false;   // 그 사이 사용자가 고쳤거나 잠갔으면 덮지 않는다
             const current = singleReanalysisTarget(fresh, c.id, scope);
             const written = withoutAxisFields(value.eroticProfile);
             const mergedBase = { ...current.baseProfile, ...written };
@@ -16490,9 +16511,11 @@ export async function bootErosync(api, hostArg) {
         registry.entities[pid] = { ...(prev || {}), id: pid, name: nm, aliases: normalizeStringList([...(prev?.aliases || []), ...aliases], 16, 120), category: prev?.category || 'persistent_mob',
           source: prev?.source || 'dusk_memory', scopeKey: prev?.scopeKey || scopeKey, profileId: pid, appearanceCount: (prev?.appearanceCount || 0) + 1, description: truncate(memory || prev?.description, 800) };
         if (!profiles.profiles[pid]) {
-          profiles.profiles[pid] = { ...normalizeProfileRecord({ id: pid, name: nm, aliases, provisionalProfile: {}, ownerBundleKeys: bundleKey ? [bundleKey] : [],
+          // addon-rebuild: 아직 분석 전이므로 provisional(예전엔 기본값 ready라 출발값 분석을 통째로 건너뛰어 축·체위가 안 생겼다).
+          // 기록은 줄마다 나눠 넣는다(한 덩어리면 정리 단계에서 400자로 잘림)
+          profiles.profiles[pid] = { ...normalizeProfileRecord({ id: pid, name: nm, aliases, provisionalProfile: {}, ownerBundleKeys: bundleKey ? [bundleKey] : [], analysisStatus: 'provisional',
             entityVerdict: { status: 'unverified', entityType: 'person', confidence: 35, reason: 'named by Dusk memory', source: 'dusk_memory' }, confidence: 35,
-            evidence: memory ? [truncate(memory, 1200)] : [] }, '', 'persistent_mob'),
+            evidence: duskMemoryLines(memory) }, '', 'persistent_mob'),
           category: 'persistent_mob', scopeOwnership: { scopeKey, sourceBundleKey: bundleKey, confidence: 'exact' } };
         }
         return pid;
@@ -16501,7 +16524,7 @@ export async function bootErosync(api, hostArg) {
       duskReadCache = null;
     }
     if (found && memory && ['temporary_mob', 'persistent_mob'].includes(found.category)) {
-      await mutateProfileRegistry('dusk profile seed memory', (profiles) => { const p = profiles.profiles?.[id]; if (p) p.evidence = [truncate(memory, 1200)]; }, { writeRegistry: false });
+      await mutateProfileRegistry('dusk profile seed memory', (profiles) => { const p = profiles.profiles?.[id]; if (p) p.evidence = duskMemoryLines(memory); }, { writeRegistry: false });
       duskReadCache = null;
     }
     return { id, found };
@@ -16686,7 +16709,7 @@ export async function bootErosync(api, hostArg) {
       // 2.2.4: 사용자가 고친 값(userOverrides)도 출발점으로 넘긴다. 예전엔 고친 항목을 빼서 영원히 그 값이었다
       const own = keys.slice();
       if (!own.length) continue;
-      targets.push({ id: profile.id, name: profile.name, aliases: profile.aliases || [], memory: truncate(person.memory || '', 1200), own,
+      targets.push({ id: profile.id, name: profile.name, aliases: profile.aliases || [], memory: truncate(person.memory || '', 1800), own,
         values: Object.fromEntries(keys.map(k => [k, turnValueOf((k in ov) || (k === 'eroticInterest' && ov.eroticInterest) ? ov : base, k)])) });
     }
     duskKoAhead(targets.map(t => t.id), profiles, context);   // addon-rebuild: 화면 글 한국어를 미리(영어가 있는 인물만, 기다리지 않음)
@@ -16718,7 +16741,7 @@ export async function bootErosync(api, hostArg) {
           saveProfileVariant(profile, variantKey, { label: current.variantLabel || variantKey, activationSignature: profile.variants?.[variantKey]?.activationSignature || '', sourceHash: current.sourceHash, sourceDocumentIds: current.sourceDocumentIds });
           // addon-rebuild: 임시 인물은 최신 장기기억 기록을 남겨 두어 '다시 분석'이 그 기록으로 분석하게 한다
           const mem = targets.find(t => t.id === id)?.memory;
-          if (mem && ['temporary_mob', 'persistent_mob'].includes(profile.category)) profile.evidence = [truncate(mem, 1200)];
+          if (mem && ['temporary_mob', 'persistent_mob'].includes(profile.category)) profile.evidence = duskMemoryLines(mem);   // 줄로(한 덩어리면 400자로 잘림)
           done.push({ id, name: profile.name, before, after, reason: parsed[id].reason });
         }
         return done;

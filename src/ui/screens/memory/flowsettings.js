@@ -134,10 +134,9 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
     const rateLabel = h("b", null, `×${rate}`, defHint("×1"));
     const slider = h("input", { type: "range", class: "rb-range", min: 0.5, max: 3, step: 0.1, value: rate, "aria-label": "임신 확률 배수", onInput: (e) => { rateLabel.textContent = `×${Number(e.target.value)}`; }, onChange: (e) => ed((s) => { s.features.openness.cycleRate = Math.min(3, Math.max(0.5, Number(e.target.value) || 1)); }) });
     replace(adultHost, sec("성인 항목 (기본 꺼짐)", "성인 인물의 욕구·월경·임신을 따라가요. 켜지 않으면 아무것도 기록하지 않아요.",
-      toggleRow("욕구 기록", "성인 항목이에요. 월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; if (!v) s.features.openness.cycle = false; })),
+      toggleRow("욕구 기록", "성인 항목이에요. 성적 욕망·이상성향을 함께 기록하고, 성인 프로필·장면 판단·월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; s.paraphiliaEnabled = v; if (!v) s.features.openness.cycle = false; })),   // addon-rebuild: 이상성향 기록은 욕구 기록과 늘 함께
       toggleRow("월경·임신 기록", "이야기 속 날짜로 주기·임신·출산을 프로그램이 셈해요. 날짜가 없는 턴은 아무것도 움직이지 않아요. 켜면 필요한 설정도 함께 켜져요.", cycle, (v) => ed((s) => { if (v) s.features.openness.enabled = true; s.features.openness.cycle = v; })),
       cycleNote(snap, ed),
-      desire ? toggleRow("이상성향 기록", "특이한 성적 취향도 따라가요.", snap.paraphiliaEnabled === true, (v) => ed((s) => { s.paraphiliaEnabled = v; })) : null,
       desire ? toggleRow("노골적인 묘사 수위", "기록 문장이 직설적이 돼요. 꺼 두면 순화해서 적어요.", snap.explicitSexualStyleEnabled === true, (v) => ed((s) => { s.explicitSexualStyleEnabled = v; })) : null,
       cycle ? h("label", { class: "rb-mem-field" }, h("span", null, "임신 확률 배수 (0.5~3)"), slider, rateLabel) : null,
       cycle ? btn("기본값으로", { size: "sm", onClick: () => ed((s) => { s.features.openness.cycleRate = 1; }) }) : null));
@@ -180,7 +179,7 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
   replace(host,
     sec("무엇을 기억할까요?", "수준을 고르면 아래 카드가 같이 바뀌어요. 바로 저장되고 다음 응답부터 적용돼요.", lvHost, featHost),
     sec("기억 방식", null, modeHost),
-    part === "basic" ? null : adultHost,
+    adultHost,   // addon-rebuild: 성인 항목은 장기 기억(인물 위키 설정 › 설정)에서도 — Erosync 애드온이 없으면 여기만
     part === "basic" ? null : sec("AI 모델", "기록과 정리를 맡길 모델이에요. 모르겠으면 ‘리스 보조 모델’로 두세요.", cfgHost, modelAdv),
     sec("가져오기", "기존에 쓰던 리수폿의 백업 파일(.json)을 불러와요. 인물 문서와 설정만 받고, API 키는 받지 않아요.", importBtn),
     part === "basic" ? null : h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, "고급 모드"), advSw), part === "basic" ? null : advHost);

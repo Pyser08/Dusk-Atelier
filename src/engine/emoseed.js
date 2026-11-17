@@ -64,3 +64,26 @@ export function sourAttraction(folder, anchor = null, now = Date.now(), { gauge 
   }
   return n;
 }
+
+// addon-rebuild: ‘이미 아는 사이’(folder.start, 본문이나 유저 입력이 밝힘)면 그 쌍의 인간적 호감·신뢰를 바닥값까지 올린다.
+// 처음 만남처럼 2에서 시작하던 문제(몇 년 함께 지낸 사이인데 ‘아는 사이’에 머묾). 낮추지는 않고, 같은 쌍·같은 수준은 한 번만. {{user}}의 감정은 정하지 않는다.
+export const START_SEED = Object.freeze({ close: { affection: 6, trust: 6 }, friendly: { affection: 4, trust: 4 } });
+export function seedFromStart(folder, anchor = null, now = Date.now()) {
+  let n = 0;
+  folder.emo ??= {};
+  for (const x of Object.values(folder?.start ?? {})) {
+    const tags = START_SEED[x?.level]; if (!tags || x.orphan) continue;
+    for (const [from, to] of [[x.a, x.b], [x.b, x.a]]) {
+      if (!from || !to || key(from) === "{{user}}") continue;
+      const k = key(from) + ">" + key(to), pair = folder.emo[k] ??= { from, to, tags: {}, log: [] };
+      const mark = `start:${x.level}`;
+      if ((pair.startSeed ?? []).includes(mark)) continue;
+      const next = {}, prev = {};
+      for (const [tag, v] of Object.entries(tags)) if ((pair.tags[tag] ?? 0) < v) { prev[tag] = pair.tags[tag] ?? null; pair.tags[tag] = v; next[tag] = v; n++; }
+      (pair.startSeed ??= []).push(mark);
+      if (Object.keys(next).length) pair.log.push({ t: next, from: prev, why: `이미 아는 사이(${x.level === "close" ? "가까움" : "아는 사이"})`, at: anchor?.at ?? x.at ?? null, at_ms: now });
+      if (!Object.keys(pair.tags).length && !pair.log.length) delete folder.emo[k];
+    }
+  }
+  return n;
+}

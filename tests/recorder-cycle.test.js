@@ -21,8 +21,8 @@ const RP = "2026년 3월 2일 밤. 성인인 민지는 {{user}}와 밤을 함께
 test("줄 읽기: woman·sex·pregnant·birth → cycle_report, {{user}}와 이상한 줄은 무시", () => {
   const r = cycleFrom("scene|x|y|z|yes\nwoman|민지\nsex|민지|{{user}}|none\nsex|민지|도윤|used\npregnant|민지\nwoman|{{user}}\nbirth|수아\nwho|민지|웃음|1", [{ name: "민지" }]);
   assert.deepEqual(r, [
-    { name: "민지", adult: true, sex: [{ partner: "{{user}}", contraception: "none" }, { partner: "도윤", contraception: "used" }], known: true, birth: false },
-    { name: "수아", adult: true, sex: [], known: false, birth: true },
+    { name: "민지", adult: true, sex: [{ partner: "{{user}}", contraception: "none" }, { partner: "도윤", contraception: "used" }], known: true, birth: false, period: false, loss: false },
+    { name: "수아", adult: true, sex: [], known: false, birth: true, period: false, loss: false },
   ]);
 });
 
@@ -71,4 +71,21 @@ test("1단계가 형식 오류로 짧은 지침 재시도까지 가도 월경 �
   assert.equal(stage1.length, 3, "세 번째(짧은 지침)까지 감");
   assert.ok(/woman\|Name/.test(stage1[2]), "짧은 지침에도 월경 줄 안내");
   assert.equal(rec.stage1.cycle?.[0]?.name, "민지");
+});
+
+test("성인 항목이 켜지면 1단계에 장면 판단·성인 프로필 줄 안내가 붙고, 답에서 aim·reply·taste를 읽는다", async () => {
+  const settings = await cycleSettings();
+  const scope0 = createEmptyWikiScope({ characterId: "c1", chatKey: "k1" });
+  const run = parseWriterRun(assembleWriterPrompt({ sourceLibrary: LIB, settings, wikiScope: scope0, rpText: RP, requestRef: "r0" }).prompt);
+  let sys = "";
+  const fake = async (msgs) => {
+    if (/memory recorder|scene\|/i.test(msgs[0].content) && !/^id\|/m.test(msgs[0].content)) { sys = msgs[0].content;
+      return "scene|밤|민지의 방|밤|yes\nwho|민지|{{user}}와 밤을 보냈다|2\naim|민지|{{user}}|sex|같이 자고 싶다|손을 잡고 침대로 이끈다|85\nreply|민지|{{user}}|yes\ntaste|민지|like|샤워실|q"; }
+    return "id|대학원생";
+  };
+  const rec = await recordTurn(fake, run, { nsfw: true });
+  assert.match(sys, /aim\|Actor\|Target/); assert.match(sys, /taste\|Name/);
+  assert.equal(rec.stage1.drive.aims[0].actor, "민지"); assert.equal(rec.stage1.drive.aims[0].target, "{{user}}");
+  assert.equal(rec.stage1.drive.replies[0].answer, "yes");
+  assert.equal(rec.stage1.nsfw[0].label, "샤워실");
 });

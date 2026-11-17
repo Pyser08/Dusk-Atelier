@@ -1,9 +1,12 @@
 // 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변).
 import { cleanForMemory } from "../engine/cleantext.js";
-import { logFailure } from "./memlog.js";
+import { logFailure, logEvent } from "./memlog.js";
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
 import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
-import { scaleBlock, wikiAware } from "../engine/memoryscale.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
+import { scaleBlock, wikiAware } from "../engine/memoryscale.js";
+import { nsfwSection } from "../engine/nsfwprofile.js";
+import { driveSection, seeded } from "../engine/scenedrive.js";
+import { nsfwByName } from "./nsfwturn.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
 import { stateText } from "../engine/storytime.js";
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
@@ -66,6 +69,14 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     if (built.text && embedder && idx.settings.inject.raw !== false && idx.settings.inject.plus !== false) {
       try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.rawQueryMin ?? 0), inj); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); logFailure({ area: "원문 회상", title: "지난 대화 원문 조각을 넣지 못했어요", error: e, fallback: "원문 조각 없이 기억만 넣었어요", ctx: { 메시지: msgs.length } }); }
     }
+    // addon-rebuild: 이 채팅 성인 프로필(folder.nsfw) — 최근 글에 나온 인물만 짧게(Erosync 대신)
+    if (built.text) { try {
+      const recent = msgs.slice(-4).map((m) => extractMessageText(m)).join("\n");
+      const ns = nsfwSection(folder, recent); if (ns) built.text += "\n" + ns;
+      // 장면 판단 계획(Erosync 대신). 같은 턴을 다시 보내도 같은 계획이 나오게 턴 번호로 정한 난수
+      const dv = driveSection(folder?.drive, recent, { spont: (n) => nsfwByName(folder, n)?.sexual?.sexualSpontaneity ?? null, limitsOf: (n) => nsfwByName(folder, n)?.tags?.limits ?? [], random: seeded(`${folder?.drive?.turn ?? 0}|${msgs.length}`) });
+      if (dv) built.text += "\n" + dv;
+    } catch { /* 빼고 진행 */ } }
     const raw = built.text, manifest = built.manifest;
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
     if (manifest && text !== raw) manifest.tokens = loreTokens(text);
@@ -111,6 +122,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       let send = messages, dropped = 0;
       if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped; }
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text, dropped };
+      logEvent({ area: "기억 넣기", title: "요청에 기억 블록을 넣었어요", detail: { 글자: c.text?.length ?? 0, 위치: c.position } });
       return insertBlock(send, wikiAware(c.text, send), c.position);
     } catch (e) { log("주입 실패", e?.message ?? e); return messages; }
   }

@@ -93,7 +93,7 @@ test("출발값 자동 만들기: 기본 켜짐, 출발값이 없으면 그 턴 
   const store = new Map();
   const api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } };
   const erosync = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [] }),
-    profile: async (op, ...a) => { calls.push([op, ...a]); return op === "status" ? { running: false } : { ok: true }; } };
+    profile: async (op, ...a) => { calls.push([op, ...a]); return op === "status" ? { running: false } : { ok: true, analyzed: true }; } };
   const T = createErosyncTurn(api, { erosync });
   await T.onTurn({ key: "k1", people: [{ name: "민지" }], rp: "본문" });
   await T.onTurn({ key: "k2", people: [{ name: "민지" }], rp: "본문" });
@@ -167,8 +167,11 @@ test("처음 등장 때 성인 항목 무작위: 이름마다 같고, 인물마�
   const seeded = [];
   assert.deepEqual(seedWikiCandidates(wiki, seeded, { since: Date.parse("2026-06-01") }), ["nw"]);
   const c = Object.values(wiki.people.candidates);
-  assert.ok(c.length >= 1 && c.every((x) => x.documentId === "nw" && x.status === "review" && ["sexual_desire", "paraphilia"].includes(x.axis)));
+  assert.ok(c.length >= 1 && c.every((x) => x.documentId === "nw" && x.status === "approved" && ["sexual_desire", "paraphilia"].includes(x.axis)));
   assert.deepEqual(seedWikiCandidates(wiki, seeded, { since: 1 }), []);   // 한 번만
+  // addon-rebuild: 넣자마자 반영 — 인물 칸에 줄로 들어간다
+  const p = wiki.people.profiles.nw;
+  for (const x of c) assert.ok((p[x.axis === "sexual_desire" ? "sexualDesire" : "paraphilia"]?.text ?? "").split("\n").includes(x.pattern));
 });
 
 test("Erosync 무작위 출발값: 처음 본 채팅의 기존 인물은 기준, 뒤에 생긴 인물만 넣는다", async () => {
@@ -226,9 +229,12 @@ test("무작위 설정: 고를 것 토글·끈 항목·직접 넣은 항목·분
   assert.deepEqual(age.on, ["연하를 챙기며 끌린다", "동갑에게 끌린다"]);
   assert.equal(poolOf(o, "kink").at(-1).label, "직접 넣은 항목");
   assert.ok(!pickable(o, "desire").includes("연상에게 끌린다"));
-  // 성적 욕망만 끄면 욕망은 비고, 이상성향 결과는 그대로
-  const all = rollAdult("민지"), noD = rollAdult("민지", null, { desires: false });
-  assert.deepEqual(noD.desires, []); assert.deepEqual(noD.kinks, all.kinks);
+  // addon-rebuild: 성적 욕망·이상성향은 늘 함께 — 하나만 꺼도 둘 다 켜진 채(예전 저장값), 둘 다 꺼야 꺼지고, 켜져 있으면 이상성향은 늘 1개
+  const all = rollAdult("민지");
+  assert.equal(normalizeSeedOpt({ desires: false }).kinks, true); assert.equal(normalizeSeedOpt({ desires: false, kinks: false }).desires, false);
+  assert.equal(all.kinks.length, 1); assert.ok(all.desires.length >= 1);
+  for (const n of ["가", "나", "다", "라", "마", "바"]) assert.equal(rollAdult(n).kinks.length, 1);
+  assert.deepEqual(rollAdult("민지", null, { desires: false, kinks: false }).kinks, []);
   assert.equal(rollAdult("민지", null, { sexual: false }).sexual, null);
   // 한 항목만 켜 두면 그것만 나온다
   const only = normalizeSeedOpt({ off: pickable({}, "desire").filter((t) => t !== "역할극을 좋아한다" && t !== "눈을 맞추는 것만으로 설렌다") });
@@ -370,7 +376,7 @@ test("질투·연적·짝사랑·재회·비밀 연애", () => {
   assert.ok(labels.includes("🤫 비밀 연애") && labels.some((l) => /^연적/.test(l)) && labels.includes("짝사랑"), labels.join("|"));
 });
 
-import { seedFirst, seedLewd, rerollWikiCandidates } from "../src/engine/adultseed.js";
+import { seedFirst, seedLewd, rerollWikiCandidates, applySeedCandidate, rejectAdultCandidate, deleteAdultCandidate } from "../src/engine/adultseed.js";
 
 test("음란도·첫인상: 기본 0(무작위 끔), 켜면 이름별 무작위·범위 안", () => {
   assert.equal(seedFirst({ on: true, first: false }, "민지"), 0);
@@ -382,20 +388,55 @@ test("음란도·첫인상: 기본 0(무작위 끔), 켜면 이름별 무작위�
   assert.notDeepEqual([1, 2, 3].map((i) => seedLewd({ on: true, lewd: true }, "민지", null, `#${i}`)), [0, 0, 0]);
 });
 
-test("위키 무작위 다시 뽑기: 검토 대기 무작위 후보만 바뀌고, 반영한 후보는 그대로", () => {
+test("위키 무작위 다시 뽑기: 무작위로 반영된 줄은 빼고 새로 뽑아 반영, 거부한 후보는 그대로", () => {
   const wiki = { documents: { d: { id: "d", type: "Character", title: "민지" } }, people: { profiles: { d: { createdAt: "2026-11-16T00:00:00Z" } }, candidates: {} } };
   seedWikiCandidates(wiki, [], {});
   const first = Object.keys(wiki.people.candidates);
-  wiki.people.candidates[first[0]].status = "approved";
+  rejectAdultCandidate(wiki, first[0]);
+  const old = first.slice(1).map((id) => wiki.people.candidates[id].pattern);
   rerollWikiCandidates(wiki, "d", {}, 1);
   const ids = Object.keys(wiki.people.candidates);
-  assert.ok(ids.includes(first[0]));
+  assert.ok(ids.includes(first[0]) && wiki.people.candidates[first[0]].status === "rejected");
   assert.ok(first.slice(1).every((id) => !ids.includes(id)));
-  assert.ok(ids.some((id) => id.includes("_1_")));
+  const fresh = ids.filter((id) => id.includes("_1_"));
+  assert.ok(fresh.length && fresh.every((id) => wiki.people.candidates[id].status === "approved"));
+  const text = [wiki.people.profiles.d.sexualDesire?.text, wiki.people.profiles.d.paraphilia?.text].join("\n").split("\n");
+  assert.ok(fresh.every((id) => text.includes(wiki.people.candidates[id].pattern)));
+  assert.ok(old.every((t) => !text.includes(t) || fresh.some((id) => wiki.people.candidates[id].pattern === t)));
+});
+
+test("성적 욕망 후보 거부·삭제: 반영된 줄만 빼고 다른 줄은 그대로", () => {
+  const wiki = { documents: { d: { id: "d", type: "Character", title: "x" } }, people: { profiles: { d: { createdAt: "2026-11-16T00:00:00Z", sexualDesire: { text: "직접 쓴 줄" } } }, candidates: {} } };
+  const mk = (id, pattern) => { wiki.people.candidates[id] = { id, documentId: "d", axis: "sexual_desire", pattern, status: "review" }; applySeedCandidate(wiki, wiki.people.candidates[id]); };
+  mk("a", "가"); mk("b", "나");
+  assert.equal(wiki.people.profiles.d.sexualDesire.text, "직접 쓴 줄\n가\n나");
+  rejectAdultCandidate(wiki, "a");
+  assert.equal(wiki.people.profiles.d.sexualDesire.text, "직접 쓴 줄\n나");
+  deleteAdultCandidate(wiki, "b");
+  assert.equal(wiki.people.profiles.d.sexualDesire.text, "직접 쓴 줄");
+  assert.ok(!wiki.people.candidates.b);
+  wiki.people.profiles.d.sexualDesireEnabled = false; mk("c", "다");
+  assert.equal(wiki.people.candidates.c.status, "review", "칸을 꺼 둔 인물은 검토 대기로");
 });
 
 test("애인·끌림이 있어도 입력 없이 갑자기 성적으로 굴지 않게 하는 지침", () => {
   const L = romanceLines({ emo: { a: { from: "민지", to: "{{user}}", tags: { attraction: 8 } } }, ties: { t: { a: "민지", b: "{{user}}", kind: "여자친구", at: 1 } } });
   assert.match(L.join("\n"), /NOT a reason for sexual behaviour/);
   assert.match(L.join("\n"), /everyday non-sexual/);
+});
+
+test("성적 욕망·이상성향 직접 추가는 바로 반영, 잠근 무작위 항목은 다시 뽑기에서 그대로", async () => {
+  const { addManualAdult } = await import("../src/engine/adultseed.js");
+  const wiki = { documents: { d: { id: "d", type: "Character", title: "민지" } }, people: { profiles: { d: { createdAt: "2026-11-16T00:00:00Z" } }, candidates: {} } };
+  const id = addManualAdult(wiki, "d", "paraphilia", "눈 가리는 걸 좋아한다");
+  assert.equal(wiki.people.candidates[id].status, "approved");
+  assert.ok(wiki.people.profiles.d.paraphilia.text.includes("눈 가리는 걸 좋아한다"));
+  assert.throws(() => addManualAdult(wiki, "zz", "paraphilia", "x"));
+  seedWikiCandidates(wiki, [], {});
+  const seeded = Object.keys(wiki.people.candidates).filter((k) => k.startsWith("candidate_seed_"));
+  const locks = { [seeded[0]]: true };
+  rerollWikiCandidates(wiki, "d", {}, 1, undefined, locks);
+  const ids = Object.keys(wiki.people.candidates);
+  assert.ok(ids.includes(seeded[0]), "잠근 항목은 남음"); assert.ok(seeded.slice(1).every((k) => !ids.includes(k)));
+  assert.ok(ids.includes(id), "직접 추가한 항목도 그대로");
 });

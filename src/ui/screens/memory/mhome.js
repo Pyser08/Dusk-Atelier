@@ -15,7 +15,7 @@ import { builders, renderGlobalSettings } from "./settings.js";
 import { tracked, scopeChip } from "./settingstools.js";
 import { writerDetails } from "./advanced.js";
 import { openJevModal } from "./jevmodal.js";
-import { openFailLog, ensureFailLogStyle } from "./faillog.js";
+import { openFailLog, openEventLog, ensureFailLogStyle } from "./faillog.js";
 import { takePendingReason } from "../../../data/memlog.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
@@ -63,7 +63,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 꺼짐
   memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요. 매 턴이 아니라 남길 턴만큼 쌓일 때마다 한꺼번에 빼서 그 사이엔 프롬프트 캐시가 그대로 맞아요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
-  memOptions.append(orowS("지난 대화 분석에 Erosync도", "지난 대화 분석 끝에 이 채팅의 Erosync 인물 값이 비어 있으면 성향 분석을 한 번 돌려요. NSFW 채팅에서만 켜 두세요.", S.backfillErosync === true, (st, v) => { st.backfillErosync = v; }));
+  // addon-rebuild: ‘지난 대화 분석에 Erosync도’는 뺐다 — 성인 프로필은 장기기억이 기본 성격과 함께 만든다
   memOptions.append(adultSeedRow(ctx));   // 2.2.6 처음 등장 때 성인 항목 무작위로(누르면 설정 창, 기본 꺼짐)
   // 숫자 칸(기억 넣기 토큰·남길 최근 턴)은 맨 아래(2.1.5). 리수폿 일괄 사용은 리수폿 화면에 있어 여기선 뺐다.
   memOptions.append(h("div", { class: "rb-srow rb-mem-tokens", id: "rb-mem-tokens" }, h("span", { class: "t" }, "기억 넣기 토큰", h("small", null, "응답마다 넣는 기억의 양이에요. 목표만큼 채우고, 중요한 게 많으면 상한까지 늘어나요.")),
@@ -291,11 +291,14 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   const failBtn = M.failLog ? h("button", { type: "button", class: "rb-card bordered rb-mem-failbtn", id: "rb-mem-failbtn", onClick: () => openFailLog(ctx).then(() => redraw()).catch(fail(ctx)) },
     h("span", { class: "t" }, h("b", null, "실패 기록 보기"), h("small", { class: "rb-muted" }, failCount ? `최근 실패 ${failCount}건 · 마지막: ${failLast}` : "실패한 기록이 없어요")),
     failCount ? h("span", { class: "rb-mem-failn" }, String(failCount)) : null, h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))) : null;
+  // addon-rebuild 전체 기록 보기(실패 기록 보기 바로 아래, 디버깅용)
+  const allBtn = M.eventLog ? h("button", { type: "button", class: "rb-card bordered rb-mem-failbtn", id: "rb-mem-allbtn", onClick: () => openEventLog(ctx).catch(fail(ctx)) },
+    h("span", { class: "t" }, h("b", null, "전체 기록 보기"), h("small", { class: "rb-muted" }, "성공·실패·건너뜀을 모두 시간순으로 (디버깅용)")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))) : null;
   const TABS4 = [["glance", "한눈에"], ["opt", "설정"]];
   const panels = {
     // 기록 칸은 없앰: 한눈에 위쪽 = 바로가기 | 나·관계도, 아래 = 최근 기록(12건) 전체 폭
     // 나·관계도는 바로가기와 같은 칸 모양(조금 더 넓게, 설명 읽기)
-    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow))), failBtn, recFull),
+    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow))), failBtn, allBtn, recFull),
     opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), gaugeMultCard(ctx), memorySettings)), advEl),
   };
   const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);

@@ -151,16 +151,26 @@ export function normalizeTargetGenderPreference(value, genderIdentity, legacyAtt
   };
 }
 
+export function positionPreferenceValue(v) {
+  const t = String(v ?? '').normalize('NFKC').trim().toLowerCase();
+  if (['preferred', 'neutral', 'disliked'].includes(t)) return t;
+  if (/^(prefer|like|love|enjoy|favou?r)|선호|좋아|즐김|좋음/.test(t) && !/비선호|안\s*좋|싫/.test(t)) return 'preferred';
+  if (/^(dislik|hate|avoid|refus)|비선호|싫|기피|거부|꺼림|안\s*좋/.test(t)) return 'disliked';
+  if (/^(neutral|indifferent|mixed|ok)|보통|중립|무난|상관/.test(t)) return 'neutral';
+  return '';
+}
 export function normalizePositionPreferences(value) {
   const result = [], ids = new Set(), labels = new Set();
   for (const raw of (Array.isArray(value) ? value : []).slice(0, 64)) {
     if (!isPlainObject(raw)) continue;
     const label = truncate(raw.label, 120).trim(), canonical = label.normalize('NFKC').toLowerCase();
-    if (!label || !['preferred', 'neutral', 'disliked'].includes(raw.preference)) continue;
+    // addon-rebuild: 한국어 출력 규칙 때문에 preference를 '선호'·'싫어함' 등으로 쓰면 예전엔 항목을 조용히 버렸다 → 같은 뜻은 받아 준다
+    const preference = positionPreferenceValue(raw.preference);
+    if (!label || !preference) continue;
     const id = truncate(safeKeyPart(raw.id || `pp_${fnv1a(canonical)}`, `pp_${fnv1a(canonical)}`), 120);
     if (ids.has(id) || labels.has(canonical)) continue;
     ids.add(id); labels.add(canonical);
-    result.push({ id, label, preference: raw.preference,
+    result.push({ id, label, preference,
       basis: ['explicit', 'inferred', 'user', 'observed'].includes(raw.basis) ? raw.basis : 'inferred',
       confidence: Math.round(clampNumber(raw.confidence, 0)), evidence: normalizeStringList(raw.evidence, 4, 240), reason: truncate(raw.reason, 300) });
     if (result.length >= 16) break;

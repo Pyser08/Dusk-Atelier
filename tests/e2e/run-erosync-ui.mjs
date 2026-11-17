@@ -89,32 +89,59 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.locator(".rb-rm-panel .rb-btn.primary").click(); await page.waitForTimeout(1500);
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "sirokko", tab: "people", page: "detail" }); __app.ctx.go("relmap"); }); await page.waitForTimeout(300); await page.evaluate(() => __app.ctx.go("memory")); await page.waitForTimeout(1500);   // 시험 데이터의 폴더 키
   const body = async () => (await page.locator(".rb-wk2").first().textContent().catch(() => "")) ?? "";
-  // 2.2.6: 요약 탭을 없애 노리는 목표는 NSFW 탭 ‘지금 상태’에서 보여 준다
-  { const nt = page.locator('.rb-wk2-tab[data-t="nsfw"]').first(); if (await nt.count()) { await nt.click(); await page.waitForTimeout(500); } }
-  ok(`[${tag}] 위키 NSFW ‘지금 상태’에 노리는 목표`, /지금 상태/.test(await body()) && /순찰 끝나고 둘이 남기/.test(await body()));
+  // addon-rebuild: NSFW 탭 성인 프로필은 이 채팅 장기기억(folder.nsfw) 값 — Erosync 카드(지금 상태·온도·태그·내보내기)는 없다
+  const docId = await page.evaluate(async () => {
+    const cur = await __app.ctx.memory.switches?.currentChat?.().catch?.(() => null);
+    const keys = cur ? [[cur.chaId, cur.chatId]] : [["c1", "t1"]];
+    for (const [a, b] of keys) {
+      const f = await __app.ctx.memory.store.getFolder(a, b); const d = Object.values(f?.wiki?.documents ?? {}).find((x) => x.title === "시로코");
+      if (d) { await __app.ctx.memory.store.updateFolder(a, b, (g) => { g.nsfw = { [d.id]: { sexual: { eroticInterest: 70, sexualSpontaneity: 40, sexualOpenness: 60, sexualMomentum: 55 }, axes: { initiative: 30, publicOpenness: 20, spontaneity: 15 }, pref: { f: 10, m: 90, x: 0 },
+        positions: [{ label: "기승위", preference: "preferred", reason: "" }, { label: "샤워실", preference: "preferred", reason: "" }, { label: "공공장소", preference: "disliked", reason: "" }], seduction: { frequency: 60, directness: 80, styles: ["노골적으로 만진다"], situations: [] }, humor: null, by: "ai", at: "", log: [{ at: "", text: "샤워실 좋아함" }] } };
+        g.wiki.people ??= {}; g.wiki.people.profiles ??= {}; g.wiki.people.profiles[d.id] ??= { createdAt: "2026-11-16T00:00:00Z", summary: "차분함", sexualDesire: { text: "" }, paraphilia: { text: "" } };
+        g.wiki.people.candidates = { ...(g.wiki.people.candidates ?? {}),
+          ["candidate_seed_" + d.id + "_sexual_desire_0"]: { id: "candidate_seed_" + d.id + "_sexual_desire_0", documentId: d.id, axis: "sexual_desire", pattern: "위에서 주도하는 걸 좋아한다", status: "approved", origin: "manual", evidence: [], appliedChange: { type: "sexual", field: "sexualDesire", before: null, pattern: "위에서 주도하는 걸 좋아한다" } },
+          ["candidate_seed_" + d.id + "_paraphilia_0"]: { id: "candidate_seed_" + d.id + "_paraphilia_0", documentId: d.id, axis: "paraphilia", pattern: "눈을 가리면 더 흥분한다", status: "approved", origin: "manual", evidence: [], appliedChange: { type: "sexual", field: "paraphilia", before: null, pattern: "눈을 가리면 더 흥분한다" } },
+          ["c_ai_" + d.id]: { id: "c_ai_" + d.id, documentId: d.id, axis: "sexual_desire", pattern: "목덜미에 약하다", status: "review", origin: "writer", evidence: [{}] } };
+        g.drive = { turn: 5, goals: { "시로코>{{user}}": { actor: "시로코", target: "{{user}}", kind: "sex", want: "같이 자고 싶다", move: "손을 잡고 방으로 이끈다", desire: 70, rung: 2, streak: 1, at: 5, last: "yes" } }, rest: {}, log: [{ at: 0, turn: 5, text: "시로코→{{user}} 눈길·신호 → 몸 붙이기" }] };
+        g.emo = { ...(g.emo ?? {}), "시로코>호시노": { from: "시로코", to: "호시노", tags: { affection: 6, attraction: 5 }, log: [{ t: { affection: 3 }, from: { affection: null }, at: 1 }, { t: { attraction: 5 }, from: { attraction: null }, at: 2 }, { t: { affection: 6 }, from: { affection: 3 }, at: 3 }] } }; }); return d.id; }
+    }
+    return null;
+  });
+  ok(`[${tag}] 시험 인물에 이 채팅 성인 프로필을 넣음`, !!docId);
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "sirokko", tab: "people", page: "detail" }); __app.ctx.go("memory"); }); await page.waitForTimeout(800);
   await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 상세 정보에는 Erosync 성향 카드가 없다(NSFW로 옮김)`, (await page.locator(".rb-wk2-ero").filter({ hasText: "Erosync 성향" }).count()) === 0);
   ok(`[${tag}] 상세 정보에는 성적 항목이 없다`, !/성적 관심/.test(await body()));
   await page.locator(".rb-wk2-tab", { hasText: "NSFW" }).click(); await page.waitForTimeout(300);
   ok(`[${tag}] NSFW 탭이 상세 정보와 기록 사이에 있다`, (await page.locator(".rb-wk2-tab").allTextContents()).join("|").replace(/\s+/g, "").includes("상세정보|NSFW|기록"));
-  ok(`[${tag}] NSFW 탭에 Erosync 성적 항목(성적 관심)`, /Erosync 성적 항목/.test(await body()) && /성적 관심/.test(await body()));
-  ok(`[${tag}] NSFW 탭 Erosync 카드에 8가지 성향(주도성)`, (await page.locator("#rb-ero-axes").count()) === 1 && /주도성/.test(await page.locator("#rb-ero-axes").textContent()));
-  await page.locator("#rb-ero-edit").click(); await page.waitForTimeout(300);
-  ok(`[${tag}] 고치기 창이 열리고 8축·성적 칸이 있음`, (await page.locator("#rb-ero-editor input[data-k=initiative]").count()) === 1 && (await page.locator("#rb-ero-editor input[data-k=sexualOpenness]").count()) === 1);
-  await page.locator("#rb-ero-editor input[data-k=initiative]").fill("90"); await page.locator("#rb-ero-editor-save").click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 저장하면 바뀐 칸만 엔진으로 전달됨`, await page.evaluate(() => JSON.stringify(window.__pf.ov) === '{"initiative":90}'), JSON.stringify(await page.evaluate(() => window.__pf.ov)));
-  await page.locator("#rb-ero-reanalyze").click(); await page.waitForTimeout(300);
-  ok(`[${tag}] 다시 분석을 누르면 start(single)가 불림`, await page.evaluate(() => window.__pf.calls.some((c) => c[0] === "start" && c[1] === "single")));
-  ok(`[${tag}] NSFW 탭 위에 '지금 상태' 요약(목표·관계·쉬는 턴)`, /지금 상태/.test(await body()) && (await page.locator("#rb-ero-summary li[data-k=rest]").count()) === 1 && /3턴 쉬는 중/.test(await page.locator("#rb-ero-summary").textContent()) && (await page.locator("#rb-ero-summary li[data-k=rel]").count()) === 1);
-  ok(`[${tag}] 관계 온도 그래프(호감·끌림·반감 선 3개)`, (await page.locator(".rb-ero-temp svg polyline").count()) === 3 && /호시노/.test(await page.locator(".rb-ero-temp").first().textContent()));
-  await page.locator("#rb-ero-temp-inject [role=switch]").click(); await page.waitForTimeout(200);
-  ok(`[${tag}] 온도 반영 스위치를 끄면 tempTrend(false)`, await page.evaluate(() => window.__tt === false));
-  await page.locator("#rb-ero-tags-likes").fill("목덜미, 느린 전개, 목덜미"); await page.locator("#rb-ero-tags-limits").fill("공개된 장소"); await page.locator("#rb-ero-tags-save").click(); await page.waitForTimeout(300);
-  ok(`[${tag}] 태그 저장: 중복 빼고 선호 2개·금기 1개가 엔진으로`, await page.evaluate(() => JSON.stringify(window.__tg.p3) === '{"likes":["목덜미","느린 전개"],"limits":["공개된 장소"]}'), JSON.stringify(await page.evaluate(() => window.__tg)));
-  ok(`[${tag}] 태그 칩이 보임(금기는 따로 표시)`, (await page.locator("#rb-ero-tags-chips [data-kind=like]").count()) === 2 && (await page.locator("#rb-ero-tags-chips [data-kind=limit]").count()) === 1);
-  ok(`[${tag}] 프로필 내보내기·가져오기 버튼`, (await page.locator("#rb-ero-export").count()) === 1 && (await page.locator("#rb-ero-import").count()) === 1);
-  const [pdl] = await Promise.all([page.waitForEvent("download", { timeout: 4000 }).catch(() => null), page.locator("#rb-ero-export").click()]);
-  ok(`[${tag}] 프로필 내보내기가 파일을 내려줌(헤드리스 크롬은 한글 파일명을 'download'로 보고하므로 내려받기 자체만 확인)`, !!pdl, pdl?.suggestedFilename());
+  const gtxt = (await page.locator("#rb-nsfw-gauges").textContent().catch(() => "")) ?? "";
+  ok(`[${tag}] 성인 프로필 게이지(성적 관심·주도성), 겹친 이름은 긴 쪽만`, /성적 관심/.test(gtxt) && /주도성/.test(gtxt) && /성적 개방성/.test(gtxt) && !/(^|[^적 ])개방성/.test(gtxt.replace(/성적 개방성/g, "")) && !/즉흥성/.test(gtxt.replace(/성적 즉흥성/g, "")), gtxt);
+  ok(`[${tag}] 좋아하는·싫어하는 체위·장소 칩`, /기승위/.test(await body()) && /샤워실/.test(await body()) && /공공장소/.test(await body()));
+  ok(`[${tag}] ‘이 채팅’ 표시와 최근 변화`, /이 채팅/.test(await body()) && (await page.locator("#rb-nsfw-log").count()) === 1);
+  ok(`[${tag}] 다시 만들기·직접 고치기·내보내기·가져오기 버튼`, (await page.locator("#rb-nsfw-regen").count()) === 1 && (await page.locator("#rb-nsfw-edit").count()) === 1 && (await page.locator("#rb-nsfw-export").count()) === 1 && (await page.locator("#rb-nsfw-import").count()) === 1);
+  ok(`[${tag}] 지금 상태: 노리는 목표·단계·다음 수`, (await page.locator("#rb-nsfw-status li[data-k=goal]").count()) === 1 && /몸 붙이기|가까이/.test(await page.locator("#rb-nsfw-status").textContent()) && /방으로 이끈다/.test(await page.locator("#rb-nsfw-status").textContent()));
+  ok(`[${tag}] 관계 온도 그래프(선 3개)`, (await page.locator(".rb-nsfw-temp svg polyline").count()) === 3);
+  await page.locator("#rb-nsfw-edit").click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 고치기 창에 성적 수치·8축·체위 칸`, (await page.locator("#rb-nsfw-editor input[data-k=sexualOpenness]").count()) === 1 && (await page.locator("#rb-nsfw-editor input[data-k=initiative]").count()) === 1 && /기승위/.test(await page.locator("#rb-nsfw-editor textarea[data-k=like-position]").inputValue()) && /샤워실/.test(await page.locator("#rb-nsfw-editor textarea[data-k=like-place]").inputValue()));
+  await page.locator("#rb-nsfw-editor input[data-k=initiative]").fill("90"); await page.locator("#rb-nsfw-editor textarea[data-k=like-position]").fill("기승위, 후배위"); await page.locator("#rb-nsfw-editor textarea[data-k=like-play]").fill("눈 가리기"); await page.locator("#rb-nsfw-editor-save").click(); await page.waitForTimeout(500);
+  ok(`[${tag}] 좋아하는 것이 체위·장소·플레이로 나뉨`, (await page.locator('[data-group="like-position"]').count()) === 1 && (await page.locator('[data-group="like-place"]').count()) === 1 && (await page.locator('[data-group="like-play"]').count()) === 1 && /눈 가리기/.test(await page.locator('[data-group="like-play"]').textContent()));
+  ok(`[${tag}] 성적 욕망·이상성향 카드: 두 묶음·항목·우상단 다시 뽑기·직접 추가`, (await page.locator('#rb-nsfw-cands [data-axis="sexual_desire"] .rb-ac-item').count()) === 2 && (await page.locator('#rb-nsfw-cands [data-axis="paraphilia"] .rb-ac-item').count()) === 1 && (await page.locator(".rb-ac-card .rb-wk2-ch #rb-adult-reroll").count()) === 1 && (await page.locator(".rb-ac-card .rb-wk2-ch #rb-ac-add-btn").count()) === 1);
+  ok(`[${tag}] 거부 단추 없음, 검토 대기 항목엔 반영 단추`, (await page.locator("#rb-nsfw-cands button", { hasText: "거부" }).count()) === 0 && (await page.locator('#rb-nsfw-cands [data-status="review"] button', { hasText: "반영" }).count()) === 1);
+  ok(`[${tag}] 성인 프로필 게이지가 ‘성적 수치’·‘성향’ 두 묶음`, (await page.locator("#rb-nsfw-gauges .rb-ng.sex").count()) === 4 && (await page.locator("#rb-nsfw-gauges .rb-ng.ax").count()) >= 1);
+  ok(`[${tag}] 유혹 방식 상자(빈도·직설·칩)`, (await page.locator('[data-box="seduction"]').count()) === 1 && /자주|가끔|드물게/.test(await page.locator('[data-box="seduction"]').textContent()));
+  await page.screenshot({ path: `/tmp/ero-nsfw2-${tag}.png`, fullPage: true });
+  await page.locator('#rb-nsfw-cands [data-axis="paraphilia"] [data-act="lock"]').click(); await page.waitForTimeout(400);
+  ok(`[${tag}] 잠그면 잠김 표시·지우기 막힘`, (await page.locator('#rb-nsfw-cands [data-axis="paraphilia"] .rb-ac-item.locked').count()) === 1 && await page.locator('#rb-nsfw-cands [data-axis="paraphilia"] [data-act="del"]').isDisabled());
+  await page.locator("#rb-ac-add-btn").click(); await page.waitForTimeout(300);
+  await page.locator('#rb-ac-add .rb-ac-segb[data-k="paraphilia"]').click(); await page.locator("#rb-ac-add-text").fill("거울 앞에서 보는 걸 좋아한다"); await page.locator("#rb-ac-add-save").click(); await page.waitForTimeout(500);
+  ok(`[${tag}] 직접 추가하면 성인 프로필도 새로 만들지 묻는다`, /성인 프로필도 새로 만들까요/.test(await page.locator("body").textContent()));
+  await page.locator(".rb-dialog button", { hasText: "취소" }).last().click().catch(() => {}); await page.waitForTimeout(400);
+  ok(`[${tag}] 추가한 항목이 이상성향 묶음에`, /거울 앞에서 보는 걸 좋아한다/.test(await page.locator('#rb-nsfw-cands [data-axis="paraphilia"]').textContent()));
+  ok(`[${tag}] 저장하면 이 채팅 값이 바뀌고 ‘직접 고친 값’ 표시`, /후배위/.test(await body()) && /직접 고친 값/.test(await body()) && (await page.locator("#rb-nsfw-gauges .rb-ng", { hasText: "주도성" }).textContent()).includes("90"));
+  await page.locator("#rb-nsfw-tags-likes").fill("목덜미, 느린 전개, 목덜미"); await page.locator("#rb-nsfw-tags-limits").fill("공개된 장소"); await page.locator("#rb-nsfw-tags-save").click(); await page.waitForTimeout(500);
+  ok(`[${tag}] 태그 저장: 중복 빼고 선호 2·금기 1 칩`, (await page.locator("#rb-nsfw-tags-chips [data-kind=like]").count()) === 2 && (await page.locator("#rb-nsfw-tags-chips [data-kind=limit]").count()) === 1);
+  const [pdl] = await Promise.all([page.waitForEvent("download", { timeout: 4000 }).catch(() => null), page.locator("#rb-nsfw-export").click()]);
+  ok(`[${tag}] 내보내기가 파일을 내려줌`, !!pdl);
+  ok(`[${tag}] Erosync 카드(지금 상태·태그·내보내기)는 NSFW 탭에 없다`, (await page.locator("#rb-ero-summary, #rb-ero-tags-save, #rb-ero-export, #rb-ero-axes").count()) === 0);
   await page.screenshot({ path: `/tmp/ero-nsfw-${tag}.png`, fullPage: true });
   await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(300);
   await page.screenshot({ path: `/tmp/ero-wiki-info-${tag}.png` });
