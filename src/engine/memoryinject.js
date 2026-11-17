@@ -12,17 +12,6 @@ import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceL
 
 export const MARKER = "[Dusk Memory";
 export const HEADER = "[Dusk Memory — story so far. Newer facts win; recent messages take priority.]";
-// addon-rebuild 척도 구분: 감정 게이지는 방향별(A→B) 0~10, 관계 진도는 양방향(두 방향 중 큰 값+함께한 장면)이라 서로 다를 수 있다.
-export const EMO_TITLE = "Feelings (Dusk gauges 0-10, one direction A→B):";
-export const STAGE_TITLE = "Relationship stage (mutual: the closer of both directions + shared scenes; may differ from one-way feelings; closeness should change gradually):";
-// 위키 정리 노트(RISUPOT_DIRECTOR_NOTE)가 같은 요청에 있으면 호감도 기준은 정리 노트(−100~300). Dusk 감정은 참고용으로 낮춘다.
-const DIRECTOR_MARK = "<!-- RISUPOT_DIRECTOR_NOTE_START -->";
-export const EMO_TITLE_WIKI = "Feelings (Dusk gauges 0-10, one direction A→B; reference only — a different scale from the director note's affinity −100~300; for feelings toward {{user}} follow the director note):";
-const msgText = (m) => typeof m?.content === "string" ? m.content : Array.isArray(m?.content) ? m.content.map((p) => typeof p === "string" ? p : p?.text ?? "").join("\n") : "";
-export function wikiAware(text, messages) {
-  if (!text || !(Array.isArray(messages) ? messages : []).some((m) => msgText(m).includes(DIRECTOR_MARK))) return text;
-  return text.split(EMO_TITLE).join(EMO_TITLE_WIKI);
-}
 // 2.0.0 최신 상태 줄: 모든 인물의 지금 상태(사망·실종·떠남 등)를 관련도와 상관없이 맨 앞쪽에 둔다(죽은 인물이 다시 나오는 문제).
 export function stateLines(folder, max = 12) {
   const rows = [];
@@ -213,10 +202,10 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     };
     add("open", "Open threads (unresolved; do not resolve them early):", openLines(folder), settings.openTokens ?? 160);
     add("settled", "Promises settled recently (kept / broken — characters remember this):", settledLines(folder, { now: messageCount }), settings.settledTokens ?? 90);   // 2.2.4
-    add("emo", EMO_TITLE, emoLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.emoTokens ?? 160);
+    add("emo", "Feelings (current gauges 0-10):", emoLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.emoTokens ?? 160);
     add("romance", "Romantic pull (how each shows it now):", romanceLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.romanceTokens ?? 200);   // 2.2.6 썸 행동 지침
     if (human) {
-      add("stage", STAGE_TITLE, stageLines(folder, cur?.who ?? [], messageCount), settings.stageTokens ?? 90);
+      add("stage", "Relationship stage (closeness should change gradually):", stageLines(folder, cur?.who ?? [], messageCount), settings.stageTokens ?? 90);
       if (rel.size) {   // 장면에 관련 인물이 있을 때만
         add("talk", "How they address each other (keep it unless it changes):", talkLines(folder, rel), settings.talkTokens ?? 100);
         add("bond", "Shared memories they might bring up (only if natural):", bondLines(folder, rel, messageCount), settings.bondTokens ?? 80);
@@ -236,8 +225,6 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     if (messages) { const src = sourceLines(folder, messages, { limit: settings.srcCount ?? 2 }); add("src", "Source lines (verbatim from the story):", src.map((x) => x.line), settings.srcTokens ?? 300); manifest.recordIds.push(...src.map((x) => x.id)); }
   }
   if (!cur && !chars.length) return { text: "", manifest };
-  // addon-rebuild 기록 시점: 기록이 최신보다 2개 이상 뒤처지면(직전 응답 미반영) 머리말 아래에 적는다. 칸별 예산 밖(짧은 한 줄).
-  { const at = folder.cursor?.at; if (Number.isInteger(at) && messageCount - (at + 1) >= 2) lines.splice(1, 0, `Recorded through message ${at + 1} of ${messageCount}; later messages (including the latest reply) are not reflected here yet — where they disagree, the messages win.`); }
   const text = lines.join("\n"); manifest.tokens = estimateTokens(text);
   return { text, manifest };
 }

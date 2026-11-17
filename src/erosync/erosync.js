@@ -16289,7 +16289,14 @@ export async function bootErosync(api, hostArg) {
   }
 
   // addon-rebuild: 화면 글 한국어 채우기 — 이 인물의 영어 화면 글(선호·유혹/농담 방식·상황)을 한 번 옮겨 root.duskKo에 둔다. 호출 1번, 옮길 글이 없으면 0번.
-  async function duskKoFill(profileId) {
+  const duskKoRunning = new Map();   // 같은 인물을 동시에 두 번 옮기지 않게(뒤에서 미리 옮기는 중에 탭을 열어도 한 번)
+  function duskKoFill(profileId) {
+    if (duskKoRunning.has(profileId)) return duskKoRunning.get(profileId);
+    const job = duskKoFillOnce(profileId).finally(() => duskKoRunning.delete(profileId));
+    duskKoRunning.set(profileId, job);
+    return job;
+  }
+  async function duskKoFillOnce(profileId) {
     const { context, profile } = await duskProfileCtx(profileId);
     const view = uiProfileViewOf(profile, context, null);
     if (view.sfw || view.nonPerson) return { ok: true, filled: 0 };
@@ -16304,6 +16311,23 @@ export async function bootErosync(api, hostArg) {
     duskReadCache = null;
     return { ok: true, filled: Object.keys(add).length };
   }
+
+  // addon-rebuild: 매 턴 계산 때 그 턴 인물 중 영어 화면 글이 남은 인물을 뒤에서 한국어로(세션당 인물 1번, 한 번에 하나씩). NSFW 탭을 열 때 이미 한국어로 보이게.
+  const duskKoTried = new Set();
+  let duskKoQueue = Promise.resolve();
+  function duskKoAhead(ids, profiles, context) {
+    for (const id of ids) {
+      if (duskKoTried.has(id)) continue;
+      const root = profiles.find(p => p.id === id);
+      if (!root) continue;
+      let need = false;
+      try { const v = uiProfileViewOf(root, context, null); need = !v.sfw && !v.nonPerson && koStrings(v.effective, root.duskKo || {}).length > 0; } catch { need = false; }
+      if (!need) continue;
+      duskKoTried.add(id);
+      duskKoQueue = duskKoQueue.then(() => duskKoFill(id)).catch((error) => { if (!isStaleLifecycleError(error)) warn('display korean ahead skipped:', error?.message || error); });
+    }
+  }
+  function duskKoPending(id) { return duskKoTried.has(id); }
 
   // addon-rebuild: 전체 분석 전에 보여 줄 규모 — 자료 수·글자 수·인물 찾기 묶음 수(=찾기 호출 수). 인물 수는 찾기 전엔 알 수 없어 묶음 수로 어림.
   async function duskFullEstimate() {
@@ -16530,6 +16554,7 @@ export async function bootErosync(api, hostArg) {
       targets.push({ id: profile.id, name: profile.name, aliases: profile.aliases || [], memory: truncate(person.memory || '', 1200), own,
         values: Object.fromEntries(keys.map(k => [k, turnValueOf((k in ov) || (k === 'eroticInterest' && ov.eroticInterest) ? ov : base, k)])) });
     }
+    duskKoAhead(targets.map(t => t.id), profiles, context);   // addon-rebuild: 화면 글 한국어를 미리(영어가 있는 인물만, 기다리지 않음)
     if (!targets.length || !String(rp).trim()) return { ok: true, changed: [], unmatched };
     const guard = createRequestGuard(Math.max(30000, providerAttemptLimitMs(resolveRoleProfile(config, 'profile')) * 2), 'dusk turn update');
     const onAbort = () => guard.abort(Object.assign(new Error('턴 계산을 취소했어요'), { code: 'EROSYNC_ANALYSIS_CANCELLED' }));
@@ -16586,7 +16611,7 @@ export async function bootErosync(api, hostArg) {
     content: { get: duskContentGet, set: duskContentSet, global: duskContentGlobal },
     config: { get: duskConfigGet, set: duskConfigSet },
     behind: { list: duskBehindList, remove: duskBehindRemove },
-    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, seed: duskProfileSeed, estimate: duskFullEstimate, korean: duskKoFill, lore: duskLoreList, turn: duskTurnUpdate, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
+    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, seed: duskProfileSeed, estimate: duskFullEstimate, korean: duskKoFill, koPending: duskKoPending, lore: duskLoreList, turn: duskTurnUpdate, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
     prompts: { get: duskPromptsGet, set: duskPromptSet },
     guard: { set: duskGuardSet },
     tags: { set: duskTagsSet },

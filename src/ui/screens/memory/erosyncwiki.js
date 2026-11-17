@@ -53,17 +53,20 @@ function eroDetailRows(d) {
     d.lastAction ? h("div", { class: "rb-wk2-ero-row" }, h("small", { class: "rb-muted" }, "최근 행동"), h("p", { class: "rb-wk2-p" }, d.lastAction)) : null].filter(Boolean);
 }
 // addon-rebuild: 화면 글이 영어면(예전 분석 등) 한 번 한국어로 옮겨 달라고 하고 끝나면 다시 그린다. 인물마다 세션에 한 번만.
-const koAsked = new Set();
+const koAsked = new Map();   // 인물 id → busy | done
 const HAS_EN = (t) => /[A-Za-z]/.test(t) && !/[\uac00-\ud7a3]/.test(t);
 export function detailHasEnglish(d) {
   if (!d) return false;
   const st = (o) => [...(o?.styles ?? []), ...(o?.situations ?? [])];
   return [...(d.prefs ?? []).map((x) => prefItem(x)?.label ?? ""), ...(d.likes ?? []), ...(d.dislikes ?? []), ...st(d.seduction), ...st(d.humor)].some((t) => HAS_EN(String(t ?? "")));
 }
+// 돌려주는 값: 지금 옮기는 중인지(화면에 안내 한 줄). 영어가 없으면 false.
 function koLater(ctx, person, redraw) {
-  if (!person?.id || koAsked.has(person.id) || !detailHasEnglish(person.detail) || typeof ctx.erosync?.profile !== "function") return;
-  koAsked.add(person.id);
-  ctx.erosync.profile("korean", person.id).then((r) => { if (r?.ok && r.filled) redraw?.(); }).catch(() => {});
+  if (!person?.id || !detailHasEnglish(person.detail) || typeof ctx.erosync?.profile !== "function") return false;
+  if (koAsked.has(person.id)) return koAsked.get?.(person.id) === "busy";
+  koAsked.set(person.id, "busy");
+  ctx.erosync.profile("korean", person.id).then((r) => { koAsked.set(person.id, "done"); if (r?.ok && r.filled) redraw?.(); }).catch(() => koAsked.set(person.id, "done"));
+  return true;
 }
 // NSFW 탭: 성적 항목(성적 관심·선호 등) + 직접 고치기·AI 값으로·다시 분석. Erosync가 켜져 있고 이름이 맞는 인물에게만.
 // 2.2.6 상대별 끌림: 이 인물이 상대마다 느끼는 호감·끌림·반감(Erosync 관계 수치). 큰 것부터 5명.
@@ -93,7 +96,7 @@ export function eroNsfwCard(ctx, card, person, redraw, snap = null) {
       h("div", { class: "bar" }, ...[["f", ad.pref.f], ["m", ad.pref.m], ["x", ad.pref.x]].filter(([, v]) => v > 0).map(([k, v]) => h("i", { class: k, style: { flexGrow: v } }))),
       h("div", { class: "lg" }, h("span", { class: "f" }, `여성 ${ad.pref.f}%`), h("span", { class: "m" }, `남성 ${ad.pref.m}%`), h("span", { class: "x" }, `그 외 ${ad.pref.x}%`))) : null)] : [h("small", { class: "rb-muted" }, "성적 항목이 아직 없어요.")];
   rows.push(...eroDetailRows(person.detail));
-  koLater(ctx, person, redraw);
+  if (koLater(ctx, person, redraw)) rows.push(h("small", { class: "rb-muted", id: "rb-ero-ko" }, "영어로 적힌 항목을 한국어로 옮기는 중이에요. 끝나면 바로 바뀌어요."));
   const toward = eroTowardRows(snap, person); if (toward) rows.push(toward);
   return card("🔥 Erosync 성적 항목", [...rows, person.overridden ? h("small", { class: "rb-muted" }, "직접 고친 값이 있어요. AI가 다시 분석해도 고친 값이 우선이에요.") : null, act, line.el], null, "rb-wk2-ero");
 }

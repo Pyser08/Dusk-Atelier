@@ -31,4 +31,6 @@ test("NSFW 탭: 영어 화면 글이 있으면 한 번만 한국어 보기를 �
   assert.ok(eng.includes("normalized.duskKo = koMerge("), "저장 정리에서 duskKo가 떨어지면 안 된다");
   assert.ok(eng.includes("korean: duskKoFill") && eng.includes("if (!axesOnly) { try { await duskKoFill(profileId); }"), "연결부·1인 분석 뒤 채우기");
   assert.ok(eng.includes("const km = isPlainObject(profile?.duskKo)") && eng.includes("koApply(typeof x === 'string'"), "화면 글에 적용");
+  assert.ok(eng.includes("duskKoAhead(targets.map(t => t.id), profiles, context);"), "매 턴 계산 때 미리 옮김");
+  assert.ok(eng.includes("if (duskKoRunning.has(profileId)) return duskKoRunning.get(profileId);"), "같은 인물 동시 두 번 안 함");
 });

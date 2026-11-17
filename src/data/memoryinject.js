@@ -2,7 +2,8 @@
 import { cleanForMemory } from "../engine/cleantext.js";
 import { logFailure } from "./memlog.js";
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
-import { buildBlock, insertBlock, wikiAware, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
+import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
+import { scaleBlock, wikiAware } from "../engine/memoryscale.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
 import { stateText } from "../engine/storytime.js";
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
@@ -59,6 +60,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40)); } catch { sem = null; }
     const inj = effectiveInject(idx.settings.inject);   // 2.2.4 토큰 절약이 켜져 있으면 칸별 예산을 줄인 값
     const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: inj, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
+    if (built.text) built.text = scaleBlock(built.text, { coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1, messageCount: msgs.length });
     if (built.manifest && sem) built.manifest.sem = sem.size;
     // 2.2.2 원문 회상: 임베딩이 켜져 있으면 지난 대화 원문에서 지금 글과 관련 있는 조각을 날짜와 함께 덧붙인다(요약 기억이 놓친 사실을 받친다).
     if (built.text && embedder && idx.settings.inject.raw !== false && idx.settings.inject.plus !== false) {
