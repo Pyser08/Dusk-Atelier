@@ -29,3 +29,25 @@ test("별칭을 대표 이름으로: 옛 이름은 별칭으로", () => {
   assert.deepEqual(promoteAlias("나타샤", ["나탈리야 알렉산드로브나 로마노바", "타샤"], "나탈리야 알렉산드로브나 로마노바"), { title: "나탈리야 알렉산드로브나 로마노바", aliases: ["나타샤", "타샤"] });
   assert.deepEqual(promoteAlias("니지카", ["이지치 니지카"], "이지치 니지카"), { title: "이지치 니지카", aliases: ["니지카"] });
 });
+
+test("관계 지우기는 애인 지정·추억·갈등도 두 사람 것만 지운다(관계도 선까지)", () => {
+  const f = { lovers: { "미오|아저씨": { on: true, a: "미오", b: "아저씨" }, "미오|하연": { on: true, a: "미오", b: "하연" } },
+    bonds: [{ a: "미오", b: "아저씨", moment: "x" }, { a: "미오", b: "하연", moment: "y" }], rifts: [{ a: "아저씨", b: "미오", about: "z" }] };
+  removePairMemory(f, ["미오"], ["아저씨"]);
+  assert.deepEqual(Object.keys(f.lovers), ["미오|하연"]); assert.deepEqual(f.bonds.map((b) => b.b), ["하연"]); assert.deepEqual(f.rifts, []);
+});
+
+test("관계도: 이름을 고친 인물은 위키 대표 이름으로 보이고, 지운 관계 선은 없다", async () => {
+  const { buildRelMap } = await import("../src/engine/relmap.js");
+  const rec = (id, at) => ({ id, act: "x", g: "A", at, orphan: false });
+  const f = { people: { a: { name: "나타샤", records: [rec("r1", 1)] }, b: { name: "아저씨", records: [rec("r2", 2)] } },
+    emo: { "나타샤>{{user}}": { from: "나타샤", to: "{{user}}", tags: { affection: 5 }, log: [] }, "아저씨>{{user}}": { from: "아저씨", to: "{{user}}", tags: { affection: 2 }, log: [] } },
+    rels: { r: { from: "나타샤", to: "아저씨", items: [{ at: 1, dir: "+", d: "친해짐" }] } }, scenes: [],
+    wiki: { documents: { d1: { type: "Character", title: "나탈리야 알렉산드로브나 로마노바", aliases: ["나타샤"] } } } };
+  let m = buildRelMap(f);
+  assert.ok(m.nodes.some((n) => n.name === "나탈리야 알렉산드로브나 로마노바"), "대표 이름으로 보임");
+  assert.equal(m.edges.filter((e) => !String(e.id).includes("user")).length >= 1, true);
+  removePairMemory(f, ["나타샤", "나탈리야 알렉산드로브나 로마노바"], ["아저씨"]);
+  m = buildRelMap(f);
+  assert.equal(m.edges.some((e) => e.k === "r"), false, "지운 관계 선은 없음");
+});

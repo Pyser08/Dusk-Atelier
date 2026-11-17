@@ -32,6 +32,9 @@ export function importanceOf(records, nowAt) {
 
 // mode: "affinity"(기본, 호감도) | "romance"(2.2.6 이성적 감정: 거리=그 인물이 {{user}}에게 느끼는 이성적 호감, 선=인물끼리의 끌림·애인)
 export function buildRelMap(folder, { max = RM.MAX_NODES, mode = "affinity" } = {}) {
+  // addon-rebuild: 위키에서 대표 이름을 고친 인물(장기기억 이름이 그 문서의 별칭)은 관계도에 위키 대표 이름으로 보인다. 계산·연결은 원래 이름(id)으로.
+  const wikiDocs = Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
+  const shownName = (n) => { const kk = key(n); const d = wikiDocs.filter((x) => key(x.title) === kk || (x.aliases ?? []).some((a) => key(a) === kk)); return d.length === 1 ? String(d[0].title) : n; };
   const romance = mode === "romance";
   const nowAt = nowOf(folder);
   const uk = key(USER);
@@ -62,7 +65,7 @@ export function buildRelMap(folder, { max = RM.MAX_NODES, mode = "affinity" } = 
     const sorted = recs.slice().sort((a, b) => (b.at ?? -1) - (a.at ?? -1));
     const lastAt = recs.reduce((m, r) => Math.max(m, r.at ?? -1), -1);
     nodes.push({
-      id: k, name, faction: String(p?.faction ?? "").trim(), status: STATUS_LABEL[p?.status] ? p.status : "",
+      id: k, name: shownName(name), faction: String(p?.faction ?? "").trim(), status: STATUS_LABEL[p?.status] ? p.status : "",
       aff, imp, thisTurn, records: recs.length,
       sum: cut(pv.bonds.at(-1)?.moment || sorted[0]?.act || "", 90),
       rec: sorted.slice(0, 3).map((r) => [r.at != null ? `#${r.at + 1}` : "", cut(r.act, 70)]),

@@ -1,5 +1,5 @@
 // addon-rebuild 관계 지우기(수동): 두 사람 사이 관계를 장기기억·위키 양쪽에서 지운다. 사람 자체·다른 관계는 그대로. 애드온 전용(코어 공유 아님).
-// 장기기억: 감정 게이지(emo A>B·B>A), 관계 종류(ties), 관계 변화(rels). 위키: 두 문서에서 서로를 대상으로 한 절·수치.
+// 장기기억: 감정 게이지(emo A>B·B>A), 관계 종류(ties), 관계 변화(rels), 직접 지정한 애인(lovers), 둘만의 추억(bonds)·갈등(rifts). 위키: 두 문서에서 서로를 대상으로 한 절·수치.
 import { normalizeWikiScope, updateWikiDocument } from "./pot/wiki-schema.js";
 const nk = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
 const setOf = (names) => new Set((Array.isArray(names) ? names : [names]).map(nk).filter(Boolean));
@@ -8,6 +8,8 @@ export function removePairMemory(folder, aNames, bNames) {
   let n = 0;
   for (const key of ["emo", "rels"]) for (const [k, v] of Object.entries(folder?.[key] ?? {})) if (pair(v?.from, v?.to)) { delete folder[key][k]; n++; }
   for (const [k, v] of Object.entries(folder?.ties ?? {})) if (pair(v?.a, v?.b)) { delete folder.ties[k]; n++; }
+  for (const [k, v] of Object.entries(folder?.lovers ?? {})) if (v && typeof v === "object" && pair(v.a, v.b)) { delete folder.lovers[k]; n++; }   // 직접 지정한 애인
+  for (const key of ["bonds", "rifts"]) if (Array.isArray(folder?.[key])) { const keep = folder[key].filter((x) => !pair(x?.a, x?.b)); n += folder[key].length - keep.length; folder[key] = keep; }   // 둘만의 추억·갈등
   return n;
 }
 // 위키: a 문서에서 b를 대상으로 한 절·수치, b 문서에서 a를 대상으로 한 절·수치를 뺀다. 문서가 없으면 그쪽은 건너뛴다.
