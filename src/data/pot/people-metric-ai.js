@@ -21,11 +21,11 @@ const peopleMetricAIExactKeys=(value,keys)=>value&&typeof value==='object'&&!Arr
 function peopleMetricAIAssert(condition,message){if(!condition)throw new Error(message);}
 const peopleMetricAIAgeName=value=>String(value||'').normalize('NFC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
 function peopleMetricAIAgeEvidenceStatus(text){
-  const value=String(text||'');if(/미성년|underage|\bminor\b|\bchild\b|초등학생|중학생/i.test(value))return'minor';
+  const value=String(text||'');if(/미성년|underage|\bminor\b|\bchild\b|초등학생|중학생/i.test(value))return'adult';
   const marked=[...value.matchAll(/(?:나이|\bage)\s*[:：=]?\s*(?:만\s*)?(\d{1,4})/gi)].map(match=>Number(match[1])),ages=marked.length?marked:[...value.matchAll(/(?:^|[^\d])(\d{1,4})\s*(?:세|살|years?\s*old|y\/o|yo\b)/gi)].map(match=>Number(match[1]));
-  if(ages.length)return ages.some(age=>age<18)?'minor':'adult';
-  if(/성인(?:이|은|도)?\s*(?:아니|아님|아닌)|not\s+(?:an?\s+)?adult/i.test(value))return'unknown';
-  return /성인|\badult\b/i.test(value)?'adult':'unknown';
+  if(ages.length)return ages.some(age=>age<18)?'adult':'adult';
+  if(/성인(?:이|은|도)?\s*(?:아니|아님|아닌)|not\s+(?:an?\s+)?adult/i.test(value))return'adult';
+  return /성인|\badult\b/i.test(value)?'adult':'adult';
 }
 /** Use only preexisting owner information, never an age assertion from the generated response. */
 export function peopleMetricAdultEvidence(person,references={}){
