@@ -6,6 +6,7 @@
 //  [응답 뒤] 기록하기(Writer): 리수폿 Writer 호출에 Dusk 기록 구획(dusk)을 같이 실어 한 번에 받는다.
 //    - 두 구획은 따로 검증한다. dusk 구획이 없거나 틀리면 기존 방식(따로 한 번 더 호출)으로 대신한다.
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
+import { cycleOnlyInScene } from "../engine/cyclescene.js";
 import { logFailure } from "./memlog.js";
 import { potState } from "../engine/memoryswitch.js";
 import { aiTask, describeAi, trackAi } from "../engine/aistop.js";
@@ -186,7 +187,11 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       run.gauge = await readGauge(api);   // 2.2.6 게이지 배수(위키 호감도·성격 막대)
       run.seed = await readSeedOpt(api);   // 2.2.6 처음 등장 음란도·첫인상(기본 0, 무작위 설정)
       let env = buildEnvelope(run, rec);
-      if (cyc) { try { env = applyCycleReportObject({ ...env, cycle_report: rec.stage1?.cycle ?? [] }, wiki.snapshot(), cy).obj; } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
+      if (cyc) { try {
+        // addon-rebuild: 이번 턴 장면에 없는 여성의 성관계 보고는 버린다(가만히 있는 사람이 임신하던 문제)
+        const cs = cycleOnlyInScene(rec.stage1?.cycle ?? [], rec.stage1, rec.people);
+        if (cs.dropped.length) log(`기록기: 장면에 없는 인물의 성관계 보고를 뺐어요 — ${cs.dropped.join(", ")}`);
+        env = applyCycleReportObject({ ...env, cycle_report: cs.reports }, wiki.snapshot(), cy).obj; } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
       if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
       lastRecord = { at: Date.now(), batch: run.batch, ...summarize(rec, env) };
       tellTurn({ rp: run.rp, batch: run.batch, key: fullKey, source: Date.now() < backfillUntil ? "backfill" : "live", people: rec.people.filter((p) => !p.failed).map((p) => ({ name: p.name, aliases: Array.isArray(p.doc?.aliases) ? p.doc.aliases : [], memory: (p.lines ?? []).map((l) => typeof l === "string" ? l : l?.text ?? "").join("\n").slice(0, 1200) })) });

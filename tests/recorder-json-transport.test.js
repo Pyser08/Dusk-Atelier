@@ -100,9 +100,9 @@ test("가벼운 지침 자동 전환: 전체 지침에서 형식 오류면 가�
   assert.ok(log.filter(([n]) => n === second).every(([, lt]) => lt), "두 번째 인물은 처음부터 가볍게");
   assert.equal(auto.streak, 1);
   await recordTurn(model, run, { auto });
-  assert.equal(auto.hold, 10, "두 응답 연속이면 10번 쉼");
+  assert.equal(auto.hold, 3, "두 응답 연속이면 3번 쉼(addon-rebuild: 10 → 3, 깊은 칸을 덜 잃게)");
   log.length = 0; await recordTurn(model, run, { auto });
-  assert.ok(log.every(([, lt]) => lt), "쉬는 동안은 전체 지침을 보내지 않음"); assert.equal(auto.hold, 9);
+  assert.ok(log.every(([, lt]) => lt), "쉬는 동안은 전체 지침을 보내지 않음"); assert.equal(auto.hold, 2);
 });
 test("가벼운 지침 자동 전환: 잘 되는 모델은 전환하지 않고, 연결 오류로는 전환하지 않는다", async () => {
   const run = await runOf(); const auto = { streak: 1, hold: 0 };

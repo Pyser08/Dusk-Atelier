@@ -258,7 +258,8 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const lightAuto = !light && lite;
   if (auto && !light) {
     if ((auto.hold ?? 0) > 0) { if (--auto.hold === 0) auto.streak = 1; }   // 쉬는 기간이 끝나면 전체 지침을 다시 시험(또 실패하면 바로 다시 쉼)
-    else if (switched) { auto.streak = (auto.streak ?? 0) + 1; if (auto.streak >= 2) { auto.hold = 10; auto.streak = 0; } }
+    // addon-rebuild: 쉬는 기간 10 → 3턴. 쉬는 동안은 관계(npc)·기본 성격·성적 욕망 같은 깊은 칸을 묻지 않아 빠짐이 컸다
+    else if (switched) { auto.streak = (auto.streak ?? 0) + 1; if (auto.streak >= 2) { auto.hold = 3; auto.streak = 0; } }
     else if (people.length) auto.streak = 0;
   }
   return { stage1, people, known, source, lightAuto, skipped, capped };
