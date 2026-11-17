@@ -80,13 +80,13 @@
       "id": "erosync",
       "name": "Erosync (사용 중단)",
       "category": "memory",
-      "version": "0.1.12",
+      "version": "0.1.13",
       "minCore": "2.2.1",
       "hooks": false,
       "requires": [],
       "desc": "사용 중단 — 인물 성향·성적 항목·장면 연출은 장기기억 애드온이 맡아요. 이 애드온은 아무것도 하지 않으니 꺼 두세요(저장된 값은 지우지 않아요).",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/erosync.js",
-      "sha256": "02247dc2c533344b61515d0c6d2c724a3a933b1e609ee83b8fb3046fcbd1afc0",
+      "sha256": "01a150628e4e2124af045c6c7f4bdf380bd9ba46a7ca546e544c120e8c78f21a",
       "size": 634
     },
     {
