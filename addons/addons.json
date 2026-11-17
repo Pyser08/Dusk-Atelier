@@ -53,13 +53,13 @@
       "id": "memory",
       "name": "장기기억·관계도",
       "category": "memory",
-      "version": "0.3.6",
+      "version": "0.3.7",
       "minCore": "2.2.4",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "f33c0daa35fff25c4929abe11f976fdb1c0fbf93b475f9e0c421510da0ffa0f3",
-      "size": 1944917
+      "sha256": "8fdbc4d7a4125d51784be20568cd2c6a80c3e320d98ac530b38cac54e459564a",
+      "size": 1946886
     },
     {
       "id": "cards",
@@ -80,13 +80,13 @@
       "id": "erosync",
       "name": "Erosync (사용 중단)",
       "category": "memory",
-      "version": "0.1.12",
+      "version": "0.1.13",
       "minCore": "2.2.1",
       "hooks": false,
       "requires": [],
       "desc": "사용 중단 — 인물 성향·성적 항목·장면 연출은 장기기억 애드온이 맡아요. 이 애드온은 아무것도 하지 않으니 꺼 두세요(저장된 값은 지우지 않아요).",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/erosync.js",
-      "sha256": "02247dc2c533344b61515d0c6d2c724a3a933b1e609ee83b8fb3046fcbd1afc0",
+      "sha256": "01a150628e4e2124af045c6c7f4bdf380bd9ba46a7ca546e544c120e8c78f21a",
       "size": 634
     },
     {

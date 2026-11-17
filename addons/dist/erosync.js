@@ -1,2 +1,2 @@
-/* Dusk Atelier 애드온 erosync v0.1.12 — 소스: addons/erosync (Dusk Atelier 라이선스, 저장소 LICENSE) */
+/* Dusk Atelier 애드온 erosync v0.1.13 — 소스: addons/erosync (Dusk Atelier 라이선스, 저장소 LICENSE) */
 var e="dusk.erosync.retiredNotice";async function a(t,o){(n=>console.log(`[Dusk Atelier] ${n}`))("Erosync는 사용 중단됐어요 — 장기기억 애드온의 성인 프로필·장면 연출을 써요(이 애드온은 아무것도 하지 않아요).");try{await t.pluginStorage.getItem(e)||(await t.pluginStorage.setItem(e,"1"),o?.toast?.("Erosync는 장기기억 애드온으로 옮겨졌어요. 이제 이 애드온은 꺼도 돼요.",{kind:"info"}))}catch{}return{async deactivate(){}}}export{a as activate};
