@@ -64,6 +64,7 @@ export function gaugeBlock(env, doc, p) {
         h("b", null, `✦ 새 게이지 제안: ${shown.name}`), h("p", { class: "rb-muted", style: "margin:4px 0" }, shown.desc || "(설명 없음)"), dup ? h("p", { class: "rb-muted" }, "⚠ 비슷한 게이지가 이미 있어요.") : null,
         h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" },
           btn("수락 (모든 인물에게)", { kind: "primary", size: "sm", onClick: () => run((async () => { env.ctx.toast("AI가 게이지를 설계하는 중…"); await S.acceptSuggestion(chaOf(env), shown.id, modelOf(env), env.bot?.character?.name); env.ctx.toast("게이지를 만들었어요."); await paint(); })()) }),
+          doc?.title ? btn(`이 인물만 (${doc.title})`, { size: "sm", onClick: () => run((async () => { env.ctx.toast("AI가 게이지를 설계하는 중…"); await S.acceptSuggestion(chaOf(env), shown.id, modelOf(env), env.bot?.character?.name, [doc.title]); env.ctx.toast(`${doc.title}에게만 게이지를 만들었어요.`); await paint(); })()) }) : null,
           btn("나중에", { size: "sm", onClick: () => run(S.resolveSuggestion(chaOf(env), shown.id, "later").then(paint)) }),
           btn("거절", { size: "sm", onClick: () => run(S.resolveSuggestion(chaOf(env), shown.id, "dismiss").then(paint)) }))));
     }
@@ -106,6 +107,8 @@ export async function openEditor(env, draft, { isNew = false } = {}) {
     const i = (key, extra = {}) => h("input", { class: "rb-input", value: draft[key] ?? "", ...extra }), ta = (key, rows = 2) => h("textarea", { class: "rb-input", rows, maxlength: 400 }, draft[key] ?? "");
     const name = i("name", { maxlength: 24 }), desc = i("desc", { maxlength: 200 }), min = i("min", { type: "number" }), max = i("max", { type: "number" }), init = i("init", { type: "number" }), step = i("step", { type: "number", min: 1 });
     const measure = ta("measure"), rule = ta("rule"), update = ta("update");
+    const who = h("input", { class: "rb-input", id: "rb-gauge-targets", maxlength: 400, value: Array.isArray(draft.targets) ? draft.targets.join(", ") : "", placeholder: "비우면 모든 인물 · 예: 로완, 미라", "aria-label": "적용 인물" });
+    const targetsOf = () => { const list = who.value.split(/[,，]/).map((x) => x.trim()).filter(Boolean); return list.length ? list : "all"; };
     const hue = h("input", { type: "range", min: 0, max: 359, value: draft.look.hue, "aria-label": "색" }), shape = h("select", { class: "rb-input" }, G.SHAPES.map((s) => h("option", { value: s, selected: s === draft.look.shape }, { orb: "구슬", ring: "고리", bar: "막대", ticks: "눈금" }[s]))), icon = i("icon", { maxlength: 4 });
     icon.value = draft.look.icon ?? "";
     const L = draft.look, c1 = h("input", { type: "color", value: /^#[0-9a-f]{6}$/i.test(L.c1) ? L.c1 : "#7c5cf0", "aria-label": "시작 색" }), c2 = h("input", { type: "color", value: /^#[0-9a-f]{6}$/i.test(L.c2) ? L.c2 : "#c9b8ff", "aria-label": "끝 색" });
@@ -113,7 +116,7 @@ export async function openEditor(env, draft, { isNew = false } = {}) {
     const cCard = h("textarea", { class: "rb-input", rows: 2, maxlength: 700 }, L.card ?? ""), cFill = h("textarea", { class: "rb-input", rows: 2, maxlength: 700 }, L.fill ?? ""), cTrack = h("textarea", { class: "rb-input", rows: 2, maxlength: 700 }, L.track ?? "");
     const regen = h("span");
     const prev = h("div"), msg = h("div");
-    const cur = () => ({ ...draft, name: name.value, desc: desc.value, min: min.value, max: max.value, init: init.value, step: step.value, measure: measure.value, rule: rule.value, update: update.value, look: { hue: +hue.value, shape: shape.value, icon: icon.value, c1: useC.v ? c1.value : "", c2: useC.v ? c2.value : "", text: L.text, card: cCard.value, fill: cFill.value, track: cTrack.value } });
+    const cur = () => ({ ...draft, targets: targetsOf(), name: name.value, desc: desc.value, min: min.value, max: max.value, init: init.value, step: step.value, measure: measure.value, rule: rule.value, update: update.value, look: { hue: +hue.value, shape: shape.value, icon: icon.value, c1: useC.v ? c1.value : "", c2: useC.v ? c2.value : "", text: L.text, card: cCard.value, fill: cFill.value, track: cTrack.value } });
     const redraw = () => { try { const d = G.normalizeDef(cur(), { id: draft.id }); prev.replaceChildren(html(gaugeBoxHtml({ snap: [{ g: d.id, who: "미리보기", v: d.init }, { g: d.id, who: "다른 인물", v: Math.min(d.max, d.init + d.step) }], items: [] }, [d]).trim())); msg.replaceChildren(); } catch (e) { msg.replaceChildren(note("err", e.message)); } };
     [name, desc, min, max, init, step, hue, shape, icon, c1, c2, cCard, cFill, cTrack].forEach((el) => el.addEventListener("input", redraw)); redraw();
     const save = async () => {
@@ -121,7 +124,7 @@ export async function openEditor(env, draft, { isNew = false } = {}) {
       catch (e) { msg.replaceChildren(note("err", e?.message ?? String(e))); }
     };
     return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(560px,96vw);max-height:90vh;overflow:auto" }, h("h3", null, isNew ? "게이지 만들기 (아직 저장 전)" : "게이지 수정"),
-      prev, field("이름", name), field("설명", desc),
+      prev, field("이름", name), field("설명", desc), field("적용 인물", who, "쉼표로 나눠 적어요. 비우면 모든 인물에게 써요."),
       h("div", { style: "display:grid;grid-template-columns:repeat(4,1fr);gap:6px" }, field("최소", min), field("최대", max), field("처음 값", init), field("한 번에 최대", step)),
       field("무엇을 볼까 (측정)", measure), field("어떻게 움직일까 (변화 규칙)", rule), field("변화 쓰는 법 (갱신)", update),
       h("div", { style: "display:grid;grid-template-columns:1fr 1fr 70px;gap:6px;align-items:end" }, field("색", hue), field("모양", shape), field("아이콘", icon)),
@@ -143,7 +146,7 @@ export async function openManager(env) {
       const defs = await S.getDefs(cha), sug = await S.getSuggest(cha);
       listEl.replaceChildren(...(defs.length ? defs.map((d) => h("div", { class: "rb-card", style: "display:flex;gap:8px;align-items:center;margin:6px 0;padding:10px 12px" },
         h("div", { style: "flex:none;width:46px" }, html(shapeHtml({ ...d, look: { ...d.look, shape: d.look.shape === "bar" || d.look.shape === "ticks" ? "orb" : d.look.shape } }, d.init))),
-        h("div", { style: "flex:1;min-width:0" }, h("b", null, `${d.look.icon || "✦"} ${d.name}`), h("div", { class: "rb-muted", style: "font-size:12px" }, `${d.min}~${d.max}${d.src === "user" ? "" : " · AI"}${d.on ? "" : " · 꺼짐"}`)),
+        h("div", { style: "flex:1;min-width:0" }, h("b", null, `${d.look.icon || "✦"} ${d.name}`), h("div", { class: "rb-muted", style: "font-size:12px" }, `${d.min}~${d.max}${Array.isArray(d.targets) ? ` · ${d.targets.join(", ")}만` : ""}${d.src === "user" ? "" : " · AI"}${d.on ? "" : " · 꺼짐"}`)),
         switchEl(d.on, { label: "자동 갱신", onChange: (on, el) => { setSwitch(el, on); run(S.updateDef(cha, d.id, { on }).then(paint)); } }),
         btn("수정", { size: "sm", onClick: () => run(openEditor(env, d).then(paint)) }),
         btn("삭제", { size: "sm", onClick: () => run((async () => { if (await confirmDialog(env.ctx.win, { title: "게이지 삭제", body: `"${d.name}"와 모든 채팅의 값·기록이 지워져요.`, ok: "삭제", danger: true })) { await S.removeDef(cha, d.id); await paint(); } })()) }))) : [h("p", { class: "rb-muted" }, "게이지가 없어요.")]));

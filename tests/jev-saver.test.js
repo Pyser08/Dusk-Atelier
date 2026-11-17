@@ -28,3 +28,8 @@ test("Jev: 꺼져 있으면 null, 켜면 20개씩 나눠 묻고 id별 점수", a
   assert.deepEqual(calls.sort(), [20, 5].sort());
   assert.equal(m.get(100), 2.6); assert.equal(m.get(101), 0.2); assert.equal(m.size, 25);
 });
+test("직접 입력 공급자: 적은 주소·모델을 그대로 씀", async () => {
+  const { normCfg } = await import("../src/data/jev.js");
+  const c = normCfg({ provider: "custom", url: "https://api.example.ai/v1/systemone", model: "jev-1.14" });
+  assert.equal(c.provider, "custom"); assert.equal(c.url, "https://api.example.ai/v1/systemone"); assert.equal(c.model, "jev-1.14");
+});

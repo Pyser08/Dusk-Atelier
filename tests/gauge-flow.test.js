@@ -84,3 +84,14 @@ test("표시 훅은 메시지마다 저장소를 다시 읽지 않는다 (모바
   for (let i = 0; i < 40; i++) await gauge.onDisplay("메시지 " + i + LONG);
   assert.ok(reads - before <= 4, `게이지를 만든 뒤에도 매번 읽음: ${reads - before}`);
 });
+
+test("제안 수락을 특정 인물에게만 (2.2.9 요청)", async () => {
+  const { api, store } = setup(1);
+  const design = JSON.stringify({ name: "경계심", desc: "", min: 0, max: 10, init: 0, step: 3, measure: "m", rule: "r", update: "u", look: { hue: 10, shape: "orb" } });
+  const gauge = createGaugeService(api, { store, call: async () => design });
+  await gauge.setSuggestOn("c1", true);
+  await store.updateIndex((idx) => { const G = idx.gauges.c1; G.sug.list.push({ id: "s1", name: "경계심", desc: "", status: "pending" }); });
+  await gauge.acceptSuggestion("c1", "s1", null, "봇", ["로완"]);
+  const [d] = await gauge.getDefs("c1");
+  assert.deepEqual(d.targets, ["로완"]);
+});

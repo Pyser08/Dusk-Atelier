@@ -33,3 +33,16 @@ test("women| 줄: 이름들로 여성 표시, none이면 아무도 없음", () =
   assert.deepEqual(r.map((x) => x.name), ["민지", "수아"]);
   assert.equal(cycleFrom("women|none", []).length, 0);
 });
+
+test("맞춘 문서는 직전 자동 기록 이력의 after도 같이 고쳐 되돌리기 충돌을 막음", async () => {
+  const { restoreWikiHistoryBatch } = await import("../src/engine/pot/wiki-schema.js");
+  const sc = scopeWith({ length: 28, start: "2026-03-01", date: "2026-03-15", conception: "", partner: "", known: false, birth: "" });
+  const doc = sc.documents.d;
+  sc.history = [{ id: "h1", kind: "update", documentId: "d", before: null, after: structuredClone(doc), at: "2026-03-15T00:00:00.000Z" }];
+  const r = applyCycleEvents(sc, [{ name: "민지", period: true }]);
+  assert.deepEqual(r.scope.history.at(-1).after, r.scope.documents.d);
+  assert.deepEqual(sc.history[0].after, doc);   // 원본은 그대로
+  // 이력 형식 검사를 거치는 실제 되돌리기와 같은 조건(현재 문서 == 이력 after)
+  assert.equal(JSON.stringify(r.scope.documents.d), JSON.stringify(r.scope.history.at(-1).after));
+  void restoreWikiHistoryBatch;
+});
