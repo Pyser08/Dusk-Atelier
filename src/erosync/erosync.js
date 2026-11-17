@@ -13668,12 +13668,27 @@ export async function bootErosync(api, hostArg) {
     }
     if (profile.roster?.personKey) throw new Error('현재 명단에서 이 인물의 원문을 찾지 못했습니다. 명단을 다시 확인해 주세요.');
     const documents = singleReanalysisDocumentsByName(profile, inventory); // 점진 분석 후속(2026-10-31): 후속 분석의 서명과 같은 고르기
-    if (!documents.length) throw new Error('현재 포함된 자료에서 이 인물의 분석 근거를 찾지 못했습니다. 이전 원문은 재사용하지 않습니다.');
+    if (!documents.length) {
+      // addon-rebuild: 카드·로어북에 없는 대화 속 인물(장기기억이 알려 준 임시 인물)은 장기기억 기록(evidence)을 자료로 쓴다.
+      const memo = duskMemorySource(profile);
+      if (memo) return memo;
+      throw new Error('현재 포함된 자료에서 이 인물의 분석 근거를 찾지 못했습니다. 이전 원문은 재사용하지 않습니다.');
+    }
     const sourceDocumentIds = documents.map(document => document.id);
     const candidate = { id: profile.id, name: profile.name, aliases: profile.aliases || [], isMain: profile.isMain === true, sourceDocumentIds,
       sourceKinds: normalizeStringList(documents.flatMap(document => document.sourceKinds || [document.kind]), 12, 120), evidence: [] };
     candidate.sourceText = relevantDocumentsForCandidates({ ...inventory, documents }, [candidate], config.analysisProfileBatchChars);
     return candidate;
+  }
+
+  // addon-rebuild: 장기기억 기록으로 만든 1인 분석 자료. 임시 인물(mob)이고 기록이 있을 때만.
+  function duskMemorySource(profile) {
+    if (!['temporary_mob', 'persistent_mob'].includes(profile?.category)) return null;
+    const notes = normalizeStringList(profile.evidence, 8, 1200).filter(Boolean);
+    if (!notes.length) return null;
+    const block = `[SOURCE dusk_memory | TARGET ${profile.id} | 장기기억 기록(대화에서 본 모습)]\n${notes.join('\n')}`;
+    return { id: profile.id, name: profile.name, aliases: profile.aliases || [], isMain: false, sourceDocumentIds: [], sourceKinds: ['dusk_memory'], evidence: [],
+      sourceText: block, sourceParts: [block.length] };
   }
 
   function singleReanalysisExecution(execution, beforeProfile, afterProfile, status, errors = []) {
@@ -16303,12 +16318,16 @@ export async function bootErosync(api, hostArg) {
         if (!profiles.profiles[pid]) {
           profiles.profiles[pid] = { ...normalizeProfileRecord({ id: pid, name: nm, aliases, provisionalProfile: {}, ownerBundleKeys: bundleKey ? [bundleKey] : [],
             entityVerdict: { status: 'unverified', entityType: 'person', confidence: 35, reason: 'named by Dusk memory', source: 'dusk_memory' }, confidence: 35,
-            evidence: memory ? [truncate(memory, 800)] : [] }, '', 'persistent_mob'),
+            evidence: memory ? [truncate(memory, 1200)] : [] }, '', 'persistent_mob'),
           category: 'persistent_mob', scopeOwnership: { scopeKey, sourceBundleKey: bundleKey, confidence: 'exact' } };
         }
         return pid;
       });
       id = made.outcome;
+      duskReadCache = null;
+    }
+    if (found && memory && ['temporary_mob', 'persistent_mob'].includes(found.category)) {
+      await mutateProfileRegistry('dusk profile seed memory', (profiles) => { const p = profiles.profiles?.[id]; if (p) p.evidence = [truncate(memory, 1200)]; }, { writeRegistry: false });
       duskReadCache = null;
     }
     // 자료에 이름이 나오면 1인 분석. 근거가 없거나 다른 분석 중이면 임시값으로 두고 매 턴 계산이 이어서 움직인다.
@@ -16321,11 +16340,12 @@ export async function bootErosync(api, hostArg) {
       if (!live || live.scopeKey !== fresh.context.scope.scopeKey) return { ok: true, id, created: !found, analyzed: false };
       const config = normalizeConfig(fresh.context.config);
       const inventory = await collectSourceInventory(character, live, { force: true, maxSourceChars: config.analysisMaxSourceChars });
-      if (!singleReanalysisDocumentsByName(materializeProfileVariant(root, String(fresh.context.scope.variantKey || 'default')) || root, inventory).length) return { ok: true, id, created: !found, analyzed: false, reason: 'no_sources' };
+      const target = materializeProfileVariant(root, String(fresh.context.scope.variantKey || 'default')) || root;
+      if (!singleReanalysisDocumentsByName(target, inventory).length && !duskMemorySource(target)) return { ok: true, id, created: !found, analyzed: false, reason: 'no_sources' };
       const r = await startSingleProfileReanalysis(fresh.context, id, 'full', { config, label: '출발값 만들기', auditReason: '새 인물 출발값' });
-      return { ok: true, id, created: !found, analyzed: r?.status === 'success' };
+      return r?.status === 'success' ? { ok: true, id, created: !found, analyzed: true } : { ok: false, id, created: !found, analyzed: false, reason: r?.status || 'error' };
     } catch (e) {
-      return { ok: true, id, created: !found, analyzed: false, reason: String(e?.message || e) };
+      return { ok: false, id, created: !found, analyzed: false, reason: String(e?.message || e) };   // 분석 실패: 프로필은 남지만 다시 시도할 수 있게 실패로 알린다
     }
   }
 
@@ -16515,6 +16535,9 @@ export async function bootErosync(api, hostArg) {
           Object.assign(profile, current, { baseProfile: normalizeEroticProfile(next), updatedAt: new Date().toISOString() });
           if (isPlainObject(profile.userOverrides)) { const uo = { ...profile.userOverrides }; for (const k of Object.keys(after)) delete uo[k]; profile.userOverrides = uo; }   // AI가 이어서 바꾼 항목은 고친 표시를 푼다
           saveProfileVariant(profile, variantKey, { label: current.variantLabel || variantKey, activationSignature: profile.variants?.[variantKey]?.activationSignature || '', sourceHash: current.sourceHash, sourceDocumentIds: current.sourceDocumentIds });
+          // addon-rebuild: 임시 인물은 최신 장기기억 기록을 남겨 두어 '다시 분석'이 그 기록으로 분석하게 한다
+          const mem = targets.find(t => t.id === id)?.memory;
+          if (mem && ['temporary_mob', 'persistent_mob'].includes(profile.category)) profile.evidence = [truncate(mem, 1200)];
           done.push({ id, name: profile.name, before, after, reason: parsed[id].reason });
         }
         return done;

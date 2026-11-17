@@ -160,3 +160,13 @@ test("출발값 만들기가 실패한 이름은 완료로 남기지 않아 다�
   assert.equal(calls.filter(([op]) => op === "seed").length, 2, "실패했던 세라를 다시 시도");
   assert.equal((await t.autoHistory())[1].results[0].ok, false);
 });
+
+test("출발값 만들기는 같은 이름이 3번 실패하면 더 시도하지 않는다", async () => {
+  const { api } = fakeApi(), calls = [];
+  const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [] }),
+    profile: async (op, arg) => { calls.push([op, arg]); if (op === "seed") return { ok: false, reason: "error" }; return { ok: true, changed: [], unmatched: [] }; } };
+  const t = createErosyncTurn(api, { erosync: er });
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  for (const k of ["a", "b", "c", "d", "e"]) { await t.onTurn({ key: k, rp: "턴", people: [{ name: "세라", memory: "기록" }] }); await tick(); await tick(); }
+  assert.equal(calls.filter(([op]) => op === "seed").length, 3);
+});

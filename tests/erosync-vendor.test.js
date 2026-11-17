@@ -224,3 +224,13 @@ test("user 관찰(2.1.5): 켜면 플래그·저장 정리·장면 판단 입력�
   const inp = f.duskUserDirectorInput(st, true);
   assert.match(inp.note, /Never plan/); assert.ok(!("sexualOpenness" in inp.known) && !/openness/.test(inp.reply) && !/sexual/.test(inp.reply), "SFW에서는 성적 항목 없음");
 });
+
+test("카드·로어북에 없는 대화 속 인물은 장기기억 기록을 1인 분석 자료로 쓴다(임시 인물만)", () => {
+  const { duskMemorySource } = engineFns(["duskMemorySource"]);
+  const m = duskMemorySource({ id: "mob_1", name: "세라", category: "persistent_mob", evidence: ["카페 점원. 말수가 적고 먼저 다가오지 않는다."] });
+  assert.ok(m.sourceText.includes("장기기억 기록") && m.sourceText.includes("카페 점원")); assert.deepEqual(m.sourceDocumentIds, []);
+  assert.equal(duskMemorySource({ id: "a", name: "앨리스", category: "major", evidence: ["x"] }), null, "카드 인물은 원래대로 자료가 필요");
+  assert.equal(duskMemorySource({ id: "mob_2", name: "점원", category: "temporary_mob", evidence: [] }), null);
+  const eng = engineSrc();
+  assert.ok(eng.includes("const memo = duskMemorySource(profile);") && eng.includes("!duskMemorySource(target)"), "다시 분석·출발값 만들기 모두 이 자료로");
+});

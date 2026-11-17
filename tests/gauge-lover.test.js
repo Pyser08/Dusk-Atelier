@@ -182,6 +182,22 @@ test("Erosync 무작위 출발값: 처음 본 채팅의 기존 인물은 기준,
   assert.equal(edits[0][0], "edit"); assert.equal(edits[0][1], "p2"); assert.ok(Number.isFinite(edits[0][2].eroticInterest));
 });
 
+test("Erosync 무작위 월경: 처음 볼 때 성별을 모르면 미뤄 두었다가 성별이 정해지면 켠다(남성이면 안 켬)", async () => {
+  const store = new Map(), api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } };
+  const edits = [], er = { profile: async (op, id, patch) => { edits.push([op, id, patch]); return {}; } };
+  const snap = (people) => ({ ok: true, scope: { scopeKey: "s" }, people });
+  await saveSeedOpt(api, true);
+  await seedErosyncNow(api, er, snap([]));   // 처음 본 채팅(인물 없음) = 기준
+  await seedErosyncNow(api, er, snap([{ id: "p2", name: "유나", gender: "u" }, { id: "p3", name: "철수" }]));   // 성별 모름(u·없음)
+  assert.ok(edits.every(([, , pt]) => !pt.cycle), "성별 모를 땐 월경을 안 켬");
+  edits.length = 0;
+  await seedErosyncNow(api, er, snap([{ id: "p2", name: "유나", gender: "female" }, { id: "p3", name: "철수", gender: "male" }]));
+  assert.deepEqual(edits.map(([, id, pt]) => [id, pt]), [["p2", { cycle: "on" }]], "성별이 정해진 뒤 여성만 월경 켬(성적 수치는 다시 안 넣음)");
+  edits.length = 0;
+  await seedErosyncNow(api, er, snap([{ id: "p2", name: "유나", gender: "female" }]));
+  assert.equal(edits.length, 0, "한 번만");
+});
+
 import { normalizeSeedOpt, poolOf, pickable } from "../src/engine/adultseed.js";
 import { normCfg, JEV_PROVIDERS, createJev } from "../src/data/jev.js";
 

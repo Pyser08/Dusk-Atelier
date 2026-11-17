@@ -22,7 +22,7 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
   // - 출발값이 하나도 없는 채팅은 이번 턴 인물만(최대 EMPTY_MAX명).
   // - 지난 대화 분석(source "backfill")에서 온 턴은 세지 않는다.
   // - 카운터·완료 표시는 pluginStorage(AUTO_KEY)에 저장해 새로고침해도 이어진다. 자동 실행 기록은 AUTO_LOG_KEY.
-  const NEW_MIN_TURNS = 2, EMPTY_MAX = 3, SEED_PER_TURN = 3;
+  const NEW_MIN_TURNS = 2, EMPTY_MAX = 3, SEED_PER_TURN = 3, SEED_RETRY = 3;
   const keyOf = (nm) => String(nm || "").trim().toLowerCase();
   let seeding = null;
 
@@ -43,7 +43,8 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
       }
       // 실패한 이름은 완료 표시를 풀어 다음에 다시 시도한다(채팅 상태가 아직 없을 때 등). 성공(임시값 포함)만 완료로 남는다.
       const failed = results.filter((r) => !r.ok).map((r) => keyOf(r.name));
-      if (failed.length) { const st2 = await autoState(), sc2 = st2[scope] ?? { counts: {}, done: {} }; for (const k of failed) delete sc2.done[k]; st2[scope] = sc2; await write(AUTO_KEY, st2); }
+      // 같은 이름이 SEED_RETRY번 실패하면 더 시도하지 않는다(계속 실패하는 호출이 쌓이지 않게)
+      if (failed.length) { const st2 = await autoState(), sc2 = st2[scope] ?? { counts: {}, done: {} }; sc2.fails ??= {}; for (const k of failed) { sc2.fails[k] = (sc2.fails[k] ?? 0) + 1; if (sc2.fails[k] < SEED_RETRY) delete sc2.done[k]; } st2[scope] = sc2; await write(AUTO_KEY, st2); }
       log(`Erosync 출발값 만들기(${why === "empty" ? "출발값 없음" : "새 인물"}): ${results.map((r) => `${r.name}${r.analyzed ? " 분석" : r.ok ? " 임시값" : " 실패"}`).join(", ")}`);
       await write(AUTO_LOG_KEY, [{ at: now(), why, scope, names: todo.map((p) => p.name), results }, ...(await autoHistory())].slice(0, TURN_LOG_MAX));
       return results;
