@@ -26,10 +26,11 @@ test("모든 낱말이 맞아야 한다 · 빈 검색은 빈 결과", () => {
 });
 
 test("꺼진 애드온의 기능은 off로 표시하고 맨 뒤로 보낸다", () => {
-  const r = findFeatures("수위", FEATURES, { has: (id) => id !== "erosync" });
-  assert.ok(r.length >= 2);
-  assert.equal(r.at(-1).off, true);
-  assert.equal(r.find((f) => f.addon === "memory")?.off, false);
+  // 2.2.9: Erosync 항목이 빠져서 장기기억 애드온을 끈 경우로 같은 규칙을 본다
+  const r = findFeatures("관계도", FEATURES, { has: (id) => id !== "memory" });
+  assert.ok(r.some((f) => f.addon === "memory" && f.off === true), "꺼진 애드온 기능은 off");
+  const firstOff = r.findIndex((f) => f.off);
+  assert.ok(firstOff >= 0 && r.slice(firstOff).every((f) => f.off), "꺼진 것은 맨 뒤");
 });
 
 test("모든 항목은 실제 탭·하위 화면을 가리키고 이름·위치가 있다", () => {

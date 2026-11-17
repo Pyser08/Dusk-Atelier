@@ -65,25 +65,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // ── 인물 위키: 리안
   await page.evaluate(() => { const m = __app.ctx.state.memory ?? null; });
   await page.evaluate(() => __app.ctx.go("relmap")); await page.waitForTimeout(900);
-  // 관계도: 버튼이 보이고, 누르면 Erosync 층만(리안·카엘)
-  const eroBtn = page.locator(".rb-rm-ctrls button", { hasText: "Erosync 목표·경쟁만 보기" });
-  ok(`[${tag}] 관계도에 Erosync 버튼`, (await eroBtn.count()) === 1);
-  const before = await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button").count();
-  await eroBtn.click(); await page.waitForTimeout(500);
-  const after = await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button").count();
-  ok(`[${tag}] Erosync만 보기: 인물이 ${before}명 → ${after}명(리안·카엘 포함, 줄어듦)`, before >= 6 && after >= 2 && after < before, `${before} → ${after}`);
-  ok(`[${tag}] 눌린 상태(aria-pressed)`, (await eroBtn.getAttribute("aria-pressed")) === "true");
-  ok(`[${tag}] 범례가 목표·경쟁으로`, /목표/.test(await page.locator(".rb-rm-legend").textContent()) && /경쟁/.test(await page.locator(".rb-rm-legend").textContent()));
-  await page.screenshot({ path: `/tmp/ero-relmap-${tag}.png` });
-  await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button", { hasText: "리안" }).click(); await page.waitForTimeout(300);
-  ok(`[${tag}] Erosync 층에서 인물을 눌러도 화면이 깨지지 않는다(해당 없는 {{user}} 선 건너뜀)`, (await page.locator(".rb-rm-panel h2", { hasText: "리안" }).count()) === 1);
-  await eroBtn.click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 다시 누르면 전체로 복귀`, (await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button").count()) >= before);
-  // Erosync 화면의 ‘관계망’ 탭에서 넘어오면(eroOnOpen) Erosync 층이 자동으로 켜진다
-  await page.evaluate(() => { (__app.ctx.state.relmap ??= {}).eroOnOpen = true; __app.ctx.go("memory"); }); await page.waitForTimeout(500);
-  await page.evaluate(() => __app.ctx.go("relmap")); await page.waitForTimeout(900);
-  ok(`[${tag}] 관계망 탭에서 넘어오면 Erosync 층이 자동으로 켜짐`, (await page.locator(".rb-rm-ctrls button", { hasText: "Erosync 목표·경쟁만 보기" }).getAttribute("aria-pressed")) === "true");
-  await page.locator(".rb-rm-ctrls button", { hasText: "Erosync 목표·경쟁만 보기" }).click(); await page.waitForTimeout(300);
+  // 2.2.9: Erosync 사용 중단 — 관계도의 Erosync 목표·경쟁 층은 뺐다(버튼이 없어야 함)
+  ok(`[${tag}] 관계도에 Erosync 층 버튼이 없다(사용 중단)`, (await page.locator(".rb-rm-ctrls button", { hasText: "Erosync" }).count()) === 0);
   // 위키로(기억 > 인물 상세, 시험 데이터의 시로코)
   await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button", { hasText: "시로코" }).first().click(); await page.waitForTimeout(200);
   await page.locator(".rb-rm-panel .rb-btn.primary").click(); await page.waitForTimeout(1500);
