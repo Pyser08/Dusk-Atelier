@@ -15,7 +15,7 @@ import { applyPov, applyExp, takeSelf, isImportant, tensionKeys, noteTension, cl
 import { trustFields, mergeTrust, resolveConflicts, attrsForPrompt, currentState } from "./memorytrust.js";
 import { coolEmo, applyHuman, stageCeiling } from "./memoryhuman.js";
 import { normalizeUserNames } from "./memoryuser.js";
-import { canonName } from "./memorylines.js";
+import { canonNameKo as canonName } from "./namekr.js";   // addon-rebuild: 한국 이름 성 한 글자(하연=지하연)까지 맞춤
 
 // 2.2.4 이름 맞추기: 분석 결과의 이름(인물·감정·관계·관계 기록·장면 참가자)을 이 채팅의 모든 인물(30명 제한 없이)에 맞춘다.
 //   성만·이름만·호칭 붙여 부른 이름이 새 사람으로 따로 쌓이던 것(일본 캐릭터: 텐도 / 아리스 / 텐도 아리스). 바뀐 이름은 별칭으로 남긴다.

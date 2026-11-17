@@ -75,9 +75,15 @@ export function seedWikiCandidates(wiki, seeded, { since = 0, now = new Date().t
   people.candidates ??= {};
   for (const [docId, prof] of Object.entries(people.profiles)) {
     const doc = wiki.documents[docId];
-    if (!doc || doc.type !== "Character" || seeded.includes(docId)) continue;
+    if (!doc || doc.type !== "Character") continue;
     const born = Date.parse(prof?.createdAt ?? "");
-    if (since && !(born >= since)) { seeded.push(docId); continue; }   // 옵션을 켜기 전에 나온 인물은 건드리지 않는다
+    const before = since && !(born >= since);   // 옵션을 켜기 전에 나온 인물은 건드리지 않는다
+    if (seeded.includes(`skip:${docId}`)) continue;   // 옵션 켜기 전 인물로 건너뛴 기록
+    if (seeded.includes(docId)) {
+      // addon-rebuild: 넣었다고 적혔는데 이 인물의 무작위 후보가 하나도 없으면(검토하면 상태만 바뀌고 남는다) 위키 저장 경합으로 덮인 것 → 다시 넣는다.
+      // 예전 기록은 건너뛴 인물도 docId로 남겼으므로 옵션 전 인물(before)은 여기서도 건너뛴다.
+      if (before || Object.keys(people.candidates).some((k) => k.startsWith(`candidate_seed_${docId}_`))) continue;
+    } else if (before) { seeded.push(`skip:${docId}`); continue; }
     const roll = rollAdult(doc.title || prof.name || docId, random, opt);
     const add = (axis, pattern, i) => {
       const id = `candidate_seed_${docId}_${axis}_${i}`;
@@ -87,8 +93,8 @@ export function seedWikiCandidates(wiki, seeded, { since = 0, now = new Date().t
     };
     roll.desires.forEach((p, i) => add("sexual_desire", p, i));
     roll.kinks.forEach((p, i) => add("paraphilia", p, i));
-    seeded.push(docId);
-    out.push(docId);
+    if (!seeded.includes(docId)) seeded.push(docId);
+    if (roll.desires.length || roll.kinks.length) out.push(docId);
   }
   if (out.length) wiki.revision = (wiki.revision ?? 0) + 1;
   return out;

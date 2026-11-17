@@ -1,3 +1,4 @@
+import { sameKoreanPerson } from "../engine/namekr.js";
 // Dusk 2.2.0: Erosync 매 턴 계산(변화분 1번 호출). 원본 분석부의 축 정의(AXIS_DEFINITIONS·SEX_AXIS_DEFINITIONS)와
 // 성적 축 공통 규칙을 그대로 받아 채점 기준 글을 만들고, 응답(바뀐 항목만)을 정리한다. 엔진 연결부는 erosync.js duskTurnUpdate.
 import { scaleTarget } from "../engine/gaugemult.js";
@@ -65,5 +66,8 @@ const norm = (s) => String(s ?? "").normalize("NFKC").replace(/\s+/g, "").toLowe
 export function matchProfile(person, profiles) {
   const names = new Set([person?.name, ...(person?.aliases ?? [])].map(norm).filter(Boolean));
   const hits = (profiles ?? []).filter((p) => [p.name, ...(p.aliases ?? [])].map(norm).some((n) => names.has(n)));
-  return hits.length === 1 ? hits[0] : null;
+  if (hits.length) return hits.length === 1 ? hits[0] : null;
+  // addon-rebuild: 정확히 같은 이름이 없으면 한국 이름 성 한 글자 차이(하연=지하연)를 본다. 한 명일 때만.
+  const ko = (profiles ?? []).filter((p) => [p.name, ...(p.aliases ?? [])].some((n) => [...names].some((m) => sameKoreanPerson(m, n))));
+  return ko.length === 1 ? ko[0] : null;
 }

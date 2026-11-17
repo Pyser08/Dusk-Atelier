@@ -9,7 +9,8 @@
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
 import { scaleDelta } from "./gaugemult.js";
 import { seedFirst, seedLewd } from "./adultseed.js";
-import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
+import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
+import { canonNameKo as canonName } from "./namekr.js";   // addon-rebuild: 한국 이름 성 한 글자(하연=지하연)까지 맞춤
 import { validate } from "./memoryprompt.js";
 
 // '변화 없음' 판단: 코어 2.0.7의 isNoneReply는 JSON 꼴({"lines":[]})을 모르므로 애드온 쪽에서도 받는다.

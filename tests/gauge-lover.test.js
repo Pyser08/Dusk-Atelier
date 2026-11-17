@@ -182,6 +182,22 @@ test("Erosync 무작위 출발값: 처음 본 채팅의 기존 인물은 기준,
   assert.equal(edits[0][0], "edit"); assert.equal(edits[0][1], "p2"); assert.ok(Number.isFinite(edits[0][2].eroticInterest));
 });
 
+test("성적 욕망 후보가 위키 저장에 덮여 사라졌으면 다시 넣는다(검토한 후보·옵션 전 인물은 그대로)", () => {
+  const now = new Date().toISOString();
+  const wiki = { documents: { a: { type: "Character", title: "하연" }, b: { type: "Character", title: "미오" }, c: { type: "Character", title: "옛사람" } },
+    people: { profiles: { a: { createdAt: now }, b: { createdAt: now }, c: { createdAt: "2020-01-01T00:00:00Z" } }, candidates: {} } };
+  const seeded = [];
+  seedWikiCandidates(wiki, seeded, { since: Date.parse("2025-01-01") });
+  const forB = Object.keys(wiki.people.candidates).filter((k) => k.startsWith("candidate_seed_b_"));
+  wiki.people.candidates[forB[0]].status = "rejected";   // 미오는 사용자가 검토함
+  for (const k of Object.keys(wiki.people.candidates)) if (k.startsWith("candidate_seed_a_")) delete wiki.people.candidates[k];   // 하연 후보는 저장 경합으로 사라짐
+  const again = seedWikiCandidates(wiki, seeded, { since: Date.parse("2025-01-01") });
+  assert.deepEqual(again, ["a"], "하연만 다시");
+  assert.ok(Object.keys(wiki.people.candidates).some((k) => k.startsWith("candidate_seed_a_")));
+  assert.ok(!Object.keys(wiki.people.candidates).some((k) => k.startsWith("candidate_seed_c_")), "옵션 켜기 전 인물은 그대로");
+  assert.deepEqual(seedWikiCandidates(wiki, seeded, { since: Date.parse("2025-01-01") }), [], "있으면 다시 안 넣음");
+});
+
 test("Erosync 무작위 월경: 처음 볼 때 성별을 모르면 미뤄 두었다가 성별이 정해지면 켠다(남성이면 안 켬)", async () => {
   const store = new Map(), api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } } };
   const edits = [], er = { profile: async (op, id, patch) => { edits.push([op, id, patch]); return {}; } };
