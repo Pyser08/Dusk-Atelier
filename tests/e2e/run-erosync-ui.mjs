@@ -65,25 +65,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // ── 인물 위키: 리안
   await page.evaluate(() => { const m = __app.ctx.state.memory ?? null; });
   await page.evaluate(() => __app.ctx.go("relmap")); await page.waitForTimeout(900);
-  // 관계도: 버튼이 보이고, 누르면 Erosync 층만(리안·카엘)
-  const eroBtn = page.locator(".rb-rm-ctrls button", { hasText: "Erosync 목표·경쟁만 보기" });
-  ok(`[${tag}] 관계도에 Erosync 버튼`, (await eroBtn.count()) === 1);
-  const before = await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button").count();
-  await eroBtn.click(); await page.waitForTimeout(500);
-  const after = await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button").count();
-  ok(`[${tag}] Erosync만 보기: 인물이 ${before}명 → ${after}명(리안·카엘 포함, 줄어듦)`, before >= 6 && after >= 2 && after < before, `${before} → ${after}`);
-  ok(`[${tag}] 눌린 상태(aria-pressed)`, (await eroBtn.getAttribute("aria-pressed")) === "true");
-  ok(`[${tag}] 범례가 목표·경쟁으로`, /목표/.test(await page.locator(".rb-rm-legend").textContent()) && /경쟁/.test(await page.locator(".rb-rm-legend").textContent()));
-  await page.screenshot({ path: `/tmp/ero-relmap-${tag}.png` });
-  await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button", { hasText: "리안" }).click(); await page.waitForTimeout(300);
-  ok(`[${tag}] Erosync 층에서 인물을 눌러도 화면이 깨지지 않는다(해당 없는 {{user}} 선 건너뜀)`, (await page.locator(".rb-rm-panel h2", { hasText: "리안" }).count()) === 1);
-  await eroBtn.click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 다시 누르면 전체로 복귀`, (await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button").count()) >= before);
-  // Erosync 화면의 ‘관계망’ 탭에서 넘어오면(eroOnOpen) Erosync 층이 자동으로 켜진다
-  await page.evaluate(() => { (__app.ctx.state.relmap ??= {}).eroOnOpen = true; __app.ctx.go("memory"); }); await page.waitForTimeout(500);
-  await page.evaluate(() => __app.ctx.go("relmap")); await page.waitForTimeout(900);
-  ok(`[${tag}] 관계망 탭에서 넘어오면 Erosync 층이 자동으로 켜짐`, (await page.locator(".rb-rm-ctrls button", { hasText: "Erosync 목표·경쟁만 보기" }).getAttribute("aria-pressed")) === "true");
-  await page.locator(".rb-rm-ctrls button", { hasText: "Erosync 목표·경쟁만 보기" }).click(); await page.waitForTimeout(300);
+  // 2.2.9: Erosync 사용 중단 — 관계도의 Erosync 목표·경쟁 층은 뺐다(버튼이 없어야 함)
+  ok(`[${tag}] 관계도에 Erosync 층 버튼이 없다(사용 중단)`, (await page.locator(".rb-rm-ctrls button", { hasText: "Erosync" }).count()) === 0);
   // 위키로(기억 > 인물 상세, 시험 데이터의 시로코)
   await page.locator(".rb-rm-panel .rb-rm-list").last().locator("button", { hasText: "시로코" }).first().click(); await page.waitForTimeout(200);
   await page.locator(".rb-rm-panel .rb-btn.primary").click(); await page.waitForTimeout(1500);
@@ -121,9 +104,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 지금 상태: 노리는 목표·단계·다음 수`, (await page.locator("#rb-nsfw-status li[data-k=goal]").count()) === 1 && /몸 붙이기|가까이/.test(await page.locator("#rb-nsfw-status").textContent()) && /방으로 이끈다/.test(await page.locator("#rb-nsfw-status").textContent()));
   ok(`[${tag}] 관계 온도 그래프(선 3개)`, (await page.locator(".rb-nsfw-temp svg polyline").count()) === 3);
   await page.locator("#rb-nsfw-edit").click(); await page.waitForTimeout(300);
-  ok(`[${tag}] 고치기 창에 성적 수치·8축·체위 칸`, (await page.locator("#rb-nsfw-editor input[data-k=sexualOpenness]").count()) === 1 && (await page.locator("#rb-nsfw-editor input[data-k=initiative]").count()) === 1 && /기승위/.test(await page.locator("#rb-nsfw-editor textarea[data-k=like-position]").inputValue()) && /샤워실/.test(await page.locator("#rb-nsfw-editor textarea[data-k=like-place]").inputValue()));
-  await page.locator("#rb-nsfw-editor input[data-k=initiative]").fill("90"); await page.locator("#rb-nsfw-editor textarea[data-k=like-position]").fill("기승위, 후배위"); await page.locator("#rb-nsfw-editor textarea[data-k=like-play]").fill("눈 가리기"); await page.locator("#rb-nsfw-editor-save").click(); await page.waitForTimeout(500);
-  ok(`[${tag}] 좋아하는 것이 체위·장소·플레이로 나뉨`, (await page.locator('[data-group="like-position"]').count()) === 1 && (await page.locator('[data-group="like-place"]').count()) === 1 && (await page.locator('[data-group="like-play"]').count()) === 1 && /눈 가리기/.test(await page.locator('[data-group="like-play"]').textContent()));
+  ok(`[${tag}] 고치기 창에 성적 수치·8축·체위 칸`, (await page.locator("#rb-nsfw-editor input[data-k=sexualOpenness]").count()) === 1 && (await page.locator("#rb-nsfw-editor input[data-k=initiative]").count()) === 1 && /기승위/.test(await page.locator("#rb-nsfw-editor textarea[data-k=like-act]").inputValue()) && /샤워실/.test(await page.locator("#rb-nsfw-editor textarea[data-k=like-place]").inputValue()));
+  await page.locator("#rb-nsfw-editor input[data-k=initiative]").fill("90"); await page.locator("#rb-nsfw-editor textarea[data-k=like-act]").fill("기승위, 후배위, 눈 가리기"); await page.locator("#rb-nsfw-editor-save").click(); await page.waitForTimeout(500);
+  ok(`[${tag}] 좋아하는 것이 체위/플레이·장소 두 묶음`, (await page.locator('[data-group="like-act"]').count()) === 1 && (await page.locator('[data-group="like-place"]').count()) === 1 && (await page.locator('[data-group="like-position"], [data-group="like-play"]').count()) === 0 && /기승위/.test(await page.locator('[data-group="like-act"]').textContent()) && /눈 가리기/.test(await page.locator('[data-group="like-act"]').textContent()) && /체위\/플레이/.test(await page.locator('[data-group="like-act"]').textContent()));
   ok(`[${tag}] 성적 욕망·이상성향 카드: 두 묶음·항목·우상단 다시 뽑기·직접 추가`, (await page.locator('#rb-nsfw-cands [data-axis="sexual_desire"] .rb-ac-item').count()) === 2 && (await page.locator('#rb-nsfw-cands [data-axis="paraphilia"] .rb-ac-item').count()) === 1 && (await page.locator(".rb-ac-card .rb-wk2-ch #rb-adult-reroll").count()) === 1 && (await page.locator(".rb-ac-card .rb-wk2-ch #rb-ac-add-btn").count()) === 1);
   ok(`[${tag}] 거부 단추 없음, 검토 대기 항목엔 반영 단추`, (await page.locator("#rb-nsfw-cands button", { hasText: "거부" }).count()) === 0 && (await page.locator('#rb-nsfw-cands [data-status="review"] button', { hasText: "반영" }).count()) === 1);
   ok(`[${tag}] 성인 프로필 게이지가 ‘성적 수치’·‘성향’ 두 묶음`, (await page.locator("#rb-nsfw-gauges .rb-ng.sex").count()) === 4 && (await page.locator("#rb-nsfw-gauges .rb-ng.ax").count()) >= 1);

@@ -72,8 +72,9 @@ test("읽기 연결부: 채팅을 못 읽는 환경에서도 던지지 않고 �
 test("Dusk 연결: 기본 제공자가 host.runAI(Dusk AI 호출)로 간다", () => {
   const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.match(src, /providerId === 'risu' && typeof host\.runAI === 'function'/);
-  const main = fs.readFileSync(new URL("../addons/erosync/index.js", import.meta.url), "utf8");   // 2.0.0: Erosync는 애드온에서 만든다
-  assert.match(main, /host: \{ runAI:/);
+  // 2.2.9: Erosync 애드온은 사용 중단 — 엔진을 켜지 않는다(장기기억 쪽 장면 연출과 겹치지 않게)
+  const main = fs.readFileSync(new URL("../addons/erosync/index.js", import.meta.url), "utf8");
+  assert.ok(!/createErosync|bootErosync|ext\.add\("svc", "erosync"/.test(main), "사용 중단판은 엔진을 만들지 않음");
 });
 test("Dusk 연결부(실제 엔진): 동작 설정·지시문·집착 방지·주기 플래그", async () => {
   const { api } = fakeApi();
@@ -122,8 +123,7 @@ test("Dusk 이야기 시간: 켜져 있으면 주기 시계가 응답 상태 줄
   const src = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.ok(src.includes("function duskStoryAbsolute(state)") && src.includes("host.storyStatus(") && src.includes("fromDusk: true"));
   assert.ok(src.includes("(time.fromDusk === true || supported(time.evidence))"));
-  const main = fs.readFileSync(new URL("../addons/erosync/index.js", import.meta.url), "utf8");
-  assert.ok(/storyStatus: \(text, prevDate\) => \(app\.storyTime\?\.isOn\?\.\(\)/.test(main));
+  // 2.2.9: 애드온은 사용 중단(엔진 연결 없음) — 엔진 쪽 연결부만 남는다
 });
 
 test("집착 방지 상태(state.duskGuard)가 저장 때 정리 과정에서 떨어지지 않는다(턴을 넘어 연속 횟수·쉬는 턴이 이어져야 함)", () => {
@@ -249,4 +249,14 @@ test("여러 명 출발값(seedMany): 축 2명씩·프로필 묶음 1번·한글
   await assert.rejects(() => e.profiles.seedMany([{ name: "가" }]), /채팅/);
   assert.deepEqual(await e.profiles.seedMany([]), { ok: false, reason: "이름이 없어요", results: [] });
   await e.dispose();
+});
+
+test("Erosync 사용 중단판 애드온: 켜도 엔진·요청 훅 없이 안내만 한 번", async () => {
+  const { activate } = await import("../addons/erosync/index.js");
+  const store = new Map(), toasts = [];
+  const api = { pluginStorage: { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, v); } }, addRisuReplacer: () => { throw new Error("훅을 걸면 안 됨"); } };
+  const ctx = { toast: (t) => toasts.push(t), ext: { add: () => { throw new Error("서비스를 걸면 안 됨"); } }, app: {} };
+  const h = await activate(api, ctx); await activate(api, ctx);
+  assert.equal(toasts.length, 1, "안내는 한 번만"); assert.match(toasts[0], /장기기억/);
+  await h.deactivate();
 });

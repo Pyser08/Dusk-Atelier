@@ -102,3 +102,22 @@ test("RP 주입: 위키의 성적 욕망·이상성향 글도 같은 줄에(짧�
   const t = nsfwSection(f, "민지가 웃었다");
   assert.match(t, /성적 욕망: 위에서 주도하는 걸 좋아한다/); assert.match(t, /이상성향: 노출/); assert.doesNotMatch(t, /추정/);
 });
+
+test("플레이 이름은 흔히 쓰는 말로: 펠라티오→펠라치오, 엉덩이 때리기→스팽킹 등(이미 저장된 표현도 화면에서 바로잡힘)", async () => {
+  const { cleanPosLabel, posKind } = await import("../src/engine/nsfwprofile.js");
+  const cases = [["펠라티오", "펠라치오"], ["펠라치오", "펠라치오"], ["Fellatio", "펠라치오"], ["엉덩이 때리기", "스팽킹"], ["엉덩이 찰싹 때리기", "스팽킹"], ["spanking", "스팽킹"],
+    ["손가락", "핑거링"], ["손가락 애무", "핑거링"], ["더러운 말", "더티 토크"], ["질내 사정", "질내사정"], ["정면(미션어리)", "정상위"], ["손가락 빨기", "손가락 빨기"], ["목 애무", "목 애무"]];
+  for (const [a, b] of cases) assert.equal(cleanPosLabel(a), b, a);
+  for (const t of ["펠라치오", "스팽킹", "핑거링", "더티 토크", "질내사정"]) assert.equal(posKind("", t), "play", t);
+  const src = (await import("node:fs")).readFileSync(new URL("../src/engine/nsfwprofile.js", import.meta.url), "utf8");
+  assert.ok(src.includes("펠라치오, 손가락") === false && src.includes("펠라치오") && src.includes("스팽킹") && !src.includes("펠라티오, "), "지시문 예시도 흔히 쓰는 말");
+});
+
+test("체위·플레이는 한 묶음(체위/플레이), 장소는 따로 — 저장된 갈래는 그대로", async () => {
+  const { POS_GROUPS, posGroup } = await import("../src/engine/nsfwprofile.js");
+  assert.deepEqual(POS_GROUPS.map((g) => [g.id, g.label, g.kinds]), [["act", "체위/플레이", ["position", "play"]], ["place", "장소", ["place"]]]);
+  assert.equal(posGroup("position"), "act"); assert.equal(posGroup("play"), "act"); assert.equal(posGroup("place"), "place");
+  const fs = await import("node:fs");
+  const ui = fs.readFileSync(new URL("../src/ui/screens/memory/nsfwcard.js", import.meta.url), "utf8");
+  assert.ok(ui.includes("POS_GROUPS") && !ui.includes('["position", "place", "play"]'), "카드·고치기 창 모두 두 묶음");
+});

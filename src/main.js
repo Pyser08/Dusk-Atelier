@@ -245,9 +245,7 @@ async function start() {
   const duskOpen = app.open;
   app.open = async (o) => { await wh()?.yieldToDusk?.().catch(() => {}); app.ctx.addons?.checkSoon?.().catch?.(() => {}); return duskOpen(o); };   // 창을 열 때 애드온 업데이트도 확인(10분 넘었으면)
   app.ctx.onClosed = () => wh()?.resume?.();   // Dusk 창을 닫으면 떠 있던 위젯 홈을 다시 띄운다
-  // Erosync는 애드온(addons/erosync, 2.0.0). 기억 화면들은 ctx.erosync가 없으면 Erosync 칸을 숨긴다.
-  Object.defineProperty(app.ctx, "erosync", { configurable: true, get: () => app.ctx.ext.get("svc", "erosync") ?? null });
-  Object.defineProperty(app.ctx, "erosyncTurn", { configurable: true, get: () => app.ctx.ext.get("svc", "erosyncTurn") ?? null });   // 매 턴 계산(2.2.0)
+  // 2.2.9: Erosync는 사용 중단(장기기억 애드온의 성인 프로필·장면 연출로 옮김) — ctx.erosync 연결과 자동 받기를 뺐다. 저장 값(erosync_*)은 그대로 남는다.
   // 애드온(2.0.0): 받아 둔 애드온을 같은 창에서 불러온다. 리스 플러그인 목록에는 안 뜬다.
   globalThis.__duskLib = ADDON_LIB; globalThis.__duskVersion = VERSION;   // 애드온이 코어 모듈을 다시 넣지 않고 함께 쓴다(tools/build-addons.mjs)
   // 훅 있는 애드온(장기기억·Erosync) 업데이트를 받아 두면 새로고침을 부탁한다: 리스 화면 알림 → 못 띄우면 Dusk 창 안 알림
@@ -269,7 +267,7 @@ async function start() {
   };
   const addons = createAddons(api, { core: VERSION, onPendingRestart: askRefresh, onNewAddons: newAddons, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
   app.ctx.addons = addons;
-  // 2.0.0으로 올라온 기존 사용자: 쓰던 기능(장기기억·기억카드·Erosync·위젯)의 애드온을 자동으로 받아 그대로 쓰게 한다.
+  // 2.0.0으로 올라온 기존 사용자: 쓰던 기능(장기기억·기억카드·위젯)의 애드온을 자동으로 받아 그대로 쓰게 한다.
   const rawOf = async (k) => { try { const v = await api.pluginStorage.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };
   const on = (v) => v === true || v === "on" || v === "true";
   const ADOPT = [
@@ -277,7 +275,6 @@ async function start() {
     ["manage", async () => !!(await rawOf("rbm:ui:v1"))],
     ["memory", async () => !!((await rawOf("dusk.mem.v3.index")) || (await rawOf("dusk.mem.v2.index")) || (await rawOf("risupot.settings")))],
     ["cards", async () => { const v = await rawOf("dusk.mem.v2.cardidx"); try { return (typeof v === "string" ? JSON.parse(v) : v)?.list?.length > 0; } catch { return false; } }],
-    ["erosync", async () => on(await rawOf("dusk.erosync.on"))],
     ["widgets", async () => on(await rawOf("dusk.widgethome.on"))],
     // 프로바이더(실험): 실험 기능을 켜 두고 프로필을 만들어 둔 사람
     ["provider", async () => { try { const ui = JSON.parse((await rawOf("rbm:ui:v1")) || "{}"); return ui.experimental === true && !!(await rawOf("dusk.prov.v1")); } catch { return false; } }],

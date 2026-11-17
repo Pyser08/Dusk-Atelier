@@ -13,6 +13,9 @@ const list = (v, n = 6, len = 80) => (Array.isArray(v) ? v : []).map((x) => text
 
 // 체위·장소 이름 다듬기: 괄호 속 두 번째 이름·영어 음역을 흔히 쓰는 한국어로(“정면(미션어리)” → “정상위”)
 const POS_KO = [[/리버스\s*카우걸|reverse\s*cowgirl|역\s*기승위/i, "역기승위"], [/미션어리|미셔너리|missionary|정면\s*체위|^정면$/i, "정상위"], [/카우걸|cowgirl|여성\s*상위/i, "기승위"], [/도기\s*스타일|도기|doggy|from\s*behind|뒤에서/i, "후배위"],
+  // addon-rebuild: 플레이도 흔히 쓰는 말로(펠라티오·엉덩이 때리기처럼 어색한 직역 → 펠라치오·스팽킹). 이미 저장된 표현도 화면에서 이 표로 바로잡힌다
+  [/펠라[티치]오|fellatio|blow\s*job/i, "펠라치오"], [/엉덩이\s*(?:를\s*)?(?:찰싹\s*)?(?:때리기|때림|치기|찰싹)|spank/i, "스팽킹"], [/^손가락(?:\s*(?:애무|삽입|넣기))?$|fingering/i, "핑거링"],
+  [/더러운\s*말|음담패설|dirty\s*talk/i, "더티 토크"], [/질\s*내\s*사정|creampie/i, "질내사정"],
   [/스푸닝|spooning/i, "옆으로 누워서(스푼)"], [/식스티나인|69/i, "69"], [/스탠딩|standing/i, "선 채로"], [/샤워\s*룸|shower/i, "샤워실"], [/카섹스|in\s*a\s*car/i, "차 안"]];
 export function cleanPosLabel(label) {
   let t = String(label ?? "").replace(/\s+/g, " ").trim();
@@ -24,6 +27,9 @@ export function cleanPosLabel(label) {
 // 항목 갈래: 체위(position)·장소(place)·플레이(play). 모델이 안 주면 이름으로 짐작한다
 export const POS_MAX = 30;
 export const POS_KIND_LABEL = Object.freeze({ position: "체위", place: "장소", play: "플레이" });
+// addon-rebuild: 화면 묶음 — 체위와 플레이는 '체위/플레이' 하나로, 장소는 따로. 저장된 갈래(kind)는 그대로 둔다(이전 데이터 그대로 읽힘)
+export const POS_GROUPS = Object.freeze([{ id: "act", label: "체위/플레이", kinds: ["position", "play"] }, { id: "place", label: "장소", kinds: ["place"] }]);
+export const posGroup = (kind) => (kind === "place" ? "place" : "act");
 export function posKind(k, label = "") {
   const t = String(k ?? "").toLowerCase();
   if (/^pos|체위|자세/.test(t)) return "position"; if (/^pla(ce)?$|^loc|장소/.test(t)) return "place"; if (/^play|^act|플레이|행위/.test(t)) return "play";
@@ -82,7 +88,7 @@ export const NSFW_RULES = [
   "sexual: four 0-100 integers — eroticInterest (how often and how strongly they want sex), sexualSpontaneity (how little time, commitment and conditions they need before sex), sexualOpenness (how open they are about kinds of sex and talking about it), sexualMomentum (how hard they keep going once started).",
   "axes: eight 0-100 integers for general behaviour — initiative (starts things), spontaneity (acts on the mood), directness (says what they mean), goalPersistence (keeps chasing a goal), obsessiveness (fixates on one person or thing), publicOpenness (shows it in front of others), retaliation (pays back what was done), extremity (how far the means escalate).",
   "pref: the percentage of sexual attraction to women (f), men (m) and others (x), summing to 100, inferred from the data when not stated.",
-  "positions: 8 to 12 preferred and 4 to 6 disliked items in total, spread over three kinds — kind position (sex positions: 정상위, 후배위, 기승위, 역기승위, 69, 선 채로, 옆으로 누워서, 무릎 꿇고, 들어 올려서…), kind place (where to have sex: 침대, 샤워실, 욕조, 차 안, 교실, 사무실, 소파, 창가, 야외, 호텔…) and kind play (concrete acts and touches: 목 애무, 귓불 깨물기, 가슴 애무, 커닐링구스, 펠라티오, 손가락, 엉덩이 때리기, 눈 가리기, 손목 묶기, 더러운 말, 거울 앞, 질내 사정…). Give at least 3 preferred of each kind. Each must follow from this character's personality, sexual desire and paraphilia; the paraphilia must show up in the play items. Write each label as the plain Korean term Koreans actually use, one term only: no English, no transliteration of English (not 미션어리), no parentheses or second name. Never an emotional condition or value such as mutual respect.",
+  "positions: 8 to 12 preferred and 4 to 6 disliked items in total, spread over three kinds — kind position (sex positions: 정상위, 후배위, 기승위, 역기승위, 69, 선 채로, 옆으로 누워서, 무릎 꿇고, 들어 올려서…), kind place (where to have sex: 침대, 샤워실, 욕조, 차 안, 교실, 사무실, 소파, 창가, 야외, 호텔…) and kind play (concrete acts and touches: 목 애무, 귓불 깨물기, 가슴 애무, 커닐링구스, 펠라치오, 핑거링, 스팽킹, 눈 가리기, 손목 묶기, 더티 토크, 거울 앞, 질내사정…). Give at least 3 preferred of each kind. Each must follow from this character's personality, sexual desire and paraphilia; the paraphilia must show up in the play items. Write each label as the one term Korean adult readers actually use: a native Korean word when that is what people say (정상위, not 미션어리), an established loanword when that is the common term (펠라치오, 스팽킹, 핑거링, 더티 토크), never English letters, never a literal translation nobody uses (not 엉덩이 때리기 for spanking), no parentheses or second name. Never an emotional condition or value such as mutual respect.",
   "seduction and humor: how they seduce and how they joke about sex — frequency and directness 0-100, styles as short phrases, situations as short phrases.",
   "Write labels, reasons, styles and situations in Korean, in blunt plain sexual words without euphemism or literary softening. Keep the enum values (preferred, neutral, disliked) in English.",
 ].join(" ");

@@ -85,8 +85,9 @@ test("연결: 기록기 알림·엔진 연결부·애드온 붙이기", () => {
   const eng = fs.readFileSync(new URL("../src/erosync/erosync.js", import.meta.url), "utf8");
   assert.ok(eng.includes("async function duskTurnUpdate") && eng.includes("turn: duskTurnUpdate"));
   assert.ok(eng.includes("buildTurnSystem({ keys, axisDefs: AXIS_DEFINITIONS, sexDefs: SEX_AXIS_DEFINITIONS"), "원본 축 정의를 그대로 쓴다");
+  // 2.2.9: Erosync 애드온은 사용 중단 — 매 턴 계산을 붙이지 않는다
   const addon = fs.readFileSync(new URL("../addons/erosync/index.js", import.meta.url), "utf8");
-  assert.ok(addon.includes("turn.attach(app.memory?.flow)"));
+  assert.ok(!addon.includes("turn.attach("));
 });
 
 test("실제 엔진: 채팅이 없으면 매 턴 계산은 이유를 알리고 던지지 않는다(연결부 경로)", async () => {

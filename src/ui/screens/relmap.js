@@ -11,9 +11,6 @@ import { buildRelMap, STATUS_LABEL, relmapTurns, folderAt } from "../../engine/r
 import { ensureMemAddonCss } from "./memory/memaddoncss.js";
 import { mem } from "./memory/common.js";
 import { createRelMapCanvas } from "./relmap/canvas.js";
-import { eroLoad } from "./memory/erosyncwiki.js";
-import { eroRelmapData } from "../../engine/erosyncview.js";
-import { nameIndex } from "../../engine/identity.js";
 
 const sigOf = (m) => `${m.nowAt}|${m.nodes.map((n) => `${n.id}:${n.aff}:${n.imp}:${n.records}`).join(",")}|${m.edges.map((e) => `${e.id}:${e.w}:${e.items.length}`).join(",")}`;
 const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 가까이 (이성적 감정 관계도에서는 나에게 끌릴수록)"], ["오른쪽 단추", "호감도 ↔ 이성적 감정 관계도 바꾸기"], ["아래 막대", "끌어서 지난 응답 시점의 관계도 보기"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 파랗게"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
@@ -34,7 +31,6 @@ export async function renderRelMap(ctx) {
   // 같은 채팅이면 만든 화면을 그대로 붙이고, 뒤에서 새 데이터만 확인
   if (st.view?.key === key) {
     replace(ctx.main, st.view.root); st.view.ctrl.start(); st.view.ctrl.resize();
-    if (st.eroOnOpen) { st.eroOnOpen = false; st.view.ero?.(); }
     M.store.getFolder(cur.chaId, cur.chatId).catch(() => null).then((f) => { const v = st.view; if (v?.key === key && ctx.state.tab === "relmap") v.update(buildRelMap(f), f); });
     return;
   }
@@ -55,7 +51,6 @@ export async function renderRelMap(ctx) {
   st.view = buildView(ctx, win, cur, key, data, uname, folder);
   replace(ctx.main, st.view.root);
   st.view.ctrl.start();
-  if (st.eroOnOpen) { st.eroOnOpen = false; st.view.ero?.(); }
 }
 
 function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
@@ -100,26 +95,15 @@ function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
   const clearBtn = chip("선택 해제", { onClick: () => choose(null) }); clearBtn.hidden = true;
   const turnBtn = chip("이번 턴 등장 강조", { pressed: true, onClick: () => { hl = !hl; ctrl.setHighlight(hl); syncBtns(); } });
   let spin = true, hl = true;
-  // Erosync 목표·경쟁만 보기(Erosync가 켜져 있을 때만 버튼이 보인다). 같은 화면에서 Erosync 층만 남긴다.
-  let eroOn = false, eroSnap = null, aliasIdx = null;
-  ctx.memory.store.getFolder(cur.chaId, cur.chatId).then((f) => { aliasIdx = nameIndex(f, (n) => String(n ?? "").trim().toLowerCase().replace(/\s+/g, "")); }).catch(() => {});   // 2.2.2: Erosync 인물을 장기 기억 이름·별칭으로 찾는다
+  // addon-rebuild: Erosync 목표·경쟁 층은 Erosync 사용 중단(장기기억 성인 프로필로 옮김)과 함께 뺐다
   const legendDefault = [...legendEl.childNodes];
   const roLegend = [h("span", null, h("i", { style: "border-color:#ff4f9a" }), "애인 · 끌림"), h("span", null, h("i", { style: "border-color:#ff4f9a;border-top-style:dashed" }), "짝사랑 · 한쪽만"), h("span", null, h("i", { style: "border-color:var(--rb-blue);border-top-style:dashed" }), "연적 · 💔 전 애인"), h("span", null, "가까울수록 나에게 끌림 · 선을 누르면 연표")];
-  const eroLegend = [h("span", null, h("i", { style: "border-color:var(--rb-rose)" }), "목표 (노리는 쪽 → 대상)"), h("span", null, h("i", { style: "border-color:var(--rb-blue);border-top-style:dashed" }), "경쟁"), h("span", null, "굵기 = 우선도·세기")];
-  const applyEro = (o = {}) => {
-    const mapped = eroOn ? eroRelmapData(data0, eroSnap, aliasIdx) : data0;
+  const applyData = (o = {}) => {
+    const mapped = data0;
     ctrl.setData(mapped, o); buildFilters(); curSel = null; ctrl.select(null);
-    legendEl.replaceChildren(...(eroOn ? eroLegend : mode === "romance" ? roLegend : legendDefault));
+    legendEl.replaceChildren(...(mode === "romance" ? roLegend : legendDefault));
     syncBtns(); paint();
   };
-  const eroBtn = ctx.erosync?.isRunning?.() ? chip("Erosync 목표·경쟁만 보기", { onClick: async () => {
-    if (eroOn) { eroOn = false; applyEro(); return; }
-    eroSnap = await eroLoad(ctx);
-    const probe = eroSnap ? eroRelmapData(data0, eroSnap, aliasIdx) : null;
-    if (!probe || probe.empty) { toast(eroSnap ? `Erosync 목표·경쟁이 없거나, 위키에 없는 인물이에요${probe?.missing ? ` (${probe.missing}명)` : ""}.` : "Erosync 값을 읽지 못했어요. 이 채팅에서 한 턴 이상 진행했는지 확인해 주세요."); return; }
-    eroOn = true; applyEro();
-    if (probe.missing) toast(`위키에 없는 인물 ${probe.missing}명은 빠졌어요.`);
-  } }) : null;
   // 2.2.6 관계도 두 가지(호감도 · 이성적 감정)와 지난 턴 보기. 아래 막대를 끌어 응답 시점을 고르고, ? 아래 단추로 관계도를 바꾼다.
   let fullFolder = folder0, atTurn = null, mode = ctx.state.relmap?.mode === "romance" ? "romance" : "affinity";
   const turnsOf = () => relmapTurns(fullFolder);
@@ -136,7 +120,7 @@ function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
     atTurn = next;
     data0 = build();
     root.classList.toggle("rb-rm-past", atTurn != null);
-    eroOn = false; applyEro({ animate: "soft" }); syncTurn();   // 턴 이동은 부드럽게만
+    applyData({ animate: "soft" }); syncTurn();   // 턴 이동은 부드럽게만
     if (data0.empty) toast("그 시점엔 그릴 인물이 없어요.");
   }
   function syncTurn() {
@@ -155,19 +139,18 @@ function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
     root.classList.toggle("rb-rm-romance", k === "romance");
     stage.classList.remove("rb-rm-swap"); void stage.offsetWidth; stage.classList.add("rb-rm-swap");
     data0 = build(); sig = sigOf(data0);
-    eroOn = false; applyEro({ animate: true });
+    applyData({ animate: true });
     if (data0.empty || (k === "romance" && !data0.nodes.some((n) => n.aff > 0) && !data0.edges.length)) toast("아직 이성적 감정이 기록된 인물이 없어요.");
   }
   stage.append(modeBox, turnBar);
   root.classList.toggle("rb-rm-romance", mode === "romance");
   if (mode === "romance") { data0 = build(); ctrl.setData(data0); legendEl.replaceChildren(...roLegend); }
-  ctrlsEl.append(flatBtn, ...(spinBtn ? [spinBtn] : []), clearBtn, turnBtn, ...(eroBtn ? [eroBtn] : []));
+  ctrlsEl.append(flatBtn, ...(spinBtn ? [spinBtn] : []), clearBtn, turnBtn);
   syncTurn();
   function syncBtns() {
     flatBtn.firstChild.textContent = ctrl.flat ? "입체로 보기" : "정면으로 보기";
     flatBtn.setAttribute("aria-pressed", "false");
     turnBtn.setAttribute("aria-pressed", hl ? "true" : "false");
-    if (typeof eroBtn !== "undefined" && eroBtn) eroBtn.setAttribute("aria-pressed", eroOn ? "true" : "false");
     if (spinBtn) { spinBtn.setAttribute("aria-pressed", spin ? "true" : "false"); spinBtn.disabled = ctrl.flat; spinBtn.style.opacity = ctrl.flat ? 0.45 : 1; }
   }
   syncBtns();
@@ -299,7 +282,6 @@ function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
     if (mode !== "affinity" && fullFolder) next = buildRelMap(fullFolder, { mode });
     if (next.empty || sigOf(next) === sig) return;
     sig = sigOf(next); data0 = next;
-    if (eroOn) { applyEro(); return; }
     const keep = curSel?.type === "node" ? curSel.id : "";
     ctrl.setData(next); buildFilters();
     curSel = keep && ctrl.nodeById(keep) ? { type: "node", id: keep } : null;
@@ -307,7 +289,5 @@ function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
   }
   void data0;
   const dispose = () => { nameWatch?.disconnect?.(); ctrl.destroy(); clearTimeout(toastT); win.document.removeEventListener("pointerdown", onDoc); win.document.removeEventListener("keydown", onKey, true); };
-  // Erosync 화면의 ‘관계망’ 탭에서 넘어왔을 때: 자동으로 Erosync 층 켜기
-  const ero = () => { if (!eroOn && eroBtn) eroBtn.click(); };
-  return { key, root, ctrl, update, dispose, ero };
+  return { key, root, ctrl, update, dispose };
 }
