@@ -302,10 +302,10 @@ export const MEM_ADDON_CSS = `.e-attraction{background:#ff6fae}.e-possess{backgr
 .rb-wk2-ibox .rb-wk2-ero-row{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:14px;background:var(--rb-surf2);margin-top:6px}
 .rb-wk2-ibox .rb-wk2-ero-row>small:first-child{font-weight:700;color:var(--rb-sub)}
 .rb-wk2-ibox .rb-wk2-ero-row.k-like{background:color-mix(in srgb,#3fcfa6 10%,var(--rb-surf2))}.rb-wk2-ibox .rb-wk2-ero-row.k-like>small:first-child::before{content:"♥ ";color:#1fa985}
-.rb-wk2-ibox .rb-wk2-ero-row.k-like .rb-wk2-chip{background:color-mix(in srgb,#3fcfa6 20%,transparent);color:#137a60;border:1px solid color-mix(in srgb,#3fcfa6 40%,transparent)}
+.rb-wk2-ibox .rb-wk2-ero-row.k-like .rb-wk2-chip{background:color-mix(in srgb,#3fcfa6 16%,transparent);color:color-mix(in srgb,#3fcfa6 35%,var(--rb-text));border:1px solid color-mix(in srgb,#3fcfa6 45%,transparent)}
 .rb-wk2-ibox .rb-wk2-ero-row.k-hate{background:color-mix(in srgb,#ef5350 8%,var(--rb-surf2))}.rb-wk2-ibox .rb-wk2-ero-row.k-hate>small:first-child::before{content:"✕ ";color:#d43a37}
-.rb-wk2-ibox .rb-wk2-ero-row.k-hate .rb-wk2-chip{background:color-mix(in srgb,#ef5350 14%,transparent);color:#a8302d;border:1px solid color-mix(in srgb,#ef5350 35%,transparent);text-decoration:line-through;text-decoration-color:color-mix(in srgb,#ef5350 50%,transparent)}
-.rb-wk2-ibox .rb-wk2-ero-row.k-mid .rb-wk2-chip{background:color-mix(in srgb,#b77bf5 16%,transparent);color:#7a3fc0}
+.rb-wk2-ibox .rb-wk2-ero-row.k-hate .rb-wk2-chip{background:color-mix(in srgb,#ef5350 14%,transparent);color:color-mix(in srgb,#ef5350 35%,var(--rb-text));border:1px solid color-mix(in srgb,#ef5350 45%,transparent)}
+.rb-wk2-ibox .rb-wk2-ero-row.k-mid .rb-wk2-chip{background:color-mix(in srgb,#b77bf5 16%,transparent);color:color-mix(in srgb,#b77bf5 35%,var(--rb-text))}
 .rb-wk2-ibox #rb-ero-toward{background:linear-gradient(135deg,color-mix(in srgb,#ff4fa3 10%,var(--rb-surf2)),var(--rb-surf2))}
 .rb-ero-pref{display:flex;flex-direction:column;gap:6px;margin-top:8px}.rb-ero-pref .bar{display:flex;height:12px;border-radius:7px;overflow:hidden;gap:2px;background:var(--rb-surf2)}
 .rb-ero-pref .bar i{display:block;height:100%;transform-origin:left;animation:rbGxGrow .8s both}.rb-ero-pref i.f{background:linear-gradient(90deg,#ffb3d6,#ff6fae)}.rb-ero-pref i.m{background:linear-gradient(90deg,#8fb2ff,#5b86f0)}.rb-ero-pref i.x{background:#b9bccb}
