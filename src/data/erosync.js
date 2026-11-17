@@ -216,6 +216,7 @@ export function createErosync(api, { log = () => {}, boot = null, load = loadEro
         if (op === "seed") return typeof P.seed === "function" ? await P.seed(args[0]) : { ok: false, reason: "이 버전에서는 인물별 출발값을 만들 수 없어요" };   // 인물 1명 출발값
         if (op === "estimate") return typeof P.estimate === "function" ? await P.estimate() : { ok: false, reason: "규모를 미리 볼 수 없어요" };   // 전체 분석 규모
         if (op === "korean") return typeof P.korean === "function" ? await P.korean(args[0]) : { ok: false, reason: "이 버전에서는 한국어 보기를 만들 수 없어요" };   // 화면 글 한국어
+        if (op === "seedMany") return typeof P.seedMany === "function" ? await P.seedMany(args[0]) : { ok: false, reason: "이 버전에서는 여러 명을 한 번에 만들 수 없어요" };   // 여러 명 출발값(호출 묶음)
         if (op === "cancel") return { ok: true, ...P.cancel() };
         if (op === "turn") return typeof P.turn === "function" ? await P.turn(args[0]) : { ok: false, reason: "이 버전에서는 매 턴 계산을 할 수 없어요" };   // 매 턴 계산(변화분 1번)
         if (op === "lore") return typeof P.lore === "function" ? await P.lore() : { ok: false, reason: "이 버전에서는 인물을 골라 분석할 수 없어요" };   // 인물 골라서 분석: 고를 수 있는 로어북 항목

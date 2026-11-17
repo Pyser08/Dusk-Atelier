@@ -52,9 +52,9 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
     const chat = btn("대화 속 인물로 만들기", { id: "rb-erosync-analyze-chat", disabled: !live, onClick: async () => {
       const list = await chatPeopleList(ctx).catch(() => []);
       if (!list.length) { chatStatus.textContent = "이 채팅 장기기억의 인물은 모두 Erosync 값이 있어요."; return; }
-      if (!(await confirmDialog(ctx.win, { title: `${list.length}명 출발값을 만들까요?`, body: `${list.map((p) => p.name).join(", ")} — 한 명씩 분석해요(인물당 AI 호출 3~4번). 카드·로어북에 없는 인물은 장기기억 기록으로 분석해요.`, ok: "만들기" }))) return;
+      if (!(await confirmDialog(ctx.win, { title: `${list.length}명 출발값을 만들까요?`, body: `${list.map((p) => p.name).join(", ")} — 여러 명을 묶어 분석해요(4명에 AI 호출 약 6~7번). 카드·로어북에 없는 인물은 장기기억 기록으로 분석해요.`, ok: "만들기" }))) return;
       chat.disabled = true;
-      const res = await seedAllChatPeople(ctx, { list, onProgress: ({ index, total, name }) => { chatStatus.textContent = `${index + 1} / ${total} · ${name} 만드는 중…`; } });
+      const res = await seedAllChatPeople(ctx, { list, onProgress: ({ index, total, name }) => { chatStatus.textContent = `${index + 1}~ / ${total} · ${name} 만드는 중…`; } });
       chat.disabled = false;
       const bad = res.filter((r) => !r.ok);
       chatStatus.textContent = `${res.length - bad.length}명 만들었어요${bad.length ? ` · 실패 ${bad.map((r) => r.name).join(", ")}` : ""}. 인물 위키 NSFW 탭에서 볼 수 있어요.`;

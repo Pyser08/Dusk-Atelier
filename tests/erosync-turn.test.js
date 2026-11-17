@@ -198,6 +198,22 @@ test("대화 속 인물로 만들기: 기억에 있고 Erosync 프로필이 없�
   assert.deepEqual(list.map((p) => p.name), ["주설지", "지하연"]);
   assert.equal(list[0].memory, "게임 좋아함\n밤새 게임"); assert.equal(list[1].memory, "웃음");
   const calls = [];
-  const res = await seedAllChatPeople({ erosync: { profile: async (op, p) => { calls.push([op, p.name]); return { ok: true, analyzed: p.name === "주설지" }; } } }, { list });
+  const res = await seedAllChatPeople({ erosync: { profile: async (op, p) => { if (op === "seedMany") return { ok: false }; calls.push([op, p.name]); return { ok: true, analyzed: p.name === "주설지" }; } } }, { list });
   assert.deepEqual(calls, [["seed", "주설지"], ["seed", "지하연"]]); assert.equal(res[0].analyzed, true);
+});
+
+test("출발값 만들기는 여러 명을 한 번에(seedMany) 부른다 — 엔진에 없으면 한 명씩", async () => {
+  const { api } = fakeApi(), calls = [];
+  const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [] }),
+    profile: async (op, arg) => { calls.push([op, arg]); if (op === "seedMany") return { ok: true, results: arg.map((p) => ({ name: p.name, ok: true, analyzed: true })) }; return { ok: true, changed: [], unmatched: [] }; } };
+  const t = createErosyncTurn(api, { erosync: er });
+  await t.onTurn({ key: "m1", rp: "턴", people: ["가", "나", "다"].map((name) => ({ name, memory: name + " 기록" })) });
+  for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(calls.filter(([op]) => op === "seedMany").map(([, a]) => a.map((p) => p.name)), [["가", "나", "다"]]);
+  assert.equal(calls.filter(([op]) => op === "seed").length, 0);
+  assert.equal((await t.autoHistory())[0].results.every((r) => r.analyzed), true);
+  const { seedAllChatPeople } = await import("../src/data/erosyncseedall.js");
+  const c2 = [];
+  await seedAllChatPeople({ erosync: { profile: async (op, a) => { c2.push(op); if (op === "seedMany") return { ok: false, reason: "이 버전에서는" }; return { ok: true }; } } }, { list: [{ name: "가" }, { name: "나" }] });
+  assert.deepEqual(c2, ["seedMany", "seed", "seed"], "seedMany를 못 쓰면 한 명씩");
 });

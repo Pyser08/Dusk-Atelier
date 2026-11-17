@@ -234,3 +234,19 @@ test("카드·로어북에 없는 대화 속 인물은 장기기억 기록을 1�
   const eng = engineSrc();
   assert.ok(eng.includes("const memo = duskMemorySource(profile);") && eng.includes("!duskMemorySource(target)"), "다시 분석·출발값 만들기 모두 이 자료로");
 });
+
+test("여러 명 출발값(seedMany): 축 2명씩·프로필 묶음 1번·한글 묶음·화면 글 한글 전체 1번, 그 사이 바뀐 값은 안 덮음", async () => {
+  const eng = engineSrc();
+  const i = eng.indexOf("async function duskProfileSeedMany("), body = eng.slice(i, eng.indexOf("\n  async function duskKoFillMany(", i));
+  assert.ok(i > 0 && body.includes("for (const chunk of axisCallChunks(candidates))"), "축 채점은 2명씩");
+  assert.equal((body.match(/promptProfileSystem\(\)/g) || []).length, 1, "프로필 작성은 묶음당 1번");
+  assert.ok(body.includes("scoreSexualAxesForGroup({ group: scored") && body.includes("axisKoreanForBatch(scored, entries"));
+  assert.ok(body.includes("await duskKoFillMany(analyzedIds)"), "화면 글 한글은 전체 한 번");
+  assert.ok(body.includes("JSON.stringify(root) !== g.baseline"), "그 사이 바뀐 인물은 덮지 않음");
+  assert.ok(body.includes("analysisRuntime.running || profileCompilePromises.size"), "다른 분석 중이면 안 함");
+  assert.ok(eng.includes("seedMany: duskProfileSeedMany"));
+  const { api } = fakeApi(); const e = await bootErosync(api);
+  await assert.rejects(() => e.profiles.seedMany([{ name: "가" }]), /채팅/);
+  assert.deepEqual(await e.profiles.seedMany([]), { ok: false, reason: "이름이 없어요", results: [] });
+  await e.dispose();
+});

@@ -12,6 +12,20 @@ export function normalizeTurnSettings(v) {
   return { on: s.on === undefined ? TURN_DEFAULT.on : s.on === true, groups: [...new Set(groups)], autoStart: s.autoStart === undefined ? TURN_DEFAULT.autoStart : s.autoStart === true };
 }
 
+// addon-rebuild: 여러 명을 엔진 한 번(seedMany, 호출 묶음)으로. 엔진에 없거나 못 쓰면 한 명씩(seed).
+export async function seedBatch(erosync, list) {
+  try {
+    const r = await erosync.profile("seedMany", list);
+    if (r?.ok && Array.isArray(r.results)) return list.map((p) => { const x = r.results.find((y) => String(y?.name ?? "").trim().toLowerCase() === p.name.trim().toLowerCase()); return { name: p.name, ok: !!x?.ok, analyzed: !!x?.analyzed, reason: x?.reason || (x ? "" : "결과 없음") }; });
+  } catch { /* 한 명씩으로 */ }
+  const out = [];
+  for (const p of list) {
+    try { const r = await erosync.profile("seed", p); out.push({ name: p.name, ok: !!r?.ok, analyzed: !!r?.analyzed, reason: r?.reason || "" }); }
+    catch (e) { out.push({ name: p.name, ok: false, reason: String(e?.message ?? e) }); }
+  }
+  return out;
+}
+
 export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Date.now() }) {
   const read = async (k) => { try { const v = await api.pluginStorage.getItem(k); return typeof v === "string" ? JSON.parse(v) : v ?? null; } catch { return null; } };
   const write = (k, v) => api.pluginStorage.setItem(k, JSON.stringify(v));
@@ -36,11 +50,7 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
     for (const p of todo) sc.done[keyOf(p.name)] = now();
     st[scope] = sc; await write(AUTO_KEY, st);
     seedQueue = seedQueue.then(async () => {
-      const results = [];
-      for (const p of todo) {
-        try { const r = await erosync.profile("seed", { name: p.name, aliases: p.aliases ?? [], memory: p.memory ?? "" }); results.push({ name: p.name, ok: !!r?.ok, analyzed: !!r?.analyzed, reason: r?.reason || "" }); }
-        catch (e) { results.push({ name: p.name, ok: false, reason: String(e?.message ?? e) }); }
-      }
+      const results = await seedBatch(erosync, todo.map((p) => ({ name: p.name, aliases: p.aliases ?? [], memory: p.memory ?? "" })));
       // 실패한 이름은 완료 표시를 풀어 다음에 다시 시도한다(채팅 상태가 아직 없을 때 등). 성공(임시값 포함)만 완료로 남는다.
       const failed = results.filter((r) => !r.ok).map((r) => keyOf(r.name));
       // 같은 이름이 SEED_RETRY번 실패하면 더 시도하지 않는다(계속 실패하는 호출이 쌓이지 않게)

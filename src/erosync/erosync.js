@@ -16344,9 +16344,138 @@ export async function bootErosync(api, hostArg) {
 
   // addon-rebuild: 장기기억이 알려 준 인물 1명만 출발값 만들기. 전체 인물 찾기(카드·로어·모듈 전체)는 부르지 않는다.
   // 프로필이 없으면 이 채팅 소속 인물로 만들고(빠진 축은 임시값), 자료에 이름이 나오면 그 인물만 1인 분석(축→성적 축→프로필)을 돌린다.
-  async function duskProfileSeed({ name = '', aliases = [], memory = '' } = {}) {
+  // addon-rebuild: 여러 명 출발값을 한 번에(호출 줄이기). 1인 분석과 같은 지시문·정리·저장을 쓰되 묶어서 부른다:
+  // 축 채점 2명씩(출력 한도, 전체 분석과 같음) · 성적 축 2명씩 · 프로필 작성 묶음(최대 SEED_GROUP명)당 1번 · 축 답 한글 묶음 · 화면 글 한글 전체 1번.
+  // 예: 4명 → 축 2 + 성적 2 + 프로필 1 + 한글 1(+화면 0~1) ≈ 6~7번(한 명씩이면 16~20번). 자료가 없는 인물은 임시값으로 둔다.
+  const SEED_GROUP = 4;
+  async function duskProfileSeedMany(people = []) {
+    const list = (Array.isArray(people) ? people : []).filter(p => truncate(String(p?.name || ''), 160).trim()).slice(0, 12);
+    if (!list.length) return { ok: false, reason: '이름이 없어요', results: [] };
+    const ensured = [];
+    for (const p of list) { const r = await duskEnsureProfile(p); if (r?.id && !ensured.some(x => x.id === r.id)) ensured.push({ ...r, name: p.name }); }
+    const results = new Map(ensured.map(x => [x.id, { name: x.name, id: x.id, ok: true, analyzed: false, reason: '' }]));
+    const finish = () => ({ ok: true, results: [...results.values()] });
+    if (analysisRuntime.running || profileCompilePromises.size || verificationPromises.size || activeAutoProfileRefresh) {
+      for (const r of results.values()) { r.ok = false; r.reason = 'busy'; }
+      return finish();
+    }
+    const { context } = await duskProfileCtx('');
+    const character = await R.getCharacter();
+    const live = character ? await resolveScope(character) : null;
+    if (!live || live.scopeKey !== context.scope.scopeKey || !context.isLiveScope) return finish();
+    const scope = { ...context.scope, variantKey: String(context.scope.variantKey || 'default') };
+    const config = normalizeConfig(context.config);
+    const fence = { ...captureBackgroundFence(scope), enforceLifecycleEpoch: true };
+    const guard = createRequestGuard(providerTaskBudgetMs(config, 'profile') * (4 + ensured.length * 3) + 30000, 'dusk seed many');
+    updateAnalysisRuntime({ running: true, cancelRequested: false, phase: 'profiles', detail: `출발값 만들기 준비 · ${ensured.map(x => x.name).join(', ')}`, completed: 0, total: ensured.length, failed: 0, startedAt: Date.now(), finishedAt: 0, errors: [] });
+    const check = (label) => { assertBackgroundFence(fence, label); if (analysisRuntime.cancelRequested) throw analysisCancelledError(); guard.throwIfAborted(label); };
+    let done = 0;
+    try {
+      const inventory = await collectSourceInventory(character, live, { force: true, maxSourceChars: config.analysisMaxSourceChars, requestGuard: guard });
+      const store = await loadProfileStore();
+      const selection = normalizeRosterDiscovery((await getBotOverride(scope.sourceBundleKey)).rosterDiscovery);
+      const items = [];
+      for (const x of ensured) {
+        const root = store.profiles?.[x.id];
+        if (!root || root.analysisStatus === 'ready') continue;
+        let profile, input;
+        try { profile = singleReanalysisTarget(store, x.id, scope); input = singleReanalysisSource(profile, store, inventory, scope, selection, config); }
+        catch (error) { results.get(x.id).reason = 'no_sources'; continue; }
+        items.push({ candidate: { id: x.id, name: profile.name, aliases: profile.aliases || [] }, profile, input, baseline: JSON.stringify(root) });
+      }
+      for (let gi = 0; gi < items.length; gi += SEED_GROUP) {
+        check('dusk seed many group');
+        const group = items.slice(gi, gi + SEED_GROUP), candidates = group.map(g => g.candidate);
+        const each = Math.floor(config.analysisProfileBatchChars / Math.max(1, group.reduce((n, g) => n + (g.input.sourceParts?.length || 1), 0)));
+        const sourceText = group.map(g => candidateSourceExcerpt(g.input, each)).join('\n\n');
+        const targetList = group.map(g => ({ id: g.candidate.id, name: g.profile.name, aliases: g.profile.aliases || [], identityEvidence: g.input.evidence || [], isMain: g.profile.isMain === true, sourceKinds: g.input.sourceKinds }));
+        const promptHead = [`CURRENT MAIN CHARACTER: ${scope.identity?.name || ''}`, `ACTIVE PROFILE VARIANT: ${scope.variantLabel || scope.variantKey} (${scope.variantKey})`,
+          `ALL DISCOVERED CHARACTER IDS: ${targetList.map(t => `${t.id}=${t.name}`).join(', ')}`, ''];
+        const body = ['TARGET CHARACTERS:', JSON.stringify(targetList, null, 2), '', 'BOUNDED SOURCE EXCERPTS:', sourceText];
+        updateAnalysisRuntime({ detail: `축 채점 · ${candidates.map(c => c.name).join(', ')}` });
+        const entries = new Map();
+        for (const chunk of axisCallChunks(candidates)) {
+          const ids = new Set(chunk.map(c => c.id));
+          const raw = await runJsonTask(promptAxisSystem(), truncate([...promptHead, 'TARGET CHARACTERS:', JSON.stringify(targetList.filter(t => ids.has(t.id)), null, 2), '', 'BOUNDED SOURCE EXCERPTS:', sourceText].join('\n'), config.analysisProfileBatchChars + 8000),
+            config, 'profile', 'dusk seed axes', { requestGuard: guard, webSearch: true });
+          check('dusk seed axes');
+          for (const [c, entry] of axisScoringEntries(raw, chunk)) entries.set(c, entry);
+        }
+        const scored = candidates.filter(c => { const e = entries.get(c); return e && !e.skip && e.complete; });
+        for (const c of candidates) if (!scored.includes(c)) { const r = results.get(c.id); r.ok = false; r.reason = entries.get(c)?.skip ? '인물이 아닌 출처' : '축 채점 결과가 다 오지 않음'; }
+        if (!scored.length) continue;
+        updateAnalysisRuntime({ detail: `성적 축 채점 · ${scored.map(c => c.name).join(', ')}` });
+        await scoreSexualAxesForGroup({ group: scored, targetList, promptHead, sourceText, entries, config, requestGuard: guard, label: 'dusk seed sexual', fence });
+        check('dusk seed sexual');
+        updateAnalysisRuntime({ detail: `프로필 작성 · ${scored.map(c => c.name).join(', ')}` });
+        const axisBlock = axisAnswersBlock(scored, entries);
+        const raw = await runJsonTask(promptProfileSystem(), truncate([...promptHead, axisBlock, '', ...body].join('\n'), config.analysisProfileBatchChars + 8000 + axisBlock.length + 2),
+          config, 'profile', 'dusk seed profile', { requestGuard: guard, webSearch: true });
+        check('dusk seed profile');
+        try { await axisKoreanForBatch(scored, entries, config, guard, fence); } catch (error) { if (isStaleLifecycleError(error)) throw error; warn('dusk seed korean skipped:', error?.message || error); }
+        const returned = Array.isArray(raw?.characters) ? raw.characters : [];
+        const finiteScore = n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 100;
+        for (const c of scored) {
+          const g = group.find(x => x.candidate === c), value = returned.filter(item => item?.id === c.id).length === 1 ? returned.find(item => item?.id === c.id) : null;
+          const confidence = value?.profileConfidence?.overall ?? value?.confidence;
+          if (!value || !isPlainObject(value.eroticProfile) || !finiteScore(confidence)) { const r = results.get(c.id); r.ok = false; r.reason = '프로필 응답 형식이 맞지 않음'; continue; }
+          const axisEntry = entries.get(c);
+          await mutateProfileRegistry('dusk seed many', fresh => {
+            const root = fresh.profiles?.[c.id];
+            if (!root || JSON.stringify(root) !== g.baseline) return false;   // 그 사이 바뀌었으면(사용자 수정 등) 덮지 않는다
+            const current = singleReanalysisTarget(fresh, c.id, scope);
+            const written = withoutAxisFields(value.eroticProfile);
+            const mergedBase = { ...current.baseProfile, ...written };
+            for (const field of ['genderIdentity', 'eroticInterest', 'sexualHumor', 'flirting', 'seduction']) if (isPlainObject(written[field])) mergedBase[field] = { ...current.baseProfile[field], ...written[field] };
+            Object.assign(mergedBase, axisEntry.fields);
+            if (!axisEntry.fields.axisAnswers) delete mergedBase.axisAnswers;
+            const normalized = normalizeProfileRecord({ ...value, id: c.id, name: current.name, eroticProfile: mergedBase, confidence }, inventory.sourceHash, current.category);
+            normalized.baseProfile.targetGenderPreference = resolveAnalyzedTargetGenderPreference(value.eroticProfile.targetGenderPreference, current.baseProfile);
+            const patch = { baseProfile: normalized.baseProfile, profileConfidence: normalized.profileConfidence, analysisStatus: normalized.profileConfidence.overall < 40 ? 'low_evidence' : 'ready',
+              evidence: ['temporary_mob', 'persistent_mob'].includes(current.category) ? (current.evidence || []) : normalized.evidence, sourceHash: inventory.sourceHash, sourceDocumentIds: g.input.sourceDocumentIds, updatedAt: normalized.updatedAt };
+            if (root.variants?.[scope.variantKey]) Object.assign(root.variants[scope.variantKey], safeClone(patch));
+            if (!Object.keys(root.variants || {}).length || String(root.activeVariantKey || 'default') === scope.variantKey) Object.assign(root, patch, { confidence: normalized.profileConfidence.overall });
+            return true;
+          }, { fence, writeRegistry: false }).then(t => { const r = results.get(c.id); if (t.outcome) { r.analyzed = true; done += 1; } else { r.ok = false; r.reason = '그 사이 값이 바뀜'; } });
+        }
+        updateAnalysisRuntime({ completed: done });
+      }
+      invalidateAllPreparedDecisionState('dusk seed many');
+      invalidateUiInventory(scope.sourceBundleKey);
+      duskReadCache = null;
+      const analyzedIds = [...results.values()].filter(r => r.analyzed).map(r => r.id);
+      if (analyzedIds.length) { try { await duskKoFillMany(analyzedIds); } catch (error) { if (isStaleLifecycleError(error)) throw error; warn('dusk seed display korean skipped:', error?.message || error); } }
+      updateAnalysisRuntime({ running: false, phase: 'complete', detail: `출발값 만들기 ${done}명 완료`, completed: done, finishedAt: Date.now() });
+      return finish();
+    } catch (error) {
+      updateAnalysisRuntime({ running: false, phase: 'error', detail: `출발값 만들기 실패: ${String(error?.message || error)}`, finishedAt: Date.now() });
+      for (const r of results.values()) if (!r.analyzed && !r.reason) { r.ok = false; r.reason = String(error?.message || error); }
+      if (isStaleLifecycleError(error)) throw error;
+      return finish();
+    } finally { guard.dispose(); }
+  }
+  // 화면 글 한글을 여러 명 한 번에(호출 1번). 사람마다 옮길 글을 모아 하나로 보내고 각자 duskKo에 나눠 저장한다.
+  async function duskKoFillMany(ids) {
+    const { context } = await duskProfileCtx('');
+    const roots = ids.map(id => context.profiles?.profiles?.[id]).filter(Boolean);
+    const ask = new Map();
+    for (const root of roots) { const v = uiProfileViewOf(root, context, null); if (v.sfw || v.nonPerson) continue; for (const t of koStrings(v.effective, root.duskKo || {})) ask.set(t, [...(ask.get(t) || []), root.id]); }
+    const asked = [...ask.keys()].slice(0, 80);
+    if (!asked.length) return 0;
+    const raw = await runJsonTask(KO_SYSTEM, `PHRASES:\n${JSON.stringify(asked)}`, normalizeConfig(context.config), 'profile', 'dusk display korean');
+    const add = koParse(raw, asked);
+    if (!Object.keys(add).length) return 0;
+    await mutateProfileRegistry('dusk display korean many', (profiles) => {
+      for (const [src, ko] of Object.entries(add)) for (const id of ask.get(src) || []) { const p = profiles.profiles?.[id]; if (p) p.duskKo = koMerge(p.duskKo, { [src]: ko }); }
+    }, { writeRegistry: false });
+    duskReadCache = null;
+    return Object.keys(add).length;
+  }
+
+  // addon-rebuild: 이름으로 이 채팅 인물을 찾고, 없으면 임시 인물(persistent_mob)로 만든다. 임시 인물은 최신 장기기억 기록을 evidence로 남긴다.
+  async function duskEnsureProfile({ name = '', aliases = [], memory = '' } = {}) {
     const nm = truncate(String(name || ''), 160).trim();
-    if (!nm) return { ok: false, reason: '이름이 없어요' };
+    if (!nm) return null;
     const { context } = await duskProfileCtx('');
     const found = matchProfile({ name: nm, aliases }, contextProfiles(context));
     let id = found?.id || '';
@@ -16375,6 +16504,12 @@ export async function bootErosync(api, hostArg) {
       await mutateProfileRegistry('dusk profile seed memory', (profiles) => { const p = profiles.profiles?.[id]; if (p) p.evidence = [truncate(memory, 1200)]; }, { writeRegistry: false });
       duskReadCache = null;
     }
+    return { id, found };
+  }
+
+  async function duskProfileSeed({ name = '', aliases = [], memory = '' } = {}) {
+    if (!truncate(String(name || ''), 160).trim()) return { ok: false, reason: '이름이 없어요' };
+    const { id, found } = await duskEnsureProfile({ name, aliases, memory });
     // 자료에 이름이 나오면 1인 분석. 근거가 없거나 다른 분석 중이면 임시값으로 두고 매 턴 계산이 이어서 움직인다.
     try {
       const fresh = await duskProfileCtx('');
@@ -16611,7 +16746,7 @@ export async function bootErosync(api, hostArg) {
     content: { get: duskContentGet, set: duskContentSet, global: duskContentGlobal },
     config: { get: duskConfigGet, set: duskConfigSet },
     behind: { list: duskBehindList, remove: duskBehindRemove },
-    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, seed: duskProfileSeed, estimate: duskFullEstimate, korean: duskKoFill, koPending: duskKoPending, lore: duskLoreList, turn: duskTurnUpdate, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
+    profiles: { get: duskProfileGet, edit: duskProfileEdit, reset: duskProfileReset, status: duskAnalysisStatus, start: duskAnalysisStart, seed: duskProfileSeed, seedMany: duskProfileSeedMany, estimate: duskFullEstimate, korean: duskKoFill, koPending: duskKoPending, lore: duskLoreList, turn: duskTurnUpdate, cancel: () => { requestAnalysisCancel(); return duskAnalysisStatus(); } },
     prompts: { get: duskPromptsGet, set: duskPromptSet },
     guard: { set: duskGuardSet },
     tags: { set: duskTagsSet },

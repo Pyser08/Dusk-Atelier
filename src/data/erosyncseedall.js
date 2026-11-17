@@ -1,5 +1,6 @@
 // addon-rebuild '대화 속 인물로 만들기': 지금 채팅 장기기억에 있는 인물 중 Erosync 프로필이 없는 인물을 한 명씩 출발값 만들기(엔진 seed).
 // 전체 인물 찾기(카드·로어북·모듈 전체 훑기)와 달리 대화에 실제로 나와 기억된 인물만 대상이다.
+import { seedBatch } from "./erosyncturn.js";
 const nk = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
 const arr = (v) => (Array.isArray(v) ? v : []);
 export function chatPeopleToSeed(folder, snap) {
@@ -18,11 +19,12 @@ export function chatPeopleToSeed(folder, snap) {
 }
 export async function seedAllChatPeople(ctx, { onProgress = () => {}, list = null } = {}) {
   const todo = list ?? await chatPeopleList(ctx);
+  // 4명씩 묶어 엔진 한 번(seedMany) — 묶음 안에서도 축 2명·프로필 4명 단위로 호출을 합친다
   const results = [];
-  for (const [i, p] of todo.entries()) {
-    onProgress({ index: i, total: todo.length, name: p.name });
-    try { const r = await ctx.erosync.profile("seed", p); results.push({ name: p.name, ok: !!r?.ok, analyzed: !!r?.analyzed, reason: r?.reason || "" }); }
-    catch (e) { results.push({ name: p.name, ok: false, reason: String(e?.message ?? e) }); }
+  for (let i = 0; i < todo.length; i += 4) {
+    const part = todo.slice(i, i + 4);
+    onProgress({ index: i, total: todo.length, name: part.map((p) => p.name).join(", ") });
+    results.push(...await seedBatch(ctx.erosync, part));
   }
   return results;
 }
