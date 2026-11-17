@@ -112,3 +112,12 @@ test("플레이 이름은 흔히 쓰는 말로: 펠라티오→펠라치오, 엉
   const src = (await import("node:fs")).readFileSync(new URL("../src/engine/nsfwprofile.js", import.meta.url), "utf8");
   assert.ok(src.includes("펠라치오, 손가락") === false && src.includes("펠라치오") && src.includes("스팽킹") && !src.includes("펠라티오, "), "지시문 예시도 흔히 쓰는 말");
 });
+
+test("체위·플레이는 한 묶음(체위/플레이), 장소는 따로 — 저장된 갈래는 그대로", async () => {
+  const { POS_GROUPS, posGroup } = await import("../src/engine/nsfwprofile.js");
+  assert.deepEqual(POS_GROUPS.map((g) => [g.id, g.label, g.kinds]), [["act", "체위/플레이", ["position", "play"]], ["place", "장소", ["place"]]]);
+  assert.equal(posGroup("position"), "act"); assert.equal(posGroup("play"), "act"); assert.equal(posGroup("place"), "place");
+  const fs = await import("node:fs");
+  const ui = fs.readFileSync(new URL("../src/ui/screens/memory/nsfwcard.js", import.meta.url), "utf8");
+  assert.ok(ui.includes("POS_GROUPS") && !ui.includes('["position", "place", "play"]'), "카드·고치기 창 모두 두 묶음");
+});

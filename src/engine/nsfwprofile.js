@@ -27,6 +27,9 @@ export function cleanPosLabel(label) {
 // 항목 갈래: 체위(position)·장소(place)·플레이(play). 모델이 안 주면 이름으로 짐작한다
 export const POS_MAX = 30;
 export const POS_KIND_LABEL = Object.freeze({ position: "체위", place: "장소", play: "플레이" });
+// addon-rebuild: 화면 묶음 — 체위와 플레이는 '체위/플레이' 하나로, 장소는 따로. 저장된 갈래(kind)는 그대로 둔다(이전 데이터 그대로 읽힘)
+export const POS_GROUPS = Object.freeze([{ id: "act", label: "체위/플레이", kinds: ["position", "play"] }, { id: "place", label: "장소", kinds: ["place"] }]);
+export const posGroup = (kind) => (kind === "place" ? "place" : "act");
 export function posKind(k, label = "") {
   const t = String(k ?? "").toLowerCase();
   if (/^pos|체위|자세/.test(t)) return "position"; if (/^pla(ce)?$|^loc|장소/.test(t)) return "place"; if (/^play|^act|플레이|행위/.test(t)) return "play";

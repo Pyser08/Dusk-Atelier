@@ -7,7 +7,7 @@ import { driveOf, emoTemp, RUNG_LABEL, KIND_LABEL } from "../../../engine/scened
 import { tempPath } from "../../../engine/erosyncview.js";
 import { TEMP_LINES } from "./erosynctempui.js";
 import { bar, eroDetailRows } from "./erosyncwiki.js";
-import { SEX_LABEL, AXIS_LABEL, SEX_KEYS, AXIS_KEYS, normalizeNsfw, normTags, cleanPosLabel, posKind, POS_KIND_LABEL } from "../../../engine/nsfwprofile.js";
+import { SEX_LABEL, AXIS_LABEL, SEX_KEYS, AXIS_KEYS, normalizeNsfw, normTags, cleanPosLabel, posKind, POS_KIND_LABEL, POS_GROUPS, posGroup } from "../../../engine/nsfwprofile.js";
 import { profileText } from "../../../data/profileseed.js";
 import { logEvent, logFailure } from "../../../data/memlog.js";
 
@@ -62,7 +62,8 @@ export function nsfwCard(env, card, doc) {
     h("div", { class: "lg" }, h("span", { class: "f" }, `여성 ${n.pref.f}%`), h("span", { class: "m" }, `남성 ${n.pref.m}%`), h("span", { class: "x" }, `그 외 ${n.pref.x}%`))) : null;
   // 좋아하는·싫어하는 것을 체위·장소·플레이로 나눠 칩으로(값이 없는 갈래는 빼고, 하나도 없으면 빈 줄 안내는 eroDetailRows가 한다)
   const kindOf = (p) => p.kind || posKind("", p.label), chipRow = (title, list, cls, id) => list.length ? h("div", { class: ["rb-wk2-ero-row", cls], "data-group": id }, h("small", { class: "rb-muted" }, title), h("div", { class: "rb-wk2-chips" }, list.map((x) => h("span", { class: "rb-wk2-chip", title: x.reason || "" }, cleanPosLabel(x.label))))) : null;
-  const grouped = ["position", "place", "play"].flatMap((k) => [chipRow(`좋아하는 ${POS_KIND_LABEL[k]}`, n.positions.filter((p) => p.preference === "preferred" && kindOf(p) === k), "k-like", `like-${k}`), chipRow(`싫어하는 ${POS_KIND_LABEL[k]}`, n.positions.filter((p) => p.preference === "disliked" && kindOf(p) === k), "k-hate", `hate-${k}`)]).filter(Boolean);
+  // addon-rebuild: 체위·플레이는 한 묶음(체위/플레이), 장소는 따로
+  const grouped = POS_GROUPS.flatMap((g) => [chipRow(`좋아하는 ${g.label}`, n.positions.filter((p) => p.preference === "preferred" && posGroup(kindOf(p)) === g.id), "k-like", `like-${g.id}`), chipRow(`싫어하는 ${g.label}`, n.positions.filter((p) => p.preference === "disliked" && posGroup(kindOf(p)) === g.id), "k-hate", `hate-${g.id}`)]).filter(Boolean);
   // 유혹 방식 · 성적 농담: 빈도(자주/가끔/드물게)·직설 막대 + 방식 칩 + 주로 나오는 때
   const LV = (v) => !Number.isFinite(v) ? "" : v >= 70 ? "자주" : v >= 40 ? "가끔" : "드물게";
   const styleBox = (title, o, id) => o ? h("div", { class: "rb-ns-box", "data-box": id },
@@ -84,7 +85,7 @@ export function openNsfwEditor(env, doc, n0) {
   const n = n0 ?? normalizeNsfw({ sexual: { eroticInterest: 50 } }, { by: "user" });
   const numIn = (k, v) => h("input", { type: "number", min: 0, max: 100, step: 1, value: Number.isFinite(v) ? v : "", "data-k": k, class: "rb-input", style: "width:72px" });
   const row = (label, el) => h("label", { style: "display:flex;align-items:center;justify-content:space-between;gap:8px" }, h("span", null, label), el);
-  const kindOf = (p) => p.kind || posKind("", p.label), join = (pref, k) => n.positions.filter((p) => p.preference === pref && kindOf(p) === k).map((p) => cleanPosLabel(p.label)).join(", ");
+  const kindOf = (p) => p.kind || posKind("", p.label), join = (pref, g) => n.positions.filter((p) => p.preference === pref && posGroup(kindOf(p)) === g).map((p) => cleanPosLabel(p.label)).join(", ");
   const ta = (k, v, ph) => h("textarea", { class: "rb-input", rows: 2, "data-k": k, placeholder: ph, style: "width:100%" }, v);
   return modal(env.ctx.win, (done) => {
     const box = h("div", { class: "rb-dialog", id: "rb-nsfw-editor", role: "dialog", "aria-modal": "true", "aria-label": "성인 프로필 고치기", style: "width:min(560px,94vw);max-height:86vh;overflow:auto;display:flex;flex-direction:column;gap:10px" },
@@ -92,15 +93,16 @@ export function openNsfwEditor(env, doc, n0) {
       h("b", null, "성적 수치"), ...SEX_KEYS.map((k) => row(SEX_LABEL[k], numIn(k, n.sexual?.[k]))),
       h("b", null, "8가지 성향"), ...AXIS_KEYS.map((k) => row(AXIS_LABEL[k], numIn(k, n.axes?.[k]))),
       h("b", null, "끌리는 상대(%)"), row("여성", numIn("pf", n.pref?.f)), row("남성", numIn("pm", n.pref?.m)), row("그 외", numIn("px", n.pref?.x)),
-      ...["position", "place", "play"].flatMap((k) => [h("b", null, `좋아하는 ${POS_KIND_LABEL[k]} (쉼표로)`), ta(`like-${k}`, join("preferred", k), k === "position" ? "기승위, 후배위" : k === "place" ? "샤워실, 차 안" : "목 애무, 눈 가리기"),
-        h("b", null, `싫어하는 ${POS_KIND_LABEL[k]} (쉼표로)`), ta(`hate-${k}`, join("disliked", k), "")]),
+      ...POS_GROUPS.flatMap((g) => [h("b", null, `좋아하는 ${g.label} (쉼표로)`), ta(`like-${g.id}`, join("preferred", g.id), g.id === "place" ? "샤워실, 차 안" : "기승위, 후배위, 목 애무, 눈 가리기"),
+        h("b", null, `싫어하는 ${g.label} (쉼표로)`), ta(`hate-${g.id}`, join("disliked", g.id), "")]),
       h("b", null, "유혹 방식 (쉼표로)"), ta("sed", (n.seduction?.styles ?? []).join(", "), ""),
       h("b", null, "성적 농담 (쉼표로)"), ta("hum", (n.humor?.styles ?? []).join(", "), ""),
       h("div", { class: "rb-mem-edrow", style: "justify-content:flex-end;gap:6px" }, btn("취소", { onClick: () => done(false) }), btn("저장", { kind: "primary", id: "rb-nsfw-editor-save", onClick: async () => {
         const val = (k) => box.querySelector(`[data-k="${k}"]`)?.value ?? "", num = (k) => { const v = val(k); return v === "" ? undefined : Number(v); };
         const split = (k) => val(k).split(/[,，\n]/).map((x) => x.trim()).filter(Boolean);
         const raw = { sexual: Object.fromEntries(SEX_KEYS.map((k) => [k, num(k)])), axes: Object.fromEntries(AXIS_KEYS.map((k) => [k, num(k)])), pref: { f: num("pf"), m: num("pm"), x: num("px") ?? 0 },
-          positions: ["position", "place", "play"].flatMap((k) => [...split(`like-${k}`).map((label) => ({ label, kind: k, preference: "preferred" })), ...split(`hate-${k}`).map((label) => ({ label, kind: k, preference: "disliked" }))]),
+          // 체위/플레이 칸은 이름으로 체위·플레이를 짐작해 저장(장소 칸은 장소)
+          positions: POS_GROUPS.flatMap((g) => { const kindFor = (label) => (g.id === "place" ? "place" : posKind("", label) === "position" ? "position" : "play"); return [...split(`like-${g.id}`).map((label) => ({ label, kind: kindFor(label), preference: "preferred" })), ...split(`hate-${g.id}`).map((label) => ({ label, kind: kindFor(label), preference: "disliked" }))]; }),
           seduction: { ...(n.seduction ?? {}), styles: split("sed") }, humor: { ...(n.humor ?? {}), styles: split("hum") }, tags: n.tags };
         const next = normalizeNsfw(raw, { by: "user", log: [...(n.log ?? []), { at: new Date().toISOString(), text: "직접 고침" }] });
         if (!next) return env.ctx.toast("값이 하나도 없어요.", { error: true });
