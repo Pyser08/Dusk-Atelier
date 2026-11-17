@@ -58,7 +58,7 @@ export const FEATURES = [
   { t: "에로 위키 (Erosync 인물 값)", k: "에로 위키 erosync 성향 선호 체위 유혹 성적 농담 최근 행동 nsfw 인물 값", path: `${E}`, tab: "memory", mem: ero("manage"), addon: "erosync" },
   // Erosync
   { t: "Erosync 매 턴 계산", k: "nsfw 성향 매턴 턴마다 자동 갱신 계산 변화 장기기억", path: `${E} › 분석·관리 › 매 턴 계산`, tab: "memory", mem: ero("manage"), find: "매 턴 계산", addon: "erosync" },
-  { t: "Erosync 출발값 만들기 (전체 · 골라서)", k: "nsfw 성향 분석 캐릭터 분석 인물 분석 선택 로어북 골라 출발값", path: `${E} › 분석·관리 › 출발값 만들기`, tab: "memory", mem: ero("manage"), find: "출발값 만들기", addon: "erosync" },
+  { t: "Erosync 출발값 만들기 (대화 속 인물 · 전체 · 골라서)", k: "nsfw 성향 분석 캐릭터 분석 인물 분석 선택 로어북 골라 출발값 대화 속 인물 빠진 인물 erosync 항목 없음", path: `${E} › 분석·관리 › 출발값 만들기`, tab: "memory", mem: ero("manage"), find: "출발값 만들기", addon: "erosync" },
   { t: "Erosync 수위 · 집착 방지 · 프리셋", k: "nsfw 수위 상한 극단 집착 obsession 프리셋", path: `${E} › 장면·수위 › 수위`, tab: "memory", mem: ero("scene"), find: "수위", addon: "erosync" },
   { t: "Erosync 동작 (장면 빈도·자율성)", k: "nsfw 빈도 끈기 읽는 범위 마지막 장면 되돌리기", path: `${E} › 장면·수위 › 동작`, tab: "memory", mem: ero("scene"), find: "동작", addon: "erosync" },
   { t: "Erosync 검토 (성향 변화 후보)", k: "후보 반영 검토 성격 변화", path: `${E} › 분석·관리 › 성격 변화 검토`, tab: "memory", mem: ero("manage"), find: "성격 변화 검토", addon: "erosync" },

@@ -135,14 +135,14 @@ test("지난 대화 분석(backfill)에서 온 턴은 자동 출발값 집계에
   assert.equal(calls.filter(([op]) => op === "seed" || op === "start").length, 0);
 });
 
-test("출발값이 하나도 없으면 전체 분석 대신 이번 턴 인물만 seed(최대 3명)", async () => {
+test("출발값이 하나도 없으면 전체 분석 대신 이번 턴에 기록된 인물만 seed(최대 8명)", async () => {
   const { api } = fakeApi(), calls = [];
   const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people: [] }),
     profile: async (op, arg) => { calls.push([op, arg]); return { ok: true, changed: [], unmatched: [] }; } };
   const t = createErosyncTurn(api, { erosync: er });
-  await t.onTurn({ key: "e1", rp: "턴", people: ["가", "나", "다", "라"].map((name) => ({ name })) });
-  await new Promise((r) => setTimeout(r, 0));
-  assert.deepEqual(calls.filter(([op]) => op === "seed").map(([, a]) => a.name), ["가", "나", "다"]);
+  await t.onTurn({ key: "e1", rp: "턴", people: ["가", "나", "다", "라", "마", "바", "사", "아", "자"].map((name) => ({ name })) });
+  for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(calls.filter(([op]) => op === "seed").map(([, a]) => a.name), ["가", "나", "다", "라", "마", "바", "사", "아"]);
   assert.equal(calls.filter(([op]) => op === "start").length, 0);
 });
 
@@ -169,4 +169,35 @@ test("출발값 만들기는 같은 이름이 3번 실패하면 더 시도하지
   const tick = () => new Promise((r) => setTimeout(r, 0));
   for (const k of ["a", "b", "c", "d", "e"]) { await t.onTurn({ key: k, rp: "턴", people: [{ name: "세라", memory: "기록" }] }); await tick(); await tick(); }
   assert.equal(calls.filter(([op]) => op === "seed").length, 3);
+});
+
+test("출발값이 없는 채팅: 그 턴에 기록된 인물을 다 만든다(6명), 앞 묶음이 도는 중에 준비된 이름은 버리지 않고 이어서", async () => {
+  const { api } = fakeApi(), calls = [];
+  let release; const gate = new Promise((r) => { release = r; });
+  let people = [];
+  const er = { on: () => true, isRunning: () => true, read: async () => ({ ok: true, scope: { scopeKey: "s1" }, people }),
+    profile: async (op, arg) => { calls.push([op, arg]); if (op === "seed") { await gate; return { ok: true }; } if (op === "turn") return { ok: true, changed: [], unmatched: ["카즈"] }; return { ok: true }; } };
+  const t = createErosyncTurn(api, { erosync: er });
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  await t.onTurn({ key: "e1", rp: "턴", people: ["가", "나", "다", "라", "마", "바"].map((name) => ({ name })) }); await tick();
+  people = [{ id: "a", name: "가" }];
+  await t.onTurn({ key: "e2", rp: "턴", people: [{ name: "카즈" }] }); await tick();
+  await t.onTurn({ key: "e3", rp: "턴", people: [{ name: "카즈" }] }); await tick();   // 카즈 준비됨 — 앞 묶음은 아직 도는 중
+  release(); for (let i = 0; i < 20; i++) await tick();
+  assert.deepEqual(calls.filter(([op]) => op === "seed").map(([, a]) => a.name), ["가", "나", "다", "라", "마", "바", "카즈"]);
+});
+
+test("대화 속 인물로 만들기: 기억에 있고 Erosync 프로필이 없는 인물만, 기억 요약을 같이 넘김", async () => {
+  const { chatPeopleToSeed, seedAllChatPeople } = await import("../src/data/erosyncseedall.js");
+  const folder = { people: {
+    a: { name: "주설지", digest: "게임 좋아함", records: [{ act: "밤새 게임", orphan: false }] },
+    b: { name: "미오", aliases: ["Mio"], records: [] },
+    c: { name: "{{user}}" }, d: { name: "숨김", ctx: "never" }, e: { name: "지하연", records: [{ act: "인사", orphan: true }, { act: "웃음" }] } } };
+  const snap = { ok: true, people: [{ id: "x", name: "mio" }] };
+  const list = chatPeopleToSeed(folder, snap);
+  assert.deepEqual(list.map((p) => p.name), ["주설지", "지하연"]);
+  assert.equal(list[0].memory, "게임 좋아함\n밤새 게임"); assert.equal(list[1].memory, "웃음");
+  const calls = [];
+  const res = await seedAllChatPeople({ erosync: { profile: async (op, p) => { calls.push([op, p.name]); return { ok: true, analyzed: p.name === "주설지" }; } } }, { list });
+  assert.deepEqual(calls, [["seed", "주설지"], ["seed", "지하연"]]); assert.equal(res[0].analyzed, true);
 });

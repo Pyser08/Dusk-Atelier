@@ -19,23 +19,23 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
   const seen = [];   // 같은 응답 기록(key)은 한 번만
   // addon-rebuild 출발값 자동 만들기: 전체 인물 찾기(카드·로어·모듈 전체)는 자동으로 부르지 않는다. 장기기억이 알려 준 인물만 1명씩 seed.
   // - 처음 보는 이름은 NEW_MIN_TURNS턴 나와야 seed(한 번 스친 엑스트라 제외). 한 번 seed한 이름은 다시 안 함.
-  // - 출발값이 하나도 없는 채팅은 이번 턴 인물만(최대 EMPTY_MAX명).
+  // - 출발값이 하나도 없는 채팅은 이번 턴에 기록된 인물을 모두(최대 EMPTY_MAX명). 예전 3명 제한은 나머지가 두 턴 더 나와야 만들어지는 문제가 있었다.
+  // - 앞 묶음이 분석 중이어도 새로 준비된 이름은 버리지 않고 줄을 세워 이어서 만든다.
   // - 지난 대화 분석(source "backfill")에서 온 턴은 세지 않는다.
   // - 카운터·완료 표시는 pluginStorage(AUTO_KEY)에 저장해 새로고침해도 이어진다. 자동 실행 기록은 AUTO_LOG_KEY.
-  const NEW_MIN_TURNS = 2, EMPTY_MAX = 3, SEED_PER_TURN = 3, SEED_RETRY = 3;
+  const NEW_MIN_TURNS = 2, EMPTY_MAX = 8, SEED_PER_TURN = 3, SEED_RETRY = 3;
   const keyOf = (nm) => String(nm || "").trim().toLowerCase();
-  let seeding = null;
+  let seedQueue = Promise.resolve();   // 출발값 만들기는 한 번에 한 묶음씩(차례로)
 
   async function autoState() { const v = await read(AUTO_KEY); return v && typeof v === "object" ? v : {}; }
   async function autoHistory() { const v = await read(AUTO_LOG_KEY); return Array.isArray(v) ? v : []; }
   async function seedPeople(why, scope, people) {
-    if (seeding) return false;
     const st = await autoState(), sc = st[scope] ?? { counts: {}, done: {} };
-    const todo = people.filter((p) => !sc.done[keyOf(p.name)]).slice(0, SEED_PER_TURN);
+    const todo = people.filter((p, i, a) => !sc.done[keyOf(p.name)] && a.findIndex((x) => keyOf(x.name) === keyOf(p.name)) === i).slice(0, why === "empty" ? EMPTY_MAX : SEED_PER_TURN);
     if (!todo.length) return false;
     for (const p of todo) sc.done[keyOf(p.name)] = now();
     st[scope] = sc; await write(AUTO_KEY, st);
-    seeding = (async () => {
+    seedQueue = seedQueue.then(async () => {
       const results = [];
       for (const p of todo) {
         try { const r = await erosync.profile("seed", { name: p.name, aliases: p.aliases ?? [], memory: p.memory ?? "" }); results.push({ name: p.name, ok: !!r?.ok, analyzed: !!r?.analyzed, reason: r?.reason || "" }); }
@@ -48,7 +48,7 @@ export function createErosyncTurn(api, { erosync, log = () => {}, now = () => Da
       log(`Erosync 출발값 만들기(${why === "empty" ? "출발값 없음" : "새 인물"}): ${results.map((r) => `${r.name}${r.analyzed ? " 분석" : r.ok ? " 임시값" : " 실패"}`).join(", ")}`);
       await write(AUTO_LOG_KEY, [{ at: now(), why, scope, names: todo.map((p) => p.name), results }, ...(await autoHistory())].slice(0, TURN_LOG_MAX));
       return results;
-    })().catch((e) => { log(`Erosync 출발값 만들기 실패 ${e?.message ?? e}`); return null; }).finally(() => { seeding = null; });
+    }).catch((e) => { log(`Erosync 출발값 만들기 실패 ${e?.message ?? e}`); return null; });
     return true;
   }
   async function countNew(scope, names, people) {
