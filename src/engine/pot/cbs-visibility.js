@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/cbs-visibility.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/cbs-visibility.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 // Semantics checked against RisuBard 0.9.12 parser/blockStartMatcher, cbs.ts and chatVar.svelte.ts.
 // This deliberately cannot execute the host parser, mutate state, run functions or reproduce random rolls.

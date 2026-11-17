@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/hypa-reference.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/hypa-reference.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 export const HYPA_REFERENCE_MAX_CHARS=24000,HYPA_REFERENCE_DEFAULT_ITEMS=16,HYPA_REFERENCE_MAX_ITEMS=64;
 export function selectedHypaSource(settings={}){return settings.hypaPlusReferenceEnabled!==false?'hypaplus':settings.hypaReferenceEnabled!==false?'hypa':'off';}

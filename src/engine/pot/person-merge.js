@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/person-merge.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/person-merge.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { normalizeIdentityRedirects } from './identity-links.js';
 import { peopleItemPinned, peoplePatternKey } from './people-pins.js';
 import { PERSONALITY_AXES, peopleCandidateEvidenceId, peopleCandidateId } from './people-profile.js';

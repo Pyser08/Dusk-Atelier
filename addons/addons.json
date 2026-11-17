@@ -58,8 +58,8 @@
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "5212f73dfd63bad085b1c341dc93eacd9dc31939507a2702ebb62260a0900393",
-      "size": 1884154
+      "sha256": "c68ce9c567d94e9125fed9eadf64efeba2be2b6dc02a736597c6a691a8113100",
+      "size": 1948226
     },
     {
       "id": "cards",
@@ -88,8 +88,8 @@
       ],
       "desc": "NSFW 장면 강화 — 인물 성향·목표를 읽어 다음 응답의 장면 계획을 넣어요. 장기기억·관계도 애드온이 필요해요.",
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/erosync.js",
-      "sha256": "945fd6ea17ea7b0cc18d68a8e263a67584c4c8e27101670383581281318cbcdd",
-      "size": 878247
+      "sha256": "8f73ac50683989f4257249200ad21ad48f8a31b9b475d610523618b64282ef17",
+      "size": 907575
     },
     {
       "id": "protlink",

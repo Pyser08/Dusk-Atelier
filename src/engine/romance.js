@@ -7,7 +7,7 @@ import { scaleDelta } from "./gaugemult.js";
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
 const USER = "{{user}}";
 export const EVENT_MAX = 80, AWKWARD_TURNS = 8, REUNION_GAP = 15;
-export const EVENT_LABEL = Object.freeze({ met: "처음 만남", confess: "고백", accept: "사귀기 시작", reject: "고백 거절", breakup: "헤어짐", reunion: "오랜만에 재회", jealous: "질투", rivalry: "연적이 됨", fight: "첫 다툼" });
+export const EVENT_LABEL = Object.freeze({ known: "이미 아는 사이로 시작", met: "처음 만남", confess: "고백", accept: "사귀기 시작", reject: "고백 거절", breakup: "헤어짐", reunion: "오랜만에 재회", jealous: "질투", rivalry: "연적이 됨", fight: "첫 다툼" });
 
 const R = (folder) => (folder.romance ??= { events: [] });
 const tagsOf = (folder, a, b) => folder?.emo?.[key(a) + ">" + key(b)]?.tags ?? {};
@@ -120,7 +120,10 @@ export function applyRomance(folder, emos, loversBefore, anchor = null, now = Da
 // 두 사람의 관계 연표(오래된 것부터, 같은 종류는 처음 것만 — 질투·재회는 모두)
 export function timeline(folder, a, b) {
   const k = pairKey(a, b), seen = new Set(), out = [];
-  for (const kind of ["met", "fight"]) { const f = folder?.romance?.firsts?.[kind]?.[k]; if (f) out.push({ kind, ...f }); }
+  // addon-rebuild: 본문·유저 입력이 ‘이미 아는 사이’라고 밝힌 쌍은 ‘처음 만남’ 대신 ‘이미 아는 사이로 시작’
+  const sk = [key(a), key(b)].sort().join("|"), known = folder?.start?.[sk];
+  for (const kind of ["met", "fight"]) { const f = folder?.romance?.firsts?.[kind]?.[k]; if (f) out.push(kind === "met" && known ? { ...f, kind: "known", note: known.q } : { kind, ...f }); }
+  if (known && !folder?.romance?.firsts?.met?.[k]) out.push({ kind: "known", a, b, at: known.at ?? null, note: known.q });
   for (const e of folder?.romance?.events ?? []) {
     if (pairKey(e.a, e.b) !== k) continue;
     if (!["jealous", "reunion", "confess", "reject"].includes(e.kind)) { if (seen.has(e.kind)) continue; seen.add(e.kind); }
@@ -128,7 +131,7 @@ export function timeline(folder, a, b) {
   }
   return out.sort((x, y) => (x.at ?? -1) - (y.at ?? -1));
 }
-export const eventText = (e) => `${EVENT_LABEL[e.kind] ?? e.kind}${e.kind === "confess" || e.kind === "reject" ? ` (${e.by})` : ""}${e.kind === "jealous" && e.c ? ` · ${e.c} 때문에` : ""}${e.kind === "rivalry" && e.over ? ` · ${e.over}를 두고` : ""}${e.kind === "reunion" && e.gap ? ` · ${e.gap}턴 만에` : ""}`;
+export const eventText = (e) => `${EVENT_LABEL[e.kind] ?? e.kind}${e.kind === "confess" || e.kind === "reject" ? ` (${e.by})` : ""}${e.kind === "jealous" && e.c ? ` · ${e.c} 때문에` : ""}${e.kind === "rivalry" && e.over ? ` · ${e.over}를 두고` : ""}${e.kind === "reunion" && e.gap ? ` · ${e.gap}턴 만에` : ""}${e.kind === "known" && e.note ? ` · “${e.note}”` : ""}`;
 
 // 1) 성적 지향: Erosync에서 옮겨 온 folder.orient[이름키] = { g: "f"|"m"|"x"|"u", pref: {f, m, x} }로, A가 B의 성별에 얼마나 끌리는지에 따라 끌림 상한.
 // 가장 끌리는 성별 대비 15% 미만이면 1, 40% 미만이면 4, 70% 미만이면 7. 모르면 제한 없음(null).

@@ -1,7 +1,7 @@
 // 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 await 하지 않는다.
 import { effectiveTags, talkForPrompt, beliefsForPrompt, riftsForPrompt } from "../engine/memoryhuman.js";
 import { cleanForMemory, splitParts, mergeParts } from "../engine/cleantext.js";
-import { logFailure } from "./memlog.js";
+import { logFailure, logEvent } from "./memlog.js";
 import { extractMessageText, isUserMessage, messageIdentity, messageIdOf, confirmedAiIndex, isChatGenerating as isGenerating, isChatStreaming } from "../engine/chattext.js";
 import { skillBlock } from "../engine/skillhook.js";
 import { appendToMessages } from "../engine/skillcfg.js";
@@ -181,6 +181,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     if (gaugeOut) await gauge.afterAnalyze(chaId, chatId, gaugeOut).catch((e) => log("게이지 후처리 실패", e?.message ?? e));
     await bump(chaId, (b) => { b.fails = 0; b.lastRunAt = Date.now(); b.notified = true; });
     await status({ processed: (idx.status.processed ?? 0) + 1, lastSuccessAt: Date.now(), lastError: "" });
+    logEvent({ area: "장기 기억 기록", title: `‘${character.name}’ 응답 기록`, detail: { 채팅: chat?.name ?? "", "응답 위치": last, 합침: !!session.combined, 게이지: !!gaugeOut } });
     digestIfNeeded(chaId, chatId, modelOf(idx.settings)).catch((e) => log("digest 실패", e?.message ?? e));
     try { await afterAnalyze?.(charIndex, chatIndex); } catch (e) { log("후처리 실패", e?.message ?? e); }
     if (firstTime) notify("이 봇의 장기 기억 자동 기록을 시작했어요 (기억 탭에서 끌 수 있어요)");

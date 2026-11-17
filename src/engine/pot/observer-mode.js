@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/observer-mode.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/observer-mode.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 // It is stored as an ordinary chat-scoped custom prompt (Director + Writer), so no settings format change is needed,
 // the rule text is visible and editable under Prompts > 추가 프롬프트, and older 2.0.0 builds still read the settings.

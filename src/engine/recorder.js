@@ -9,7 +9,8 @@
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
 import { scaleDelta } from "./gaugemult.js";
 import { seedFirst, seedLewd } from "./adultseed.js";
-import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, canonName, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
+import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
+import { canonNameKo as canonName } from "./namekr.js";   // addon-rebuild: 한국 이름 성 한 글자(하연=지하연)까지 맞춤
 import { validate } from "./memoryprompt.js";
 
 // '변화 없음' 판단: 코어 2.0.7의 isNoneReply는 JSON 꼴({"lines":[]})을 모르므로 애드온 쪽에서도 받는다.
@@ -45,6 +46,7 @@ export function parseWriterRun(prompt) {
   const user = man.user_actor ?? {};
   return {
     requestRef: man.request_ref, rp: String(ref.source_catalog["source:rp"].content ?? ""), recent: String(ref.source_catalog["source:recent_context"]?.content ?? ""),
+    user: String(man.source_catalog?.["source:user"]?.content ?? ref.source_catalog?.["source:user"]?.content ?? ""),   // addon-rebuild: 유저 입력(관계 시작 근거로만)
     userNames: [user.title, ...(user.aliases ?? [])].filter((n) => n && user.known !== false && !/^Current user/.test(n)),
     docs, slots, policies: man.metric_policies ?? {}, allowCreate: man.batch_contract?.allow_create !== false,
     batch: { index: man.batch_contract?.index ?? 1, total: man.batch_contract?.total ?? 1 },
@@ -123,6 +125,8 @@ export const DEEP_SLOTS = Object.freeze({
   "openness.context": ["openness", "an established experience or reaction about intimacy and what it means now"],
 });
 const DEEP_BY_KEY = Object.fromEntries(Object.entries(DEEP_SLOTS).map(([slot, [key]]) => [key, slot]));
+// addon-rebuild: 유저 입력이 '이미 오래 알던 사이'를 밝히면 start 줄을 쓰게(인용은 userInput에서 그대로 따와도 된다)
+export const startLine = (run) => run?.user ? ["start|Other|close or friendly|exact quote      ALSO write this when userInput (the player's message) states that this character and Other already knew each other before (years together, family, lovers, old friends, living together); then quote userInput exactly. close = intimate (lovers, family, best friends, years together); friendly = know each other"] : [];
 export function deepMenu(run) {
   const lines = [];
   const deep = Object.entries(DEEP_SLOTS).filter(([slot]) => run.slots.has(slot)).map(([, [key, desc]]) => `${key} = ${desc}`);
@@ -140,24 +144,53 @@ export const CYCLE_STAGE1 = [
   "",
   "",
   "Cycle tracking is on — ALSO write these lines, only for characters who are women and appear in newest:",
+  "women|Name, Name      REQUIRED in every reply, exactly one line: every woman who appears in newest, or women|none when no woman appears",
   "woman|Name      every woman who appears in newest (one line each)",
-  "sex|Name|male partner|used or none      only vaginal intercourse with a man shown in newest; used only when contraception is clearly shown",
-  "pregnant|Name      she learns in newest that she is pregnant",
+  "sex|Name|male partner|used, outside or none      vaginal intercourse with a man in newest, one line per man. Count it also when it is clearly implied (a time skip right after undressing in bed, waking up together after it, narration saying they did it, semen inside her). Not oral, anal or hands only. used = condom, pill, IUD or other contraception clearly shown; outside = he clearly pulled out or finished outside her; none = everything else, including when nothing is said",
+  "period|Name      newest shows her period starting or that she is on her period (bleeding, cramps from her period, pads or tampons)",
+  "pregnant|Name      newest shows she is pregnant and knows it (positive test, a doctor says so, she tells someone)",
+  "loss|Name      newest shows a miscarriage or the end of her pregnancy",
   "birth|Name      she gives birth in newest",
 ].join("\n");
+import { DRIVE_STAGE1, driveFrom } from "./scenedrive.js";
+// addon-rebuild: 채팅별 성인 프로필(체위·장소·성적 수치) 변화 — 성인 항목이 켜졌을 때만 1단계에 줄 두 개를 더 받는다. 대부분의 턴엔 아무 줄도 없다.
+export const NSFW_STAGE1 = [
+  "",
+  "",
+  "Sexual profile tracking is on — ALSO write these lines only when newest clearly shows it (most replies have none):",
+  "taste|Name|like or dislike|position, place or play|its plain Korean name|exact quote      a character newly shows liking or disliking a specific sex position, place to have sex or kind of play",
+  "sexval|Name|eroticInterest, sexualSpontaneity, sexualOpenness or sexualMomentum|+1..+10 or -1..-10|exact quote      a clear change in that sexual trait shown in newest",
+].join("\n");
+export function nsfwFrom(raw, known = []) {
+  const out = [];
+  for (const line0 of String(raw ?? "").split(/\r?\n/)) {
+    const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
+    const name = canonName(String(f[1] ?? "").trim(), known); if (!name || name === "{{user}}") continue;
+    if (tag === "taste" && f[3]) { const k = /^(position|place|play|체위|장소|플레이)$/i.test(f[3]) && f[4] ? f[3] : "", lab = k ? f[4] : f[3], q = k ? f[5] : f[4];   // 예전 줄(갈래 없음)도 읽는다
+      out.push({ kind: "taste", posKind: k, name, preference: /dislike|싫/i.test(f[2] ?? "") ? "disliked" : "preferred", label: lab.slice(0, 60), quote: (q ?? "").slice(0, 160) }); }
+    else if (tag === "sexval" && f[2] && f[3]) out.push({ kind: "sexval", name, key: f[2], delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
 // 원문 → cycle_report 목록 [{name, adult, sex:[{partner, contraception}], known, birth}]
-export function cycleFrom(raw, known = []) {
+// outside(질외 사정)는 실패율을 생각해 다섯 번에 한 번만 피임 안 함으로 넘긴다(주기 계산 모듈은 used/none만 안다)
+export function cycleFrom(raw, known = [], random = Math.random) {
   const m = new Map();
-  const get = (n) => { const name = canonName(String(n ?? "").trim(), known); if (!name || name === "{{user}}") return null; if (!m.has(nk(name))) m.set(nk(name), { name, adult: true, sex: [], known: false, birth: false }); return m.get(nk(name)); };
+  const get = (n) => { const name = canonName(String(n ?? "").trim(), known); if (!name || name === "{{user}}") return null; if (!m.has(nk(name))) m.set(nk(name), { name, adult: true, sex: [], known: false, birth: false, period: false, loss: false }); return m.get(nk(name)); };
   let text = String(raw ?? "");
   try { const t = text.replace(/```[a-z]*/gi, "").trim(); if (/^[[{]/.test(t)) { const o = JSON.parse(t); const acc = []; const walk = (v) => { if (typeof v === "string") acc.push(...v.split(/\r?\n/)); else if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === "object") Object.values(v).forEach(walk); }; walk(o); text = acc.join("\n"); } } catch { /* 줄로 읽기 */ }
   for (const line0 of text.split(/\r?\n/)) {
     const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim());
     const tag = (f[0] ?? "").toLowerCase();
     if (tag === "woman") get(f[1]);
-    else if (tag === "sex" && f[2]) { const w = get(f[1]); if (w && w.sex.length < 4) w.sex.push({ partner: f[2].slice(0, 60), contraception: /^used$/i.test(f[3] ?? "") ? "used" : "none" }); }
+    else if (tag === "women") { for (const n of String(f[1] ?? "").split(/[,，、·]/).map((x) => x.trim())) if (n && !/^(none|없음|no one|nobody)$/i.test(n)) get(n); }
+    else if (tag === "sex" && f[2]) { const w = get(f[1]); if (w && w.sex.length < 4) { const c = String(f[3] ?? "").toLowerCase(); w.sex.push({ partner: f[2].slice(0, 60), contraception: /^used/.test(c) ? "used" : /^outside|pull/.test(c) ? (random() < 0.2 ? "none" : "used") : "none" }); } }
     else if (tag === "pregnant") { const w = get(f[1]); if (w) w.known = true; }
     else if (tag === "birth") { const w = get(f[1]); if (w) w.birth = true; }
+    else if (tag === "period") { const w = get(f[1]); if (w) w.period = true; }
+    else if (tag === "loss") { const w = get(f[1]); if (w) w.loss = true; }
   }
   return [...m.values()];
 }
@@ -167,21 +200,24 @@ export const GROUP_MAX = 3;   // 2.1.4: 한 번에 묻는 인물 수
 const names = (chunk) => chunk.map((t) => t.name).join("·");
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
 // cast(name, aliases) → bool: 로어북에 있는 인물만 새로 만들기(설정 '로어북에 있는 인물만 새로 기록'). 없으면 막지 않는다. 이미 위키에 있는 인물은 묻지 않고 통과.
-export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, onWarn = () => {} } = {}) {
+export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, nsfw = false, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
   const key = nk(source).slice(0, 4000);
-  const ckey = cycle ? key + "|cycle" : key;
+  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "");
+  const extra = (cycle ? CYCLE_STAGE1 : "") + (nsfw ? NSFW_STAGE1 + DRIVE_STAGE1 : "");   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
   let stage1 = cache?.get(ckey) ?? null;
   if (!stage1) {
-    const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: cut(run.recent || (dusk?.recent ?? []).join("\n"), 4000), newest: source.slice(0, 8000) };
-    stage1 = await ask(call, [{ role: "system", content: cycle ? LINES_STAGE1 + CYCLE_STAGE1 : LINES_STAGE1 }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+    const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: cut(run.recent || (dusk?.recent ?? []).join("\n"), 4000), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
+    stage1 = await ask(call, [{ role: "system", content: LINES_STAGE1 + extra }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
       const lines = parseLines(raw); if (!lines.length) return null;
       const got = fromStage1(lines, { known, source, openIds });
-      if (cycle) got.cycle = cycleFrom(raw, known);
+      // addon-rebuild: women| 줄이 있었는지 — 없으면 '모델이 월경 줄을 빠뜨림', 있으면 '여성이 없다고 보고'로 구분한다
+      if (cycle) { got.cycle = cycleFrom(raw, known); got.cycleDeclared = /(^|\n)\s*(?:[-*•>]+\s*)?women\s*[|｜¦]/i.test(String(raw ?? "")) || got.cycle.length > 0; }
+      if (nsfw) { got.nsfw = nsfwFrom(raw, known); got.drive = driveFrom(raw, (n) => { const c = canonName(String(n ?? "").trim(), known); return c && c !== "{{user}}" ? c : (/\{\{user\}\}/i.test(String(n)) ? "{{user}}" : ""); }); }
       return got.scene || got.people.length ? got : null;
-    }, { minimal: LINES_STAGE1_MIN });
+    }, { minimal: LINES_STAGE1_MIN + extra });   // 2.2.8: 짧은 지침 재시도에도 월경 줄(빠지면 그 턴만 월경 보고가 비었다)
     stage1.states ??= []; stage1.fresh ??= []; stage1.open ??= { add: [], close: [] };   // 예전 코어(fromStage1)와 섞여도 깨지지 않게
     cache?.set(ckey, stage1);
   }
@@ -208,13 +244,13 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   // 2.2.6 첫인상이 아직 없는 기존 인물에게도 첫인상 줄을 묻는다(처음 등장 때 놓친 경우)
   const noFirst = (t) => !!t.doc && !entryText(t.doc, "affinity.appraisal", "actor:user");
   const firstLine = (who) => `first|${who}'s first impression of {{user}}, one sentence      only if it is not in the card yet`;
-  const askPerson = (t, payload, isNew, useLight, tries = 2) => ask(call, [{ role: "system", content: linesStage2(t.name, { light: useLight, beliefs, wiki: true, isNew, extraLines: [...deepMenu(run), ...(noFirst(t) ? [firstLine("the focus character")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+  const askPerson = (t, payload, isNew, useLight, tries = 2) => ask(call, [{ role: "system", content: linesStage2(t.name, { light: useLight, beliefs, wiki: true, isNew, extraLines: [...deepMenu(run), ...startLine(run), ...(noFirst(t) ? [firstLine("the focus character")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
     if (isNoneReply(raw)) return { lines: [] };
     const lines = parseLines(raw); return lines.length ? { lines } : null;
   }, { tries });
   const payloadOf = (t) => {
     const mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
-    return { focus: t.name, known: known.map((p) => p.name), card: cardOf(t.doc), overview: { scene: stage1.scene?.sum ?? "", act: t.act ?? "" }, ...(mine(dusk?.emoState).length ? { emoState: mine(dusk.emoState) } : {}), ...(mine(dusk?.talkState).length ? { talkState: mine(dusk.talkState) } : {}), newest: focusText(source, t.name, 3000) };
+    return { focus: t.name, known: known.map((p) => p.name), card: cardOf(t.doc), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), overview: { scene: stage1.scene?.sum ?? "", act: t.act ?? "" }, ...(mine(dusk?.emoState).length ? { emoState: mine(dusk.emoState) } : {}), ...(mine(dusk?.talkState).length ? { talkState: mine(dusk.talkState) } : {}), newest: focusText(source, t.name, 3000) };
   };
   const runOne = async (t) => {
     const isNew = !t.doc, payload = payloadOf(t);
@@ -234,7 +270,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const askGroup = async (chunk) => {
     const names = chunk.map((t) => t.name), anyNew = chunk.some((t) => !t.doc);
     const payload = { known: known.map((p) => p.name), overview: { scene: stage1.scene?.sum ?? "" }, people: chunk.map((t) => { const p = payloadOf(t); delete p.focus; delete p.known; delete p.newest; return { name: t.name, ...(t.doc ? {} : { new: true }), ...p, overview: undefined, act: t.act ?? "" }; }), newest: source.slice(0, 8000) };
-    return ask(call, [{ role: "system", content: linesStage2Group({ light: lite, beliefs, wiki: true, anyNew, extraLines: [...deepMenu(run), ...(chunk.some(noFirst) ? [firstLine("each character whose card has no first impression")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+    return ask(call, [{ role: "system", content: linesStage2Group({ light: lite, beliefs, wiki: true, anyNew, extraLines: [...deepMenu(run), ...startLine(run), ...(chunk.some(noFirst) ? [firstLine("each character whose card has no first impression")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
       const m = splitGroupReply(raw, names); if (!m || !m.size) return null;
       return new Map([...m].map(([n, block]) => [n, isNoneReply(block) ? [] : parseLines(block)]));
     }, { tries: 2 });
@@ -257,10 +293,11 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const lightAuto = !light && lite;
   if (auto && !light) {
     if ((auto.hold ?? 0) > 0) { if (--auto.hold === 0) auto.streak = 1; }   // 쉬는 기간이 끝나면 전체 지침을 다시 시험(또 실패하면 바로 다시 쉼)
-    else if (switched) { auto.streak = (auto.streak ?? 0) + 1; if (auto.streak >= 2) { auto.hold = 10; auto.streak = 0; } }
+    // addon-rebuild: 쉬는 기간 10 → 3턴. 쉬는 동안은 관계(npc)·기본 성격·성적 욕망 같은 깊은 칸을 묻지 않아 빠짐이 컸다
+    else if (switched) { auto.streak = (auto.streak ?? 0) + 1; if (auto.streak >= 2) { auto.hold = 3; auto.streak = 0; } }
     else if (people.length) auto.streak = 0;
   }
-  return { stage1, people, known, source, lightAuto, skipped, capped };
+  return { stage1, people, known, source, context: [run.user, run.recent].filter(Boolean).join("\n"), lightAuto, skipped, capped };
 }
 
 // ── ③ 줄 → 리수폿 응답(envelope) ──
@@ -438,6 +475,16 @@ export function buildEnvelope(run, rec) {
 }
 
 // ── ③-2 줄 → Dusk 기록(장면·인물·관계·떡밥·감정·호칭…) ──
+// start 줄 중 본문(newest)이 아니라 유저 입력·최근 맥락에서 인용한 것(fromStage2는 본문 인용만 받는다)
+const START_KO = { 친함: "close", 친한: "close", 가까움: "close", 가족: "close", 연인: "close", 아는: "friendly", 지인: "friendly", 안면: "friendly" };
+export function startFromContext(lines, name, known, context) {
+  for (const { tag, f } of lines ?? []) {
+    if (tag !== "start") continue;
+    const b = canonName(String(f[0] ?? "").trim(), known) || String(f[0] ?? "").trim(), raw = String(f[1] ?? "").trim(), level = START_KO[raw] ?? (/close/i.test(raw) ? "close" : /friend/i.test(raw) ? "friendly" : ""), q = String(f[2] ?? "").trim();
+    if (b && level && q && nk(b) !== nk(name) && quoteOk(q, context)) return [{ a: name, b, level, q: q.slice(0, 60) }];
+  }
+  return [];
+}
 export function buildDusk(rec, { ignore = [], light = false, beliefs = false } = {}) {
   const { stage1, people, known } = rec;
   const merged = { people: stage1.people.map((e) => ({ ...e })), scene: stage1.scene, rel: stage1.rel, open: stage1.open, emo: [], talk: [], rift: [], bond: [], belief: [], start: [] };
@@ -445,6 +492,7 @@ export function buildDusk(rec, { ignore = [], light = false, beliefs = false } =
   for (const p of people) {
     if (!p.lines.length) continue;
     const got = fromStage2(p.lines, p.name, { known, source, light });
+    if (!light && !got.start?.length && rec.context) got.start = startFromContext(p.lines, p.name, known, rec.context);   // 유저 입력이 밝힌 ‘이미 아는 사이’
     const slot = merged.people.find((e) => nk(e.name) === nk(p.name) && !e.attr);
     if (slot) Object.assign(slot, got.entry);
     for (const k of ["emo", "talk", "rift", "bond", "belief", "start"]) merged[k].push(...(got[k] ?? []));

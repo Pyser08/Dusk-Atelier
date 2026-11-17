@@ -13,7 +13,7 @@ export async function eroLoad(ctx) {
   try { const s = await er.read(); return eroReady(s) ? s : null; } catch { return null; }
 }
 
-const bar = (label, v, hint, ghost) => h("div", { class: "rb-wk2-num g" }, h("span", { class: "n", title: hint || "" }, label),
+export const bar = (label, v, hint, ghost) => h("div", { class: "rb-wk2-num g" }, h("span", { class: "n", title: hint || "" }, label),
   h("span", { class: "track", role: "progressbar", "aria-label": label, "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": v },
     ghost != null && ghost !== v ? h("i", { class: "ghost", style: { width: `${ghost}%`, opacity: 0.35 } }) : null, h("i", { style: { width: `${v}%` } })),
   h("small", { class: "v" }, `${v}/100`));
@@ -38,9 +38,11 @@ export function prefItem(x) {
   return label ? { label, preference: String(o.preference ?? ""), confidence: Number.isFinite(Number(o.confidence)) && o.confidence !== null ? Math.round(Number(o.confidence)) : null, reason: String(o.reason ?? "") } : null;
 }
 const LEVEL = (n) => !Number.isFinite(n) ? "" : n >= 70 ? "자주" : n >= 40 ? "가끔" : "드물게";
-function eroDetailRows(d) {
-  if (!d) return [];
+export function eroDetailRows(d) {
+  d ??= {};
   const chips = (title, list, kind) => list?.length ? h("div", { class: ["rb-wk2-ero-row", kind && `k-${kind}`] }, h("small", { class: "rb-muted" }, title), h("div", { class: "rb-wk2-chips" }, list.map((x) => h("span", { class: "rb-wk2-chip" }, prefItem(x)?.label ?? "")))) : null;
+  // addon-rebuild: 체위·장소는 비어 있어도 늘 보인다(처음부터 자리가 있게)
+  const always = (title, list, kind) => chips(title, list, kind) ?? h("div", { class: ["rb-wk2-ero-row", `k-${kind}`] }, h("small", { class: "rb-muted" }, title), h("small", { class: "rb-muted" }, "아직 없어요 · ‘다시 분석’으로 채울 수 있어요"));
   const style = (title, o) => o && (o.styles?.length || o.situations?.length) ? h("div", { class: "rb-wk2-ero-row" }, h("small", { class: "rb-muted" }, `${title}${LEVEL(o.frequency) ? ` · ${LEVEL(o.frequency)}` : ""}${Number.isFinite(o.directness) ? ` · 직접성 ${o.directness}` : ""}`),
     o.styles?.length ? h("div", { class: "rb-wk2-chips" }, o.styles.map((x) => h("span", { class: "rb-wk2-chip" }, prefItem(x)?.label ?? ""))) : null, o.situations?.length ? h("small", { class: "rb-muted" }, `주로: ${o.situations.join(" · ")}`) : null) : null;
   // 2.2.6 선호는 좋아함·싫어함·그 밖으로 나누고 확신도를 붙인다(예전 저장분의 JSON 글자도 풀어서 보여 준다)
@@ -49,8 +51,24 @@ function eroDetailRows(d) {
   const pgroup = (title, list, kind) => list.length ? h("div", { class: ["rb-wk2-ero-row", kind && `k-${kind}`] }, h("small", { class: "rb-muted" }, title), h("div", { class: "rb-wk2-chips" }, list.map(pchip))) : null;
   const liked = P.filter((x) => /prefer|like|want|enjoy/i.test(x.preference)), hated = P.filter((x) => /dislik|avoid|hate|refus|taboo/i.test(x.preference));
   return [pgroup("좋아하는 것", liked, "like"), pgroup("싫어하는 것", hated, "hate"), pgroup("성향", P.filter((x) => !liked.includes(x) && !hated.includes(x)), "mid"),
-    chips("좋아하는 체위·장소", d.likes, "like"), chips("싫어하는 체위·장소", d.dislikes, "hate"), style("유혹 방식", d.seduction), style("성적 농담", d.humor),
+    always("좋아하는 체위·장소", d.likes, "like"), always("싫어하는 체위·장소", d.dislikes, "hate"), style("유혹 방식", d.seduction), style("성적 농담", d.humor),
     d.lastAction ? h("div", { class: "rb-wk2-ero-row" }, h("small", { class: "rb-muted" }, "최근 행동"), h("p", { class: "rb-wk2-p" }, d.lastAction)) : null].filter(Boolean);
+}
+// addon-rebuild: 화면 글이 영어면(예전 분석 등) 한 번 한국어로 옮겨 달라고 하고 끝나면 다시 그린다. 인물마다 세션에 한 번만.
+const koAsked = new Map();   // 인물 id → busy | done
+const HAS_EN = (t) => /[A-Za-z]/.test(t) && !/[\uac00-\ud7a3]/.test(t);
+export function detailHasEnglish(d) {
+  if (!d) return false;
+  const st = (o) => [...(o?.styles ?? []), ...(o?.situations ?? [])];
+  return [...(d.prefs ?? []).map((x) => prefItem(x)?.label ?? ""), ...(d.likes ?? []), ...(d.dislikes ?? []), ...st(d.seduction), ...st(d.humor)].some((t) => HAS_EN(String(t ?? "")));
+}
+// 돌려주는 값: 지금 옮기는 중인지(화면에 안내 한 줄). 영어가 없으면 false.
+function koLater(ctx, person, redraw) {
+  if (!person?.id || !detailHasEnglish(person.detail) || typeof ctx.erosync?.profile !== "function") return false;
+  if (koAsked.has(person.id)) return koAsked.get?.(person.id) === "busy";
+  koAsked.set(person.id, "busy");
+  ctx.erosync.profile("korean", person.id).then((r) => { koAsked.set(person.id, "done"); if (r?.ok && r.filled) redraw?.(); }).catch(() => koAsked.set(person.id, "done"));
+  return true;
 }
 // NSFW 탭: 성적 항목(성적 관심·선호 등) + 직접 고치기·AI 값으로·다시 분석. Erosync가 켜져 있고 이름이 맞는 인물에게만.
 // 2.2.6 상대별 끌림: 이 인물이 상대마다 느끼는 호감·끌림·반감(Erosync 관계 수치). 큰 것부터 5명.
@@ -74,12 +92,17 @@ export function eroNsfwCard(ctx, card, person, redraw, snap = null) {
     btn("축만 다시 채점", { size: "sm", id: "rb-ero-rescore", title: "8축 점수만 다시 매겨요(호출 1~2번)", onClick: () => line.start("axes", person.id) }),
     btn("프로필 내보내기", { size: "sm", id: "rb-ero-export", title: "직접 고친 값과 선호·금기 태그를 파일로 저장해요", onClick: () => exportProfile(ctx, person) }),
     btn("프로필 가져오기", { size: "sm", id: "rb-ero-import", title: "내보낸 파일로 이 인물의 직접 고친 값과 태그를 덮어써요", onClick: () => importProfile(ctx, person, redraw) }));
-  const rows = ad ? [h("div", { class: "rb-wk2-nums" }, ad.rows.map((r) => bar(r.label, r.value)),
-    ad.pref ? h("div", { class: "rb-ero-pref", role: "img", "aria-label": `끌리는 상대 · 여성 ${ad.pref.f}% · 남성 ${ad.pref.m}% · 그 외 ${ad.pref.x}%` },
+  // addon-rebuild: 8가지 성향은 위 게이지에 합친다(이름이 같으면 위 성적 항목 값을 우선)
+  // 이름이 겹치면(개방성 ↔ 성적 개방성) 더 긴 이름 하나만 남긴다
+  const top = ad?.rows ?? [], longer = (l) => [...top, ...ax].some((o) => o.label !== l && o.label.length > l.length && o.label.includes(l));
+  const gauges = [...top.filter((r) => !longer(r.label)).map((r) => bar(r.label, r.value)), ...ax.filter((a) => !longer(a.label) && !top.some((r) => r.label === a.label)).map((a) => bar(a.label + (a.changed ? " ·바뀜" : ""), a.value, a.hint, a.changed ? a.base : null))];
+  const rows = [h("div", { class: "rb-wk2-nums", id: "rb-ero-axes" }, ...gauges,
+    ad?.pref ? h("div", { class: "rb-ero-pref", role: "img", "aria-label": `끌리는 상대 · 여성 ${ad.pref.f}% · 남성 ${ad.pref.m}% · 그 외 ${ad.pref.x}%` },
       h("small", { class: "rb-muted" }, "끌리는 상대"),
       h("div", { class: "bar" }, ...[["f", ad.pref.f], ["m", ad.pref.m], ["x", ad.pref.x]].filter(([, v]) => v > 0).map(([k, v]) => h("i", { class: k, style: { flexGrow: v } }))),
-      h("div", { class: "lg" }, h("span", { class: "f" }, `여성 ${ad.pref.f}%`), h("span", { class: "m" }, `남성 ${ad.pref.m}%`), h("span", { class: "x" }, `그 외 ${ad.pref.x}%`))) : null)] : [h("small", { class: "rb-muted" }, "성적 항목이 아직 없어요.")];
+      h("div", { class: "lg" }, h("span", { class: "f" }, `여성 ${ad.pref.f}%`), h("span", { class: "m" }, `남성 ${ad.pref.m}%`), h("span", { class: "x" }, `그 외 ${ad.pref.x}%`))) : null)];
   rows.push(...eroDetailRows(person.detail));
+  if (koLater(ctx, person, redraw)) rows.push(h("small", { class: "rb-muted", id: "rb-ero-ko" }, "영어로 적힌 항목을 한국어로 옮기는 중이에요. 끝나면 바로 바뀌어요."));
   const toward = eroTowardRows(snap, person); if (toward) rows.push(toward);
   return card("🔥 Erosync 성적 항목", [...rows, person.overridden ? h("small", { class: "rb-muted" }, "직접 고친 값이 있어요. AI가 다시 분석해도 고친 값이 우선이에요.") : null, act, line.el], null, "rb-wk2-ero");
 }

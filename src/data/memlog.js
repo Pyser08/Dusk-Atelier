@@ -16,6 +16,7 @@ export function redact(s) {
 export function explain(raw) {
   const m = String(raw ?? "");
   const rules = [
+    [/^\s*검열[:：]/, "모델(또는 제공자)이 성인 내용을 거절했어요(검열).", "이 기능에 쓰는 모델을 성인 내용을 받는 모델로 바꾸거나, 제공자의 안전 설정을 낮춰 주세요."],
     [/401|403|거절|unauthori[sz]ed|forbidden|invalid.*key|키가/i, "API 키가 거절됐어요.", "모델 설정에서 키가 맞는지, 주소와 같은 서비스의 키인지 확인해 주세요."],
     [/429|rate.?limit|too many|한도|quota|insufficient/i, "모델 서비스의 요청 한도에 걸렸거나 잔액이 모자라요.", "잠시 뒤 다시 시도하거나, 제공자 계정의 잔액·한도를 확인해 주세요."],
     [/입력 예산|input budget|context.?length|maximum context|too long|토큰 한도|exceed/i, "보낼 글이 모델이나 설정의 한도를 넘었어요.", "장기 기억 → 설정의 ‘자동 기록 입력 예산’을 올리거나, 더 긴 글을 받는 모델을 써 보세요."],
@@ -50,6 +51,7 @@ export function createMemLog(api, { now = () => Date.now() } = {}) {
       why: why || ex.why, todo: todo || ex.todo, fallback: String(fallback ?? "").slice(0, 160), msg, raw: raw.slice(0, 1500),
       ctx: JSON.parse(redact(JSON.stringify(ctx ?? {})).slice(0, 2000) || "{}"), ver: String(globalThis.__duskVersion ?? "") };
     BUS.items = [...(BUS.items ?? []), e].slice(-MAX); BUS.last = e;
+    logEvent({ kind: "fail", area: e.area, title: e.title, detail: msg });
     await save(); emit();
     return e;
   }
@@ -64,6 +66,28 @@ export function createMemLog(api, { now = () => Date.now() } = {}) {
   BUS.instance = api_;
   return api_;
 }
+// addon-rebuild 전체 기록(디버깅용): 성공·실패·건너뜀을 모두 최근 300개까지(이 기기에만). 실패는 add()가 자동으로 함께 남긴다.
+const ALL_KEY = "dusk.memlog.all.v1", ALL_MAX = 300;
+const ALL = (globalThis.__duskMemLogAll ??= { items: null, loading: null, store: null });
+export function createEventLog(api, { now = () => Date.now() } = {}) {
+  const store = async () => ALL.store ??= (typeof api?.getLocalPluginStorage === "function" ? await api.getLocalPluginStorage() : api?.safeLocalStorage ?? null);
+  const load = async () => { await (ALL.loading ??= (async () => {
+    try { const s = await store(); const v = s ? await s.getItem(ALL_KEY) : null; const a = typeof v === "string" ? JSON.parse(v) : v; ALL.items = Array.isArray(a) ? a.slice(-ALL_MAX) : []; } catch { ALL.items = []; }
+  })()); return ALL.items ?? []; };
+  const save = async () => { try { const s = await store(); if (s) await s.setItem(ALL_KEY, JSON.stringify(ALL.items ?? [])); } catch { /* 이번 세션만 */ } };
+  let chain = Promise.resolve();
+  const add = ({ kind = "ok", area = "기타", title = "", detail = "" } = {}) => (chain = chain.then(async () => {
+    await load();
+    const e = { at: now(), kind: String(kind).slice(0, 8), area: String(area).slice(0, 40), title: String(title).slice(0, 160), detail: redact(typeof detail === "string" ? detail : JSON.stringify(detail ?? "")).slice(0, 1500) };
+    ALL.items = [...(ALL.items ?? []), e].slice(-ALL_MAX); await save(); return e;
+  }).catch(() => null));
+  const api_ = { add, load, list: async () => [...(await load())].reverse(), clear: async () => { ALL.items = []; await save(); } };
+  ALL.instance = api_;
+  return api_;
+}
+// 어디서나 전체 기록 남기기(kind: ok·fail·skip·info)
+export const logEvent = (entry) => { try { return ALL.instance?.add(entry) ?? null; } catch { return null; } };
+export const eventText = (e) => `[${when(e.at)}] ${e.kind} · ${e.area} · ${e.title}${e.detail ? `\n${e.detail}` : ""}`;
 // 어디서나 실패 남기기(기록 저장소가 아직 없으면 조용히 넘어간다)
 export const logFailure = (entry) => { try { return BUS.instance?.add(entry) ?? null; } catch { return null; } };
 // 오른쪽 아래 알림의 '이유 보기' → 플러그인을 열면 이 항목을 바로 보여 준다

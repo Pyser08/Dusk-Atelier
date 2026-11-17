@@ -18,9 +18,9 @@ export const FEATURES = [
   { t: "마음 열기", k: "openness 개방 마음", path: `${P} › 무엇을 기억할까요? › 마음 열기`, tab: "memory", mem: POT, find: "마음 열기", addon: "memory" },
   { t: "대화 리듬", k: "rhythm 말 속도 길이", path: `${P} › 무엇을 기억할까요? › 대화 리듬`, tab: "memory", mem: POT, find: "대화 리듬", addon: "memory" },
   // 성인 항목
-  { t: "월경·임신 기록", k: "생리 주기 생리주기 임신 출산 배란 cycle 확률 배수 성인 nsfw", path: `${E} › 장면·수위 › 성인 항목`, tab: "memory", mem: ero("scene"), find: "성인 항목", addon: "memory" },
-  { t: "욕구 기록", k: "성인 성욕 desire nsfw", path: `${E} › 장면·수위 › 성인 항목`, tab: "memory", mem: ero("scene"), find: "성인 항목", addon: "memory" },
-  { t: "이상성향 기록 · 노골적인 묘사 수위", k: "취향 페티시 paraphilia 직설 순화 성인 nsfw", path: `${E} › 장면·수위 › 성인 항목 (욕구 기록을 켜면 보여요)`, tab: "memory", mem: ero("scene"), find: "성인 항목", addon: "memory" },
+  { t: "월경·임신 기록", k: "생리 주기 생리주기 임신 출산 배란 cycle 확률 배수 성인 nsfw", path: `${P} › 성인 항목`, tab: "memory", mem: POT, find: "성인 항목", addon: "memory" },
+  { t: "욕구 기록 (성적 욕망·이상성향)", k: "성인 성욕 desire nsfw 이상성향 이상성욕 페티시 paraphilia 함께", path: `${P} › 성인 항목`, tab: "memory", mem: POT, find: "성인 항목", addon: "memory" },
+  { t: "노골적인 묘사 수위", k: "취향 직설 순화 성인 nsfw 노골", path: `${P} › 성인 항목 (욕구 기록을 켜면 보여요)`, tab: "memory", mem: POT, find: "성인 항목", addon: "memory" },
   // 방식·모델
   { t: "기억 방식 (더 정확하게 / 빠르게)", k: "정확 빠르게 호출 수 속도 router keyword 관련 인물 찾기 장면 정리", path: `${P} › 기억 방식`, tab: "memory", mem: POT, find: "기억 방식", addon: "memory" },
   { t: "기억용 AI 모델 · 내 API 키", k: "보조 모델 api 키 공급자 openai claude gemini deepseek openrouter ollama 모델 이름 연결 시험 사용량 토큰", path: `${PA} › AI 모델`, tab: "memory", mem: POTA, find: "AI 모델", addon: "memory" },
@@ -51,7 +51,7 @@ export const FEATURES = [
   { t: "감정이 시간이 지나면 식어요", k: "식음 냉각 cooling 적대 두려움 애정 감정 감소", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "감정이 시간이", addon: "memory" },
   { t: "거짓말·오해 추적", k: "거짓말 오해 믿음 belief 잘못 믿는", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "거짓말", addon: "memory" },
   { t: "요약된 옛 대화 빼고 보내기", k: "토큰 줄이기 trim 옛 대화 요약 하이파처럼 문맥 줄이기", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "요약된 옛 대화", addon: "memory" },
-  { t: "지난 대화 분석에 함께 기록 · Erosync도", k: "백필 backfill 인물 위키 함께 erosync 성향 분석", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "지난 대화 분석에", addon: "memory" },
+  { t: "지난 대화 분석에 함께 기록", k: "백필 backfill 인물 위키 함께 기본 성격 성인 프로필", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "지난 대화 분석에", addon: "memory" },
   { t: "인물 위키 (인물·상황·시간선)", k: "인물 위키 wiki 문서 인물 정보 상황 시간선 타임라인 장면 기록 보기 성격 기본 성격 6축 호감 관계 진도 감정", path: `${M} › 채팅 고르기 › 기록 보기`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "인물 관계도", k: "관계도 relationship map 관계 그래프 연결 누가 누구 남매 연인 애인 erosync 보기 이전 턴 지난 턴 되돌려 보기", path: "장기 기억 › 인물 관계도", tab: "relmap", addon: "memory" },
   { t: "같은 인물 합치기 · 위키 점검", k: "합치기 중복 같은 이름 별칭 merge 되돌리기 위키 점검 문서 이름 맞추기 빈 문서", path: `${M} › 인물 › 더보기`, tab: "memory", mem: { page: "home" }, addon: "memory" },

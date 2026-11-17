@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/relationship-mode.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/relationship-mode.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 export const EXPRESSION_BASELINE_CONTROL='Emotional expression has one baseline: People axes.emotionalExpressiveness together with emotion_expression. Do not create or use a separate affinity.decorum score, do not derive one from the axis, and do not invert an archived decorum value into the axis. If this baseline is absent, preserve uncertainty or use supplied personality prose without inventing a numeric replacement. Evidence that someone conceals feelings toward a specific person belongs in affinity.private, affinity.stance, or register.restraint as contextual text, not a second general expression score. Existing pinned personality values remain authoritative.';
 const RELATIONSHIP_ONLY_DISABLED_FEATURES=Object.freeze(['rhythm']);

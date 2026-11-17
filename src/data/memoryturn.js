@@ -6,7 +6,9 @@
 //  [응답 뒤] 기록하기(Writer): 리수폿 Writer 호출에 Dusk 기록 구획(dusk)을 같이 실어 한 번에 받는다.
 //    - 두 구획은 따로 검증한다. dusk 구획이 없거나 틀리면 기존 방식(따로 한 번 더 호출)으로 대신한다.
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
-import { logFailure } from "./memlog.js";
+import { cycleOnlyInScene } from "../engine/cyclescene.js";
+import { logFailure, logEvent } from "./memlog.js";
+import { applyCycleEvents } from "./cyclesync.js";
 import { potState } from "../engine/memoryswitch.js";
 import { aiTask, describeAi, trackAi } from "../engine/aistop.js";
 import { folderIdOf } from "./memorystore.js";
@@ -57,11 +59,13 @@ const STASH_MAX = 8;
 export function createTurnFlow(api, { store, runner, injector, embedder = null, sourceLibrary, link = {}, onOpen = null, log = (...a) => console.log("[Dusk 기억]", ...a), scheduler = globalThis } = {}) {
   // 2.2.0: 기록기가 한 턴(묶음)을 기록하면 알린다 — Erosync 매 턴 계산이 듣는다. 듣는 쪽 실패는 기록에 영향 없음.
   const turnListeners = new Set();
+  // addon-rebuild: 지난 대화 분석이 예약한 기록이면 턴 알림에 source "backfill". 취소돼 끝 알림(backfillPotWait)이 안 와도 풀리게 시각으로 둔다(마지막 예약 뒤 10분).
+  let backfillUntil = 0; const BACKFILL_HOLD_MS = 10 * 60 * 1000;
   const tellTurn = (info) => { for (const fn of turnListeners) { try { Promise.resolve(fn(info)).catch((e) => log("턴 알림 처리 실패", e?.message ?? e)); } catch (e) { log("턴 알림 처리 실패", e?.message ?? e); } } };
   let rt = null, starting = null, lastTurn = null, cold = null, lastRecord = null, lastNote = null, retryHits = 0, lastSkipped = null;
   // pure: 기억 저장소가 '끔'이면 Dusk 자체 기억(기록·회상·주입)은 전부 빼고 리수폿 위키 정리만 돌린다
   let pure = false;
-  let cyclePending = null; const cycleEvents = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
+  let cyclePending = null, cycleNote = ""; const cycleEvents = [], cycleSync = [], nsfwQueue = [], driveQueue = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
   const stash = new Map();  // 메시지 해시 → 검증된 dusk 구획
   const putStash = (h, v) => { stash.set(h, v); while (stash.size > STASH_MAX) stash.delete(stash.keys().next().value); };
   const libFor = (mode) => mode === "accurate" ? sourceLibrary : { ...sourceLibrary, base: { ...sourceLibrary.base, director: undefined } };
@@ -156,6 +160,10 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       const cyc = String(prompt).includes(CYCLE_BLOCK_MARK);   // 2.1.4: 월경·임신 기록도 기록기로(1단계에 줄 몇 개 더, 예전엔 늘 리수폿 Writer)
       const run = parseWriterRun(prompt); if (!run) return null;
       run.cycleOn = cyc;
+      // addon-rebuild: 월경·임신이 왜 안 잡히는지 전체 기록에(꺼짐 사유는 바뀔 때만 한 번)
+      if (!cyc) { let why = "월경·임신 기록이 꺼져 있어요"; try { const ps = settings.snapshot(); why = ps?.sexualDesireEnabled !== true ? "꺼짐 — 기억 설정의 ‘욕구 기록’이 꺼져 있어요(월경·임신 기록의 바탕)" : ps?.features?.openness?.cycle !== true ? "꺼짐 — 기억 설정의 ‘월경·임신 기록’이 꺼져 있어요" : "꺼짐 — 이번 기록 요청에 월경 지침이 없어요"; } catch { /* 설정 없음 */ }
+        if (why !== cycleNote) { cycleNote = why; logEvent({ kind: "skip", area: "월경·임신", title: why }); } }
+      else cycleNote = "";
       let prep = null;
       if (!pure) { try { prep = await runner.prepareLatest(await api.getCurrentCharacterIndex(), await api.getCurrentChatIndex()); } catch { prep = null; } }
       const snap = settings.rawSnapshot(), sc = wiki.scope ? { characterId: wiki.scope.characterId, chatKey: wiki.scope.chatKey } : {};
@@ -178,16 +186,32 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (rec) retryHits++;
       else {
         const cast = await castNow(s0);
-        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, cycle: cyc, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, cycle: cyc, nsfw: (() => { try { return settings.snapshot()?.sexualDesireEnabled === true; } catch { return false; } })(), onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
         if (!rec.people.some((p) => p.failed)) boundedSet(recDone, fullKey, rec, 4);
       }
       run.gauge = await readGauge(api);   // 2.2.6 게이지 배수(위키 호감도·성격 막대)
       run.seed = await readSeedOpt(api);   // 2.2.6 처음 등장 음란도·첫인상(기본 0, 무작위 설정)
       let env = buildEnvelope(run, rec);
-      if (cyc) { try { env = applyCycleReportObject({ ...env, cycle_report: rec.stage1?.cycle ?? [] }, wiki.snapshot(), cy).obj; } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
+      if (cyc) { try {
+        // addon-rebuild: 이번 턴 장면에 없는 여성의 성관계 보고는 버린다(가만히 있는 사람이 임신하던 문제)
+        const cs = cycleOnlyInScene(rec.stage1?.cycle ?? [], rec.stage1, rec.people);
+        if (cs.dropped.length) log(`기록기: 장면에 없는 인물의 성관계 보고를 뺐어요 — ${cs.dropped.join(", ")}`);
+        { const R = cs.reports, n = (f) => R.filter(f).map((x) => x.name);
+          const parts = [`여성 ${R.length}명${R.length ? `(${R.map((x) => x.name).join(", ")})` : ""}`, ...R.flatMap((x) => x.sex.map((y) => `관계 ${x.name}↔${y.partner}(${y.contraception === "used" ? "피임" : "피임 안 함"})`)),
+            n((x) => x.period).length && `생리 ${n((x) => x.period).join(", ")}`, n((x) => x.known).length && `임신 알게 됨 ${n((x) => x.known).join(", ")}`, n((x) => x.loss).length && `유산 ${n((x) => x.loss).join(", ")}`, n((x) => x.birth).length && `출산 ${n((x) => x.birth).join(", ")}`,
+            cs.dropped.length && `장면에 없어 뺀 관계 ${cs.dropped.join(", ")}`].filter(Boolean);
+          if (R.length) logEvent({ area: "월경·임신", title: parts.join(" · ") });
+          else if (rec.stage1?.cycleDeclared) logEvent({ kind: "skip", area: "월경·임신", title: "기록기가 이번 응답 장면에 여성이 없다고 보고했어요(women|none)" });
+          else logFailure({ area: "월경·임신", title: "기록기가 월경 줄을 빠뜨렸어요 — 문제", error: "문제: 월경 추적이 켜져 있는데 기록 모델 답에 women| 줄이 없어요", why: "기록 모델이 월경 지침을 따르지 않았어요(검열이 아니라 지침 누락).", todo: "계속되면 장기 기억 보조 모델을 지침을 더 잘 따르는 모델로 바꿔 보세요.", fallback: "이번 응답은 월경·임신을 기록하지 않았어요" }); }
+        env = applyCycleReportObject({ ...env, cycle_report: cs.reports }, wiki.snapshot(), cy).obj;
+        // addon-rebuild: 생리 시작·유산은 주기 계산이 끝난 뒤(settle) 위키 구획에 맞춘다
+        const ev = cs.reports.filter((x) => x.period || x.loss).map((x) => ({ name: x.name, period: !!x.period, loss: !!x.loss }));
+        if (ev.length) cycleSync.push(...ev); } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
       if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
+      if (rec.stage1?.nsfw?.length) { nsfwQueue.push(...rec.stage1.nsfw); while (nsfwQueue.length > 40) nsfwQueue.shift(); }
+      if (rec.stage1?.drive) { driveQueue.push(rec.stage1.drive); while (driveQueue.length > 6) driveQueue.shift(); }   // 장면 판단 관찰(턴 하나 = 한 묶음)   // addon-rebuild: 채팅별 성인 프로필 변화(애드온이 턴 뒤 폴더에 반영)
       lastRecord = { at: Date.now(), batch: run.batch, ...summarize(rec, env) };
-      tellTurn({ rp: run.rp, batch: run.batch, key: fullKey, people: rec.people.filter((p) => !p.failed).map((p) => ({ name: p.name, aliases: Array.isArray(p.doc?.aliases) ? p.doc.aliases : [], memory: (p.lines ?? []).map((l) => typeof l === "string" ? l : l?.text ?? "").join("\n").slice(0, 1200) })) });
+      tellTurn({ rp: run.rp, batch: run.batch, key: fullKey, source: Date.now() < backfillUntil ? "backfill" : "live", people: rec.people.filter((p) => !p.failed).map((p) => ({ name: p.name, aliases: Array.isArray(p.doc?.aliases) ? p.doc.aliases : [], memory: [personaOf(p.doc?.id), (p.lines ?? []).map((l) => typeof l === "string" ? l : l?.text ?? "").join("\n")].filter(Boolean).join("\n").slice(0, 1800) })) });
       return JSON.stringify(env);
     };
     // 기록하기: Dusk 구획을 같이 싣고, 돌아온 응답에서 떼어 낸다.
@@ -244,6 +268,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       seen = key;
       if (st.phase === "failed" && lastKey && !recorderFailed && !/리롤|삭제되어|RP 본문이 바뀌어|Dusk 기록기 실패/.test(String(st.message ?? ""))) { recDone.delete(lastKey); recCache.clear(); potNext.add(lastKey); while (potNext.size > 4) potNext.delete(potNext.values().next().value); }
       if (st.phase === "completed") lastKey = "";
+      logEvent({ kind: st.phase === "completed" ? "ok" : st.phase === "failed" ? "fail" : "skip", area: "인물 위키 기록", title: st.phase, detail: String(st.message ?? "") });
       let scope = null; try { scope = wiki.snapshot(); } catch { /* 아직 준비 전 */ }
       const verdict = judgeAutoResult({ phase: st.phase, message: st.message, scope, names: lastRecord && !lastRecord.error ? lastRecord.names ?? null : null });
       if (verdict) {
@@ -367,6 +392,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       link.settle = async (ci, ti) => {
         const ok = await r.auto.waitForScope(ci, ti, { timeoutMs: 180000 });
         try { if (cyclePending) { const ev = milestonesBetween(cyclePending, cycleStates(r.wiki.snapshot())); cyclePending = null; cycleEvents.push(...ev); } } catch { cyclePending = null; }
+        if (ok && cycleSync.length) { const ev = cycleSync.splice(0); try { let changed = []; const st = r.wiki.requireStore(); st.replace((v) => { const o = applyCycleEvents(v, ev); changed = o.changed; return o.scope; }); await st.flush(); if (changed.length) { log(`월경 기록 맞춤: ${changed.join(", ")}`); logEvent({ area: "월경·임신", title: `생리 시작·유산 반영 · ${changed.join(", ")}`, detail: ev }); } } catch (e) { log("월경 기록 맞춤 실패", e?.message ?? e); } }
         return ok;
       };
       link.takeCycle = () => cycleEvents.splice(0);
@@ -376,10 +402,11 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         const idx = await store.getIndex();
         return potState(idx, character?.chaId).on && r.auto.enabled();
       };
-      link.backfillPot = (ci, ti, messageIndex, shared) => r.auto.schedule({ chat: shared.chat, char: shared.character, characterIndex: ci, chatIndex: ti, messageIndex });
+      link.backfillPot = (ci, ti, messageIndex, shared) => { backfillUntil = Date.now() + BACKFILL_HOLD_MS; return r.auto.schedule({ chat: shared.chat, char: shared.character, characterIndex: ci, chatIndex: ti, messageIndex }); };
       link.backfillPotWait = (ci, ti, signal) => new Promise((res) => {
-        const p = r.auto.waitForScope(ci, ti, { timeoutMs: 10 * 60 * 1000 }).then(res, () => res(false));
-        signal?.addEventListener?.("abort", () => res(false), { once: true });
+        const done = (v) => { backfillUntil = 0; res(v); };
+        const p = r.auto.waitForScope(ci, ti, { timeoutMs: 10 * 60 * 1000 }).then(done, () => done(false));
+        signal?.addEventListener?.("abort", () => done(false), { once: true });
         return p;
       });
       rt = r; return r;
@@ -388,7 +415,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
   }
   async function stop() {
     if (!rt) return false;
-    const r = rt; rt = null; try { r.tools?.dispose(); } catch {} delete link.settle; delete link.take; delete link.takeCycle; delete link.backfillPot; delete link.backfillPotWait; delete link.backfillPotReady; stash.clear(); cycleEvents.length = 0; cyclePending = null;
+    const r = rt; rt = null; try { r.tools?.dispose(); } catch {} delete link.settle; delete link.take; delete link.takeCycle; delete link.backfillPot; delete link.backfillPotWait; delete link.backfillPotReady; stash.clear(); cycleEvents.length = 0; cycleSync.length = 0; cyclePending = null;
     await r.hooks.dispose().catch(() => {});
     if (!pure) await injector.start();
     return true;
@@ -411,5 +438,13 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
   }
   const dropCold = () => { cold = null; };
 
-  return { onTurn: (fn) => { turnListeners.add(fn); return () => turnListeners.delete(fn); }, start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, lastRecord: () => lastRecord, lastSkipped: () => lastSkipped, lastNote: () => lastNote, retryHits: () => retryHits, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
+  // addon-rebuild: Erosync 출발값에 넘길 인물 바탕(위키 기본 성격·성적 욕망·이상성향) — 체위·장소 기본값을 여기서 추론한다
+  function personaOf(docId) {
+    try {
+      const pr = docId ? wiki.snapshot()?.people?.profiles?.[docId] : null; if (!pr) return "";
+      return [pr.summary && `성격: ${pr.summary}`, pr.coreTraits?.length && `특성: ${pr.coreTraits.join(", ")}`, pr.intimacyStyle && `친밀감: ${pr.intimacyStyle}`,
+        pr.sexualDesire?.text && `성적 욕망: ${pr.sexualDesire.text}`, pr.paraphilia?.text && `이상성향: ${pr.paraphilia.text}`].filter(Boolean).join("\n").slice(0, 900);
+    } catch { return ""; }
+  }
+  return { takeNsfw: () => nsfwQueue.splice(0), takeDrive: () => driveQueue.splice(0), onTurn: (fn) => { turnListeners.add(fn); return () => turnListeners.delete(fn); }, start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, lastRecord: () => lastRecord, lastSkipped: () => lastSkipped, lastNote: () => lastNote, retryHits: () => retryHits, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
 }

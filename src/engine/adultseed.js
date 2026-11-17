@@ -33,7 +33,8 @@ export function normalizeSeedOpt(v) {
   const custom = (Array.isArray(s.custom) ? s.custom : []).map((c) => ({ kind: c?.kind === "kink" ? "kink" : "desire", cat: String(c?.cat || CUSTOM_CAT).slice(0, 20), text: String(c?.text ?? "").trim().slice(0, 120) }))
     .filter((c, i, a) => c.text && a.findIndex((x) => x.kind === c.kind && x.text === c.text) === i).slice(0, 60);
   return { on: s.on === true, since: Number.isFinite(s.since) ? s.since : 0,
-    cycle: bool(s.cycle, true), sexual: bool(s.sexual, true), desires: bool(s.desires, true), kinks: bool(s.kinks, true),
+    // addon-rebuild: 성적 욕망·이상성향은 늘 함께(한 스위치). 예전 저장값은 둘 중 하나라도 켜져 있으면 둘 다 켬
+    cycle: bool(s.cycle, true), sexual: bool(s.sexual, true), desires: bool(s.desires, true) || bool(s.kinks, true), kinks: bool(s.desires, true) || bool(s.kinks, true),
     lewd: bool(s.lewd, false), first: bool(s.first, false),   // 2.2.6 음란도·첫인상: 기본은 0에서 시작, 켜면 무작위
     off: [...new Set((Array.isArray(s.off) ? s.off : []).map(String))].slice(0, 200), custom };
 }
@@ -60,7 +61,8 @@ export function rollAdult(name, random = null, opt = null) {   // name 뒤에 #�
   const r = random ?? seededRandom(`dusk-adult:${name}`);
   const o = normalizeSeedOpt(opt ?? {}), D = pickable(o, "desire"), K = pickable(o, "kink");
   const bell = () => Math.round(Math.max(3, Math.min(97, ((r() + r() + r()) / 3) * 100 + (r() - 0.5) * 30)));
-  const nD = r() < 0.5 ? 1 : 2, hasK = r() >= 0.45;   // 난수는 항목이 꺼져 있어도 같은 순서로 뽑아 다른 결과가 흔들리지 않게
+  const nD = r() < 0.5 ? 1 : 2; r();   // addon-rebuild: 이상성향은 늘 1개(예전엔 약 45% 없음). 난수 순서는 그대로 두어 다른 결과가 흔들리지 않게
+  const hasK = K.length > 0;
   const d0 = pick(D, r, nD), k0 = hasK ? pick(K, r, 1) : [];
   const desires = o.desires ? d0 : [], kinks = o.kinks ? k0 : [];
   const sexual = Object.fromEntries(SEX_KEYS.map((k) => [k, bell()]));
@@ -68,6 +70,44 @@ export function rollAdult(name, random = null, opt = null) {   // name 뒤에 #�
 }
 
 // 위키 범위(f.wiki)에 후보로 넣기. 이미 넣은 인물(seeded)·옵션을 켜기 전부터 있던 인물(since 이전 프로필)은 건너뛴다. 반환: 넣은 문서 id들
+
+// addon-rebuild: 무작위 성적 욕망·이상성향은 넣자마자 반영한다(검토 없이). 한 인물에 여러 개면 줄을 이어 붙이고,
+// 거부(되돌리기)·삭제·다시 뽑기 때는 그 줄만 뺀다. 인물에서 그 칸을 꺼 두었으면 검토 대기로 남긴다.
+const FIELD = (axis) => axis === "sexual_desire" ? "sexualDesire" : "paraphilia";
+const lines = (t) => String(t ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
+export function applySeedCandidate(wiki, c, now = new Date().toISOString()) {
+  const prof = wiki?.people?.profiles?.[c?.documentId], field = FIELD(c?.axis);
+  if (!prof || c.status !== "review" || prof[`${field}Enabled`] === false) return false;
+  const before = prof[field] ? JSON.parse(JSON.stringify(prof[field])) : null, cur = lines(prof[field]?.text);
+  if (!cur.includes(c.pattern)) cur.push(c.pattern);
+  prof[field] = { text: cur.join("\n").slice(0, 700), evidenceRefs: [...new Set([...(prof[field]?.evidenceRefs ?? []), "source:manual_input"])].slice(0, 24), manualEdited: false, updatedAt: now };
+  c.status = "approved"; c.appliedChange = { type: "sexual", field, before, pattern: c.pattern }; c.updatedAt = now; prof.updatedAt = now;
+  return true;
+}
+// 반영된 무작위 항목의 줄만 뺀다(다른 줄은 그대로)
+export function unapplySeedCandidate(wiki, c, now = new Date().toISOString()) {
+  const prof = wiki?.people?.profiles?.[c?.documentId], ch = c?.appliedChange;
+  if (!prof || c.status !== "approved" || !ch?.pattern) return false;
+  const rest = lines(prof[ch.field]?.text).filter((x) => x !== ch.pattern);
+  prof[ch.field] = { ...(prof[ch.field] ?? {}), text: rest.join("\n"), updatedAt: now };
+  prof.updatedAt = now; c.updatedAt = now;
+  return true;
+}
+// 위키 화면: 성적 욕망·이상성향 후보 거부(반영된 것이면 그 줄을 빼고 거부로) · 삭제(줄을 빼고 후보도 지움)
+export function rejectAdultCandidate(wiki, id, now = new Date().toISOString()) {
+  const c = wiki?.people?.candidates?.[id]; if (!c) throw new Error("후보가 없어요.");
+  if (c.status === "approved") { if (!unapplySeedCandidate(wiki, c, now)) throw new Error("이 후보는 ‘되돌리기’로 빼 주세요."); }
+  else if (!["collecting", "review"].includes(c.status)) throw new Error("이미 거부한 후보예요.");
+  c.status = "rejected"; c.updatedAt = now; wiki.revision = (wiki.revision ?? 0) + 1;
+  return wiki;
+}
+export function deleteAdultCandidate(wiki, id, now = new Date().toISOString()) {
+  const c = wiki?.people?.candidates?.[id]; if (!c) throw new Error("후보가 없어요.");
+  if (c.status === "approved" && !unapplySeedCandidate(wiki, c, now)) throw new Error("이 후보는 ‘되돌리기’로 먼저 빼 주세요.");
+  delete wiki.people.candidates[id]; wiki.revision = (wiki.revision ?? 0) + 1;
+  return wiki;
+}
+
 export function seedWikiCandidates(wiki, seeded, { since = 0, now = new Date().toISOString(), random = null, opt = null } = {}) {
   const out = [];
   const people = wiki?.people;
@@ -75,9 +115,15 @@ export function seedWikiCandidates(wiki, seeded, { since = 0, now = new Date().t
   people.candidates ??= {};
   for (const [docId, prof] of Object.entries(people.profiles)) {
     const doc = wiki.documents[docId];
-    if (!doc || doc.type !== "Character" || seeded.includes(docId)) continue;
+    if (!doc || doc.type !== "Character") continue;
     const born = Date.parse(prof?.createdAt ?? "");
-    if (since && !(born >= since)) { seeded.push(docId); continue; }   // 옵션을 켜기 전에 나온 인물은 건드리지 않는다
+    const before = since && !(born >= since);   // 옵션을 켜기 전에 나온 인물은 건드리지 않는다
+    if (seeded.includes(`skip:${docId}`)) continue;   // 옵션 켜기 전 인물로 건너뛴 기록
+    if (seeded.includes(docId)) {
+      // addon-rebuild: 넣었다고 적혔는데 이 인물의 무작위 후보가 하나도 없으면(검토하면 상태만 바뀌고 남는다) 위키 저장 경합으로 덮인 것 → 다시 넣는다.
+      // 예전 기록은 건너뛴 인물도 docId로 남겼으므로 옵션 전 인물(before)은 여기서도 건너뛴다.
+      if (before || Object.keys(people.candidates).some((k) => k.startsWith(`candidate_seed_${docId}_`))) continue;
+    } else if (before) { seeded.push(`skip:${docId}`); continue; }
     const roll = rollAdult(doc.title || prof.name || docId, random, opt);
     const add = (axis, pattern, i) => {
       const id = `candidate_seed_${docId}_${axis}_${i}`;
@@ -87,8 +133,9 @@ export function seedWikiCandidates(wiki, seeded, { since = 0, now = new Date().t
     };
     roll.desires.forEach((p, i) => add("sexual_desire", p, i));
     roll.kinks.forEach((p, i) => add("paraphilia", p, i));
-    seeded.push(docId);
-    out.push(docId);
+    for (const c of Object.values(people.candidates)) if (c.id?.startsWith(`candidate_seed_${docId}_`)) applySeedCandidate(wiki, c, now);
+    if (!seeded.includes(docId)) seeded.push(docId);
+    if (roll.desires.length || roll.kinks.length) out.push(docId);
   }
   if (out.length) wiki.revision = (wiki.revision ?? 0) + 1;
   return out;
@@ -111,11 +158,16 @@ export function seedLewd(opt, name, policy = null, salt = "") {
 
 // 2.2.6 위키 ‘무작위 다시 뽑기’: 이 인물에게 넣었던 무작위 후보(아직 검토 대기인 것)를 지우고 새로 뽑는다. 반영·거부한 후보는 그대로.
 // 같은 인물을 n번째로 다시 뽑으면 이름 뒤에 #n을 붙여 다른 결과가 나온다. 반환: 새로 넣은 후보 수
-export function rerollWikiCandidates(wiki, docId, opt, n, now = new Date().toISOString()) {
+export function rerollWikiCandidates(wiki, docId, opt, n, now = new Date().toISOString(), locks = null) {
+  const locked = (id) => !!locks?.[id];   // addon-rebuild: 잠근 후보는 다시 뽑기에도 그대로
   const people = wiki?.people, doc = wiki?.documents?.[docId];
   if (!people?.profiles?.[docId] || !doc) return 0;
   people.candidates ??= {};
-  for (const [id, c] of Object.entries(people.candidates)) if (id.startsWith(`candidate_seed_${docId}_`) && ["collecting", "review"].includes(c?.status)) delete people.candidates[id];
+  for (const [id, c] of Object.entries(people.candidates)) {
+    if (!id.startsWith(`candidate_seed_${docId}_`) || locked(id)) continue;
+    if (["collecting", "review"].includes(c?.status)) delete people.candidates[id];
+    else if (c?.status === "approved" && unapplySeedCandidate(wiki, c, now)) delete people.candidates[id];   // 무작위로 반영된 줄은 빼고 새로 뽑는다
+  }
   const o = normalizeSeedOpt({ ...opt, on: true });
   const roll = rollAdult(`${doc.title || docId}#${n}`, null, o);
   let k = 0;
@@ -123,6 +175,21 @@ export function rerollWikiCandidates(wiki, docId, opt, n, now = new Date().toISO
     evidence: [{ id: `${id}:0`, ref: "source:manual_input", sceneKey: "", summary: "무작위로 다시 뽑은 취향", confidence: 0, strength: 0, at: now }], sceneKeys: [], confidence: 0, averageStrength: 0, proposedDelta: 0, createdAt: now, updatedAt: now, appliedChange: null }; k++; };
   roll.desires.forEach((p, i) => add("sexual_desire", p, i));
   roll.kinks.forEach((p, i) => add("paraphilia", p, i));
+  for (const c of Object.values(people.candidates)) if (c.id?.startsWith(`candidate_seed_${docId}_`)) applySeedCandidate(wiki, c, now);
   wiki.revision = (wiki.revision ?? 0) + 1;
   return k;
+}
+
+// addon-rebuild: 성적 욕망·이상성향 직접 추가 — 후보로 넣고 바로 반영(그 칸을 꺼 둔 인물이면 검토 대기로 남는다). 반환: 후보 id
+export function addManualAdult(wiki, docId, axis, pattern, now = new Date().toISOString()) {
+  const people = wiki?.people; if (!people?.profiles?.[docId]) throw new Error("이 인물은 기본 성격이 아직 없어요.");
+  const text = String(pattern ?? "").trim().slice(0, 300); if (!text) throw new Error("내용을 적어 주세요.");
+  const ax = axis === "paraphilia" ? "paraphilia" : "sexual_desire";
+  const id = `candidate_manual_${docId}_${ax}_${Date.parse(now) || Date.now()}`;
+  people.candidates ??= {};
+  people.candidates[id] = { id, documentId: docId, axis: ax, direction: "replace", pattern: text, origin: "manual", status: "review",
+    evidence: [{ id: `${id}:0`, ref: "source:manual_input", sceneKey: "", summary: "직접 추가", confidence: 0, strength: 0, at: now }], sceneKeys: [], confidence: 0, averageStrength: 0, proposedDelta: 0, createdAt: now, updatedAt: now, appliedChange: null };
+  applySeedCandidate(wiki, people.candidates[id], now);
+  wiki.revision = (wiki.revision ?? 0) + 1;
+  return id;
 }

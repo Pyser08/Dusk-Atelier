@@ -19,11 +19,13 @@ export function splitText(text, { maxChars = 360, minChars = 80 } = {}) {
   return out;
 }
 
+// addon-rebuild: 지난 메시지의 상태 줄([Status:date=…])은 그때 값이라 지금 날짜와 섞이지 않게 뺀다
+export const stripStatus = (t) => String(t ?? "").replace(/\[Status:[^\]]*\]/gi, " ");
 // messages: [{text, who, mi}] (mi = 채팅 안 번호). dateOf(mi) → 그 메시지의 이야기 날짜(없으면 "")
 export function buildChunks(messages, dateOf = () => "", opts = {}) {
   const out = [];
   for (const m of messages) {
-    const pieces = splitText(m.text, opts);
+    const pieces = splitText(stripStatus(m.text), opts);
     pieces.forEach((p, k) => { const t = `${m.who}: ${p}`; out.push({ id: out.length, mi: m.mi, k, t, h: hashText(t, 400), date: dateOf(m.mi) || "" }); });
   }
   return out;

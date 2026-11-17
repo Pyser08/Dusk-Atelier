@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/router-runtime.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/router-runtime.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { wrapPdfReference } from '../../engine/pot/pdf-reference.js';
 import { USER_ACTOR_CONTROL, normalizeUserActor } from '../../engine/pot/user-identity.js';
 import { assertSafeWikiData } from '../../engine/pot/wiki-schema.js';

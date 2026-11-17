@@ -31,7 +31,9 @@ function recordBox(M) {
   const when = new Date(r.at).toLocaleTimeString();
   if (r.error) return h("p", { class: "rb-muted", "data-rec": "error" }, `최근 기록 결과 (${when}): 실패 — ${r.error}`);
   const parts = [r.created?.length ? `새 인물 ${r.created.join(", ")}` : "", r.updated ? `카드 ${r.updated}명 갱신` : "", r.entries ? `항목 ${r.entries}개` : "", r.gauges ? `호감도 변화 ${r.gauges}건` : "", r.states?.length ? `상태 ${r.states.join(", ")}` : "", r.failed?.length ? `세부 실패 ${r.failed.join(", ")}` : "", r.lightAuto ? "가벼운 지침으로 자동 전환(깊은 칸은 이번에 묻지 않음)" : "", r.skipped?.length ? `로어북에 없어 새로 만들지 않음: ${r.skipped.join(", ")}` : ""].filter(Boolean);
-  return h("details", { class: "rb-mem-man", "data-rec": "ok" }, h("summary", null, `최근 기록 결과 (${when}) · ${parts.length ? parts.slice(0, 2).join(" · ") : "바뀐 것 없음"}`),
+  // addon-rebuild: 가벼운 지침으로 기록한 턴은 요약 줄에 바로 보이게(관계·기본 성격·성적 욕망 같은 깊은 칸이 빠진다)
+  const liteNote = r.lightAuto ? "⚠ 가벼운 기록(관계·기본 성격·성적 욕망 칸 빠짐)" : "";
+  return h("details", { class: "rb-mem-man", "data-rec": "ok" }, h("summary", null, `최근 기록 결과 (${when}) · ${[liteNote, ...(parts.length ? parts.slice(0, 2) : ["바뀐 것 없음"])].filter(Boolean).join(" · ")}`),
     h("ul", null, [r.scene ? `장면: ${r.scene}` : "", ...parts, ...extra].filter(Boolean).map((t) => h("li", null, t))));
 }
 

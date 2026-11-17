@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/writer-input-budget.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/writer-input-budget.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 export const WRITER_INPUT_BUDGET_DEFAULT=96000;
 const WRITER_INPUT_BUDGET_LIMITS=Object.freeze({minimum:1000,maximum:1000000,step:1000});

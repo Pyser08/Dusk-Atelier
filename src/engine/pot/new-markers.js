@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/new-markers.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/new-markers.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 function latestWriterContext(scope){if(!scope)return{record:null,requestRef:'',identity:'',events:[]};const records=scope.automation?.records||{},last=scope.automation?.lastStatus,record=last?.phase==='completed'?records[last.identity]:null;if(record?.status==='completed')return{record,requestRef:String(record.requestRef||''),identity:String(record.identity||''),events:(scope.history||[]).filter(event=>event.requestRef===record.requestRef)};const latest=(scope.history||[]).at(-1);if(!latest)return{record:null,requestRef:'',identity:'',events:[]};return{record:null,requestRef:String(latest.requestRef||''),identity:'',events:(scope.history||[]).filter(event=>(latest.batchRef&&event.batchRef===latest.batchRef)||(!latest.batchRef&&event.requestRef===latest.requestRef))};}
 function latestDocumentEvent(scope,documentId){const context=latestWriterContext(scope);return[...context.events].reverse().find(event=>event.documentId===documentId)||null;}

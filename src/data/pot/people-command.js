@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/people-command.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/people-command.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { APPRAISAL_FIRST_PRESERVED, APPRAISAL_TEXT_CONTROL, shouldPreserveFirstAppraisal } from '../../engine/pot/appraisal-records.js';
 import { readCurrentRpSource } from './chat-source.js';
 import { INFORMATION_CONTINUITY_NOTE, shouldPreserveInformation } from '../../engine/pot/information-continuity.js';

@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/render-guard.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/render-guard.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 
 const EDITABLE_SELECTOR='textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=file]):not([type=range]):not([type=color]),[contenteditable=""],[contenteditable="true"]';
 function isEditingIn(doc,scope=null){const active=doc?.activeElement;return Boolean(active&&active!==doc?.body&&(!scope||scope.contains?.(active))&&active.matches?.(EDITABLE_SELECTOR));}

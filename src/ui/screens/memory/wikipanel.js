@@ -6,6 +6,7 @@ import { fail } from "./common.js";
 import { editSectionText, setPin, isPinned, sectionPinKey, scopeKeyOf } from "../../../engine/personedit.js";
 import { deletePersonItem } from "../../../engine/pot/people-records.js";
 import { reviewPersonCandidate } from "../../../engine/pot/people-profile.js";
+import { rejectAdultCandidate, deleteAdultCandidate } from "../../../engine/adultseed.js";
 import { updatePersonCandidateText, deletePersonCandidate } from "../../../engine/pot/people-candidate-edit.js";
 
 const AXIS = { sexual_desire: "성적 욕망", paraphilia: "이상성향", qualitative: "성격 변화" };
@@ -31,13 +32,16 @@ export function wikiPanel(env, doc, opts = {}) {
     const live = ["collecting", "review"].includes(c.status), ev = c.evidence?.length ?? 0;
     const act = (action, label, ok) => btn(label, { size: "sm", kind: action === "approve" ? "primary" : "", onClick: () => edit((w) => reviewPersonCandidate(w, c.id, action), ok) });
     return h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("b", null, `${AXIS[c.axis] ?? "변화"} · ${STATUS[c.status] ?? c.status}`), h("div", null, c.pattern || c.summary || ""), ev ? h("div", { class: "rb-muted" }, `근거 ${ev}개`) : null),
+      opts.adult ? h("span", { class: "rb-mem-rowact" }, c.status === "review" ? act("approve", "반영", "반영했어요.") : null,
+        live || c.appliedChange?.pattern ? btn("거부", { size: "sm", onClick: () => edit((w) => rejectAdultCandidate(w, c.id), "거부했어요.") }) : c.status === "approved" ? act("revert", "되돌리기", "되돌렸어요.") : null,
+        live || c.appliedChange?.pattern || c.status !== "approved" ? btn("삭제", { size: "sm", onClick: () => edit((w) => deleteAdultCandidate(w, c.id), "지웠어요.") }) : null) :
       h("span", { class: "rb-mem-rowact" }, c.status === "review" ? act("approve", "반영", "반영했어요.") : null, live ? act("reject", "거부", "거부했어요.") : null, c.status === "approved" ? act("revert", "되돌리기", "되돌렸어요.") : null,
         live ? btn("삭제", { size: "sm", onClick: () => edit((w) => deletePersonCandidate(w, doc.id, { id: c.id, expected: JSON.stringify(wiki.people.candidates[c.id]), scopeKey: sk }), "지웠어요.") }) : null));
   };
   const addCand = btn("변화 후보 직접 추가", { size: "sm", onClick: async () => { const v = await promptDialog(ctx.win, { title: "장기 변화 후보", label: "이 인물의 달라진 점 (400자까지)", ok: "추가" }); if (v?.trim()) edit((w) => updatePersonCandidateText(w, doc.id, { text: v, scopeKey: sk }), "후보로 넣었어요. 검토 후 반영하세요."); } });
 
   if (opts.adult) return h("section", { class: "rb-wk2-card rb-mem-wikipanel", id: "rb-nsfw-cands" }, h("div", { class: "rb-wk2-ch" }, h("b", null, `성적 욕망 · 이상성향 후보 (${cands.length})`)),
-    cands.length ? h("ul", { class: "rb-mem-reclist" }, cands.map(candRow)) : h("p", { class: "rb-muted", style: "margin:0" }, "후보가 없어요. 대화에서 성적 욕망이나 취향이 드러나면 여기에 쌓여요."));
+    cands.length ? h("ul", { class: "rb-mem-reclist" }, cands.map(candRow)) : h("p", { class: "rb-muted", style: "margin:0" }, "후보가 없어요. 대화에서 성적 욕망이나 취향이 드러나면 여기에 쌓여요. 무작위로 정한 것은 바로 반영되고, 마음에 안 들면 거부·삭제하거나 다시 뽑을 수 있어요."));
   return h("details", { class: "rb-card rb-mem-man rb-mem-wikipanel rb-mem-advfold" }, h("summary", null, "위키 항목 전체 · 성격 변화 (고급)"),
     h("p", { class: "rb-muted" }, "AI가 쌓은 인물 문서의 모든 항목이에요. 고치면 다음 응답부터 반영되고, 📌으로 고정하면 AI가 덮어쓰지 않아요."),
     h("h4", null, `성격 변화 후보 (${cands.length})`), cands.length ? h("ul", { class: "rb-mem-reclist" }, cands.map(candRow)) : h("p", { class: "rb-muted" }, "후보가 없어요."), addCand,

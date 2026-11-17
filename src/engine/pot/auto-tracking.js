@@ -1,4 +1,4 @@
-// 출처: risupot 2.3.0 src/auto-tracking.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+// 출처: risupot 2.3.0 src/auto-tracking.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
 import { resolveMergedIdentity } from './identity-links.js';
 
 const AUTO_TRACKING_LIMITS=Object.freeze({scopes:512,documents:500,idChars:160,scopeIdChars:500});

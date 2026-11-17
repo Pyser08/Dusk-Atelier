@@ -8,14 +8,14 @@ import { isTombed } from "./memorydelete.js";
 import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
 import { isLover, strayRisk } from "./lover.js";
 import { attractionCap } from "./memoryhuman.js";
-import { seedFromTies, sourAttraction } from "./emoseed.js";
+import { seedFromStart, seedFromTies, sourAttraction } from "./emoseed.js";
 import { applyRomance, orientCap } from "./romance.js";
 import { loverPairs, pairKey } from "./lover.js";
 import { applyPov, applyExp, takeSelf, isImportant, tensionKeys, noteTension, clearHints } from "./memoryinner.js";
 import { trustFields, mergeTrust, resolveConflicts, attrsForPrompt, currentState } from "./memorytrust.js";
 import { coolEmo, applyHuman, stageCeiling } from "./memoryhuman.js";
 import { normalizeUserNames } from "./memoryuser.js";
-import { canonName } from "./memorylines.js";
+import { canonNameKo as canonName } from "./namekr.js";   // addon-rebuild: 한국 이름 성 한 글자(하연=지하연)까지 맞춤
 
 // 2.2.4 이름 맞추기: 분석 결과의 이름(인물·감정·관계·관계 기록·장면 참가자)을 이 채팅의 모든 인물(30명 제한 없이)에 맞춘다.
 //   성만·이름만·호칭 붙여 부른 이름이 새 사람으로 따로 쌓이던 것(일본 캐릭터: 텐도 / 아리스 / 텐도 아리스). 바뀐 이름은 별칭으로 남긴다.
@@ -106,6 +106,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   if (important) { out.pov = applyPov(latestScene(folder), result?.pov, now); out.exp = applyExp(folder, result?.exp, anchor, now); }
   { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
   out.human = applyHuman(folder, result?.human, anchor, { important, now });   // v1.8.3: 호칭·말투, 둘만의 추억(중요할 때만), 잘못된 믿음
+  out.startSeed = seedFromStart(folder, anchor, now);   // addon-rebuild: 이미 아는 사이면 인간적 호감·신뢰를 바닥값까지(처음 만남처럼 2에서 시작하지 않게)
   folder.runs = (folder.runs ?? 0) + 1;
   folder.cursor = { ...anchor };
   noteTension(folder, tBefore); clearHints(folder);  // 7-4: 감정 태그가 새로 어긋나면 자기 감정 기록을 유도
