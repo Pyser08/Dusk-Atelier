@@ -26,6 +26,7 @@ import { liveScope } from "./advanced.js";
 import { castOfCard, modulesOf } from "../../../data/castlore.js";
 import { strangers } from "../../../engine/castfilter.js";
 import { personTabs } from "./personv2.js";
+import { removePairMemory, removePairWiki, promoteAlias } from "../../../engine/relremove.js";
 
 const USER = "{{user}}";
 const AXIS_LABEL = { relationalInitiative: "관계 주도성", expressionDirectness: "표현 직접성", emotionalExpressiveness: "감정 표출성", guardedness: "경계 성향", impulsivity: "충동성", relationshipPersistence: "관계 지속성" };
@@ -186,7 +187,7 @@ export async function renderPeopleTab(env, host) {
     m.wkSel = r.id;
     for (const [id, el] of rowButtons) el.setAttribute("aria-pressed", id === r.id ? "true" : "false");
     // 인물 전환은 오른쪽 문서만 교체한다. 목록·검색·상단 상태와 무거운 설정 조회는 다시 실행하지 않는다.
-    replace(main, top(rows.length), personPage(env, r, docs, commit));
+    replace(main, lay ? null : top(rows.length), personPage(env, r, docs, commit));   // addon-rebuild: 새 배치(lay)는 위에 인물 띠가 이미 있다 — 또 그리면 띠가 두 개가 되고 인물 칩이 아래로 옮겨 갔다
   };
   // 개편: 유저(플레이어)는 늘 맨 왼쪽, 따로 강조
   const meOf = (r) => isUser(r.name) || (r.doc?.aliases ?? []).some(isUser) || String(r.name).trim() === String(userLabel()).trim();
@@ -298,7 +299,32 @@ function personPage(env, r, docs, commit) {
     btn("인물 삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: "인물 문서와 기본 성격이 함께 지워져요. 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요.", ok: "삭제", danger: true })) { m.wkSel = ""; commit((w) => removePerson(w, doc.id), "지웠어요."); } } })) : null;
   const slotLabel = Object.fromEntries(METER_SLOTS.map(([s, l]) => [s, l]));
   const metrics = (doc?.metrics ?? []).map((x) => ({ label: slotLabel[x.slotId] ?? x.slotId, slot: x.slotId, value: x.value, min: x.minimum ?? 0, max: x.maximum ?? 100, stage: x.stageLabel ?? "", targets: (x.targetRefs ?? []).map(nameOf).filter(Boolean) }));
-  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, header: h("span", { class: "rb-mem-rowact" }, p && env.backend?.id === "local" ? btn("⏳ 회귀", { size: "sm", title: "이 인물만 기억을 안고 처음으로 돌아간 새 채팅을 만들어요", onClick: () => regressFrom(env, r.pk).catch(fail(ctx)) }) : null, actions), metrics, gauges: () => gaugeRows(env, doc, p),
+  // addon-rebuild 수동 고치기: 이름·별칭(별칭을 대표 이름으로 올리기 포함), 두 사람 사이 관계 지우기
+  const nkey = (x) => String(x ?? "").toLowerCase().replace(/\s+/g, "");
+  const renameDialog = async () => {
+    if (!doc || !ed) return;
+    const nm = h("input", { class: "rb-input", value: doc.title, "aria-label": "대표 이름" }), al = h("input", { class: "rb-input", value: (doc.aliases ?? []).join(", "), "aria-label": "별칭" });
+    const chipsBox = h("div", { class: "rb-wk2-chips" });
+    const paintChips = () => replace(chipsBox, listOf(al.value).map((a) => h("button", { type: "button", class: "rb-wk2-chip", title: "이 별칭을 대표 이름으로", onClick: () => { const r2 = promoteAlias(nm.value, listOf(al.value), a); nm.value = r2.title; al.value = r2.aliases.join(", "); paintChips(); } }, `${a} → 대표 이름`)));
+    al.addEventListener("input", paintChips); paintChips();
+    const res = await modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", "aria-label": "이름·별칭 고치기", style: "max-width:520px;display:flex;flex-direction:column;gap:10px" },
+      h("b", null, "이름·별칭 고치기"), h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, "풀네임을 대표 이름으로 두고 애칭은 별칭으로 두면, 대화에서 애칭으로 불러도 같은 인물로 기록해요."),
+      h("label", { class: "rb-mem-field" }, h("span", null, "대표 이름"), nm), h("label", { class: "rb-mem-field" }, h("span", null, "별칭 (쉼표로 구분)"), al),
+      h("small", { class: "rb-muted" }, "별칭을 눌러 대표 이름으로 바꿀 수 있어요(지금 이름은 별칭으로 내려가요)."), chipsBox,
+      h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done({ title: nm.value.trim(), aliases: listOf(al.value) }) }))));
+    if (!res?.title) return;
+    await commit((w) => editDocMeta(w, doc.id, { title: res.title, aliases: res.aliases }), "이름·별칭을 고쳤어요.");
+    if (p) await editFolder(env, (f) => { const q = f.people?.[r.pk]; if (q) q.aliases = [...new Set([...(q.aliases ?? []), res.title, ...res.aliases].filter((x) => x && nkey(x) !== nkey(q.name)))]; });
+  };
+  const removeRelation = async (other) => {
+    if (!(await confirmDialog(ctx.win, { title: `${r.name} ↔ ${other} 관계를 지울까요?`, body: "두 사람 사이의 감정·관계 종류·관계 변화 기록과, 위키에서 서로를 대상으로 적힌 항목을 지워요. 두 인물과 다른 관계는 그대로예요. 대화에서 다시 엮이면 새로 기록될 수 있어요.", ok: "지우기", danger: true }))) return;
+    const odoc = Object.values(wiki?.documents ?? {}).find((d) => d?.type === "Character" && [d.title, ...(d.aliases ?? [])].some((n) => nkey(n) === nkey(other)));
+    const selfNames = [r.name, doc?.title, ...(doc?.aliases ?? []), ...(p?.aliases ?? [])], otherNames = [other, odoc?.title, ...(odoc?.aliases ?? [])];
+    await editFolder(env, (f) => { removePairMemory(f, selfNames, otherNames); });
+    if (ed && doc && odoc) await commit((w) => removePairWiki(w, doc.id, odoc.id).scope, "관계를 지웠어요.");
+    else again();
+  };
+  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, removeRelation, header: h("span", { class: "rb-mem-rowact" }, ed ? btn("이름·별칭 고치기", { size: "sm", id: "rb-wk-rename", title: "대표 이름을 풀네임으로 바꾸거나 별칭을 고쳐요", onClick: () => renameDialog().catch(fail(ctx)) }) : null, p && env.backend?.id === "local" ? btn("⏳ 회귀", { size: "sm", title: "이 인물만 기억을 안고 처음으로 돌아간 새 채팅을 만들어요", onClick: () => regressFrom(env, r.pk).catch(fail(ctx)) }) : null, actions), metrics, gauges: () => gaugeRows(env, doc, p),
     info: (go) => infoTab(env, { doc, p, r, ed, profile, groups, commit, nameOf, aiNew, addMetricFlow, editProfileAll, go,
       K: { ORDER, MEMBERS, ALWAYS, LABEL, SUB, AXES: PROFILE_AXES, AXIS_LABEL, band, METER_SLOTS, TEXT_FIELDS },
       makeProfile: () => commit((w) => ensureProfile(w, doc.id), "만들었어요. 이제 직접 수정이나 AI 작성을 쓸 수 있어요."),

@@ -93,11 +93,12 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   { const nt = page.locator('.rb-wk2-tab[data-t="nsfw"]').first(); if (await nt.count()) { await nt.click(); await page.waitForTimeout(500); } }
   ok(`[${tag}] 위키 NSFW ‘지금 상태’에 노리는 목표`, /지금 상태/.test(await body()) && /순찰 끝나고 둘이 남기/.test(await body()));
   await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 상세 정보에 'Erosync 성향' 8축 게이지`, (await page.locator(".rb-wk2-ero").filter({ hasText: "Erosync 성향" }).count()) === 1 && /주도성/.test(await body()));
+  ok(`[${tag}] 상세 정보에는 Erosync 성향 카드가 없다(NSFW로 옮김)`, (await page.locator(".rb-wk2-ero").filter({ hasText: "Erosync 성향" }).count()) === 0);
   ok(`[${tag}] 상세 정보에는 성적 항목이 없다`, !/성적 관심/.test(await body()));
   await page.locator(".rb-wk2-tab", { hasText: "NSFW" }).click(); await page.waitForTimeout(300);
   ok(`[${tag}] NSFW 탭이 상세 정보와 기록 사이에 있다`, (await page.locator(".rb-wk2-tab").allTextContents()).join("|").replace(/\s+/g, "").includes("상세정보|NSFW|기록"));
   ok(`[${tag}] NSFW 탭에 Erosync 성적 항목(성적 관심)`, /Erosync 성적 항목/.test(await body()) && /성적 관심/.test(await body()));
+  ok(`[${tag}] NSFW 탭 Erosync 카드에 8가지 성향(주도성)`, (await page.locator("#rb-ero-axes").count()) === 1 && /주도성/.test(await page.locator("#rb-ero-axes").textContent()));
   await page.locator("#rb-ero-edit").click(); await page.waitForTimeout(300);
   ok(`[${tag}] 고치기 창이 열리고 8축·성적 칸이 있음`, (await page.locator("#rb-ero-editor input[data-k=initiative]").count()) === 1 && (await page.locator("#rb-ero-editor input[data-k=sexualOpenness]").count()) === 1);
   await page.locator("#rb-ero-editor input[data-k=initiative]").fill("90"); await page.locator("#rb-ero-editor-save").click(); await page.waitForTimeout(400);

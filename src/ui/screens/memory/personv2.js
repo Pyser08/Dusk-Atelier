@@ -251,6 +251,8 @@ export function personTabs(env, parts) {
       open ? h("div", { class: "rb-wk2-emptybody" }, P.talkEmpty ? P.talk : null, P.faceEmpty ? P.face : null) : null);
   };
   const filled = (P) => [P.nums, P.talkEmpty ? null : P.talk, P.rifts, P.bonds, P.exp, P.faceEmpty ? null : P.face, P.beliefs, P.ero].filter(Boolean);
+  // addon-rebuild: 이 상대와의 관계 지우기(잘못 붙은 관계 — 예: 스친 엑스트라). 위키 화면이 넘겨준 removeRelation이 있을 때만.
+  const relDel = (other) => typeof parts.removeRelation === "function" && other ? h("div", { class: "rb-mem-sact" }, btn(`${shown(other)}와의 관계 지우기`, { size: "sm", id: "rb-wk2-reldel", title: "두 사람 사이 감정·관계 기록과 위키의 서로에 대한 항목을 지워요", onClick: () => parts.removeRelation(other) })) : null;
   const hint = () => h("p", { class: "rb-wk2-hint rb-muted" }, "이 내용은 AI가 대화할 때 참고해요. 고치면 잠겨서 AI가 바꾸지 않아요.");
   const noPeople = () => h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "아직 함께 기록된 인물이 없어요. 대화가 이어지면 채워져요."), ...(eroSelf() ? [h("div", { class: "rb-wk2-cards" }, eroPartnerCards(ctx, card, ero, eroSelf()))] : []));
   const curOther = () => people.find((x) => x.name === withSel[pk])?.name ?? people[0].name;
@@ -268,7 +270,7 @@ export function personTabs(env, parts) {
   const layoutA = () => {
     if (!people.length) return noPeople();
     const other = curOther(), P = pieces(other);
-    return h("div", { class: "rb-wk2-pane lay-a" }, pickRow(other), duel(other, P), P.tl, h("div", { class: "rb-wk2-grid2" }, filled(P)), emptyRow(P), hint());
+    return h("div", { class: "rb-wk2-pane lay-a" }, pickRow(other), duel(other, P), P.tl, h("div", { class: "rb-wk2-grid2" }, filled(P)), emptyRow(P), relDel(other), hint());
   };
   // B안: 왼쪽 상대 목록 + 접는 묶음 5개
   const accOpen = (m.wkAcc ??= { feel: true, state: true });
@@ -294,7 +296,7 @@ export function personTabs(env, parts) {
       acc("talk", "말과 태도", [talkTxt || null], [P.talk, P.faceEmpty ? null : P.face]),
       acc("story", "추억 · 갈등 · 오해", [v.bonds.length ? `추억 ${v.bonds.length}` : null, v.rifts?.length ? `갈등 ${v.rifts.length}` : null, v.beliefs.length ? `오해 ${v.beliefs.length}` : null], [P.nums, P.bonds, P.rifts, P.exp, P.beliefs]),
       acc("ero", "Erosync", [], [P.ero])];
-    return h("div", { class: ["rb-wk2-pane", "lay-b", `lay-b${sub}`] }, chips, h("div", { class: ["rb-wk2-bmain", sub === "2" && "panels"] }, groups, emptyRow(P)), hint());
+    return h("div", { class: ["rb-wk2-pane", "lay-b", `lay-b${sub}`] }, chips, h("div", { class: ["rb-wk2-bmain", sub === "2" && "panels"] }, groups, emptyRow(P)), relDel(other), hint());
   };
   // C안: 상대마다 한 줄 → 누르면 그 자리에서 펼침(마주 보기 + 나머지)
   const openRow = (m.wkOpenRow ??= {});
@@ -309,7 +311,7 @@ export function personTabs(env, parts) {
           avatar(shown(x.name), ""), h("b", null, shown(x.name), loverWith(x.name) ? " 💗" : ""),
           h("span", { class: "bars" }, bar("attraction", "이성적"), bar("affection", "인간적")),
           h("small", { class: "rb-wk2-chip" }, stageName(x.stage)), u2(x.name) ? h("small", { class: "rb-wk2-chip" }, "짝사랑") : null, h("i", { class: "arr", "aria-hidden": "true" })),
-        open ? h("div", { class: "rb-wk2-cbody" }, duel(x.name, P), P.tl, h("div", { class: "rb-wk2-grid2" }, filled(P)), emptyRow(P)) : null);
+        open ? h("div", { class: "rb-wk2-cbody" }, duel(x.name, P), P.tl, h("div", { class: "rb-wk2-grid2" }, filled(P)), emptyRow(P), relDel(x.name)) : null);
     }), hint());
   };
   const relation = () => {
@@ -320,12 +322,12 @@ export function personTabs(env, parts) {
     return h("div", { class: "rb-wk2-pane" }, pickRow(other),
       h("div", { class: "rb-wk2-cards" }, P.stage, P.lover, P.tl, P.unreq, feelCard(v, other), P.nums, P.talk, P.rifts,
         P.bonds ?? card("둘만의 추억", h("p", { class: "rb-muted" }, "아직 없어요. 둘에게 의미 있는 순간이 생기면 쌓여요.")), P.exp, P.faceEmpty ? null : P.face, P.beliefs, P.ero),
-      hint());
+      relDel(other), hint());
   };
 
   // ── 상세 정보 · 기록 ──
   const go = (tab, w) => { if (w) withSel[pk] = w; tabs[pk] = tab; paint(); root.scrollIntoView?.({ block: "start" }); };
-  const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean), (() => { const e = eroSelf(); return e ? eroInfoCard(ctx, card, e) : null; })());
+  const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean), null);   // addon-rebuild: Erosync 8가지 성향은 NSFW 탭의 Erosync 카드로 옮김(상세 정보의 성향과 헷갈려서)
   // NSFW 탭: Dusk 성인 항목(월경·임신, 성적 욕망·이상성향 후보) + Erosync 성적 항목(켜져 있을 때만). 항상 보인다.
   // 월경·임신 한눈에: 주기 띠(생리·가임기·오늘) + 다음 월경·배란까지 남은 날 / 임신이면 주차·출산 예정까지
   const dayN = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5 : NaN; };

@@ -95,6 +95,8 @@ export function eroNsfwCard(ctx, card, person, redraw, snap = null) {
       h("small", { class: "rb-muted" }, "끌리는 상대"),
       h("div", { class: "bar" }, ...[["f", ad.pref.f], ["m", ad.pref.m], ["x", ad.pref.x]].filter(([, v]) => v > 0).map(([k, v]) => h("i", { class: k, style: { flexGrow: v } }))),
       h("div", { class: "lg" }, h("span", { class: "f" }, `여성 ${ad.pref.f}%`), h("span", { class: "m" }, `남성 ${ad.pref.m}%`), h("span", { class: "x" }, `그 외 ${ad.pref.x}%`))) : null)] : [h("small", { class: "rb-muted" }, "성적 항목이 아직 없어요.")];
+  // addon-rebuild: 8가지 성향(예전 상세 정보의 'Erosync 성향')도 여기서 함께
+  if (ax.length) rows.push(h("div", { class: "rb-wk2-ero-row", id: "rb-ero-axes" }, h("small", { class: "rb-muted" }, "성향 (8가지)"), h("div", { class: "rb-wk2-nums" }, ax.map((a) => bar(a.label + (a.changed ? " ·바뀜" : ""), a.value, a.hint, a.changed ? a.base : null)))));
   rows.push(...eroDetailRows(person.detail));
   if (koLater(ctx, person, redraw)) rows.push(h("small", { class: "rb-muted", id: "rb-ero-ko" }, "영어로 적힌 항목을 한국어로 옮기는 중이에요. 끝나면 바로 바뀌어요."));
   const toward = eroTowardRows(snap, person); if (toward) rows.push(toward);
