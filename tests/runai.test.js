@@ -34,3 +34,8 @@ test('v1.6.8: pick.timeoutSec가 있으면 오래 걸리는 호출을 실패로 
   const ok = { runLLMModel: async () => ({ type: 'success', result: '완료' }) };
   assert.equal(await runAI(ok, [], { mode: 'submodel', timeoutSec: 600 }), '완료');
 });
+
+test("보조 모델에 키가 없다는 오류엔 고칠 곳 안내를 붙임", async () => {
+  const api = { runLLMModel: async () => ({ type: "fail", result: "요청 에러:You didn't provide an API key. You need to provide your API key in an Authorization header" }) };
+  await assert.rejects(runAI(api, [{ role: "user", content: "t" }], { mode: "submodel", noUserPrompts: true }), /보조 모델/);
+});

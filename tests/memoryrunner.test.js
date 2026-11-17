@@ -262,3 +262,12 @@ test("지난 대화 분석에 함께 기록: 묶음마다 리수폿에 맡기고
   const off = await run(true);
   assert.equal(off.pot.length, 0); assert.deepEqual(off.ev, []);
 });
+
+test("위키 모델이 ‘내 API’면 기본(메모리·보조) 분석 모델도 따라감, 직접 고른 건 그대로 (11-18 제보)", async () => {
+  const { followHubPick } = await import("../src/data/memoryrunner.js");
+  const hub = { mode: "custom", presetId: "p1" };
+  assert.deepEqual(followHubPick({ mode: "memory", timeoutSec: 600 }, hub), { mode: "custom", presetId: "p1", timeoutSec: 600 });
+  assert.deepEqual(followHubPick({ mode: "submodel", timeoutSec: 60 }, hub), { mode: "custom", presetId: "p1", timeoutSec: 60 });
+  assert.deepEqual(followHubPick({ mode: "model", timeoutSec: 600 }, hub), { mode: "model", timeoutSec: 600 });
+  assert.deepEqual(followHubPick({ mode: "memory", timeoutSec: 600 }, null), { mode: "memory", timeoutSec: 600 });
+});
