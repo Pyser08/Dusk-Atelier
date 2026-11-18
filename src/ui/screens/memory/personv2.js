@@ -319,7 +319,7 @@ export function personTabs(env, parts) {
   // 세부 탭(PC 왼쪽 레일 · 모바일 아래 반원 다이얼). 고른 세부 탭은 인물·탭마다 기억
   const subSel = (m.wkSub ??= {});
   const sub2 = (tab, items) => subTabs(ctx, subSel, `${pk}|${tab}`, items, { label: "세부 탭" });
-  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "진도·감정·호칭·추억", n: people.length, render: relation0 }, { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }]);
+  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "진도·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }]);
   const relation0 = () => {
     if (lay === "A") return layoutA();
     if (fam === "B") return layoutB();

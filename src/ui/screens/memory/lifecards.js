@@ -64,7 +64,11 @@ export function infoBtn(text) {
   const b = h("button", { type: "button", class: "rb-ibtn", "aria-label": "설명 보기", "aria-expanded": "false", onClick: (e) => { e.stopPropagation();
     doc = b.ownerDocument; if (b.classList.contains("open")) return close();
     doc.querySelectorAll(".rb-ibtn.open").forEach((x) => x.dispatchEvent(new (doc.defaultView.CustomEvent)("rb-iclose")));
-    b.classList.add("open"); b.setAttribute("aria-expanded", "true"); doc.addEventListener("pointerdown", outside, true); doc.addEventListener("keydown", esc, true); } }, "i");
+    b.classList.add("open"); b.setAttribute("aria-expanded", "true"); doc.addEventListener("pointerdown", outside, true); doc.addEventListener("keydown", esc, true);
+    // 화면(창) 밖으로 나가면 안쪽으로 밀어 넣는다(모바일에서 옆으로 뚫던 것)
+    tipEl.style.translate = "0 0";
+    (doc.defaultView.requestAnimationFrame ?? setTimeout)(() => { const vw = doc.documentElement.clientWidth, r = tipEl.getBoundingClientRect(), pad = 12;
+      const dx = r.left < pad ? pad - r.left : r.right > vw - pad ? (vw - pad) - r.right : 0; if (dx) tipEl.style.translate = `${Math.round(dx)}px 0`; }); } }, "i");
   b.addEventListener("rb-iclose", close);
   wrapEl = h("span", { class: "rb-iwrap" }, b, tipEl);
   return wrapEl;
@@ -150,7 +154,7 @@ export function compareCard(env, card, doc) {
     ...rows.map(({ d, v, adult }) => h("div", { class: ["row", d.id === doc?.id && "me"] }, h("b", null, d.title), adult ? bar(v.lust, "lust") : h("small", { class: "rb-muted" }, "—"), bar(v.fat, "fat"), h("small", null, v.moodTop ? `${v.moodTop.label} ${v.moodTop.v}` : "평온"))))], null, "rb-life");
 }
 // NSFW 탭 배경 효과: 달아오름에 따라(0~1)
-export function heatOf(env, doc) { const v = doc ? viewOf(env, doc) : null; return v && Object.keys(env.folder?.nsfw?.[doc.id]?.sexual ?? {}).length ? v.lust / 100 : 0; }
+export function heatOf(env, doc) { const v = doc ? viewOf(env, doc) : null; return v && Object.keys(env.folder?.nsfw?.[doc?.id]?.sexual ?? {}).length ? v.lust / 100 : 0; }
 export function heatFx() { return h("div", { class: "rb-heatfx", "aria-hidden": "true" }, Array.from({ length: 10 }, (_, i) => h("i", { style: { "--x": `${(i * 37) % 100}%`, "--d": `${6 + (i % 4) * 1.7}s`, "--w": `${-(i * 0.9)}s`, "--z": String(0.6 + (i % 3) * 0.25) } }, "♥"))); }
 
 // ── 그래프: 부드러운 곡선(카디널 → 베지어) ──
@@ -370,7 +374,7 @@ export const LIFE_CSS = `
 .rb-iwrap{position:relative;display:inline-flex;vertical-align:middle;margin-left:4px}
 .rb-ibtn{width:15px;height:15px;padding:0;border-radius:50%;border:1px solid var(--rb-line);background:var(--rb-surf);color:var(--rb-mute);font:italic 700 9.5px/13px Georgia,serif;cursor:pointer;display:grid;place-items:center}
 .rb-ibtn.open,.rb-ibtn:focus-visible{border-color:var(--rb-acc);color:var(--rb-acc)}
-.rb-ibub{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);width:max-content;max-width:240px;padding:8px 10px;border-radius:10px;background:var(--rb-text);color:var(--rb-win);font-size:11.5px;font-weight:500;line-height:1.45;letter-spacing:0;white-space:normal;text-align:left;opacity:0;pointer-events:none;transition:opacity .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1));z-index:20;box-shadow:0 6px 18px color-mix(in srgb,#000 22%,transparent)}
+.rb-ibub{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);width:max-content;max-width:min(240px,calc(100vw - 32px));padding:8px 10px;border-radius:10px;background:var(--rb-text);color:var(--rb-win);font-size:11.5px;font-weight:500;line-height:1.45;letter-spacing:0;white-space:normal;text-align:left;opacity:0;pointer-events:none;transition:opacity .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1));z-index:20;box-shadow:0 6px 18px color-mix(in srgb,#000 22%,transparent)}
 .rb-ibtn.open+.rb-ibub{opacity:1;transform:translateX(-50%)}
 @media (hover:hover){.rb-ibtn:hover+.rb-ibub{opacity:1;transform:translateX(-50%)}}
 .rb-lhi{position:absolute;top:10px;left:12px}
@@ -470,7 +474,7 @@ export const LIFE_CSS = `
 .rb-aitag .rb-ibub{left:auto;right:-8px;transform:translateY(-4px)}.rb-aitag .rb-ibtn.open+.rb-ibub{transform:none}@media (hover:hover){.rb-aitag .rb-ibtn:hover+.rb-ibub{transform:none}}
 `;
 
-export const lustCard = (env, card, doc, o) => live(doc.id, () => lustCard0(env, card, doc, o));
-export const moodCard = (env, card, doc) => live(doc.id, () => moodCard0(env, card, doc));
-export const bodyCard = (env, card, doc, o) => live(doc.id, () => bodyCard0(env, card, doc, o));
-export const humanCard = (env, card, doc, grp) => live(doc.id, () => humanCard0(env, card, doc, grp));
+export const lustCard = (env, card, doc, o) => !doc ? null : live(doc.id, () => lustCard0(env, card, doc, o));
+export const moodCard = (env, card, doc) => !doc ? null : live(doc.id, () => moodCard0(env, card, doc));
+export const bodyCard = (env, card, doc, o) => !doc ? null : live(doc.id, () => bodyCard0(env, card, doc, o));
+export const humanCard = (env, card, doc, grp) => !doc ? null : live(doc.id, () => humanCard0(env, card, doc, grp));
