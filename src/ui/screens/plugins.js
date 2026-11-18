@@ -61,6 +61,8 @@ var LOADERS = { list: viewList, interop: viewInterop, create: viewCreate, storag
 
 export async function renderPlugins(ctx, { fresh = false } = {}) {
   const st = ctx.state;
+  if (LOADERS[st.sub] && st.subApplied !== st.sub) { st.pluginView = st.sub; st.subApplied = st.sub; }   // 기능 찾기로 들어오면 그 보기로(tab: plugins, sub: interop)
+  if (!st.sub) st.subApplied = null;
   if (!LOADERS[st.pluginView]) st.pluginView = "list";
   let shell = ctx.main.querySelector(":scope > .rb-plugins");
   if (!shell) {
@@ -224,9 +226,11 @@ async function viewInterop(ctx, { fresh }) {
   const open = ctx.state.pluginOpen && interop.find((e) => e.id === ctx.state.pluginOpen);
   if (open) setTimeout(() => showInterop(ctx, open), 0);
   ctx.state.pluginOpen = null;
+  const perms = await bridgePerms(ctx);
   return h(
     "div",
     { style: "display:flex;flex-direction:column;gap:6px" },
+    permsCard(ctx, perms),
     interop.length ? null : h(
       "div",
       { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:8px" },
@@ -253,6 +257,36 @@ async function viewInterop(ctx, { fresh }) {
       ),
       icon("chevron", 16)
     ))
+  );
+}
+
+// Dusk 기능 허용(2.2.11, data/duskbridge.js): 다른 플러그인이 createDuskClient로 Dusk 기능을 부르도록 허용한 목록
+async function bridgePerms(ctx) {
+  try { return ctx.bridge ? await ctx.bridge.perms() : {}; } catch { return {}; }
+}
+function permsCard(ctx, perms) {
+  const ids = Object.keys(perms).sort();
+  const set = async (id, allow) => {
+    try { await ctx.bridge?.setPerm(id, allow); ctx.toast(allow == null ? `‘${id}’ 허용을 지웠어요` : allow ? `‘${id}’를 허용했어요` : `‘${id}’를 막았어요`); }
+    catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); }
+    renderPlugins(ctx);
+  };
+  return h(
+    "section",
+    { class: "rb-card pad bordered", id: "rb-bridge-perms", style: "display:flex;flex-direction:column;gap:8px" },
+    h("h3", { class: "rb-h3" }, "Dusk 기능 허용"),
+    h("p", { class: "rb-muted" }, "다른 플러그인이 Dusk의 기억·위키·AI 기능을 쓰도록 허용한 목록이에요. 처음 부를 때 리스 화면 알림으로 허용하고, 기억을 바꾸는 요청은 매번 물어요."),
+    ids.length ? ids.map((id) => {
+      const p = perms[id] ?? {};
+      return h(
+        "div",
+        { class: "rb-srow", dataset: { bridge: id } },
+        h("span", { class: "t" }, id, h("small", null, [p.allow ? "허용됨" : "막음", p.at && fmtWhen(p.at)].filter(Boolean).join(" · "))),
+        h("span", { class: "end", style: "display:flex;gap:6px" },
+          switchEl(!!p.allow, { label: `${id} 허용`, onChange: (v) => set(id, v) }),
+          iconBtn("trash", `${id} 허용 지우기`, { onClick: () => set(id, null) }))
+      );
+    }) : h("p", { class: "rb-muted" }, "아직 허용한 플러그인이 없어요.")
   );
 }
 

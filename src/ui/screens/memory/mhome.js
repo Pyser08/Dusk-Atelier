@@ -88,7 +88,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     budgetRow.hidden = false;
   })().catch(() => {});
   memOptions.append(h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "‘요약된 옛 대화 빼고 보내기’를 켰을 때 이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요. 두 배가 쌓이면 이만큼으로 한 번에 줄여요.")),
-    num("턴", () => inj.trimKeep ?? 20, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
+    num("턴", () => inj.trimKeep ?? 10, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
 
   return { memorySettings, memOptions };
 }

@@ -12,7 +12,7 @@ import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
 import { chatKeyOf } from "../engine/chatkey.js";
-import { trimCovered } from "../engine/historytrim.js";
+import { trimCovered, trimUntil, gateProcess } from "../engine/historytrim.js";
 import { buildChunks, lexScores, rrf, assemble, RAW_TITLE } from "../engine/rawrecall.js";
 
 // onRequest: 메인 모델 요청 직전에 부른다(기다리지 않음). 러너가 '다음 입력 때 직전 응답 확정'을 시작하는 데 쓴다.
@@ -27,6 +27,7 @@ function semQuery(msgs, minLen = 40) {
 // 2.2.4 기억 토큰 절약: LoCoMo 233문항에서 기억 블록 약 4,100 → 2,900토큰(-29%), 정답률 약 1~2점 손해로 잰 예산
 export const SAVER_INJECT = Object.freeze({ eventTokens: 900, recentEventTokens: 500, recallTokens: 350, rawTokens: 700, rawPicks: 6 });
 export const effectiveInject = (s) => (s?.saver === true ? { ...(s ?? {}), ...SAVER_INJECT } : (s ?? {}));
+export var TRIM_KEEP = 10;   // 최근 남길 턴(2.2.11: 20 → 10). 경계는 이만큼씩 묶어 옮겨 10~19턴이 남는다
 export function createMemoryInjector(api, { store, prep = null, storyNow = null, onRequest = null, embedder = null, rerank = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   let last = null, mode = "none";
 
@@ -83,7 +84,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
     if (manifest && text !== raw) manifest.tokens = loreTokens(text);
     if (mark && text && idx.settings.inject.plus !== false && manifest?.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
-    return { text, raw, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty", coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1, trim: idx.settings.inject.trimOld === true ? Math.max(4, Number(idx.settings.inject.trimKeep) || 20) : 0 };
+    return { text, raw, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty", coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1, trim: idx.settings.inject.trimOld === true ? Math.max(4, Number(idx.settings.inject.trimKeep) || TRIM_KEEP) : 0 };
   }
   async function rawRecall(folder, msgs, character, chat, query, s) {
     if (!String(query ?? "").trim()) return null;
@@ -122,7 +123,9 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       if (!c?.text) { last = { at: Date.now(), injected: false, manifest: c?.manifest ?? null, reason: c?.reason ?? "" }; return messages; }
       // 요약된 옛 대화 빼고 보내기(설정, 기본 꺼짐): 기억이 실제로 들어갈 때만, 분석이 끝난 옛 대화만 뺀다
       let send = messages, dropped = 0;
-      if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped; }
+      // 2.2.11: process 훅이 달려 있으면 리스가 이미 번호로 뺐다(아래는 훅이 없는 환경의 예비 — 요청 글 앞부분 맞추기)
+      if (c.trim && procOn) dropped = Math.max(0, trimState.from);
+      else if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped; }
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text, dropped };
       logEvent({ area: "기억 넣기", title: "요청에 기억 블록을 넣었어요", detail: { 글자: c.text?.length ?? 0, 위치: c.position } });
       return insertBlock(send, wikiAware(c.text, send), c.position);
@@ -145,6 +148,38 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     await api.setChatToIndex(ci, ti, { ...cur.chat, localLore: next });
     return true;
   }
+  // 요약된 옛 대화 빼고 보내기(2.2.11, HypaPlus 방식): 리스 처리 단계(process)에서 분석이 끝난 옛 메시지를 번호(chat_index)로 뺀다.
+  // 요청 글 모양과 상관없이 빠진다. 메시지마다 불리므로 경계는 한 번 구해 2초 동안 같이 쓴다.
+  let procOn = false, trimState = { at: 0, from: -1, p: null };
+  async function computeTrimFrom() {
+    const cur = await current(); if (!cur) return -1;
+    const idx = await store.getIndex(), inj = idx.settings.inject ?? {};
+    if (idx.settings.backend === "off" || inj.on === false || inj.trimOld !== true || idx.bots[String(cur.character.chaId)]?.on === false) return -1;
+    const msgs = cur.chat.message ?? [];
+    const folder = await loadReconciled(store, cur.character.chaId, chatKeyOf(cur.chat), msgs);
+    if (!injectVerdict(folder, inj, msgs.filter(isUserMessage).length).ok) return -1;   // 기억이 들어가지 않을 채팅이면 빼지 않는다
+    const keep = Math.max(4, Number(inj.trimKeep) || TRIM_KEEP);
+    const until = trimUntil(msgs, { keepTurns: keep, step: keep, coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1 });
+    return until >= 0 ? until + 1 : -1;
+  }
+  function trimFrom() {
+    if (trimState.p) return trimState.p;
+    if (Date.now() - trimState.at < 2000) return Promise.resolve(trimState.from);
+    trimState.p = computeTrimFrom().catch((e) => { log("옛 대화 빼기 계산 실패", e?.message ?? e); return -1; })
+      .then((from) => { trimState = { at: Date.now(), from, p: null }; return from; });
+    return trimState.p;
+  }
+  const onProcess = async (text) => { try { const f = await trimFrom(); return f > 0 && typeof text === "string" ? gateProcess(text, f) : text; } catch { return text; } };
+  async function startTrim() {
+    if (procOn || typeof api.addRisuScriptHandler !== "function") return procOn;
+    try { await api.addRisuScriptHandler("process", onProcess); procOn = true; } catch (e) { log("process 훅 등록 실패(요청 글 맞추기로 대신)", e?.message ?? e); }
+    return procOn;
+  }
+  async function stopTrim() {
+    if (!procOn) return;
+    try { await api.removeRisuScriptHandler?.("process", onProcess); } catch { /* 이미 없음 */ }
+    procOn = false;
+  }
   async function start() {
     if (typeof api.addRisuReplacer === "function") {
       try { await api.addRisuReplacer("beforeRequest", beforeRequest); mode = "hook"; return "hook"; } catch (e) { log("beforeRequest 훅 등록 실패", e?.message ?? e); }
@@ -156,5 +191,5 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     if (mode !== "hook") return false;
     try { await api.removeRisuReplacer?.("beforeRequest", beforeRequest); mode = "none"; return true; } catch (e) { log("beforeRequest 훅 해제 실패", e?.message ?? e); return false; }
   }
-  return { start, stop, beforeRequest, compose, preview, syncLore, current, lastRequest: () => last, mode: () => mode };
+  return { start, stop, startTrim, stopTrim, trimFrom, onProcess, beforeRequest, compose, preview, syncLore, current, lastRequest: () => last, mode: () => mode };
 }

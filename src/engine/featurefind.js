@@ -60,6 +60,7 @@ export const FEATURES = [
   { t: "기억·인물 위키 프롬프트", k: "기본 프롬프트 지침 수정", path: "설정 › 기억·인물 위키 프롬프트", tab: "settings", sub: "prompts" },
   { t: "플러그인 꾸미기 (색·테마)", k: "색 테마 다크 라이트 모양 글꼴", path: "설정 › 플러그인 꾸미기", tab: "settings", sub: "theme" },
   { t: "업데이트 설정", k: "자동 업데이트 버전 알림", path: "설정 › 업데이트 설정", tab: "settings", sub: "updset" },
+  { t: "다른 플러그인의 Dusk 기능 허용", k: "DA Interop 연동 허용 취소 막기 createDuskClient 플러그인 권한 위키 기억 접근", path: "플러그인 › 연동 설정 › Dusk 기능 허용", tab: "plugins", sub: "interop", find: "Dusk 기능 허용", addon: "manage" },
   { t: "설정 정리", k: "초기화 지우기 저장소 청소", path: "설정 › 설정 정리", tab: "settings", sub: "cleanup" },
   { t: "기록 · 되돌리기", k: "undo 실행 취소 이력 복구", path: "설정 › 기록 · 되돌리기", tab: "settings", sub: "history" },
   { t: "프리셋", k: "모듈 프리셋 묶음 저장", path: "도구 › 프리셋", tab: "tools", sub: "presets" },

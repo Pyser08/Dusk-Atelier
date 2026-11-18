@@ -2,6 +2,7 @@ import { trackAi, justStopped, stopError, aiTask, describeAi, activeTasks } from
 import { noteAux, auxTok, msgsText } from "./auxlog.js";
 import { extractRunAIText } from './airesponse.js';
 import { applyUserPrompts } from './customprompt.js';
+import { r64Messages } from '../data/risu64link.js';
 
 const isStream = (v) => v && typeof v === "object" && typeof v.getReader === "function";
 // 보조 모델이 {type:"streaming", result: ReadableStream}로 답하면 끝까지 읽어 한 문자열로 만든다.
@@ -69,10 +70,11 @@ async function runAIInner(api, messages, pick, signal) {
     let res; try { res = await p; return res; }
     finally { try { noteAux({ label, inTok: auxTok(msgsText(messages)), outTok: auxTok(typeof res === "string" ? res : extractRunAIText?.(res) ?? ""), real: false }); } catch { /* 무시 */ } }
   };
-  if (dp && duskRunner) return direct(duskRunner(api, messages, dp, signal));
+  // 리스 runLLMModel 경로는 main.js 래퍼에서 Risu64 난독화를 거치고, 직접 보내는 두 경로는 여기서 거친다
+  if (dp && duskRunner) return direct(r64Messages(api, messages).then((m) => duskRunner(api, m, dp, signal)));
   if (pick?.mode === "custom") {
     if (!customRunner) throw new Error("내 API 모델을 쓸 수 없어요 (모델 설정이 아직 준비되지 않았어요).");
-    return direct(customRunner(api, messages, pick, signal));
+    return direct(r64Messages(api, messages).then((m) => customRunner(api, m, pick, signal)));
   }
   const opts = { messages, mode: pick?.mode && pick.mode !== "static" ? pick.mode : "submodel", allowPlugins: true };
   if (pick?.mode === "static" && pick.staticModel) opts.staticModel = pick.staticModel;
