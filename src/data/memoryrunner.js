@@ -22,9 +22,16 @@ import { pickFor } from "../engine/modelcfg.js";
 // 11-18 제보: 위키 설정 ‘AI 모델’을 ‘내 API’로 바꿔도 지난 대화 분석은 리스 메모리 모델(기본값)로 가서 키 없음 오류가 났다.
 // 분석 모델이 기본값(메모리·보조 모델)이면 위키의 ‘내 API’를 따라간다. 메인 모델 등 직접 고른 건 그대로.
 export function followHubPick(base, hub) {
-  if (!hub || !["memory", "submodel", undefined].includes(base?.mode)) return base;
-  return { ...hub, timeoutSec: base.timeoutSec };
+  if (!["memory", "submodel", undefined].includes(base?.mode)) return base;
+  if (hub) return { ...hub, timeoutSec: base.timeoutSec };
+  // 11-19 제보: 기본값이 리스 ‘메모리 모델’(하이파 요약용, 보통 키 없는 OpenAI)이라 위키에서 ‘리스 보조 모델’을 골라도 지난 대화 분석은
+  // 그쪽으로 가서 ‘You didn't provide an API key’가 났다. 직접 메모리 모델을 고른 경우(explicit)만 그대로 두고, 기본값은 보조 모델로.
+  if (base?.mode === "memory" && !base.explicit) return { ...base, mode: "submodel" };
+  return base;
 }
+// 11-19 제보: 위키 ‘고급: 단계별 모델’에서 장면 정리(Writer)만 내 API로 두면 위 규칙이 못 보고 리스 보조 모델로 가서 같은 키 오류가 났다.
+// 기억 분석은 Writer와 같은 일이라 Writer 단계 모델을 먼저 보고, 없으면 전체 설정(내 API)을 본다.
+export const hubPickOf = (cfg) => { try { return pickFor(cfg, "writer") ?? pickFor(cfg, ""); } catch { return null; } };
 import { aiTask, isStopError } from "../engine/aistop.js";
 import { indexMessages } from "../engine/memoryreconcile.js";
 import { applyRegex } from "../engine/regexprep.js";
@@ -60,7 +67,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
   // 보조 모델 호출 제한시간(초): 기록·주입 세부 설정에서 바꾼다. 기본 600초
   const baseModelOf = (s) => ({ ...s.model, timeoutSec: Number.isFinite(s.modelTimeoutSec) ? s.modelTimeoutSec : 600 });
-  const hubPick = async () => { try { return pickFor(await getCfg(api), ""); } catch { return null; } };
+  const hubPick = async () => { try { return hubPickOf(await getCfg(api)); } catch { return null; } };
   const modelOf = async (s) => followHubPick(baseModelOf(s), call ? null : await hubPick());
   const run = call ?? (async (msgs, pick, signal) => runAI(api, appendToMessages(msgs, await skillBlock("analysis")), pick, signal));   // 스킬 주입(꺼짐이면 원문 그대로, v1.8.1)
 

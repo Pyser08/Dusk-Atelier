@@ -76,7 +76,9 @@ async function runAIInner(api, messages, pick, signal) {
     if (!customRunner) throw new Error("내 API 모델을 쓸 수 없어요 (모델 설정이 아직 준비되지 않았어요).");
     return direct(r64Messages(api, messages).then((m) => customRunner(api, m, pick, signal)));
   }
-  const opts = { messages, mode: pick?.mode && pick.mode !== "static" ? pick.mode : "submodel", allowPlugins: true };
+  // 장기기억 기본값이던 ‘메모리 모델’(리스 하이파 요약용)은 직접 고른 경우(explicit)만 쓰고, 아니면 보조 모델로(키 없는 OpenAI로 가던 문제)
+  const mode0 = pick?.mode === "memory" && !pick.explicit ? "submodel" : pick?.mode;
+  const opts = { messages, mode: mode0 && mode0 !== "static" ? mode0 : "submodel", allowPlugins: true };
   if (pick?.mode === "static" && pick.staticModel) opts.staticModel = pick.staticModel;
 
   let last = null;

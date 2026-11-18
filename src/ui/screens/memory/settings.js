@@ -42,9 +42,9 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false, b
   const m = mem(ctx), M = ctx.memory, idx = await M.store.getIndex();
   const backend = M.backend(idx.settings), caps = M.capabilities(backend.id);
   const { S, save, num, sw, section } = builders(ctx, idx, redraw);
-  const mode = h("select", { class: "rb-input", "aria-label": "분석 모델" }, AI_MODES.map(([v, l]) => h("option", { value: v, selected: (S.model.mode ?? "memory") === v }, l)));
+  const mode = h("select", { class: "rb-input", "aria-label": "분석 모델" }, AI_MODES.map(([v, l]) => h("option", { value: v, selected: ((S.model.mode === "memory" && !S.model.explicit ? "submodel" : S.model.mode) ?? "memory") === v }, l)));
   const sid = h("input", { class: "rb-input", placeholder: "모델 ID", value: S.model.staticModel ?? "", "aria-label": "모델 ID", style: S.model.mode === "static" ? "" : "display:none" });
-  const saveModel = () => save((s) => { s.model = { mode: mode.value, ...(mode.value === "static" ? { staticModel: sid.value.trim() } : {}) }; });
+  const saveModel = () => save((s) => { s.model = { mode: mode.value, ...(mode.value === "memory" ? { explicit: true } : {}), ...(mode.value === "static" ? { staticModel: sid.value.trim() } : {}) }; });   // 메모리 모델은 직접 고른 것만 그대로 쓴다
   mode.addEventListener("change", saveModel); sid.addEventListener("change", saveModel);
   const mcfg = await getModelCfg(ctx.api).catch(() => ({ presets: [] }));
   const smSel = h("select", { class: "rb-input", "aria-label": "서버 분석에 쓸 모델", onChange: () => save((s) => { s.serverModel = { presetId: smSel.value }; }) },

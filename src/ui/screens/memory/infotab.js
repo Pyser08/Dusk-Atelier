@@ -10,7 +10,7 @@ import { editMetric, editWikiText, policyOf } from "./people.js";
 import { openRecords } from "./recordsui.js";
 import { openFieldAI } from "./aitools.js";
 import { gaugeSuggestBox, openCreate, openManager } from "./gaugeui.js";
-import { sectionPinKey, metricPinKey, scopeKeyOf, isPinned, setPin } from "../../../engine/personedit.js";
+import { sectionPinKey, metricPinKey, scopeKeyOf, isPinned, setPin, normItem } from "../../../engine/personedit.js";
 import { deletePersonItem } from "../../../engine/pot/people-records.js";
 import { EMO_TAGS, EMO_LABEL } from "../../../engine/memoryemo.js";
 import { effectiveTags, nowOf } from "../../../engine/memoryhuman.js";
@@ -85,7 +85,7 @@ export function infoTab(env, B) {
       const tg = (x.targetRefs ?? []).map(B.nameOf).filter(Boolean).map(shown).join(" → ");
       const item = { label, value: x.value, min, max, metricId: x.id, slotId: x.slotId };
       const items = [policyOf(env, x.slotId) ? { label: "값 고치기", onClick: () => run(editMetric(env, st, item)) } : null, pinItem(metricPinKey(x.id)),
-        { label: "삭제", danger: true, onClick: async () => { if (!(await confirmDialog(ctx.win, { title: "이 수치를 지울까요?", body: label, ok: "삭제", danger: true }))) return; commit((w) => deletePersonItem(w, doc.id, { id: x.id, kind: "metric", expected: JSON.stringify(doc.metrics.find((y) => y.id === x.id)), scopeKey: scopeKeyOf(w) }), "지웠어요."); } }];
+        { label: "삭제", danger: true, onClick: async () => { if (!(await confirmDialog(ctx.win, { title: "이 수치를 지울까요?", body: label, ok: "삭제", danger: true }))) return; commit((w) => deletePersonItem(w, doc.id, { id: x.id, kind: "metric", expected: JSON.stringify(normItem(w, doc.id, "metric", x.id) ?? doc.metrics.find((y) => y.id === x.id)), scopeKey: scopeKeyOf(w) }), "지웠어요."); } }];
       const inner = [h("span", { class: "n" }, label, tg || x.stageLabel ? h("small", { class: "rb-muted" }, ` · ${[tg, x.stageLabel].filter(Boolean).join(" · ")}`) : null, pinMark(metricPinKey(x.id))),
         x.lastDelta ? h("small", { class: ["d", x.lastDelta > 0 ? "up" : "down"] }, `최근 ${x.lastDelta > 0 ? "+" : ""}${x.lastDelta}`) : h("span"),
         h("b", { class: "v" }, String(x.value), h("small", { class: "rb-muted" }, `/${max}`)),
@@ -142,7 +142,7 @@ export function infoTab(env, B) {
       h("p", null, s.body)),
       more(s.heading || "항목", [{ label: "고치기", onClick: () => run(editWikiText(env, st, { label: s.heading || "항목", body: s.body, sectionId: s.id })) }, pinItem(sectionPinKey(s.id)),
         { label: "AI로 다시 쓰기", onClick: () => run(openFieldAI(env, doc, `section:${s.id}`, `${s.heading || "항목"} AI 작성`)) },
-        { label: "삭제", danger: true, onClick: async () => { if (!(await confirmDialog(ctx.win, { title: "이 항목을 지울까요?", body: s.heading || "", ok: "삭제", danger: true }))) return; commit((w) => deletePersonItem(w, doc.id, { id: s.id, kind: "section", expected: JSON.stringify(doc.sections.find((x) => x.id === s.id)), scopeKey: scopeKeyOf(w) }), "지웠어요."); } }]));
+        { label: "삭제", danger: true, onClick: async () => { if (!(await confirmDialog(ctx.win, { title: "이 항목을 지울까요?", body: s.heading || "", ok: "삭제", danger: true }))) return; commit((w) => deletePersonItem(w, doc.id, { id: s.id, kind: "section", expected: JSON.stringify(normItem(w, doc.id, "section", s.id) ?? doc.sections.find((x) => x.id === s.id)), scopeKey: scopeKeyOf(w) }), "지웠어요."); } }]));
   };
   const addFor = (g) => ed ? btn("추가", { size: "sm", onClick: (e) => openMenu(ctx.win, e.currentTarget, [{ label: "직접 적기", onClick: () => run(openRecords(env, doc, { group: g })) }, { label: "AI가 대화 보고 채우기", onClick: () => run(B.aiNew(g)) }]) }) : null;
   const recIds = K.ORDER.filter((id) => id !== "PROFILE" && id !== "METRICS");

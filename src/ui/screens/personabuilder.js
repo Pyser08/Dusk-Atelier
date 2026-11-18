@@ -7,7 +7,7 @@ import { btn, iconBtn, confirmDialog, promptDialog, modal, note, openMenu, switc
 import { attachUndo } from '../undo.js';
 import { AI_MODES, runAI } from '../../engine/merge.js';
 import { runAITask } from '../../engine/runai.js';
-import { PB_BACKUP_KEY, parseTemplate, compose, readValues, translatePrompt, fieldKey, freeKey, loadPB, savePB, pushBackup, loadBackups, newId, templateCode, readCode, DEFAULT_AI, addField, removeField, addSection, removeSection } from '../../data/personabuilder.js';
+import { PB_BACKUP_KEY, parseTemplate, compose, readValues, translatePrompt, translateItemsPrompt, readTranslatedItems, fieldKey, freeKey, loadPB, savePB, pushBackup, loadBackups, newId, templateCode, readCode, DEFAULT_AI, addField, removeField, addSection, removeSection } from '../../data/personabuilder.js';
 import { SOP_RULES, SOP_TITLE, SOP_DRAFT, dropPlaceholders } from '../../data/personasop.js';
 import { stepPrompt, SOP_ID, SOP_TEMPLATE, STEP_KEYS, STEP_DEFAULT, ensureSop, readSheet, writableKeys, buildStepPrompt, buildReviewPrompt, buildFinalPrompt, parseReport, CATS, CAT_KO, naiTagPrompt, cleanTags, translateReportPrompt, estimateTokens, lineDiff, aiCode2, readAiCode2 } from '../../data/personasop.js';
 import { makeBackup, backupName, parseBackup, planImport, restoreImages } from '../../data/personafile.js';
@@ -372,11 +372,13 @@ export async function renderPersonaBuilder(ctx) {
     const P = aip();
     if (!pb.showKo) return;
     const vals = keys ? Object.fromEntries([...keys].map((k) => [k, values[k]])) : values;
-    const text = compose(sections.filter((s) => s.kind !== "fixed"), vals, off);
-    if (!text.trim()) return;
+    const items = Object.entries(vals).filter(([, v]) => String(v ?? "").trim()).map(([k, v]) => [k, String(v).trim()]);
+    if (!items.length) return;
     try {
-      const out = await runAITask("페르소나 만들기", api, translatePrompt(text), P);
-      const t = readValues(sections, out);
+      const out = await runAITask("페르소나 만들기", api, translateItemsPrompt(items), P);
+      let t = readTranslatedItems(out, items);
+      if (!Object.keys(t).length) t = readValues(sections, out);   // 번호를 안 지킨 답이면 예전 방식으로
+      if (!Object.keys(t).length) throw new Error("번역 답에서 칸을 찾지 못했어요");
       for (const [k, v] of Object.entries(t)) if (v) ko[k] = { t: v, src: String(values[k] ?? "").trim() };
       persist();
       drawSheet();
