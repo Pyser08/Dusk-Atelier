@@ -75,7 +75,7 @@ export const LIFE_INFO = Object.freeze({
   since: "마지막으로 관계한 뒤 지난 응답 수예요. 40턴이 넘으면 성욕이 더 빨리 올라요.",
   cnt: "이야기 속 관계 횟수 + 이야기 전 경험(입력·로어북에서 드러난 것)을 합친 수예요.",
   fam: "상대와의 익숙함. 처음 → 한 번 → 몇 번 → 익숙해지는 중 → 익숙함. 이야기 전 경험도 합쳐요. ‘밝혀지지 않음’은 횟수가 안 나와서 AI가 짐작한 값이에요.",
-  boost: "켜 두면 응답에 이 인물의 성적 욕망·이상성향과 관련된 상황이 나올 때 성욕이 더 빨리 차요(글을 맞대어 엔진이 판단, 호출 없음).",
+  boost: "기본으로 켜져 있어요. 켜 두면 응답에 이 인물의 성적 욕망·이상성향과 관련된 상황이 나올 때 성욕이 더 빨리 차요(글을 맞대어 엔진이 판단, 호출 없음).",
   temp: "관계 온도 = 끌림 + 호감 − 적대감. 최근 10번의 흐름이에요. 3 넘게 오르면 가까워지는 중, 내리면 식는 중.",
   miss: "보고 싶음. 이 인물이 안 나온 지 30턴이 넘으면, 지난 턴 수와 호감으로 계산해요.",
   jeal: "질투. 소유욕·독점욕(또는 끌림)이 있는 상대가 다른 사람에게 끌리거나 애인이면 생겨요.",
@@ -104,8 +104,8 @@ function lustCard0(env, card, doc, { cycle = null } = {}) {
   const cyc = cycle ? h("div", { class: "rb-lcyc" }, h("small", { class: "rb-lh" }, "월경·임신"), cycle) : null;
   // 달아오르는 속도(배수) · 욕망·이상성향 스위치
   const mult = n?.lustMult ?? 1;
-  const sw = (k, label, has) => h("button", { type: "button", class: ["rb-lsw", n?.boost?.[k] && "on"], "aria-pressed": n?.boost?.[k] ? "true" : "false", disabled: !has, title: has ? null : "위키에 이 글이 아직 없어요",
-    onClick: () => saveN(env, doc, (cur) => ({ ...cur, boost: { ...(cur.boost ?? {}), [k]: !cur.boost?.[k] } })) }, h("i", { class: "knob" }), label);
+  const sw = (k, label, has) => h("button", { type: "button", class: ["rb-lsw", n?.boost?.[k] !== false && "on"], "aria-pressed": n?.boost?.[k] !== false ? "true" : "false", disabled: !has, title: has ? null : "위키에 이 글이 아직 없어요",
+    onClick: () => saveN(env, doc, (cur) => ({ ...cur, boost: { ...(cur.boost ?? {}), [k]: cur.boost?.[k] === false } })) }, h("i", { class: "knob" }), label);
   const ctl = h("div", { class: "rb-lctl" },
     h("div", { class: "rb-lmult" }, h("small", null, "달아오르는 속도", infoBtn(LIFE_INFO.mult)), h("div", { class: "row" }, h("b", null, `×${mult.toFixed(1)}`))),
     h("div", { class: "rb-lsws" }, h("small", null, "관련 상황에 더 빨리", infoBtn(LIFE_INFO.boost)), h("div", { class: "row" }, sw("desire", "성적 욕망", !!pr?.sexualDesire?.text), sw("para", "이상성향", !!pr?.paraphilia?.text), h("span", { style: "flex:1" }), btn("직접 고치기", { size: "sm", onClick: () => openLifeEditor(env, doc) }))));
