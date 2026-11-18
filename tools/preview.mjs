@@ -32,6 +32,25 @@ async function seedWiki() {
   if (q.get("many") === "1") for (const n of ["하루", "나기", "카즈사", "요시미", "아이리", "레이사", "치세", "히나", "아코", "이로하", "츠루기", "하스미", "마시로", "코하루", "하나코", "아즈사"]) { try { w = L.createBlankPerson(w, n); } catch {} }
   await __app.ctx.memory.store.updateFolder("c1", "t1", (f) => {
     f.wiki = w;
+    // 사람다움·잠자리·성감대·몸과 마음 계산 목업(수아)
+    if (sua) {
+      f.cursor = { ...(f.cursor ?? {}), at: 40 };
+      f.nsfw = { ...(f.nsfw ?? {}), [sua.id]: { sexual: { eroticInterest: 72, sexualSpontaneity: 40, sexualOpenness: 55, sexualMomentum: 50 }, axes: { initiative: 35, directness: 30 }, pref: { f: 10, m: 90, x: 0 },
+        positions: [{ label: "정상위", preference: "preferred", kind: "position", reason: "얼굴 보는 게 좋아서" }, { label: "침대", preference: "preferred", kind: "place", reason: "" }, { label: "야외", preference: "disliked", kind: "place", reason: "들킬까 봐" }],
+        seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [],
+        human: { speech: ["~잖아요", "말끝을 흐림"], habit: ["불안하면 손톱 깨물기"], trigger: ["남편의 외도"], dream: ["작은 꽃집 열기"], secret: ["이혼 서류를 숨겨 둠"], love: "말없이 챙겨 주기", anger: "말수가 줄고 혼자 있으려 함", sad: "밤에 몰래 욺" },
+        ext: { first: "스무 살, 첫 연애", fantasy: ["누가 강하게 이끌어 주기"], voice: "참다가 새는 숨소리", after: "꼭 안겨 있으려 함", yes: ["숨이 가빠짐", "이름을 부름"], no: ["몸이 굳음"], contra: "꼭 챙김" },
+        lustMult: 1.3, boost: { desire: true }, past: [{ name: "도윤", count: 40, est: true }],
+        zones: [{ part: "neck", level: 3, note: "숨만 닿아도 움츠림", dev: 88 }, { part: "ears", level: 2, note: "", dev: 64 }, { part: "back", level: 2, note: "등줄기" }, { part: "thighs", level: 1, note: "", dev: 34 }, { part: "nipples", level: 0, note: "", dev: 18 }] } };
+      f.life = { turn: 40, p: { [sua.id]: { lust: +(q.get("lust") ?? 84), refr: -1, fat: 45, seen: 40, seenPrev: 31, sex: { n: 3, last: 22, first: { turn: 12, date: "2026-03-05" }, by: { "미오": { name: "미오", n: 3, first: { turn: 12, date: "2026-03-05" } } } },
+        uses: { "정상위": 3, "키스하며": 2 }, lover: {}, met: { "미오": { name: "미오", turn: 1, date: "2026-03-01" }, "도윤": { name: "도윤", turn: 3, date: "2026-03-02" } },
+        temp: { "미오": { name: "미오", h: [8, 10, 12, 15, 18], trust: [3, 4, 4, 6, 7] }, "도윤": { name: "도윤", h: [9, 7, 4, 2], trust: [6, 5, 3, 2] } },
+        mood: { anxiety: 45, excitement: 30 }, habits: { "미오": { name: "미오", list: ["밤마다 '잘 자' 문자", "손가락 걸고 약속"] } }, sat: [1, 0],
+        trace: [{ turn: 36, text: "자연 +3.1 (가임기·끌림·밤)" }, { turn: 37, text: "키스 +6" }, { turn: 38, text: "대화 +12 “목덜미에 숨이 닿자”" }, { turn: 40, text: "자연 +2.4 (가임기·끌림)" }] } } };
+      const dy = Object.values(w.documents).find((d) => d.title === "도윤"), sj = Object.values(w.documents).find((d) => d.title === "서진");
+      if (dy) { f.nsfw[dy.id] = { sexual: { eroticInterest: 60 }, axes: {}, positions: [], by: "ai", log: [] }; f.life.p[dy.id] = { lust: 41, refr: -1, fat: 20, mood: { irritation: 55 }, sex: { n: 0, by: {} }, uses: {}, met: {}, lover: {}, temp: {} }; }
+      if (sj) f.life.p[sj.id] = { lust: 10, refr: -1, fat: 70, mood: {}, sex: { n: 0, by: {} }, uses: {}, met: {}, lover: {}, temp: {} };
+    }
     f.people["수아"] = { name: "수아", records: [rec("s1", "외도 의심을 미오에게 털어놓았다", "A", 3), rec("s2", "장례식장에서 오열했다", "A", 5), rec("s3", "미오에게 고백했다", "A", 9), rec("s4", "서진과 말다툼을 했다", "B", 12), rec("s5", "미오과 우산을 같이 썼다", "B", 14), rec("s6", "도윤의 휴대폰을 몰래 봤다", "C", 2)] };
     f.people["도윤"] = { name: "도윤", records: [rec("d1", "셔츠에 향수 냄새를 남겼다", "C", 3)] };
     f.people["서진"] = { name: "서진", records: [rec("j1", "도윤과 몰래 만났다", "B", 2), rec("j2", "수아를 몰래 지켜봤다", "B", 6)] };

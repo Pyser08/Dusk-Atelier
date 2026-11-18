@@ -6,7 +6,8 @@ import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engi
 import { scaleBlock, wikiAware } from "../engine/memoryscale.js";
 import { nsfwSection } from "../engine/nsfwprofile.js";
 import { driveSection, seeded } from "../engine/scenedrive.js";
-import { nsfwByName } from "./nsfwturn.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
+import { nsfwByName } from "./nsfwturn.js";
+import { lifeSection, humanSection, lustOfName, hotActors } from "../engine/nsfwlife.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
 import { stateText } from "../engine/storytime.js";
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
@@ -26,7 +27,8 @@ function semQuery(msgs, minLen = 40) {
 }
 // 2.2.4 기억 토큰 절약: LoCoMo 233문항에서 기억 블록 약 4,100 → 2,900토큰(-29%), 정답률 약 1~2점 손해로 잰 예산
 export const SAVER_INJECT = Object.freeze({ eventTokens: 900, recentEventTokens: 500, recallTokens: 350, rawTokens: 700, rawPicks: 6 });
-export const effectiveInject = (s) => (s?.saver === true ? { ...(s ?? {}), ...SAVER_INJECT } : (s ?? {}));
+// 기억 토큰 절약·옛 대화 빼고 보내기는 기본 켜짐(끈 사람만 false)
+export const effectiveInject = (s) => (s?.saver !== false ? { ...(s ?? {}), ...SAVER_INJECT } : (s ?? {}));
 export var TRIM_KEEP = 10;   // 최근 남길 턴(2.2.11: 20 → 10). 경계는 이만큼씩 묶어 옮겨 10~19턴이 남는다
 export function createMemoryInjector(api, { store, prep = null, storyNow = null, onRequest = null, embedder = null, rerank = null, log = (...a) => console.log("[Dusk 기억]", ...a) } = {}) {
   let last = null, mode = "none";
@@ -71,20 +73,27 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       try { const r = await rawRecall(folder, msgs, character, chat, semQuery(msgs, idx.settings.inject.rawQueryMin ?? 0), inj); if (r) { built.text += "\n" + r.text; if (built.manifest) { built.manifest.included.push({ kind: "raw", tokens: r.tokens, count: r.count }); built.manifest.tokens = (built.manifest.tokens ?? 0) + r.tokens; } } } catch (e) { log("원문 회상 건너뜀", e?.message ?? e); logFailure({ area: "원문 회상", title: "지난 대화 원문 조각을 넣지 못했어요", error: e, fallback: "원문 조각 없이 기억만 넣었어요", ctx: { 메시지: msgs.length } }); }
     }
     // addon-rebuild: 이 채팅 성인 프로필(folder.nsfw) — 최근 글에 나온 인물만 짧게(Erosync 대신)
-    if (built.text) { try {
+    // 기억 블록이 비어 있어도(새 채팅·기록 전) 성인 프로필·사람다움·몸 상태·장면 계획은 넣는다(예전엔 블록이 비면 다 빠졌다)
+    if (folder) { try {
+      const add = (x) => { if (x) built.text = built.text ? `${built.text}\n${x}` : x; };
       const recent = msgs.slice(-4).map((m) => extractMessageText(m)).join("\n");
       // 1:1 봇은 자기 이름을 잘 안 써서 이름 찾기만으론 빠졌다 → 기억 블록에 든 인물·봇 캐릭터도 장면 인물로
       const present = [...(built.manifest?.included ?? []).filter((x) => x.kind === "person").map((x) => x.name), character?.name].filter(Boolean);
-      const ns = nsfwSection(folder, recent, 4, { present }); if (ns) built.text += "\n" + ns;
+      add(nsfwSection(folder, recent, 4, { present }));
+      // 사람다운 항목·몸과 마음 상태(엔진 계산) — 최근 글에 이름이 나온 인물 + 장면 인물
+      { const low = recent.normalize("NFKC").toLowerCase();
+        const here = [...present, ...Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && [d.title, ...(d.aliases ?? [])].some((n) => String(n ?? "").length >= 2 && low.includes(String(n).normalize("NFKC").toLowerCase()))).map((d) => d.title)];
+        add(humanSection(folder, here));
+        if (Number.isInteger(folder?.cursor?.at)) add(lifeSection(folder, here, folder.cursor.at)); }
       // 장면 판단 계획(Erosync 대신). 같은 턴을 다시 보내도 같은 계획이 나오게 턴 번호로 정한 난수
-      const dv = driveSection(folder?.drive, recent, { spont: (n) => nsfwByName(folder, n)?.sexual?.sexualSpontaneity ?? null, limitsOf: (n) => nsfwByName(folder, n)?.tags?.limits ?? [], random: seeded(`${folder?.drive?.turn ?? 0}|${msgs.length}`), present });
-      if (dv) built.text += "\n" + dv;
+      const dv = driveSection(folder?.drive, recent, { spont: (n) => nsfwByName(folder, n)?.sexual?.sexualSpontaneity ?? null, limitsOf: (n) => nsfwByName(folder, n)?.tags?.limits ?? [], random: seeded(`${folder?.drive?.turn ?? 0}|${msgs.length}`), present, lustOf: (n) => lustOfName(folder, n), hot: hotActors(folder) });
+      add(dv);
     } catch { /* 빼고 진행 */ } }
     const raw = built.text, manifest = built.manifest;
     const text = applyLore(raw, folder?.lore);  // 주입 로어 편집(줄 수정·숨김·내 로어)
     if (manifest && text !== raw) manifest.tokens = loreTokens(text);
     if (mark && text && idx.settings.inject.plus !== false && manifest?.recordIds?.length) markUsed(character, chat, manifest.recordIds, msgs.length);
-    return { text, raw, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty", coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1, trim: idx.settings.inject.trimOld === true ? Math.max(4, Number(idx.settings.inject.trimKeep) || TRIM_KEEP) : 0 };
+    return { text, raw, manifest, position: idx.settings.inject.position, reason: text ? "" : "empty", coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1, trim: idx.settings.inject.trimOld !== false ? Math.max(4, Number(idx.settings.inject.trimKeep) || TRIM_KEEP) : 0 };
   }
   async function rawRecall(folder, msgs, character, chat, query, s) {
     if (!String(query ?? "").trim()) return null;
@@ -154,7 +163,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
   async function computeTrimFrom() {
     const cur = await current(); if (!cur) return -1;
     const idx = await store.getIndex(), inj = idx.settings.inject ?? {};
-    if (idx.settings.backend === "off" || inj.on === false || inj.trimOld !== true || idx.bots[String(cur.character.chaId)]?.on === false) return -1;
+    if (idx.settings.backend === "off" || inj.on === false || inj.trimOld === false || idx.bots[String(cur.character.chaId)]?.on === false) return -1;
     const msgs = cur.chat.message ?? [];
     const folder = await loadReconciled(store, cur.character.chaId, chatKeyOf(cur.chat), msgs);
     if (!injectVerdict(folder, inj, msgs.filter(isUserMessage).length).ok) return -1;   // 기억이 들어가지 않을 채팅이면 빼지 않는다

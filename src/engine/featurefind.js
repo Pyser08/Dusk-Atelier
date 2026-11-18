@@ -37,7 +37,7 @@ export const FEATURES = [
   // 장기 기억 홈
   { t: "지난 대화 분석", k: "백필 backfill 이전 대화 한꺼번에 분석 범위", path: `${M} › 지난 대화 분석`, tab: "memory", mem: { page: "home" }, find: "지난 대화", addon: "memory" },
   { t: "처음 등장 때 성인 항목 무작위로", k: "랜덤 무작위 성적 욕망 이상성향 이상성욕 후보 성적 관심 성적 항목 월경 처음 등장 random 취향 맛 커스텀 항목 분류", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "처음 등장 때 성인 항목 무작위로", addon: "memory" },
-  { t: "게이지 배수 (오를 때 · 내릴 때)", k: "호감도 배수 감정 게이지 속도 올라가는 내려가는 배율 multiplier 성격 막대 소유욕 독점욕", path: `${M} › 설정 › 게이지 배수`, tab: "memory", mem: MSET, find: "게이지 배수", addon: "memory" },
+  { t: "게이지 배수 (오를 때 · 내릴 때)", k: "호감도 배수 감정 게이지 속도 올라가는 내려가는 배율 multiplier 성격 막대 소유욕 독점욕 달아오름 성욕 게이지 달아오르는 속도", path: `${M} › 설정 › 게이지 배수`, tab: "memory", mem: MSET, find: "게이지 배수", addon: "memory" },
   { t: "기억 넣기 토큰 · 남길 최근 턴", k: "주입 토큰 예산 inject 요약된 옛 대화 빼기 trim", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "기억 넣기", addon: "memory" },
   { t: "나에 대한 기억", k: "user 페르소나 내 정보 감정", path: `${M} › 나에 대한 기억`, tab: "memory", mem: { page: "me" }, addon: "memory" },
   { t: "다른 채팅의 기억 보기", k: "봇별 기억 채팅 목록 인물 위키", path: `${M} › 다른 채팅`, tab: "memory", mem: { page: "bots" }, addon: "memory" },

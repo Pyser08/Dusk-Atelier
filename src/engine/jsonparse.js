@@ -8,6 +8,9 @@ function closeTail(s) {
   }
   return s + (inStr ? '"' : "") + st.reverse().map((c) => (c === "{" ? "}" : "]")).join("");
 }
+export function salvageJson(s) { return salvage(s); }
+// 사고 출력·코드 펜스를 지운 글
+export const stripModelNoise = (raw) => String(raw ?? "").replace(/<(Thoughts|think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, "").replace(/^[\s\S]*?<\/(?:Thoughts|think|thinking|reasoning)>/i, "").replace(/```(?:json)?/gi, "").trim();
 function salvage(s) {
   for (let i = 0; i < 60 && s; i++) {
     try { return JSON.parse(closeTail(s)); } catch { /* 더 물러선다 */ }

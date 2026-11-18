@@ -10,6 +10,9 @@ import { bar, eroDetailRows } from "./erosyncwiki.js";
 import { SEX_LABEL, AXIS_LABEL, SEX_KEYS, AXIS_KEYS, normalizeNsfw, normTags, cleanPosLabel, posKind, POS_KIND_LABEL, POS_GROUPS, posGroup } from "../../../engine/nsfwprofile.js";
 import { profileText } from "../../../data/profileseed.js";
 import { logEvent, logFailure } from "../../../data/memlog.js";
+import { infoBtn, smoothPath } from "./lifecards.js";
+// 성인 프로필 수치 설명(i 버튼)
+const GAUGE_INFO = { "성적 관심": "얼마나 자주·강하게 성관계를 원하는지. 성욕 게이지가 오르는 기본 속도가 돼요.", "성적 즉흥성": "조건·관계·시간이 얼마나 적게 필요해도 응하는지. 장면 계획에서 한 번에 나아가는 폭이 돼요.", "성적 개방성": "성에 대해 얼마나 열려 있는지(말하기·새로운 시도).", "성적 추진력": "원하는 걸 얼마나 밀어붙이는지.", "주도성": "먼저 시작하고 제안하는 정도.", "즉흥성": "분위기에 따라 바로 움직이는 정도.", "직접성": "돌려 말하지 않고 원하는 걸 말하는 정도.", "지속성": "목표를 쉽게 접지 않는 정도.", "집착성": "한 사람·한 가지에 매달리는 정도.", "개방성": "남들 앞에서도 드러내는 정도.", "보복성": "당한 걸 갚으려는 정도.", "극단성": "선을 넘는 데까지 가는 정도." };
 
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
 
@@ -37,7 +40,7 @@ export async function regenerate(env, doc, { keep = null, quiet = false } = {}) 
     return ctx.toast(cen ? "모델이 거절했어요(검열). 실패 기록에서 자세히 볼 수 있어요." : `만들지 못했어요 · ${msg.replace(/^문제[:：]\s*/, "")}`, { error: true });
   }
   await env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; const old = f.nsfw[doc.id];
-    f.nsfw[doc.id] = { ...n, sexual: keep?.sexual ? { ...n.sexual, ...keep.sexual } : n.sexual, tags: normTags(old?.tags), log: [...(old?.log ?? []), { at: new Date().toISOString(), text: keep ? "다시 뽑기로 새로 만듦" : "다시 만듦" }].slice(-20) }; });
+    f.nsfw[doc.id] = { ...n, human: n.human ?? old?.human, ext: n.ext ?? old?.ext, zones: n.zones ?? old?.zones, sexual: keep?.sexual ? { ...n.sexual, ...keep.sexual } : n.sexual, tags: normTags(old?.tags), log: [...(old?.log ?? []), { at: new Date().toISOString(), text: keep ? "다시 뽑기로 새로 만듦" : "다시 만듦" }].slice(-20) }; });
   logEvent({ area: "성인 프로필 만들기", title: `${doc.title} ${keep ? "다시 뽑기 반영" : "다시 만들기"} · 체위·장소·플레이 ${n.positions.length}` });
   env.redraw?.();
   return true;
@@ -53,7 +56,7 @@ export function nsfwCard(env, card, doc) {
   if (!n) return card("🔥 성인 프로필", [note("아직 없어요. 기본 성격을 만들 때 함께 만들어져요(장기 기억 설정의 ‘욕구 기록’이 켜져 있어야 해요). 이미 성격이 있는 인물은 다음 턴에 채워지거나 ‘지금 만들기’로 바로 만들 수 있어요."), acts], null, "rb-wk2-ero rb-nsfw-base");
   // 게이지: ‘성적 수치’와 ‘성향’ 두 묶음, 각 칸은 이름·값 알약·막대(넓으면 두 줄로)
   const SEXL = new Set(Object.values(SEX_LABEL)), gl = nsfwGauges(n);
-  const gauge = (r, kind) => h("div", { class: ["rb-ng", kind], role: "img", "aria-label": `${r.label} ${r.value}/100` }, h("div", { class: "top" }, h("span", null, r.label), h("b", null, String(r.value))), h("div", { class: "tr" }, h("i", { style: { width: `${Math.max(0, Math.min(100, r.value))}%` } })));
+  const gauge = (r, kind) => h("div", { class: ["rb-ng", kind], role: "img", "aria-label": `${r.label} ${r.value}/100` }, h("div", { class: "top" }, h("span", null, r.label, infoBtn(GAUGE_INFO[r.label])), h("b", null, String(r.value))), h("div", { class: "tr" }, h("i", { style: { width: `${Math.max(0, Math.min(100, r.value))}%` } })));
   const gblock = (title, list, kind) => list.length ? h("div", { class: "rb-ng-block" }, h("small", { class: "rb-ng-h" }, title), h("div", { class: "rb-ng-grid" }, list.map((r) => gauge(r, kind)))) : null;
   const gauges = [gblock("성적 수치", gl.filter((r) => SEXL.has(r.label)), "sex"), gblock("성향", gl.filter((r) => !SEXL.has(r.label)), "ax")].filter(Boolean);
   const pref = n.pref ? h("div", { class: "rb-ero-pref", role: "img", "aria-label": `끌리는 상대 · 여성 ${n.pref.f}% · 남성 ${n.pref.m}% · 그 외 ${n.pref.x}%` },
@@ -103,7 +106,7 @@ export function openNsfwEditor(env, doc, n0) {
         const raw = { sexual: Object.fromEntries(SEX_KEYS.map((k) => [k, num(k)])), axes: Object.fromEntries(AXIS_KEYS.map((k) => [k, num(k)])), pref: { f: num("pf"), m: num("pm"), x: num("px") ?? 0 },
           // 체위/플레이 칸은 이름으로 체위·플레이를 짐작해 저장(장소 칸은 장소)
           positions: POS_GROUPS.flatMap((g) => { const kindFor = (label) => (g.id === "place" ? "place" : posKind("", label) === "position" ? "position" : "play"); return [...split(`like-${g.id}`).map((label) => ({ label, kind: kindFor(label), preference: "preferred" })), ...split(`hate-${g.id}`).map((label) => ({ label, kind: kindFor(label), preference: "disliked" }))]; }),
-          seduction: { ...(n.seduction ?? {}), styles: split("sed") }, humor: { ...(n.humor ?? {}), styles: split("hum") }, tags: n.tags };
+          seduction: { ...(n.seduction ?? {}), styles: split("sed") }, humor: { ...(n.humor ?? {}), styles: split("hum") }, tags: n.tags, human: n.human, ext: n.ext, zones: n.zones };
         const next = normalizeNsfw(raw, { by: "user", log: [...(n.log ?? []), { at: new Date().toISOString(), text: "직접 고침" }] });
         if (!next) return env.ctx.toast("값이 하나도 없어요.", { error: true });
         await save(env, doc, () => next); done(true);
@@ -160,12 +163,27 @@ const NS = "http://www.w3.org/2000/svg";
 const svgEl = (tag, attrs = {}, ...kids) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v)); for (const c of kids) if (c) e.append(c); return e; };
 export function nsfwTempCard(env, card, doc) {
   const list = emoTemp(env.folder, doc.title); if (!list.length) return null;
-  const rows = list.map((t) => { const w = 240, hh = 70, svg = svgEl("svg", { viewBox: `0 0 ${w} ${hh}`, width: "100%", height: hh, role: "img", "aria-label": `${t.toName}에 대한 관계 온도`, preserveAspectRatio: "none" });
-    for (const y of [0, 50, 100]) svg.append(svgEl("line", { x1: 0, x2: w, y1: hh - (y / 100) * hh, y2: hh - (y / 100) * hh, stroke: "currentColor", "stroke-opacity": y === 50 ? 0.25 : 0.1, "stroke-width": 1 }));
-    for (const [k, label, color] of TEMP_LINES) svg.append(svgEl("polyline", { points: tempPath(t.points, k, w, hh), fill: "none", stroke: color, "stroke-width": 2, "data-k": k }, svgEl("title", {}, label)));
-    return h("div", { class: "rb-nsfw-temp", style: "display:grid;gap:4px" }, h("b", null, t.toName), svg); });
-  const legend = h("div", { class: "rb-muted", style: "display:flex;gap:12px;font-size:12px" }, ...[["a", "인간적 호감"], ["e", "이성적 호감"], ["h", "적대감"]].map(([k, l]) => h("span", null, h("i", { style: `display:inline-block;width:10px;height:3px;background:${TEMP_LINES.find((x) => x[0] === k)[2]};margin-right:4px;vertical-align:middle` }), l)));
-  return card("관계 온도", [note("장기 기억 감정 게이지가 기록될 때마다의 값이에요. AI를 더 부르지 않아요."), ...rows, legend], null, "rb-nsfw-base");
+  const w = 300, hh = 96, padR = 34;
+  const rows = list.map((t) => {
+    const svg = svgEl("svg", { viewBox: `0 0 ${w} ${hh}`, role: "img", "aria-label": `${t.toName}에 대한 관계 온도`, class: "rb-tg" });
+    const defs = svgEl("defs"); svg.append(defs);
+    for (const y of [0, 25, 50, 75, 100]) svg.append(svgEl("line", { x1: 0, x2: w - padR, y1: 4 + (hh - 8) * (1 - y / 100), y2: 4 + (hh - 8) * (1 - y / 100), class: y === 50 ? "mid" : "grid" }));
+    for (const [k, label, color] of TEMP_LINES) {
+      const xy = tempPath(t.points, k, w - padR, hh - 8).split(" ").filter(Boolean).map((pt) => pt.split(",").map(Number)).map(([x, y]) => [x, y + 4]);
+      if (!xy.length) continue;
+      const gid = `rbTg${k}${Math.random().toString(36).slice(2, 6)}`;
+      defs.append(svgEl("linearGradient", { id: gid, x1: 0, y1: 0, x2: 0, y2: 1 }, svgEl("stop", { offset: 0, "stop-color": color, "stop-opacity": 0.22 }), svgEl("stop", { offset: 1, "stop-color": color, "stop-opacity": 0 })));
+      const d = smoothPath(xy), end = xy.at(-1);
+      svg.append(svgEl("path", { d: `${d} L${end[0]},${hh} L${xy[0][0]},${hh} Z`, fill: `url(#${gid})` }));
+      svg.append(svgEl("path", { d, fill: "none", stroke: color, "stroke-width": 2.2, "stroke-linecap": "round", "vector-effect": "non-scaling-stroke", "data-k": k }, svgEl("title", {}, label)));
+      svg.append(svgEl("circle", { cx: end[0], cy: end[1], r: 3, fill: color }));
+      const val = Math.round(100 - ((end[1] - 4) / (hh - 8)) * 100);
+      svg.append(svgEl("text", { x: end[0] + 6, y: end[1] + 3.5, fill: color, class: "v" }, String(val)));
+    }
+    return h("div", { class: "rb-tgrow" }, h("div", { class: "hd" }, h("b", null, t.toName), h("small", { class: "rb-muted" }, `${t.points.length}번 기록`)), svg);
+  });
+  const legend = h("div", { class: "rb-tglegend" }, ...TEMP_LINES.map(([k, l, c]) => h("span", { style: { "--c": c } }, l)));
+  return card("📈 관계 온도", [legend, ...rows, note("장기 기억 감정 게이지가 기록될 때마다의 값이에요(0~100). AI를 더 부르지 않아요.")], null, "rb-nsfw-base");
 }
 
 // ── 성적 욕망·이상성향 직접 쓰기(인물 위키 프로필 칸). 저장하면 성인 프로필도 새로 만들지 묻는다 ──

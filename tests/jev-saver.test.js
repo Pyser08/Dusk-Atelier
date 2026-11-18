@@ -4,10 +4,11 @@ import assert from "node:assert/strict";
 import { effectiveInject, SAVER_INJECT } from "../src/data/memoryinject.js";
 import { createJev, jevScore, jevBody } from "../src/data/jev.js";
 
-test("토큰 절약: 켜면 칸별 예산을 줄인 값, 끄면 그대로", () => {
+test("토큰 절약: 기본 켜짐(칸별 예산을 줄인 값), 끄면(false) 그대로", () => {
   assert.equal(effectiveInject({ saver: true, recallTokens: 900 }).recallTokens, SAVER_INJECT.recallTokens);
-  assert.equal(effectiveInject({ recallTokens: 900 }).recallTokens, 900);
-  assert.deepEqual(effectiveInject(undefined), {});
+  assert.equal(effectiveInject({ recallTokens: 900 }).recallTokens, SAVER_INJECT.recallTokens);
+  assert.equal(effectiveInject({ saver: false, recallTokens: 900 }).recallTokens, 900);
+  assert.equal(effectiveInject(undefined).recallTokens, SAVER_INJECT.recallTokens);
 });
 test("Jev 점수: 확률 기대값, 없으면 score", () => {
   assert.equal(jevScore({ probabilities: { 0: 0, 1: 0, 2: 0.5, 3: 0.5 } }), 2.5);
