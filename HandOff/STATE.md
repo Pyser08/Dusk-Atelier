@@ -1,4 +1,5 @@
 ## addon-rebuild (2026-11-17, main 4144a3f에서 분기) — 애드온 재구성
+- **11-19 미배포**: homegridcss 최근 기록 — .rb-hrecent align-items:stretch(목록이 2/3 폭만 쓰던 것)·.rb-hrec-list 칸 안 스크롤(8개, 아래 흐림).
 - **11-19 v2.2.12 릴리스 + 애드온 10개 배포(움직임)**: dom.js EASE(.22,1.12,.36,1 살짝 넘침)·EASE_OUT·EASE_IN, motion 기본 220ms, fadeUp 10px+scale. app.js 창 열기 340ms·닫기 EASE_IN, 화면 fadeUp 260ms. styles.js 토큰 --rb-ease/-out/-in(:root,.rb-root), 키프레임 rb-in/pop/expand/bs-up 키움, 등장 animation→var(--rb-ease), transition 시간만 있던 곳→var(--rb-ease-out,기본값) 21개 CSS 파일, 누름 scale(.965) 후 스프링 복귀, 대화상자 rb-pop .3s. 기본값 붙인 var라 호스트(스텔스·위젯)에서도 유효. run-addons-ui e2e는 이전부터 chattheme 받기 단계에서 실패(이번 변경과 무관, stash로 확인).
 - **11-19 안내서 정리**: guide/memory.html — 맨 위 ‘최근 바뀐 점’(0.3.11·0.3.10·v2.2.11), 새 절 #body(성욕·오늘·마음 흐름·사람다움·성감대·왜/i/직접 고치기), #ai-cost·#prune(기록 방식 아래), Erosync 절에 사용 중단 경고. manage.html Risu64 줄, addons.html Erosync 목록 정리.
 - **11-18 장기기억 0.3.11 배포**: ui/screens/memory/aicost.js(AI_COST 기능별 호출 종류·설명, aiTag 배지+i, aiLegend) → mhome 기억 옵션·임베딩·Jev, flowsettings 성인 항목(withTag). ensureMemAddonCss를 두 화면에서 부름(i CSS).

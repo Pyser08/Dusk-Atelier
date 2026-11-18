@@ -1136,6 +1136,9 @@ textarea.rb-input.area{height:auto;min-height:84px;padding:10px 14px;line-height
 /* 최근 기록 */
 .rb-hw .rb-hrec{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rb-line)}
 .rb-hw .rb-hrec:last-child{border-bottom:0}
+/* 2.2.13 최근 기록: 칸보다 목록이 길면 잘리던 것 → 칸 안에서 스크롤(8개 모두), 아래는 살짝 흐리게 */
+.rb-hw .rb-hrecent{display:flex;flex-direction:column;align-items:stretch;height:100%;min-height:0}.rb-hw .rb-hrecent>*{align-self:stretch;width:100%}
+.rb-hw .rb-hrec-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-bottom:10px;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent)}
 .rb-hw .rb-hrec>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rb-hdot{width:8px;height:8px;border-radius:50%;background:var(--rb-acc);box-shadow:0 0 8px var(--rb-glow,transparent);flex:none}
 .rb-hw[data-w=add]{padding:0;overflow:hidden}
