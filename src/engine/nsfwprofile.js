@@ -130,24 +130,32 @@ export function applyNsfwReports(nsfw, reports, at = new Date().toISOString()) {
 export function nsfwInjectLine(name, n) {
   if (!n) return "";
   const s = SEX_KEYS.filter((k) => Number.isFinite(n.sexual?.[k])).map((k) => `${SEX_LABEL[k]} ${n.sexual[k]}`);
-  const like = n.positions.filter((p) => p.preference === "preferred").map((p) => cleanPosLabel(p.label)).slice(0, 10), hate = n.positions.filter((p) => p.preference === "disliked").map((p) => cleanPosLabel(p.label)).slice(0, 6);
-  const parts = [s.length && s.join(", "), like.length && `좋아함: ${like.join(", ")}`, hate.length && `싫어함: ${hate.join(", ")}`, n.seduction?.styles?.length && `유혹: ${n.seduction.styles.slice(0, 2).join(", ")}`,
+  const ax = AXIS_KEYS.filter((k) => Number.isFinite(n.axes?.[k])).map((k) => `${AXIS_LABEL[k]} ${n.axes[k]}`);
+  const pos = n.positions ?? [], like = pos.filter((p) => p.preference === "preferred").map((p) => cleanPosLabel(p.label)).slice(0, 10), hate = pos.filter((p) => p.preference === "disliked").map((p) => cleanPosLabel(p.label)).slice(0, 6);
+  const pf = n.pref && [n.pref.f && `여 ${n.pref.f}%`, n.pref.m && `남 ${n.pref.m}%`, n.pref.x && `그 외 ${n.pref.x}%`].filter(Boolean).join("·");
+  const parts = [s.length && s.join(", "), pf && `성적 지향: ${pf}`, ax.length && `성향: ${ax.join(", ")}`, like.length && `좋아함: ${like.join(", ")}`, hate.length && `싫어함: ${hate.join(", ")}`, n.seduction?.styles?.length && `유혹: ${n.seduction.styles.slice(0, 2).join(", ")}`,
+    n.humor?.styles?.length && `성적 농담: ${n.humor.styles.slice(0, 2).join(", ")}`,
     n.tags?.likes?.length && `사용자가 정한 선호: ${n.tags.likes.join(", ")}`, n.tags?.limits?.length && `금기(절대 넘지 않음): ${n.tags.limits.join(", ")}`].filter(Boolean);
   return parts.length ? `- ${name}: ${parts.join(" / ")}` : "";
 }
 export const NSFW_INJECT_TITLE = "[Sexual profile — use only when the scene turns sexual; never force it]";
 
-// 폴더 → 최근 글에 이름이 나온 인물의 성인 프로필 줄(최대 max명). 없으면 ""
-export function nsfwSection(folder, recentText, max = 4) {
-  const map = folder?.nsfw; if (!map || !recentText) return "";
-  const t = String(recentText).normalize("NFKC").toLowerCase(), lines = [];
-  for (const [id, n] of Object.entries(map)) {
-    const d = folder?.wiki?.documents?.[id]; if (!d) continue;
-    const names = [d.title, ...(d.aliases ?? [])].map((x) => String(x ?? "").normalize("NFKC").toLowerCase().trim()).filter((x) => x.length >= 2);
-    if (!names.some((x) => t.includes(x))) continue;
-    const pr = folder?.wiki?.people?.profiles?.[id], short = (t) => String(t ?? "").replace(/<추정>|미확인/g, "").replace(/\s+/g, " ").trim().slice(0, 140);
-    const extra = [pr?.sexualDesire?.text && short(pr.sexualDesire.text) && `성적 욕망: ${short(pr.sexualDesire.text)}`, pr?.paraphilia?.text && short(pr.paraphilia.text) && `이상성향: ${short(pr.paraphilia.text)}`].filter(Boolean);
-    const line = nsfwInjectLine(d.title, n); if (line) lines.push(line + (extra.length ? ` / ${extra.join(" / ")}` : ""));
+// 폴더 → 장면 인물(최근 글에 이름이 나왔거나 present에 든 인물)의 성인 프로필 줄(최대 max명). 없으면 ""
+// 채팅 성인 프로필(folder.nsfw)이 아직 없어도 위키의 성적 욕망·이상성향 글은 넣는다.
+export function nsfwSection(folder, recentText, max = 4, { present = [] } = {}) {
+  const docs = folder?.wiki?.documents ?? {}, profiles = folder?.wiki?.people?.profiles ?? {}, map = folder?.nsfw ?? {};
+  const norm = (x) => String(x ?? "").normalize("NFKC").toLowerCase().trim();
+  const t = norm(recentText), here = new Set(present.map(norm).filter(Boolean)), lines = [];
+  const short = (x) => String(x ?? "").replace(/<추정>|미확인/g, "").replace(/\s+/g, " ").trim().slice(0, 140);
+  for (const id of new Set([...Object.keys(map), ...Object.keys(profiles)])) {
+    const d = docs[id]; if (!d || d.type && d.type !== "Character") continue;
+    const names = [d.title, ...(d.aliases ?? [])].map(norm).filter((x) => x.length >= 2);
+    if (!names.some((x) => here.has(x) || (t && t.includes(x)))) continue;
+    const pr = profiles[id];
+    const extra = [short(pr?.sexualDesire?.text) && `성적 욕망: ${short(pr.sexualDesire.text)}`, short(pr?.paraphilia?.text) && `이상성향: ${short(pr.paraphilia.text)}`].filter(Boolean);
+    const line = nsfwInjectLine(d.title, map[id]);
+    if (line) lines.push(line + (extra.length ? ` / ${extra.join(" / ")}` : ""));
+    else if (extra.length) lines.push(`- ${d.title}: ${extra.join(" / ")}`);
     if (lines.length >= max) break;
   }
   return lines.length ? [NSFW_INJECT_TITLE, ...lines].join("\n") : "";

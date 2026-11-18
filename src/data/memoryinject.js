@@ -72,9 +72,11 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     // addon-rebuild: 이 채팅 성인 프로필(folder.nsfw) — 최근 글에 나온 인물만 짧게(Erosync 대신)
     if (built.text) { try {
       const recent = msgs.slice(-4).map((m) => extractMessageText(m)).join("\n");
-      const ns = nsfwSection(folder, recent); if (ns) built.text += "\n" + ns;
+      // 1:1 봇은 자기 이름을 잘 안 써서 이름 찾기만으론 빠졌다 → 기억 블록에 든 인물·봇 캐릭터도 장면 인물로
+      const present = [...(built.manifest?.included ?? []).filter((x) => x.kind === "person").map((x) => x.name), character?.name].filter(Boolean);
+      const ns = nsfwSection(folder, recent, 4, { present }); if (ns) built.text += "\n" + ns;
       // 장면 판단 계획(Erosync 대신). 같은 턴을 다시 보내도 같은 계획이 나오게 턴 번호로 정한 난수
-      const dv = driveSection(folder?.drive, recent, { spont: (n) => nsfwByName(folder, n)?.sexual?.sexualSpontaneity ?? null, limitsOf: (n) => nsfwByName(folder, n)?.tags?.limits ?? [], random: seeded(`${folder?.drive?.turn ?? 0}|${msgs.length}`) });
+      const dv = driveSection(folder?.drive, recent, { spont: (n) => nsfwByName(folder, n)?.sexual?.sexualSpontaneity ?? null, limitsOf: (n) => nsfwByName(folder, n)?.tags?.limits ?? [], random: seeded(`${folder?.drive?.turn ?? 0}|${msgs.length}`), present });
       if (dv) built.text += "\n" + dv;
     } catch { /* 빼고 진행 */ } }
     const raw = built.text, manifest = built.manifest;

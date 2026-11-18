@@ -88,9 +88,9 @@ export function applyDrive(drive0, obs, { spont = () => null, at = Date.now() } 
 export function seeded(seed) { let s = 0; for (const c of String(seed)) s = (s * 31 + c.charCodeAt(0)) >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
 // 이번 요청에 넣을 계획: 장면(최근 글)에 행위자와 대상이 다 나온 목표만, 쉬는 인물 빼고, 욕구 확률로 고른다. 반환 [{goal, toRung}]
-export function pickPlans(drive, recentText, { spont = () => null, random = Math.random, max = 3 } = {}) {
-  const t = String(recentText ?? "").normalize("NFKC").toLowerCase();
-  const here = (n) => isUser(n) || (String(n ?? "").length >= 2 && t.includes(String(n).normalize("NFKC").toLowerCase()));
+export function pickPlans(drive, recentText, { spont = () => null, random = Math.random, max = 3, present = [] } = {}) {
+  const t = String(recentText ?? "").normalize("NFKC").toLowerCase(), pres = new Set(present.map(nk).filter(Boolean));   // present: 이름이 글에 안 나와도 장면에 있는 인물(기억 블록에 든 인물·봇 캐릭터)
+  const here = (n) => isUser(n) || pres.has(nk(n)) || (String(n ?? "").length >= 2 && t.includes(String(n).normalize("NFKC").toLowerCase()));
   const out = [], used = new Set();
   const goals = Object.values(drive?.goals ?? {}).filter((g) => here(g.actor) && here(g.target) && !(drive.rest?.[nk(g.actor)] >= (drive.turn ?? 0)) && g.move)
     .sort((a, b) => (b.desire ?? 0) - (a.desire ?? 0));
@@ -104,8 +104,8 @@ export function pickPlans(drive, recentText, { spont = () => null, random = Math
 }
 
 export const DRIVE_HEAD = "[Scene plan — hidden direction for the next reply. Apply each move through the actor's own personality and voice, only from what the actor knows. Never control {{user}}'s character. Do not mention this block.]";
-export function driveSection(drive, recentText, { spont, random, limitsOf = () => [] } = {}) {
-  const plans = pickPlans(drive, recentText, { spont, random });
+export function driveSection(drive, recentText, { spont, random, limitsOf = () => [], present = [] } = {}) {
+  const plans = pickPlans(drive, recentText, { spont, random, present });
   if (!plans.length) return "";
   const lines = plans.map(({ goal: g, toRung }) => {
     const lim = limitsOf(g.actor), lim2 = isUser(g.target) ? [] : limitsOf(g.target);

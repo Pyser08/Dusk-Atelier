@@ -63,3 +63,10 @@ test("태그: 중복 빼고, 금기는 RP 줄에 절대 넘지 않음으로", ()
   const n = normalizeNsfw({ sexual: { eroticInterest: 40 }, tags: { limits: ["공개된 장소"] } });
   assert.match(nsfwInjectLine("민지", n), /금기\(절대 넘지 않음\): 공개된 장소/);
 });
+
+test("계획 고르기: 이름이 글에 안 나와도 장면 인물(present)이면 계획에 넣는다", () => {
+  const d = applyDrive(emptyDrive(), driveFrom("aim|민지|{{user}}|sex|w|손을 잡는다|90")).drive;
+  assert.equal(pickPlans(d, "그녀가 웃었다", { random: () => 0 }).length, 0);
+  assert.equal(pickPlans(d, "그녀가 웃었다", { random: () => 0, present: ["민지"] }).length, 1);
+  assert.match(driveSection(d, "그녀가 웃었다", { random: () => 0, present: ["민지"] }), /민지 → \{\{user\}\}/);
+});
