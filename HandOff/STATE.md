@@ -1,4 +1,5 @@
 ## addon-rebuild (2026-11-17, main 4144a3f에서 분기) — 애드온 재구성
+- **11-19 안내서 정리**: guide/memory.html — 맨 위 ‘최근 바뀐 점’(0.3.11·0.3.10·v2.2.11), 새 절 #body(성욕·오늘·마음 흐름·사람다움·성감대·왜/i/직접 고치기), #ai-cost·#prune(기록 방식 아래), Erosync 절에 사용 중단 경고. manage.html Risu64 줄, addons.html Erosync 목록 정리.
 - **11-18 장기기억 0.3.11 배포**: ui/screens/memory/aicost.js(AI_COST 기능별 호출 종류·설명, aiTag 배지+i, aiLegend) → mhome 기억 옵션·임베딩·Jev, flowsettings 성인 항목(withTag). ensureMemAddonCss를 두 화면에서 부름(i CSS).
 - **11-18 v2.2.11 릴리스 + 장기기억 0.3.10 배포**: 아래 미배포 항목 전부 포함(사람다움·성욕 게이지·몸과 마음 엔진·구역 이동·위키 정리·People JSON 복구·토큰 절약/옛 대화 빼기 기본 켜짐). 아카 글 docs/arca/memory-0.3.10.html(+img/memory-0.3.10/). addonlib 변화 없음 → memory minCore 2.2.4 그대로.
 - **11-18 기본값(미배포)**: inject.saver·inject.trimOld 기본 켜짐(`!== false`, 끈 사람만 false) — memoryinject effectiveInject·trim·computeTrimFrom, mhome 스위치, 테스트 jev-saver 고침, 안내서 memory.html.
