@@ -1,4 +1,5 @@
 ## addon-rebuild (2026-11-17, main 4144a3f에서 분기) — 애드온 재구성
+- **11-19 v2.2.15 릴리스 + 장기기억 0.3.15**: memoryhuman keyOf(folder)·setUserNames·displayOf — 위키 제목·별칭·성 변형(sameKoreanPerson)·{{user}}/페르소나 이름을 한 열쇠로(counterparts·pairView·stageOf). personv2가 setUserNames(userLabel·userIdentity). recorder isUserNameLike(괄호·님/씨/군/양·성 변형) → 새 인물 안 만듦·actor:user로. 테스트 relations-dedupe.
 - **11-19 v2.2.14 릴리스 + 장기기억 0.3.14 배포**: null.store — people-import applySelection이 await store.flush() 뒤 this.pendingSave를 다시 읽다가(그새 begin()이 null로) 터짐 → 지역 saved로 들고 감, 새 작업 상태는 안 건드림(tests/peopleparse 재현). memory 화면 저장은 memstore.js memStore(ctx)로(ctx.memory 비면 안내 오류) — people.js editFolder·lifecards saveN/saveLife·nsfwcard save.
 - **11-19 장기기억 0.3.13 배포**: nsfw.boost 기본 켜짐(desire/para `!== false`) — nsfwturn profOf·lifecards 스위치·nsfwprofile normalize. 테스트 nsfwlife.
 - **11-19 v2.2.13 릴리스**: homegridcss 최근 기록 — .rb-hrecent align-items:stretch(목록이 2/3 폭만 쓰던 것)·.rb-hrec-list 칸 안 스크롤(8개, 아래 흐림).

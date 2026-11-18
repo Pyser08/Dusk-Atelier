@@ -7,6 +7,7 @@
 //         ③ 줄을 리수폿이 원래 받던 응답(JSON envelope)으로 바꿔 돌려준다 → 리수폿 검증·저장·화면은 그대로.
 //         같은 결과로 Dusk 기록(장면·인물·관계·떡밥·감정)도 만든다.
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
+import { sameKoreanPerson } from "./namekr.js";
 import { scaleDelta } from "./gaugemult.js";
 import { seedFirst, seedLewd } from "./adultseed.js";
 import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
@@ -238,6 +239,13 @@ export function cycleFrom(raw, known = [], random = Math.random) {
   return [...m.values()];
 }
 
+// 유저 이름 판별: 정확히 같거나, 괄호·호칭(님·씨·군·양)을 떼면 같거나, 성만 붙거나 뗀 같은 사람(한미오↔미오)이면 유저로 본다
+const stripHon = (n) => String(n ?? "").replace(/\s*[(（][^)）]*[)）]\s*/g, "").replace(/\s*(님|씨|군|양)$/u, "").trim();
+export function isUserNameLike(name, userNames = []) {
+  const k = nk(name), k2 = nk(stripHon(name)); if (!k) return false;
+  if (k === nk("{{user}}") || /^(user|유저)$/i.test(k2)) return true;
+  return userNames.filter(Boolean).some((u) => { const uk = nk(u); return uk && (uk === k || uk === k2 || nk(stripHon(u)) === k2 || (k2.length >= 2 && uk.length >= 2 && sameKoreanPerson(stripHon(name), stripHon(u)))); });
+}
 export const MAX_PEOPLE = 6;
 export const GROUP_MAX = 3;   // 2.1.4: 한 번에 묻는 인물 수
 const names = (chunk) => chunk.map((t) => t.name).join("·");
@@ -273,7 +281,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const seen = new Set(), targets = [], skipped = [];
   for (const e of [...stage1.people].sort((x, y) => imp(y) - imp(x))) {
     if (e.extra) continue;   // 2.2.2 추가 사실(fact) 줄은 인물 카드 대상이 아니다
-    const k = nk(e.name); if (seen.has(k) || userKeys.has(k)) continue; seen.add(k);
+    const k = nk(e.name); if (seen.has(k) || userKeys.has(k) || (!byName.has(k) && isUserNameLike(e.name, run.userNames))) continue; seen.add(k);   // 기존 인물 문서 이름이 아니면서 유저 이름과 같은 사람이면 새로 만들지 않는다
     const doc = byName.get(k) ?? null;
     if (doc ? !doc.writable : !run.allowCreate) continue;
     if (!doc && imp(e) < 1 && !stage1.fresh.some((f) => nk(f.name) === k)) continue;   // 새 인물은 한 일이 있을 때만
@@ -385,7 +393,7 @@ export function buildEnvelope(run, rec) {
   let n = 0;
   for (const p of people) { const fresh = run.docs.find((d) => nk(d.title) === nk(p.name) || (d.aliases ?? []).some((a) => nk(a) === nk(p.name))); if (fresh) { p.doc = fresh; p.isNew = false; } }   // 다시 쓴 결과여도 지금 위키 기준으로
   for (const p of people) if (p.isNew && !refOf.has(nk(p.name))) { p.ref = slug(++n); refOf.set(nk(p.name), p.ref); } else p.ref = p.doc?.ref ?? refOf.get(nk(p.name));
-  const targetRef = (name) => { const c = canonName(name, known); const k = nk(c); if (!k) return null; if (userKeys.has(k) || c === "{{user}}") return "actor:user"; return refOf.get(k) ?? null; };
+  const targetRef = (name) => { const c = canonName(name, known); const k = nk(c); if (!k) return null; if (userKeys.has(k) || c === "{{user}}" || (!refOf.has(k) && isUserNameLike(c, run.userNames))) return "actor:user"; return refOf.get(k) ?? null; };
   const entry = (doc, slot, targets, text, reason, { fresh = false } = {}) => {
     if (!slotOn(slot) || !text) return null;
     const s = S(slot), [lo, hi] = s.targets ?? [0, 0];

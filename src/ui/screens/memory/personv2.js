@@ -17,7 +17,7 @@ import { isLover, loverPairs, setLover, pairKey } from "../../../engine/lover.js
 import { timeline, eventText, isSecret, setSecret, unrequited } from "../../../engine/romance.js";
 import { ensureMemAddonCss, wkLayoutOf } from "./memaddoncss.js";
 import { parseCycleBody } from "../../../engine/pot/cycle-tracking.js";
-import { nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
+import { setUserNames, nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const STAGES = [["just met", "처음 봄"], ["acquaintances", "아는 사이"], ["close", "친한 사이"], ["very close", "아주 가까움"]];
 const stageIdx = (s) => Math.max(0, STAGES.findIndex(([k]) => k === s));
@@ -52,6 +52,7 @@ export function personTabs(env, parts) {
   const eroSelf = () => (ero ? eroPerson(ero, selfNames) : null);
   eroLoad(ctx).then((snap) => { if (snap) { ero = snap; if (eroSelf()) paint(); } }).catch(() => {});
 
+  setUserNames(f, [userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])]);   // 페르소나 이름으로 따로 쌓인 기록도 {{user}} 한 사람으로
   const people = counterparts(f, selfNames, now);
   // 성별 색: folder.orient(Erosync에서 옮겨 온 성별) 또는 Erosync 인물의 gender. 여 = 분홍, 남 = 파랑
   const genderOf = (name) => { const g = f.orient?.[nk(name)]?.g ?? (ero ? eroPersonByName(ero, name)?.gender : null); return g === "f" || g === "m" ? g : ""; };

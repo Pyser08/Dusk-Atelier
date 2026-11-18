@@ -3,9 +3,36 @@
 //  분석에 얹기: ⑥ 호칭·말투(talk) · ⑩ 둘만의 추억(bond) · ⑤ 잘못된 믿음(belief/cleared, 설정 켤 때만)
 // 저장은 폴더의 새 키(talk·bonds·beliefs)만 쓰고 기존 형식은 바꾸지 않는다. 사라진 응답(리롤)에서 생긴 것은 되돌린다(src).
 import { srcOf } from "./memoryreconcile.js";
+import { sameKoreanPerson } from "./namekr.js";
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
+// 같은 사람의 여러 표기(위키 제목·별칭·성 뺀 이름, {{user}}·페르소나 이름)를 한 사람으로 묶는 열쇠. 폴더마다 한 번 만든다.
+const CANON = new WeakMap(), USERS = new WeakMap();
+const USER_WORDS = ["{{user}}", "user", "유저", "나"];
+export function setUserNames(folder, names) { if (folder && typeof folder === "object") { USERS.set(folder, (names ?? []).filter(Boolean)); CANON.delete(folder); } }
+function canonOf(folder) {
+  if (!folder || typeof folder !== "object") return null;
+  let c = CANON.get(folder); if (c) return c;
+  const m = new Map(), titles = [], disp = new Map([["{{user}}", "{{user}}"]]);
+  for (const d of Object.values(folder.wiki?.documents ?? {})) {
+    if (d?.type !== "Character" || !key(d.title)) continue;
+    const ck = key(d.title); titles.push([d.title, ck]); disp.set(ck, d.title);
+    for (const n of [d.title, ...(d.aliases ?? [])]) if (key(n) && !m.has(key(n))) m.set(key(n), ck);
+  }
+  for (const n of [...USER_WORDS, ...(USERS.get(folder) ?? [])]) if (key(n)) m.set(key(n), "{{user}}");
+  c = { m, titles, disp }; CANON.set(folder, c); return c;
+}
+export function keyOf(folder) {
+  const c = canonOf(folder);
+  return (n) => {
+    const k = key(n); if (!c || !k) return k;
+    let v = c.m.get(k);
+    if (v === undefined) { v = k; for (const [t, ck] of c.titles) if (sameKoreanPerson(t, String(n))) { v = ck; break; } c.m.set(k, v); }
+    return v;
+  };
+}
+export const displayOf = (folder, k, fallback) => canonOf(folder)?.disp.get(k) ?? fallback;
 const nk = (v) => String(v ?? "").toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "");
 const oneLine = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 const rid = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -76,27 +103,27 @@ export function fading(r, now, forgetAfter = 150) {
 
 // ── ⑨ 관계 진도 ──
 export function stageOf(folder, a, b, now) {
-  const ka = key(a), kb = key(b);
-  const shared = (folder?.scenes ?? []).filter((s) => !s.orphan && (s.who ?? []).some((w) => key(w) === ka) && (s.who ?? []).some((w) => key(w) === kb)).length;
+  const K = keyOf(folder), ka = K(a), kb = K(b);
+  const shared = (folder?.scenes ?? []).filter((s) => !s.orphan && (s.who ?? []).some((w) => K(w) === ka) && (s.who ?? []).some((w) => K(w) === kb)).length;
   let warmth = 0;
   for (const p of Object.values(folder?.emo ?? {})) {
-    const pf = key(p.from), pt = key(p.to);
+    const pf = K(p.from), pt = K(p.to);
     if (!((pf === ka && pt === kb) || (pf === kb && pt === ka))) continue;
     const t = effectiveTags(p, now);
     warmth = Math.max(warmth, t.affection ?? 0, t.trust ?? 0);   // 2.2.6: 이성적 호감은 진도에 넣지 않는다(끌림이 진도를 올리고 진도가 끌림 상한을 올리는 되먹임 방지)
   }
   // 장면 수만으로 보면 처음부터 친한 사이로 시작한 관계가 '처음 봄'이 된다 → 쌓인 추억·관계 변화·편한 말투도 친숙함 근거로 센다.
-  const pair = (x, y) => (key(x) === ka && key(y) === kb) || (key(x) === kb && key(y) === ka);
+  const pair = (x, y) => (K(x) === ka && K(y) === kb) || (K(x) === kb && K(y) === ka);
   let evidence = (folder?.bonds ?? []).filter((x) => pair(x.a, x.b)).length;
   for (const r of Object.values(folder?.rels ?? {})) if (pair(r.from, r.to)) evidence += (r.items ?? []).filter((i) => !i.orphan).length;
   if (Object.values(folder?.talk ?? {}).some((t) => pair(t.from, t.to) && t.tone === "casual")) evidence += 2;
   // 근거는 '처음 봄'만 벗겨 준다. '친한 사이' 이상은 여전히 함께한 장면 수와 감정으로만 오른다.
   // 2.2.4 게이지 조화: 감정이 아주 깊으면(7+) 장면 3개로도 '친한 사이', 적대·두려움이 애정·신뢰보다 크면 '친한 사이' 이상으로 올리지 않는다
   let hostile = 0;
-  for (const p of Object.values(folder?.emo ?? {})) { const pf = key(p.from), pt = key(p.to); if ((pf === ka && pt === kb) || (pf === kb && pt === ka)) { const t = effectiveTags(p, now); hostile = Math.max(hostile, t.hostility ?? 0, t.fear ?? 0); } }
+  for (const p of Object.values(folder?.emo ?? {})) { const pf = K(p.from), pt = K(p.to); if ((pf === ka && pt === kb) || (pf === kb && pt === ka)) { const t = effectiveTags(p, now); hostile = Math.max(hostile, t.hostility ?? 0, t.fear ?? 0); } }
   let stage = shared + evidence <= 1 && warmth < 3 ? "just met" : (shared < 5 && !(shared >= 3 && warmth >= 7)) || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
   if (hostile > warmth && (stage === "close" || stage === "very close")) stage = "acquaintances";
-  const floor = folder?.start?.[[ka, kb].sort().join("|")]?.level;   // 본문이 '이미 아는 사이'라고 밝힌 경우의 바닥
+  const floor = (folder?.start?.[[key(a), key(b)].sort().join("|")] ?? folder?.start?.[[ka, kb].sort().join("|")])?.level;   // 본문이 '이미 아는 사이'라고 밝힌 경우의 바닥
   const RANK = ["just met", "acquaintances", "close", "very close"], min = floor === "close" ? 2 : floor === "friendly" ? 1 : 0;
   return { stage: RANK[Math.max(RANK.indexOf(stage), min)], shared, warmth };
 }
@@ -350,39 +377,39 @@ export function nowOf(folder) {
   for (const p of Object.values(folder?.people ?? {})) for (const r of p.records ?? []) if (r.at != null) n = Math.max(n ?? -1, r.at);
   return n ?? 0;
 }
-const keysOf = (names) => new Set((names ?? []).map(key).filter(Boolean));
+const keysOf = (names, K = key) => new Set((names ?? []).map(K).filter(Boolean));
 // 이 인물과 얽힌 상대들(장면을 함께한 횟수 → 관계 온도 순). selfNames: 이름·별칭들.
 export function counterparts(folder, selfNames, now = nowOf(folder)) {
-  const self = keysOf(selfNames), found = new Map();
-  const add = (n) => { const k = key(n); if (k && !self.has(k) && !found.has(k)) found.set(k, String(n)); };
-  for (const s of folder?.scenes ?? []) if (!s.orphan && (s.who ?? []).some((w) => self.has(key(w)))) (s.who ?? []).forEach(add);
-  for (const p of Object.values(folder?.emo ?? {})) { if (self.has(key(p.from))) add(p.to); if (self.has(key(p.to))) add(p.from); }
-  for (const t of Object.values(folder?.talk ?? {})) { if (self.has(key(t.from))) add(t.to); if (self.has(key(t.to))) add(t.from); }
-  for (const b of folder?.bonds ?? []) { if (self.has(key(b.a))) add(b.b); if (self.has(key(b.b))) add(b.a); }
-  for (const e of Object.values(folder?.exp ?? {})) { if (self.has(key(e.a))) add(e.b); if (self.has(key(e.b))) add(e.a); }
-  for (const b of folder?.beliefs ?? []) { if (self.has(key(b.who)) && b.by) add(b.by); if (b.by && self.has(key(b.by))) add(b.who); }
+  const K = keyOf(folder), self = keysOf(selfNames, K), found = new Map();
+  const add = (n) => { const k = K(n); if (k && !self.has(k) && !found.has(k)) found.set(k, displayOf(folder, k, String(n))); };
+  for (const s of folder?.scenes ?? []) if (!s.orphan && (s.who ?? []).some((w) => self.has(K(w)))) (s.who ?? []).forEach(add);
+  for (const p of Object.values(folder?.emo ?? {})) { if (self.has(K(p.from))) add(p.to); if (self.has(K(p.to))) add(p.from); }
+  for (const t of Object.values(folder?.talk ?? {})) { if (self.has(K(t.from))) add(t.to); if (self.has(K(t.to))) add(t.from); }
+  for (const b of folder?.bonds ?? []) { if (self.has(K(b.a))) add(b.b); if (self.has(K(b.b))) add(b.a); }
+  for (const e of Object.values(folder?.exp ?? {})) { if (self.has(K(e.a))) add(e.b); if (self.has(K(e.b))) add(e.a); }
+  for (const b of folder?.beliefs ?? []) { if (self.has(K(b.who)) && b.by) add(b.by); if (b.by && self.has(K(b.by))) add(b.who); }
   const me = [...selfNames ?? []][0];
   return [...found.values()].map((name) => ({ name, ...stageOf(folder, me, name, now) })).sort((a, b) => b.shared - a.shared || b.warmth - a.warmth);
 }
 // 두 사람 사이의 모든 것: 관계 진도 · 감정(양쪽, 식은 것 설명) · 호칭(양쪽) · 추억 · 기대 차이 · 오해.
 export function pairView(folder, selfNames, other, now = nowOf(folder)) {
-  const self = keysOf(selfNames), ko = key(other), me = [...selfNames][0];
+  const K = keyOf(folder), self = keysOf(selfNames, K), ko = K(other), me = [...selfNames][0];
   const feelOf = (fromSelf) => {
-    const p = Object.entries(folder?.emo ?? {}).find(([, x]) => fromSelf ? self.has(key(x.from)) && key(x.to) === ko : key(x.from) === ko && self.has(key(x.to)));
+    const p = Object.entries(folder?.emo ?? {}).find(([, x]) => fromSelf ? self.has(K(x.from)) && K(x.to) === ko : K(x.from) === ko && self.has(K(x.to)));
     if (!p) return null;
     const [pk, pair] = p, eff = effectiveTags(pair, now);
     const cooled = Object.entries(eff).filter(([t, v]) => pair.tags[t] != null && v < pair.tags[t]).map(([tag, to]) => ({ tag, from: pair.tags[tag], to }));
     return { pk, from: pair.from, to: pair.to, tags: eff, stored: { ...pair.tags }, cooled, lock: pair.lock ?? null };
   };
   const talkOf = (fromSelf) => {
-    const e = Object.entries(folder?.talk ?? {}).find(([, t]) => fromSelf ? self.has(key(t.from)) && key(t.to) === ko : key(t.from) === ko && self.has(key(t.to)));
+    const e = Object.entries(folder?.talk ?? {}).find(([, t]) => fromSelf ? self.has(K(t.from)) && K(t.to) === ko : K(t.from) === ko && self.has(K(t.to)));
     return e ? { k: e[0], ...e[1] } : null;
   };
   const faceOf = (fromSelf) => {
-    const e = Object.entries(folder?.faces ?? {}).find(([, x]) => fromSelf ? self.has(key(x.who)) && key(x.to) === ko : key(x.who) === ko && self.has(key(x.to)));
+    const e = Object.entries(folder?.faces ?? {}).find(([, x]) => fromSelf ? self.has(K(x.who)) && K(x.to) === ko : K(x.who) === ko && self.has(K(x.to)));
     return e ? { k: e[0], ...e[1] } : null;
   };
-  const both = (a, b) => (self.has(key(a)) && key(b) === ko) || (self.has(key(b)) && key(a) === ko);
+  const both = (a, b) => (self.has(K(a)) && K(b) === ko) || (self.has(K(b)) && K(a) === ko);
   return {
     stage: stageOf(folder, me, other, now),
     start: folder?.start?.[pairKey(me, other)] ?? null,   // 이야기 시작 전부터 알던 사이(본문 인용)
@@ -392,7 +419,7 @@ export function pairView(folder, selfNames, other, now = nowOf(folder)) {
     exp: Object.values(folder?.exp ?? {}).find((e) => both(e.a, e.b)) ?? null,
     rifts: (folder?.rifts ?? []).filter((r) => both(r.a, r.b)).sort((a, b) => riftClosed(a) - riftClosed(b)),
     face: { ab: faceOf(true), ba: faceOf(false) },
-    beliefs: (folder?.beliefs ?? []).filter((b) => self.has(key(b.who)) && (key(b.by) === ko || !b.by) || key(b.who) === ko).sort((a, b) => (b.open === true) - (a.open === true)),
+    beliefs: (folder?.beliefs ?? []).filter((b) => self.has(K(b.who)) && (K(b.by) === ko || !b.by) || K(b.who) === ko).sort((a, b) => (b.open === true) - (a.open === true)),
   };
 }
 // 요약 탭: 바뀐 것(전 → 지금), 지금 상태, 기억에 남은 순간.
