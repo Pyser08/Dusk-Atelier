@@ -2,7 +2,7 @@
 import { svgFrom } from "../../dom.js";
 
 export var CSS = `
-.sds{position:absolute;inset:0;z-index:25;display:flex;flex-direction:row;overflow:hidden;background:var(--rb-win);color:var(--rb-text);animation:rb-in .15s ease-out}
+.sds{position:absolute;inset:0;z-index:25;display:flex;flex-direction:row;overflow:hidden;background:var(--rb-win);color:var(--rb-text);animation:rb-in .15s var(--rb-ease,cubic-bezier(.22,1.12,.36,1))}
 .sds *{box-sizing:border-box}
 .sds-rail{width:44px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;background:var(--rb-surf);border-right:var(--rb-bw,1px) solid var(--rb-line2)}
 .sds-rail .tab{writing-mode:vertical-rl;letter-spacing:.2em;font-weight:800;font-size:13px;padding:10px 0;border:0;background:none;color:var(--rb-sub);cursor:pointer;border-radius:var(--rb-r1)}
@@ -98,7 +98,7 @@ export var CSS = `
 .sds-card .cap .pk{height:20px;padding:0 7px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:11.5px;font-weight:800;display:inline-flex;align-items:center}
 .sds.nonames .sds-card .cap .n{visibility:hidden}
 .sds-card .rsv{position:absolute;top:8px;right:8px;height:22px;padding:0 8px;border-radius:999px;background:var(--rb-acc-grad);color:var(--rb-on-acc);font-size:12px;font-weight:800;display:flex;align-items:center}
-.sds-card .chk{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:7px;background:var(--rb-win);border:1px solid var(--rb-line3);display:flex;align-items:center;justify-content:center;color:var(--rb-on-acc);opacity:0;transition:opacity .12s}
+.sds-card .chk{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:7px;background:var(--rb-win);border:1px solid var(--rb-line3);display:flex;align-items:center;justify-content:center;color:var(--rb-on-acc);opacity:0;transition:opacity .12s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .sds-card[aria-selected=true] .chk,.sds-card:focus-visible .chk{opacity:1}
 .sds-card[aria-selected=true]{border-color:var(--rb-acc);box-shadow:0 0 0 2px var(--rb-acc)}
 .sds-card[aria-selected=true] .chk{background:var(--rb-acc-grad);border:0}
@@ -109,7 +109,7 @@ export var CSS = `
 .sds-card .rsvbtn:hover{filter:brightness(1.15)}
 .sds-card .badges{position:absolute;top:8px;right:8px;display:flex;gap:4px}
 .sds-card .badge{height:22px;min-width:22px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
-.sds-card .quick{position:absolute;left:8px;right:8px;bottom:44px;display:flex;gap:6px;justify-content:flex-end;opacity:0;transition:opacity .12s}
+.sds-card .quick{position:absolute;left:8px;right:8px;bottom:44px;display:flex;gap:6px;justify-content:flex-end;opacity:0;transition:opacity .12s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 @media (hover:hover){.sds-card:hover .chk,.sds-card:hover .quick{opacity:1}.sds-card:hover{border-color:var(--rb-acc)}}
 .sds-card .quick button{height:26px;padding:0 9px;border-radius:999px;border:0;background:rgba(0,0,0,.6);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .sds-frow{border:var(--rb-bw,1px) solid var(--rb-line2);border-radius:var(--rb-r3);background:var(--rb-surf);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
@@ -140,7 +140,7 @@ export var CSS = `
 .sds-drag-scene .sds-tray{display:flex}
 .sds-prog{display:flex;align-items:center;gap:10px;min-width:220px;flex:1;max-width:520px}
 .sds-prog .bar{flex:1;height:8px;border-radius:999px;background:var(--rb-surf2);overflow:hidden;border:1px solid var(--rb-line2)}
-.sds-prog .bar i{display:block;height:100%;background:var(--rb-acc-grad);transition:width .3s}
+.sds-prog .bar i{display:block;height:100%;background:var(--rb-acc-grad);transition:width .3s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .sds-qerr{padding:8px 16px;background:color-mix(in srgb,var(--rb-danger) 16%,transparent);border-bottom:var(--rb-bw,1px) solid var(--rb-danger);color:var(--rb-text);font-size:13px;font-weight:700;line-height:1.45;white-space:normal;word-break:break-word;flex-shrink:0}
 .sds-qerr[hidden]{display:none}
 .sds-prog .t{font-size:12px;font-weight:700;color:var(--rb-sub);white-space:nowrap;font-variant-numeric:tabular-nums}

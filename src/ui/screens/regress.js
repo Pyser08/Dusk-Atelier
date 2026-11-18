@@ -29,7 +29,7 @@ const CSS = `
 .rb-rg button.rb-rg-all[aria-pressed=true]{border-color:var(--rb-acc);color:var(--rb-acc-text);background:var(--rb-acc-soft)}
 .rb-rg-list{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 14px}
 .rb-rg-p{display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;border-radius:var(--rb-r3,14px);cursor:pointer;text-align:left;color:var(--rb-text);font:inherit;
-  background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);transition:border-color .15s,background .15s}
+  background:var(--rb-surf);border:var(--rb-bw,1px) solid var(--rb-line2);transition:border-color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-rg-p:hover{background:var(--rb-hover)}
 .rb-rg-p[aria-pressed=true]{border-color:var(--rb-acc);background:var(--rb-acc-soft);box-shadow:0 0 0 2px var(--rb-sel-ring,transparent)}
 .rb-rg-av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--rb-acc-text);background:var(--rb-acc-soft);border:1px solid var(--rb-line2)}
@@ -86,9 +86,9 @@ const CSS = `
 .rb-rg-full.glitch .rb-rg-halo{background:radial-gradient(circle,rgba(255,236,200,.22) 0%,rgba(255,236,200,.06) 45%,transparent 68%)}
 .rb-rg-full.glitch .rb-rg-rays{opacity:.35}
 .rb-rg-fx{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;overflow:visible;filter:drop-shadow(0 0 1px rgba(30,18,6,.9)) drop-shadow(-2px 0 0 rgba(255,70,140,.7)) drop-shadow(2px 0 0 rgba(70,225,255,.65)) drop-shadow(0 0 10px rgba(255,236,200,.6))}
-.rb-rg-fx .crack{fill:none;stroke:#fffaf0;stroke-width:.55;stroke-linecap:round;stroke-dasharray:var(--l);stroke-dashoffset:var(--l);animation:rg-crack .5s ease-out var(--dl) forwards}
+.rb-rg-fx .crack{fill:none;stroke:#fffaf0;stroke-width:.55;stroke-linecap:round;stroke-dasharray:var(--l);stroke-dashoffset:var(--l);animation:rg-crack .5s var(--rb-ease,cubic-bezier(.22,1.12,.36,1)) var(--dl) forwards}
 @keyframes rg-crack{to{stroke-dashoffset:0}}
-.rb-rg-fx{transition:opacity .9s ease .1s}
+.rb-rg-fx{transition:opacity .9s ease .1s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-rg-full.tick .rb-rg-fx{opacity:0}   /* 12시: 금이 아물듯 사라진다 */
 .rb-rg-word{position:relative;margin-top:clamp(-40px,-4vmin,-10px);font-family:"Cinzel","Trajan Pro","Cormorant SC",Georgia,serif;font-weight:800;font-size:clamp(44px,12vmin,118px);letter-spacing:.22em;padding-left:.22em;line-height:1;color:#ffe9ef;
   -webkit-text-stroke:1.5px rgba(40,22,10,.85);paint-order:stroke fill;text-shadow:-4px 0 0 rgba(255,70,140,.8),4px 0 0 rgba(70,225,255,.75),0 0 22px rgba(255,236,200,.8);animation:rg-wjit .14s steps(2) infinite}
@@ -101,9 +101,9 @@ const CSS = `
 .rb-rg-full.tick .rb-rg-big{animation:none;filter:drop-shadow(0 0 2px rgba(30,18,6,.8)) drop-shadow(0 0 22px rgba(255,215,122,.8)) drop-shadow(0 0 60px rgba(255,190,80,.4))}
 .rb-rg-full.tick .rb-rg-big [stroke="#fff1d6"],.rb-rg-full.tick .rb-rg-big .face{stroke:#ffe1a0}
 .rb-rg-full.tick .rb-rg-big text{fill:#ffe1a0}
-.rb-rg-full.tick .rb-rg-halo{animation:none;background:radial-gradient(circle,rgba(255,215,122,.35) 0%,rgba(255,190,80,.12) 45%,transparent 70%);transition:background .6s}
+.rb-rg-full.tick .rb-rg-halo{animation:none;background:radial-gradient(circle,rgba(255,215,122,.35) 0%,rgba(255,190,80,.12) 45%,transparent 70%);transition:background .6s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-rg-full.tick .rb-rg-rays{opacity:.8}
-.rb-rg-full.tick .rb-rg-dust{animation-play-state:paused;opacity:0;transition:opacity .6s}
+.rb-rg-full.tick .rb-rg-dust{animation-play-state:paused;opacity:0;transition:opacity .6s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 @keyframes rg-wsettle{0%{transform:scale(1.18);filter:brightness(2)}100%{transform:none;filter:none}}
 .rb-rg-full.tick .rb-rg-word::after{animation:none;opacity:0}
 .rb-rg-full.glitch .rb-rg-fstage{font-size:clamp(13px,2vmin,17px);padding:5px 16px}

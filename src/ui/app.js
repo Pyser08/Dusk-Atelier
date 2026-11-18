@@ -18,7 +18,7 @@ import { renderPlaceholder } from './screens/placeholder.js';
 import { renderPresets } from './screens/presets.js';
 import { renderHistory } from './screens/history.js';
 import { onNotice } from '../data/modules.js';
-import { fadeUp, h, motion, replace, installImeGuard } from './dom.js';
+import { fadeUp, h, motion, replace, installImeGuard, EASE_OUT, EASE_IN } from './dom.js';
 import { icon } from './icons.js';
 import { createService } from '../data/service.js';
 import { openEditor } from './screens/editor.js';
@@ -313,7 +313,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   let wasLoading = false;
   new MutationObserver(() => {
     const now = !!main.querySelector(":scope > .rb-loading");
-    if (wasLoading && !now) for (const el of main.children) motion(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
+    if (wasLoading && !now) for (const el of main.children) motion(el, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 240 });
     wasLoading = now;
   }).observe(main, { childList: true });
   win.append(head, topnav, body, tabbar);
@@ -468,7 +468,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     state.sub = sub;
     ctx.closeSheet();
     render({ reuse: changed });
-    if (changed) fadeUp(main, { duration: 180 });
+    if (changed) fadeUp(main, { duration: 260 });
   }
   // 1.6.3: 한 번 그린 탭은 DOM을 보존했다가 돌아오면 그대로 붙인다 (재렌더 생략)
   const paneCache = new Map();
@@ -631,8 +631,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (ctx.cellar) checkCellarUpdate(api, ctx.cellar, { toast: (t) => ctx.toast(t, { seconds: 12 }) }).then((v) => { ctx.cellarNew = v; }).catch(() => {});
     checkTide();
     ctx.watcher?.check();
-    motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
-    motion(win, [{ opacity: 0, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 220 });
+    motion(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: EASE_OUT });
+    motion(win, [{ opacity: 0, transform: "translateY(18px) scale(.965)" }, { opacity: 1, transform: "none" }], { duration: 340 });
     state.opened = true;
     setTimeout(() => (win.querySelector(".rb-row") ?? searchInput).focus?.(), 50);
   }
@@ -641,8 +641,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (legacy.busy || closing) return;
     closing = true;
     try {
-      const out = motion(win, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(8px) scale(.99)" }], { duration: 130, fill: "forwards" });
-      motion(root, [{ opacity: 1 }, { opacity: 0 }], { duration: 130, fill: "forwards" });
+      const out = motion(win, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(10px) scale(.975)" }], { duration: 150, fill: "forwards", easing: EASE_IN });
+      motion(root, [{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards", easing: EASE_IN });
       // 애니메이션이 끝났다는 신호가 안 오는 환경(백그라운드 탭 등)에서도 창이 닫히도록 시간 제한을 둔다.
       if (out) await Promise.race([out.finished.catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
       root.hidden = true;
@@ -713,7 +713,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       const key = state.tab + "|" + (detail3.querySelector("h2")?.textContent ?? detail3.textContent.slice(0, 40));
       if (key !== lastDetail) {
         lastDetail = key;
-        if (!ctx.isMobile()) motion(detail3, [{ opacity: 0, transform: "translateX(6px)" }, { opacity: 1, transform: "none" }], { duration: 170 });
+        if (!ctx.isMobile()) motion(detail3, [{ opacity: 0, transform: "translateX(12px)" }, { opacity: 1, transform: "none" }], { duration: 170 });
       }
     },
     toast: (text, opts) => toast(win, text, opts),

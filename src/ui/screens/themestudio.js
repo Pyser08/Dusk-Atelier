@@ -45,7 +45,7 @@ export function targetToggle(value, onChange) {
 }
 export var TTOG_CSS = `
 .rb-ttog{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:14px;background:var(--rb-surf);border:1px solid var(--rb-line);min-width:260px;isolation:isolate}
-.rb-ttog button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:7px;height:38px;border:0;background:transparent;color:var(--rb-sub);font-size:13.5px;cursor:pointer;border-radius:10px;transition:color .25s}
+.rb-ttog button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:7px;height:38px;border:0;background:transparent;color:var(--rb-sub);font-size:13.5px;cursor:pointer;border-radius:10px;transition:color .25s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-ttog button[aria-checked=true]{color:#fff;font-weight:700}
 .rb-ttog-thumb{position:absolute;z-index:0;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:10px;background:linear-gradient(135deg,#4f7cf7,#7c5cf0);box-shadow:0 4px 14px rgba(124,92,240,.35);transition:transform .38s cubic-bezier(.34,1.45,.5,1)}
 .rb-ttog[data-v=pocket] .rb-ttog-thumb{transform:translateX(100%)}

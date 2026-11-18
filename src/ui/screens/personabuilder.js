@@ -65,8 +65,8 @@ var CSS = `
 .rb-pb-reel .ops{display:flex;justify-content:center;gap:2px}
 .rb-pb-reel .rb-pb-mini{color:#ffe08a}
 .rb-pb-lever{flex:none;position:relative;width:28px;height:172px;border:0;background:none;cursor:pointer;padding:0}
-.rb-pb-lever .rod{position:absolute;left:11px;top:16px;width:6px;height:92px;border-radius:3px;background:linear-gradient(90deg,#9aa,#eee,#9aa);transform-origin:50% 100%;transition:transform .2s}
-.rb-pb-lever .knob{position:absolute;left:2px;top:0;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8a8a,#c0262d);box-shadow:0 2px 4px rgb(0 0 0/.5);transition:transform .2s;z-index:1}
+.rb-pb-lever .rod{position:absolute;left:11px;top:16px;width:6px;height:92px;border-radius:3px;background:linear-gradient(90deg,#9aa,#eee,#9aa);transform-origin:50% 100%;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
+.rb-pb-lever .knob{position:absolute;left:2px;top:0;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8a8a,#c0262d);box-shadow:0 2px 4px rgb(0 0 0/.5);transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1));z-index:1}
 .rb-pb-lever.pull .knob{transform:translateY(92px)}
 .rb-pb-lever.pull .rod{transform:scaleY(.15)}
 .rb-pb-steps{display:flex;flex-wrap:wrap;gap:6px;align-items:center}

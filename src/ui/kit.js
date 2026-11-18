@@ -1,4 +1,4 @@
-import { h, motion } from './dom.js';
+import { h, motion, EASE_IN } from './dom.js';
 import { runeFace, moodFor } from './mascot.js';
 import { icon } from './icons.js';
 
@@ -69,7 +69,7 @@ export function toast(host, text, { action, seconds = 4, error = false } = {}) {
     clearInterval(timer);
     if (closing) return;
     closing = true;
-    const out = motion(el, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(6px) scale(.98)" }], { duration: 140, fill: "forwards" });
+    const out = motion(el, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(8px) scale(.97)" }], { duration: 150, fill: "forwards", easing: EASE_IN });
     if (out) out.finished.then(() => el.remove(), () => el.remove());
     else el.remove();
   };

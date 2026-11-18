@@ -167,7 +167,7 @@ position:relative;display:block;width:100%;max-width:var(--t-card-width);min-wid
 .dt-foot>:last-child{margin-left:auto}
 .dt-foot>:first-child>div{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center!important;gap:4px!important;min-width:0!important}
 .dt-foot>:last-child>div,.dt-foot>:last-child>div>div{flex-wrap:wrap;gap:2px;min-width:0}
-.dt-foot button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:30px;min-height:30px;margin:0;padding:0 6px;border-radius:999px;color:var(--t-muted);background:transparent;transition:background-color .2s,color .2s}
+.dt-foot button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:30px;min-height:30px;margin:0;padding:0 6px;border-radius:999px;color:var(--t-muted);background:transparent;transition:background-color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .dt-foot button svg{flex:none;width:15px;height:15px}
 .dt-foot button:hover{background:var(--t-tint);color:var(--t-accent-text)}
 .dt-foot .button-icon-remove:hover{color:#e5484d}

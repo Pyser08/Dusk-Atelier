@@ -302,7 +302,7 @@ export async function openEditorCore(ctx, cfg) {
 .rb-chg{padding:2px 10px;border-radius:999px;background:var(--rb-sel-bg);color:var(--rb-acc-text);font-size:12px;font-weight:700;white-space:nowrap}
 .rb-statusbar{flex-shrink:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 16px;background:var(--rb-surf);border-top:var(--rb-bw,1px) solid var(--rb-line2);font-size:12px;color:var(--rb-sub)}
 .rb-statusbar .dot{color:var(--rb-teal)}
-.rb-help{position:absolute;right:0;top:0;bottom:0;width:min(280px,86%);z-index:34;padding:14px 16px;overflow:auto;background:var(--rb-surf);border-left:var(--rb-bw,1px) solid var(--rb-line2);box-shadow:-6px 0 16px rgba(0,0,0,.18);font-size:13px;line-height:1.6;transform:translateX(100%);visibility:hidden;transition:transform .2s,visibility .2s}
+.rb-help{position:absolute;right:0;top:0;bottom:0;width:min(280px,86%);z-index:34;padding:14px 16px;overflow:auto;background:var(--rb-surf);border-left:var(--rb-bw,1px) solid var(--rb-line2);box-shadow:-6px 0 16px rgba(0,0,0,.18);font-size:13px;line-height:1.6;transform:translateX(100%);visibility:hidden;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),visibility .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-full.help-on .rb-help{transform:none;visibility:visible}
 .rb-help .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .rb-help .hd b{flex:1;font-size:14px}
@@ -317,7 +317,7 @@ export async function openEditorCore(ctx, cfg) {
 .rb-fold>summary::-webkit-details-marker{display:none}
 .rb-fold>summary .t{font-weight:700;font-size:15px}
 .rb-fold>summary .h{flex:1;min-width:0;font-size:12px;color:var(--rb-sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rb-fold>summary svg{flex:none;transition:transform .15s}
+.rb-fold>summary svg{flex:none;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-fold[open]>summary svg{transform:rotate(180deg)}
 .rb-fold-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:12px}
 .rb-rel{border-radius:16px;border:1px solid var(--rb-line3);background:var(--rb-surf2);padding:10px 14px;display:flex;flex-direction:column;gap:6px}
@@ -336,7 +336,7 @@ export async function openEditorCore(ctx, cfg) {
 .rb-adv>summary{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;list-style:none;font-size:13px;font-weight:600;min-height:24px}
 .rb-adv>summary::-webkit-details-marker{display:none}
 .rb-adv>summary .h{font-weight:400;color:var(--rb-sub);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rb-adv>summary svg{flex:none;transition:transform .15s}
+.rb-adv>summary svg{flex:none;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-adv[open]>summary svg{transform:rotate(180deg)}
 .rb-adv>.in{padding:2px 12px 12px}
 .rb-emptycard{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:22px 14px;border:1px dashed var(--rb-line3);border-radius:14px;color:var(--rb-sub);font-size:13px;line-height:1.6}

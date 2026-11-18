@@ -7,12 +7,12 @@ dialog .field input,dialog .field select,dialog .field textarea,dialog select,di
 dialog button{border-radius:12px}
 dialog .primary{border-radius:12px;font-weight:700}
 .check{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 0;cursor:pointer}
-.check input[type=checkbox]{order:2;appearance:none;-webkit-appearance:none;flex-shrink:0;width:42px;height:24px;margin:0;border-radius:999px;background:var(--line);position:relative;cursor:pointer;transition:background .15s}
-.check input[type=checkbox]::before{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0005;transition:transform .15s}
+.check input[type=checkbox]{order:2;appearance:none;-webkit-appearance:none;flex-shrink:0;width:42px;height:24px;margin:0;border-radius:999px;background:var(--line);position:relative;cursor:pointer;transition:background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
+.check input[type=checkbox]::before{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0005;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .check input[type=checkbox]:checked{background:var(--accent)}
 .check input[type=checkbox]:checked::before{transform:translateX(18px)}
 .check input[type=checkbox]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-label:has(> input[type=radio]){display:inline-flex;align-items:center;gap:6px;padding:7px 14px;margin:2px;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:13px;transition:background .12s,border-color .12s}
+label:has(> input[type=radio]){display:inline-flex;align-items:center;gap:6px;padding:7px 14px;margin:2px;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:13px;transition:background .12s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),border-color .12s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 label:has(> input[type=radio]:checked){background:color-mix(in srgb,var(--accent) 22%,transparent);border-color:var(--accent);font-weight:700}
 label > input[type=radio]{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
 label:has(> input[type=radio]:focus-visible){outline:2px solid var(--accent);outline-offset:2px}

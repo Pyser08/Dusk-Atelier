@@ -138,10 +138,10 @@ export const SUBTABS_CSS = `
 .rb-sub.dock{display:grid;grid-template-columns:minmax(0,1fr) 52px;gap:12px;align-items:start}
 .rb-sub.dock>.rb-sub-nav{order:2}
 .rb-sub-nav.dock{position:sticky;top:8px;display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:26px;background:color-mix(in srgb,var(--rb-surf) 85%,transparent);border:1px solid var(--rb-line2);box-shadow:0 6px 18px color-mix(in srgb,#000 10%,transparent)}
-.rb-sub-k{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;transition:background .2s,transform .2s}
+.rb-sub-k{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;transition:background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-sub-k .ic2{font-size:17px;line-height:1}
 .rb-sub-k.sel{background:var(--rb-acc-grad,var(--rb-acc));transform:scale(1.06)}
-.rb-sub-k .tip{position:absolute;right:50px;top:50%;transform:translateY(-50%) translateX(6px);white-space:nowrap;padding:4px 10px;border-radius:8px;background:var(--rb-text);color:var(--rb-win);font-size:12px;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s}
+.rb-sub-k .tip{position:absolute;right:50px;top:50%;transform:translateY(-50%) translateX(6px);white-space:nowrap;padding:4px 10px;border-radius:8px;background:var(--rb-text);color:var(--rb-win);font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 
 @media (hover:hover){.rb-sub-k:hover{background:var(--rb-surf2)}.rb-sub-k:hover .tip{opacity:1;transform:translateY(-50%)}}
 .rb-sub-k:focus-visible .tip{opacity:1;transform:translateY(-50%)}
@@ -166,14 +166,14 @@ export const SUBTABS_CSS = `
 .rb-sub-dial .ticks i{position:absolute;left:50%;top:3px;width:2px;height:5px;margin-left:-1px;border-radius:1px;background:color-mix(in srgb,var(--rb-acc) 45%,var(--rb-line));transform-origin:50% 162px;transform:rotate(var(--t))}
 .rb-sub-dial .ticks i:nth-child(3n+1){height:9px;background:color-mix(in srgb,var(--rb-acc) 70%,var(--rb-line))}
 .rb-sub-dial .notch{position:absolute;left:50%;top:8px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--rb-acc-grad,var(--rb-acc));box-shadow:0 0 8px var(--rb-acc);z-index:2}
-.rb-sub-dial .glow{position:absolute;left:50%;top:-30px;width:140px;height:80px;margin-left:-70px;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--rb-acc) 35%,transparent),transparent);opacity:.55;transition:opacity .3s}
+.rb-sub-dial .glow{position:absolute;left:50%;top:-30px;width:140px;height:80px;margin-left:-70px;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--rb-acc) 35%,transparent),transparent);opacity:.55;transition:opacity .3s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-sub-dial.drag .glow{opacity:.9}
-.rb-sub-dial.edge .arc{transform:translateY(2px);transition:transform .12s}
-.rb-sub-dial.pop .notch{animation:rbNotch .28s ease-out}
+.rb-sub-dial.edge .arc{transform:translateY(2px);transition:transform .12s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
+.rb-sub-dial.pop .notch{animation:rbNotch .28s var(--rb-ease,cubic-bezier(.22,1.12,.36,1))}
 @keyframes rbNotch{0%{transform:scale(1)}40%{transform:scale(1.6)}100%{transform:scale(1)}}
 .rb-sub-dial .ticks{transition:none!important}
 .rb-sub-d{position:absolute;left:50%;top:180px;width:96px;margin-left:-48px;height:30px;border:0;background:transparent;color:var(--rb-sub);font:inherit;font-size:12.5px;cursor:inherit;border-radius:999px;will-change:transform;
-  transform-origin:50% 0;transform:rotate(var(--a)) translateY(-142px) rotate(calc(-1 * var(--a))) scale(var(--s,1));transition:color .2s,background .25s,box-shadow .25s;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
+  transform-origin:50% 0;transform:rotate(var(--a)) translateY(-142px) rotate(calc(-1 * var(--a))) scale(var(--s,1));transition:color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),background .25s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),box-shadow .25s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1));display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
 .rb-sub-d small{font-size:10px;color:var(--rb-mute)}
 .rb-sub-d.sel{color:var(--rb-on-acc,#fff);font-weight:700;background:var(--rb-acc-grad,var(--rb-acc));box-shadow:0 4px 12px color-mix(in srgb,var(--rb-acc) 35%,transparent)}
 .rb-sub-d.sel small{color:inherit;opacity:.8}

@@ -35,7 +35,7 @@ export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repe
 .rb-gauge-row input[type=range]{width:100%;accent-color:var(--rb-acc)}.rb-gauge-row .v{min-width:3.2em;text-align:right;font-variant-numeric:tabular-nums}
 @media (max-width:760px){.rb-gauge-row{grid-template-columns:1fr auto}.rb-gauge-row input[type=range]{grid-column:1/-1;grid-row:2}}
 .rb-rm-modes{position:absolute;top:calc(10px + var(--rb-ctl-sm) + 8px);right:10px;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
-.rb-rm-mode{position:relative;overflow:hidden;padding:6px 12px;border-radius:999px;border:1px solid var(--rb-line3);background:var(--rb-surf);color:var(--rb-sub);font:600 12.5px/1.2 inherit;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.8,.5,1),background .2s,color .2s,border-color .2s,box-shadow .2s}
+.rb-rm-mode{position:relative;overflow:hidden;padding:6px 12px;border-radius:999px;border:1px solid var(--rb-line3);background:var(--rb-surf);color:var(--rb-sub);font:600 12.5px/1.2 inherit;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.8,.5,1),background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),border-color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),box-shadow .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-rm-mode:active{transform:scale(.92)}
 .rb-rm-mode[aria-pressed=true]{color:#fff;border-color:transparent;transform:scale(1.06)}
 .rb-rm-mode.m-affinity[aria-pressed=true]{background:linear-gradient(135deg,var(--rb-acc),var(--rb-rose));box-shadow:0 4px 14px color-mix(in srgb,var(--rb-acc) 45%,transparent)}
@@ -43,7 +43,7 @@ export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repe
 .rb-rm-turnbar{position:absolute;left:12px;right:12px;bottom:10px;z-index:2;display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:999px;background:var(--rb-surf);border:1px solid var(--rb-line2)}
 .rb-rm-turnbar input[type=range]{flex:1;min-width:60px;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;background:linear-gradient(90deg,var(--rb-acc) var(--p,100%),color-mix(in srgb,var(--rb-text) 14%,transparent) var(--p,100%));cursor:pointer}
 .rb-rm-romance .rb-rm-turnbar input[type=range]{background:linear-gradient(90deg,#ff4f9a var(--p,100%),color-mix(in srgb,var(--rb-text) 14%,transparent) var(--p,100%))}
-.rb-rm-turnbar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--rb-acc);box-shadow:0 2px 6px rgba(0,0,0,.25);transition:transform .15s}
+.rb-rm-turnbar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--rb-acc);box-shadow:0 2px 6px rgba(0,0,0,.25);transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-rm-turnbar input[type=range]:active::-webkit-slider-thumb{transform:scale(1.25)}
 .rb-rm-turnbar input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--rb-acc)}
 .rb-rm-turnbar input[type=range]:disabled{opacity:.4;cursor:default}
@@ -60,7 +60,7 @@ export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repe
 .rb-seed-kh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.rb-seed-cat{display:flex;flex-direction:column;gap:6px}
 .rb-seed-ch{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;color:var(--rb-sub)}
 .rb-seed-chips{display:flex;flex-wrap:wrap;gap:6px}
-.rb-seed-chip{display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--rb-line3);background:var(--rb-surf);opacity:.55;transition:opacity .15s,border-color .15s,background .15s}
+.rb-seed-chip{display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--rb-line3);background:var(--rb-surf);opacity:.55;transition:opacity .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),border-color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-seed-chip.on{opacity:1;border-color:color-mix(in srgb,#ff6fae 60%,transparent);background:color-mix(in srgb,#ff6fae 12%,var(--rb-surf))}
 .rb-seed-chip.mine{border-style:dashed}
 .rb-seed-chip button{border:0;background:none;color:inherit;font:12.5px/1.3 inherit;padding:5px 10px;cursor:pointer;text-align:left}
@@ -85,7 +85,7 @@ export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repe
 .rb-wk2-bmain{display:flex;flex-direction:column;gap:10px;min-width:0}
 .rb-wk2-acc{border:1px solid var(--rb-line);border-radius:var(--rb-r3,14px);background:var(--rb-glass-bg,var(--rb-surf))}
 .rb-wk2-acc>summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 16px;cursor:pointer;list-style:none}.rb-wk2-acc>summary::-webkit-details-marker{display:none}
-.rb-wk2-acc .arr,.rb-wk2-crowh .arr{width:8px;height:8px;border-right:2px solid var(--rb-sub);border-bottom:2px solid var(--rb-sub);transform:rotate(-45deg);transition:transform .15s}.rb-wk2-acc[open] .arr,.rb-wk2-crow.open .arr{transform:rotate(45deg)}
+.rb-wk2-acc .arr,.rb-wk2-crowh .arr{width:8px;height:8px;border-right:2px solid var(--rb-sub);border-bottom:2px solid var(--rb-sub);transform:rotate(-45deg);transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}.rb-wk2-acc[open] .arr,.rb-wk2-crow.open .arr{transform:rotate(45deg)}
 .rb-wk2-accb{display:flex;flex-direction:column;gap:12px;padding:0 16px 16px}
 @container wk2 (max-width:760px){.rb-wk2-bwrap{grid-template-columns:1fr}.rb-wk2-side{flex-direction:row;overflow-x:auto;position:static}.rb-wk2-sidewho{flex:none}}
 @media (max-width:760px){.rb-wk2-bwrap{grid-template-columns:1fr}.rb-wk2-side{flex-direction:row;overflow-x:auto;position:static}.rb-wk2-sidewho{flex:none}}
@@ -248,9 +248,9 @@ export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repe
 .rb-wk2-imain .rb-wk2-card,.rb-wk2-imain .rb-wk2-acc,.rb-wk2-imain .rb-wk3-card{animation:rbWkIn .32s cubic-bezier(.2,.8,.2,1) both}
 .rb-wk2-imain>*:nth-child(2)>*:nth-child(2){animation-delay:.04s}.rb-wk2-imain>*:nth-child(2)>*:nth-child(3){animation-delay:.08s}.rb-wk2-imain>*:nth-child(2)>*:nth-child(4){animation-delay:.12s}
 .rb-wk2-ibox .rb-wk2-card,.rb-wk2-imain .rb-wk3-card,.rb-wk2-ibox .rb-wk2-acc{border-radius:18px;box-shadow:0 1px 2px rgba(60,20,70,.04),0 6px 20px rgba(60,20,70,.05)}
-.rb-wk2-ibox .rb-wk2-tabs{padding:4px;gap:4px}.rb-wk2-ibox .rb-wk2-tab{transition:background .2s,color .2s,transform .15s}
-@media (hover:hover){.rb-wk4-people .rb-wk-row{transition:transform .15s,background .15s}.rb-wk4-people .rb-wk-row:hover{transform:translateY(-1px)}
-.rb-wk2-gl,.rb-wk2-sidewho,.rb-wk3-tocb{transition:transform .15s,box-shadow .15s}.rb-wk2-gl:hover,.rb-wk2-sidewho:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(60,20,70,.08)}}
+.rb-wk2-ibox .rb-wk2-tabs{padding:4px;gap:4px}.rb-wk2-ibox .rb-wk2-tab{transition:background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
+@media (hover:hover){.rb-wk4-people .rb-wk-row{transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}.rb-wk4-people .rb-wk-row:hover{transform:translateY(-1px)}
+.rb-wk2-gl,.rb-wk2-sidewho,.rb-wk3-tocb{transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),box-shadow .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}.rb-wk2-gl:hover,.rb-wk2-sidewho:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(60,20,70,.08)}}
 .rb-wk2-acc[open]>.rb-wk2-accb{animation:rbWkIn .25s both}
 .rb-wk2-ibox .rb-wk2-ch b{letter-spacing:-.01em}
 .rb-wk4-status .dot{animation:rbPulse 2s ease-in-out infinite}@keyframes rbPulse{50%{opacity:.45}}
@@ -309,7 +309,7 @@ export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repe
 .rb-wk2-imain .rb-wk3-num .v{color:color-mix(in srgb,var(--mc) 70%,var(--rb-text));font-size:16px}
 /* ── 감정: 상대별 카드 ── */
 .rb-wk2-imain .rb-wk3-emo{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.rb-emo2{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;border:1px solid var(--rb-line);background:var(--rb-surf);text-align:left;font:inherit;color:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.rb-emo2{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;border:1px solid var(--rb-line);background:var(--rb-surf);text-align:left;font:inherit;color:inherit;cursor:pointer;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),box-shadow .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 @media (hover:hover){.rb-emo2:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(60,20,70,.08)}}
 .rb-emo2 .hd{display:flex;justify-content:space-between;align-items:center}.rb-emo2 .hd b{font-size:14.5px}
 .rb-emo2-big{display:grid;grid-template-columns:66px minmax(0,1fr) 22px;gap:8px;align-items:center;font-size:12px}.rb-emo2-big small{color:var(--rb-sub);font-weight:600}

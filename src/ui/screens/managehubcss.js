@@ -65,7 +65,7 @@ export var MANAGEHUB_CSS = `
 .rb-plcat > summary .ico{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;color:var(--k);background:color-mix(in srgb,var(--k) 12%,transparent);border:1px solid color-mix(in srgb,var(--k) 55%,transparent)}
 .rb-plcat > summary .t{flex:1;min-width:0;font-size:15.5px;font-weight:750;letter-spacing:.01em}
 .rb-plcat > summary .n{font-size:12px;padding:2px 10px;border-radius:999px;color:var(--k);border:1px solid color-mix(in srgb,var(--k) 45%,transparent);font-weight:600}
-.rb-plcat > summary .chev{color:var(--rb-sub);display:grid;transition:transform .15s}
+.rb-plcat > summary .chev{color:var(--rb-sub);display:grid;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-plcat:not([open]) > summary .chev{transform:rotate(-90deg)}
 .rb-plcat:not([open]) > summary{padding-bottom:2px}
 .rb-plcat > summary:focus-visible{outline:2px solid var(--k);outline-offset:2px;border-radius:8px}

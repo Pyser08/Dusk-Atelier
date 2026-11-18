@@ -18,7 +18,7 @@ export var INFO_CSS = `
 .rb-info-card>summary::-webkit-details-marker{display:none}
 .rb-info-card>summary .t{font-weight:700;font-size:15px}
 .rb-info-card>summary .h{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rb-info-card>summary svg{flex:none;transition:transform .15s}
+.rb-info-card>summary svg{flex:none;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-info-card[open]>summary svg{transform:rotate(180deg)}
 .rb-info-body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
 @media (prefers-reduced-motion:reduce){.rb-info-card>summary svg{transition:none}}

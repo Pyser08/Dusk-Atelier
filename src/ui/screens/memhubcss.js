@@ -11,7 +11,7 @@ export var MEMHUB_CSS = `
 .rb-mhub-stat .line{flex:1;min-width:200px;color:var(--rb-sub);font-size:12.5px}
 .rb-mhub-go{padding:8px 16px;border-radius:999px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--rb-acc-text,var(--rb-text));background:color-mix(in srgb,var(--rb-acc) 14%,transparent);border:1px solid color-mix(in srgb,var(--rb-acc) 60%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--rb-acc) 30%,transparent)}
 .rb-mhub-tiles{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.rb-hubrow.rb-mtile{position:relative;align-items:flex-start;gap:12px;padding:16px 18px 16px 22px;border:1px solid var(--rb-line2);border-radius:16px;background:var(--rb-card,transparent);overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.rb-hubrow.rb-mtile{position:relative;align-items:flex-start;gap:12px;padding:16px 18px 16px 22px;border:1px solid var(--rb-line2);border-radius:16px;background:var(--rb-card,transparent);overflow:hidden;transition:border-color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),box-shadow .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-hubrow.rb-mtile:last-child{border-bottom:1px solid var(--rb-line2)}
 .rb-mtile::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--kg);box-shadow:0 0 10px var(--k)}
 .rb-hubrow.rb-mtile .ico{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--k) 60%,transparent),color-mix(in srgb,var(--k) 30%,transparent));border:1px solid color-mix(in srgb,var(--k) 55%,transparent);color:color-mix(in srgb,var(--k) 25%,#fff);box-shadow:0 0 8px color-mix(in srgb,var(--k) 35%,transparent)}
@@ -103,7 +103,7 @@ export var MEMHUB_CSS = `
 .rb-mem4 .rb-mem-sub>summary::-webkit-details-marker{display:none}
 .rb-mem4 .rb-mem-sub>summary .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .rb-mem4 .rb-mem-sub>summary b{font-size:14px}.rb-mem4 .rb-mem-sub>summary small{font-size:12px;color:var(--rb-mute)}
-.rb-mem4 .rb-mem-sub>summary .go{color:var(--rb-mute);transition:transform .15s}
+.rb-mem4 .rb-mem-sub>summary .go{color:var(--rb-mute);transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-mem4 .rb-mem-sub[open]>summary .go{transform:rotate(90deg)}
 .rb-mem4 .rb-mem-sub[open]{border-color:color-mix(in srgb,var(--k) 45%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--k) 15%,transparent)}
 .rb-mem4 .rb-mem-sub[open]>summary{border-bottom:1px solid var(--rb-line2)}
@@ -114,7 +114,7 @@ export var MEMHUB_CSS = `
 .rb-mem4 .rb-mem-sub.is-lore{padding:0!important}
 .rb-mem4 .rb-mem-sub.is-lore>summary{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:11px 40px 11px 16px;position:relative}
 .rb-mem4 .rb-mem-sub.is-lore>summary small{font-size:12px;color:var(--rb-mute)}
-.rb-mem4 .rb-mem-sub.is-lore>summary::after{content:"›";position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--rb-mute);font-size:18px;transition:transform .15s}
+.rb-mem4 .rb-mem-sub.is-lore>summary::after{content:"›";position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--rb-mute);font-size:18px;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-mem4 .rb-mem-sub.is-lore[open]>summary::after{transform:translateY(-50%) rotate(90deg)}
 .rb-mem4 .rb-mem-sub.is-lore>:not(summary){margin:12px 16px}
 .rb-lite .rb-mem4 .rb-mem-sub[open]{box-shadow:none}
