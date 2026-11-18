@@ -43,5 +43,13 @@ export async function renderTimeline(env, host) {
   if (!tl.length) return replace(host, readonlyNote(env), empty("list", "이야기 속 날짜·시간이 적힌 상황이 아직 없어요."));
   replace(host, readonlyNote(env), h("p", { class: "rb-muted" }, "본문에 적힌(또는 분명히 알 수 있는) 이야기 속 시각만 기록해요. 현재 시각은 이번 요청에 넣은 기억에 들어가요."),
     h("ol", { class: "rb-mem-timeline" }, tl.map((x, i) => h("li", { class: "rb-card rb-mem-scene" }, h("div", { class: "rb-mem-shead" }, h("b", null, x.when), i === tl.length - 1 ? badge("지금", "acc") : null, h("span", { style: "flex:1" }), h("span", { class: "rb-muted" }, `${x.at != null ? at(x.at) : ""}${x.place ? " · " + x.place : ""}`)),
-      h("p", null, x.sum), h("div", { class: "rb-mem-sact" }, btn("상황 보기", { size: "sm", onClick: () => { m.tab = "scenes"; m.focusScene = x.id; env.redraw(); } }))))));
+      h("p", null, x.sum), h("div", { class: "rb-mem-sact" }, btn("상황 보기", { size: "sm", onClick: () => { m.tab = "scenes"; m.focusScene = x.id; env.redraw(); } }), env.backend.id === "local" ? btn("날짜 고치기", { size: "sm", onClick: () => editSceneWhen(env, x.id, x.when) }) : null)))));
+}
+
+// 2.2.9 요청: AI가 날짜를 못 잡은(또는 틀린) 상황의 이야기 속 날짜·시각을 직접 고친다. 비우면 시간선에서 빠진다.
+export async function editSceneWhen(env, id, when = "") {
+  const v = await promptDialog(env.ctx.win, { title: "이야기 속 날짜·시각", label: "예: 0316년 11월 6일 아침 (40자, 비우면 시간선에서 빠져요)", value: when ?? "", ok: "저장" });
+  if (v == null) return;
+  const next = String(v).trim().slice(0, 40);
+  editFolder(env, (f) => { const s = (f.scenes ?? []).find((y) => y.id === id); if (!s) return; if (next) { s.when = next; s.whenBy = "user"; } else { delete s.when; delete s.whenBy; } });
 }

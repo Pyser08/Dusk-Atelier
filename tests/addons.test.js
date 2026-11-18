@@ -368,3 +368,14 @@ test("저장 공간 부족으로 코드가 비면: 켜기·다시 시작 때 다
   assert.ok(A.running("a")); assert.notEqual((await A.getIndex()).a.on, false);
   await A.dispose();
 });
+
+test("애드온 패치노트: CHANGELOG에서 그 애드온 절만 뽑고, 목록·업데이트 사이만 고름", async () => {
+  const { addonNotesFrom, notesBetween, parseManifest } = await import("../src/engine/addons.js");
+  const md = "## 다음 본체 릴리스\n- 본체\n\n## 장기기억 애드온 0.3.8 (2026-11-18 배포)\n- 분석 모델\n\n## 장기기억 애드온 0.3.7 · Erosync 0.1.13 (2026-11-18 배포)\n- 충돌 수정\n\n## v2.2.9 (2026-11-17)\n- x\n\n## 장기기억 애드온 0.3.5 (2026-11-17 배포)\n- 체위\n";
+  const n = addonNotesFrom(md, "장기기억·관계도");
+  assert.deepEqual(n.map((x) => x.v), ["0.3.8", "0.3.7", "0.3.5"]);
+  assert.equal(n[0].date, "2026-11-18"); assert.match(n[0].body, /분석 모델/);
+  assert.deepEqual(notesBetween(n, "0.3.6", "0.3.8").map((x) => x.v), ["0.3.8", "0.3.7"]);
+  const m = parseManifest({ format: 1, addons: [{ id: "memory", name: "m", version: "0.3.8", sha256: "a".repeat(64), url: "https://x/y.js", notes: n }] });
+  assert.equal(m.addons[0].notes.length, 3);
+});

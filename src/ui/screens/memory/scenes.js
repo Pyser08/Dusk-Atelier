@@ -4,6 +4,7 @@ import { btn, badge } from "../../kit.js";
 import { mem, avatar, gradeBadge, at, visibleRecords } from "./common.js";
 import { GRADES } from "../../../engine/memorygrade.js";
 import { newChatFrom } from "./people.js";
+import { editSceneWhen } from "./ledger.js";
 import { wikiNote } from "../../../engine/personview.js";
 
 export async function renderScenes(env, host) {
@@ -19,11 +20,11 @@ export async function renderScenes(env, host) {
   const cards = ordered.map((s) => {
     const rs = recsOf(s), top = rs.reduce((b, r) => GRADES.indexOf(r.g) > GRADES.indexOf(b) ? r.g : b, "");
     const card = h("article", { class: ["rb-card", "rb-mem-scene", m.focusScene === s.id && "is-focus"], id: "scene-" + s.id },
-      h("div", { class: "rb-mem-shead" }, h("b", null, `${s.at != null ? at(s.at) : "—"}${s.place ? " · " + s.place : ""}`), s.id === latest ? badge("현재 상황", "acc") : null, s.wiki ? badge("위키", "mute") : null, h("span", { style: "flex:1" }), rs.length ? h("span", { class: "rb-muted" }, `기록 ${rs.length} `, gradeBadge(top)) : null),
+      h("div", { class: "rb-mem-shead" }, h("b", null, `${s.at != null ? at(s.at) : "—"}${s.place ? " · " + s.place : ""}`), s.when ? h("span", { class: "rb-muted" }, ` ${s.when}`) : null, s.id === latest ? badge("현재 상황", "acc") : null, s.wiki ? badge("위키", "mute") : null, h("span", { style: "flex:1" }), rs.length ? h("span", { class: "rb-muted" }, `기록 ${rs.length} `, gradeBadge(top)) : null),
       h("p", null, s.sum), (s.facts ?? []).length ? h("ul", { class: "rb-mem-facts" }, s.facts.slice(0, 3).map((f) => h("li", null, f))) : null,
       s.id === latest ? h("ul", { class: "rb-mem-facts rb-mem-wikinow" }, (s.who ?? []).map((n) => [n, wikiNote(folder.wiki, n, "core.current_state", 90)]).filter(([, t]) => t).map(([n, t]) => h("li", null, h("b", null, `${n} `), t))) : null,
       (s.who ?? []).length ? h("div", { class: "rb-mem-who" }, s.who.map((n) => h("button", { type: "button", class: "rb-mem-link", onClick: () => goPerson(n), "aria-label": `${n} 폴더 열기` }, avatar(n), n))) : null,
-      h("div", { class: "rb-mem-sact" }, s.at != null ? btn("여기서 새 채팅", { size: "sm", onClick: () => newChatFrom(env, s.at) }) : null,
+      h("div", { class: "rb-mem-sact" }, env.backend?.id === "local" ? btn(s.when ? "날짜 고치기" : "날짜 넣기", { size: "sm", onClick: () => editSceneWhen(env, s.id, s.when) }) : null, s.at != null ? btn("여기서 새 채팅", { size: "sm", onClick: () => newChatFrom(env, s.at) }) : null,
         s.at != null ? btn("여기까지로 새 봇 만들기", { size: "sm", onClick: () => { m.compose = { keys: Object.keys(folder.people).filter((k) => visibleRecords(folder.people[k]).some((r) => r.sit === s.id)), to: s.at + 1 }; m.ctab = "compose"; env.ctx.go("cards"); } }) : null));
     return card;
   });

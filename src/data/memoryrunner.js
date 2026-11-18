@@ -16,6 +16,15 @@ import { applyAnalysis, knownPeople, doneHashes } from "../engine/memoryapply.js
 import { storyDateOf } from "../engine/storydate.js";
 import { addMilestones } from "../engine/cyclememo.js";
 import { runAI } from "../engine/runai.js";
+import { getCfg } from "./modelhub.js";
+import { pickFor } from "../engine/modelcfg.js";
+
+// 11-18 제보: 위키 설정 ‘AI 모델’을 ‘내 API’로 바꿔도 지난 대화 분석은 리스 메모리 모델(기본값)로 가서 키 없음 오류가 났다.
+// 분석 모델이 기본값(메모리·보조 모델)이면 위키의 ‘내 API’를 따라간다. 메인 모델 등 직접 고른 건 그대로.
+export function followHubPick(base, hub) {
+  if (!hub || !["memory", "submodel", undefined].includes(base?.mode)) return base;
+  return { ...hub, timeoutSec: base.timeoutSec };
+}
 import { aiTask } from "../engine/aistop.js";
 import { applyRegex } from "../engine/regexprep.js";
 import { openForPrompt } from "../engine/memoryplus.js";
@@ -39,7 +48,9 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   let session = { calls: 0, hooks: 0, displays: 0, hookAt: 0, tick: null }; const lastTried = new Map(); let lastTickAt = 0;
   const note = (result, extra = {}) => { session.tick = { at: Date.now(), result, ...extra }; };
   // 보조 모델 호출 제한시간(초): 기록·주입 세부 설정에서 바꾼다. 기본 600초
-  const modelOf = (s) => ({ ...s.model, timeoutSec: Number.isFinite(s.modelTimeoutSec) ? s.modelTimeoutSec : 600 });
+  const baseModelOf = (s) => ({ ...s.model, timeoutSec: Number.isFinite(s.modelTimeoutSec) ? s.modelTimeoutSec : 600 });
+  const hubPick = async () => { try { return pickFor(await getCfg(api), ""); } catch { return null; } };
+  const modelOf = async (s) => followHubPick(baseModelOf(s), call ? null : await hubPick());
   const run = call ?? (async (msgs, pick, signal) => runAI(api, appendToMessages(msgs, await skillBlock("analysis")), pick, signal));   // 스킬 주입(꺼짐이면 원문 그대로, v1.8.1)
 
   const aiIndexes = (messages) => messages.map((m, i) => (!isUserMessage(m) && extractMessageText(m).trim() ? i : -1)).filter((i) => i >= 0);
@@ -145,12 +156,12 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     const gx = gauge ? gauge.prepare(idx, existing, chaId, ordinalNow) : null;
     if (result) session.combined = (session.combined ?? 0) + 1;
     else session.calls++;
-    try { if (!result) result = await analyzeLong((msgs) => run(msgs, { ...modelOf(idx.settings), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), group: batch, onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
+    try { if (!result) result = await analyzeLong(async (msgs) => run(msgs, { ...(await modelOf(idx.settings)), noUserPrompts: true }, signal), input, { staged: idx.settings?.staged !== false, format: idx.settings?.format, light: isLightModel(idx.settings), group: batch, onWarn: (name, e) => log(`${name} 세부 분석 실패(개요만 기록)`, String(e?.message ?? e).slice(0, 120)) }); }
     catch (e) {
       const fails = await bump(chaId, (b) => ++b.fails);
       await status({ lastError: String(e?.message ?? e).slice(0, 300) });
       logFailure({ area: "장기 기억 기록", title: `‘${character.name}’ 응답 기록 실패`, error: e, fallback: fails >= MAX_FAILS ? "이 봇의 자동 기록을 멈췄어요" : "다음 응답 때 다시 기록해요",
-        ctx: { 봇: character.name, 채팅: chat?.name ?? "", "응답 위치": last, "연속 실패": fails, 모델: (() => { try { const mo = modelOf(idx.settings); return [mo?.provider, mo?.model].filter(Boolean).join(" / "); } catch { return ""; } })(), "응답 길이": text?.length ?? 0 } });
+        ctx: { 봇: character.name, 채팅: chat?.name ?? "", "응답 위치": last, "연속 실패": fails, 모델: (() => { try { const mo = baseModelOf(idx.settings); return [mo?.provider, mo?.model].filter(Boolean).join(" / "); } catch { return ""; } })(), "응답 길이": text?.length ?? 0 } });
       if (fails >= MAX_FAILS) { await bump(chaId, (b) => { b.paused = true; }); notify(`"${character.name}"의 장기 기억 분석이 ${MAX_FAILS}번 연속 실패해서 이 봇의 자동 기록을 멈췄어요. 기억 탭에서 다시 켤 수 있어요.`); }
       lastTried.delete(tryKey);
       throw e;
@@ -159,7 +170,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
       try {
         const since = Math.max(0, (existing?.gauge?.run != null ? aiIndexes(messages)[Math.max(0, existing.gauge.run - 1)] ?? 0 : last - 16));
         const recentG = messages.slice(Math.max(since, last - 16), last).filter((mm) => mm && !isUserMessage(mm)).map((mm) => clean(mm, g.rx).trim().slice(0, 1500));
-        const raw = await run(gaugeMessages(gx.input.gauges ?? [], { recent: recentG, newest: text, suggest: !!gx.input.suggestGauge }), { ...modelOf(idx.settings), noUserPrompts: true }, signal);
+        const raw = await run(gaugeMessages(gx.input.gauges ?? [], { recent: recentG, newest: text, suggest: !!gx.input.suggestGauge }), { ...(await modelOf(idx.settings)), noUserPrompts: true }, signal);
         const got = parseGaugeLines(raw);
         if (got) result = { ...result, ...got };
       } catch (e) { log("게이지 호출 실패(다음 주기에 다시)", String(e?.message ?? e).slice(0, 120)); }
@@ -182,7 +193,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     await bump(chaId, (b) => { b.fails = 0; b.lastRunAt = Date.now(); b.notified = true; });
     await status({ processed: (idx.status.processed ?? 0) + 1, lastSuccessAt: Date.now(), lastError: "" });
     logEvent({ area: "장기 기억 기록", title: `‘${character.name}’ 응답 기록`, detail: { 채팅: chat?.name ?? "", "응답 위치": last, 합침: !!session.combined, 게이지: !!gaugeOut } });
-    digestIfNeeded(chaId, chatId, modelOf(idx.settings)).catch((e) => log("digest 실패", e?.message ?? e));
+    modelOf(idx.settings).then((mo) => digestIfNeeded(chaId, chatId, mo)).catch((e) => log("digest 실패", e?.message ?? e));
     try { await afterAnalyze?.(charIndex, chatIndex); } catch (e) { log("후처리 실패", e?.message ?? e); }
     if (firstTime) notify("이 봇의 장기 기억 자동 기록을 시작했어요 (기억 탭에서 끌 수 있어요)");
     return out;
@@ -293,7 +304,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     return { groups, calls: groups.length, tokens: Math.round(chars / 1.5), total: ai.length, done: ai.length - todo.length, todo: todo.length, failed: todo.filter((i) => failedSet.has(hOf(i))).length };
   }
   // 서버 분석 중계: 서버가 요청한 모델 호출을 기존 방식(리스 보조 모델·내 API 모델·인증 포함)으로 한다
-  const relayCall = (settings, signal) => (msgs, pick) => run(msgs, { ...modelOf(settings), noUserPrompts: true, ...(pick?.timeoutSec ? { timeoutSec: pick.timeoutSec } : {}) }, signal);
+  const relayCall = (settings, signal) => async (msgs, pick) => run(msgs, { ...(await modelOf(settings)), noUserPrompts: true, ...(pick?.timeoutSec ? { timeoutSec: pick.timeoutSec } : {}) }, signal);
   // 리스 화면을 다시 열었을 때 서버에서 중계를 기다리던 분석을 이어서 한다
   async function resumeServer({ signal } = {}) {
     if (!server?.resume) return null;
@@ -317,7 +328,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     if (server && groups.length && (await store.getIndex()).settings?.serverAnalysis !== false) {
       const idx = await store.getIndex(), chaId = String(character.chaId), chatId = chatKeyOf(chat, chatIndex);
       const smId = idx.settings?.serverModel?.presetId;   // 서버 분석 전용 '내 API' 프리셋(없으면 분석 모델 그대로 → 리스 쪽 모델이면 중계)
-      const prep0 = await server.prepare(smId ? { mode: "custom", presetId: smId } : modelOf(idx.settings));
+      const prep0 = await server.prepare(smId ? { mode: "custom", presetId: smId } : await modelOf(idx.settings));
       if (prep0) {
         const out = await server.run(prep0, {
           chaId, chatId, charName: character.name, chatName: chat.name ?? chat.chatName ?? "", messages: server.slim(chat.message ?? []),

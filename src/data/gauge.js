@@ -94,10 +94,11 @@ export function createGaugeService(api, { store, log = () => {}, call = null } =
   const setSuggestOn = (chaId, on) => store.updateIndex((idx) => { ensure(idx, chaId).sug.on = !!on; });
 
   // 수락: 설계를 받아 모든 인물용 게이지로 만든다(꺼진 채 초안은 호출 쪽에서 확인 뒤 addDef)
-  const acceptSuggestion = async (chaId, id, model, bot) => {
+  // targets: "all" 또는 인물 이름 목록(2.2.9 요청: 특정 인물에게만)
+  const acceptSuggestion = async (chaId, id, model, bot, targets = "all") => {
     const sug = await getSuggest(chaId), x = sug.list.find((s) => s.id === id); if (!x) throw new Error("제안을 찾을 수 없어요.");
     const d = await design({ bot, name: x.name, desc: x.desc }, model);
-    await addDef(chaId, { ...d, on: true, src: "suggest", targets: "all" });
+    await addDef(chaId, { ...d, on: true, src: "suggest", targets });
     await resolveSuggestion(chaId, id, "accept");
   };
 

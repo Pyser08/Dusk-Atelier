@@ -28,5 +28,20 @@ export function applyCycleEvents(scope, events) {
     docs[doc.id] = { ...doc, sections };
     changed.push(doc.title);
   }
-  return changed.length ? { scope: { ...scope, documents: docs, revision: (scope.revision ?? 0) + 1 }, changed } : { scope, changed };
+  if (!changed.length) return { scope, changed };
+  // 2.2.9 버그: 이력 없이 문서만 바꾸면 그 턴을 다시 기록(수정·리롤)할 때 '직접 고친 문서와 겹침'으로 멈췄다.
+  // 이 맞춤은 그 턴 응답에서 나온 것이므로, 문서별 마지막 이력의 after가 바꾸기 전 문서와 같으면 after를 새 문서로 맞춘다.
+  let history = scope.history;
+  if (Array.isArray(history)) {
+    history = history.slice();
+    for (const id of Object.keys(docs)) {
+      if (docs[id] === scope.documents[id]) continue;
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i]?.documentId !== id) continue;
+        if (JSON.stringify(history[i].after) === JSON.stringify(scope.documents[id])) history[i] = { ...history[i], after: structuredClone(docs[id]) };
+        break;
+      }
+    }
+  }
+  return { scope: { ...scope, documents: docs, ...(history ? { history } : {}), revision: (scope.revision ?? 0) + 1 }, changed };
 }

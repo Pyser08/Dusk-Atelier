@@ -5,7 +5,7 @@
 // - 새 버전이 켜지다 실패하면 바로 전 버전으로 되돌린다. 확인 실패는 조용히 넘어간다(지금 버전 그대로).
 // - 저장: getLocalPluginStorage(RisuAI=콜드스토리지·동기화, Bard/Pocket=서버 KV) → 없으면 pluginStorage.
 import { sha256 } from "../engine/hash.js";
-import { parseManifest, pickUpdates, fitsCore, installOrder, parseCustomMeta, customFileName, cmpVer } from "../engine/addons.js";
+import { parseManifest, pickUpdates, fitsCore, installOrder, parseCustomMeta, customFileName, cmpVer, notesBetween } from "../engine/addons.js";
 import { scopeApi, createProviderRelay } from "./addonscope.js";
 import { createAddonSdk } from "./addonsdk.js";
 
@@ -13,6 +13,7 @@ import { createAddonSdk } from "./addonsdk.js";
 export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/addons.json";
 export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
 export const ADOPT_KEY = "dusk.addon.adopted.v2";
+export const NOTES_KEY = "dusk.addon.notes.v1";   // 2.2.10 업데이트된 애드온의 아직 안 보여 준 패치노트
 export const SEEN_KEY = "dusk.addon.seen.v1";   // 목록에서 본 적 있는 애드온 id(새로 생긴 애드온 알림용)
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
 // 커스텀 애드온(2.1.0): 사용자가 파일로 불러온 것. 공식 목록과 따로 저장하고, 실행 표에서는 "custom:<id>"로 구분한다.
@@ -285,6 +286,15 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     throw new Error(`파일 확인값이 목록과 달라요 (받은 ${code.length}자 ${got.slice(0, 8)} / 목록 ${a.sha256.slice(0, 8)} · 받은 내용: ${head})`);
   }
 
+  // 2.2.10 애드온 패치노트: 업데이트 때 쌓고, Dusk를 열 때 한 번 보여 주고 비운다
+  const readNotes = async () => { try { const v = await store.getItem(NOTES_KEY); const x = typeof v === "string" ? JSON.parse(v) : v; return Array.isArray(x) ? x : []; } catch { return []; } };
+  async function addNotes(item) {
+    const list = (await readNotes()).filter((x) => x.id !== item.id), prev = (await readNotes()).find((x) => x.id === item.id);
+    const merged = prev ? { ...item, from: prev.from, notes: [...item.notes, ...prev.notes.filter((n) => !item.notes.some((m) => m.v === n.v))] } : item;
+    await store.setItem(NOTES_KEY, JSON.stringify([...list, merged].slice(-12)));
+  }
+  async function takeNotes() { const list = await readNotes(); if (list.length) await store.setItem(NOTES_KEY, "[]").catch(() => {}); return list; }
+
   // 받기·업데이트 한 개. 훅이 있는 애드온 업데이트는 다음 시작부터(applyNow:false).
   async function install(id, { applyNow, withRequires = true } = {}) {
     const list = manifest ?? await loadManifest();
@@ -315,6 +325,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     if (!await saveCode(id, code)) log(`${id}: 기기 저장 공간이 부족해 코드를 저장하지 못했어요(다음 시작 때 다시 받아요)`);
     idx[id] = { version: a.version, sha256: a.sha256, on: cur?.on ?? true, at: now(), prev: cur ? { version: cur.version, sha256: cur.sha256 } : undefined, requires: a.requires?.length ? a.requires : undefined };
     await setIndex(idx, [id]);
+    if (cur?.version && cmpVer(a.version, cur.version) > 0) { const notes = notesBetween(a.notes, cur.version, a.version); if (notes.length) await addNotes({ id, name: a.name, from: cur.version, to: a.version, notes }).catch(() => {}); }
     const now_ = applyNow ?? true;   // 훅 애드온도 바로(addonscope가 예전 훅을 떼 준다)
     if (idx[id].on && now_) {
       const deps = dependents(idx, id);
@@ -473,7 +484,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     page: (id, custom = false) => ctx.ext?.get?.("svc", `addonpage:${custom ? "c:" : ""}${id}`) ?? null,
     boot, check, checkSoon, install: installOne, installMany, installing: (id) => inflight.has(id), remove, setOn, getIndex, loadManifest, adopt,
     core: () => core,
-    manifest: () => manifest,
+    manifest: () => manifest, takeNotes,
     running: (id) => running.has(id),
     lastError: () => lastError,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },

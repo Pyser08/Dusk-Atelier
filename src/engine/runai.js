@@ -95,5 +95,7 @@ async function runAIInner(api, messages, pick, signal) {
     }
     if (attempt < 3) await new Promise((r) => setTimeout(r, 1200));
   }
+  // 제보(11-18): 기본 경로는 리스 ‘보조 모델’이라, 메인 프로바이더만 설정했으면 키 없음 오류가 난다 → 고칠 곳을 알려 준다
+  if (last && opts.mode === "submodel" && /api key|authorization|unauthorized|401/i.test(String(last.message ?? ""))) last = new Error(`${last.message} · 이 작업은 리스의 ‘보조 모델’로 보내요. 리스 설정에서 보조 모델의 키를 넣거나, Dusk 모델 고르기에서 메인 모델·내 API를 골라 주세요.`);
   throw last ?? new Error("AI 응답을 받지 못했어요.");
 }

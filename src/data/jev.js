@@ -5,7 +5,9 @@ export const DEFAULT_JEV = Object.freeze({ on: false, provider: "openrouter", ur
 // 2.2.6 공급자: 오픈라우터 또는 Vercel AI Gateway(같은 System One 형식, 주소·키·모델 이름만 다름). 키는 공급자마다 따로 둔다.
 export const JEV_PROVIDERS = Object.freeze({
   openrouter: { label: "오픈라우터", url: "https://openrouter.ai/api/v1/systemone", model: "typesafe/jev-1.14", keyHint: "오픈라우터 API 키 (sk-or-v1-…)" },
-  vercel: { label: "Vercel AI Gateway", url: "https://ai-gateway.vercel.sh/typesafe/v1/systemone", model: "typesafe-ai/jev", keyHint: "Vercel AI Gateway 키" }
+  vercel: { label: "Vercel AI Gateway", url: "https://ai-gateway.vercel.sh/typesafe/v1/systemone", model: "typesafe-ai/jev", keyHint: "Vercel AI Gateway 키" },
+  // 2.2.9 요청: Jev 제공사(typesafe 등)에 바로 붙을 때 — 주소·모델을 직접 적는다
+  custom: { label: "직접 입력 (주소)", url: "", model: "jev-1.14", keyHint: "그 주소에서 받은 API 키" }
 });
 const isDefaultFor = (field, v) => Object.values(JEV_PROVIDERS).some((p) => p[field] === v);
 const RANK = ["unrelated", "background", "useful", "answers it"];
