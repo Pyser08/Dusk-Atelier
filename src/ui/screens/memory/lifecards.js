@@ -1,5 +1,6 @@
 // 장기기억 애드온: 인물 위키 카드 — 성욕 게이지·몸 상태(NSFW), 마음 흐름(관계), 성감대 인체 모형(NSFW), 사람다운 항목(상세·NSFW).
 // 수치는 엔진 계산(engine/nsfwlife.js), 글은 기록기·성인 프로필이 채우고 여기서 고칠 수 있다.
+import { memStore } from "./memstore.js";
 import { h, replace } from "../../dom.js";
 import { btn, modal, promptDialog, confirmDialog } from "../../kit.js";
 import { mem } from "./common.js";
@@ -12,13 +13,13 @@ const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:nor
 const hosts = new Set();
 function live(docId, render) { const host = h("div", { class: "rb-live" }); host.__doc = docId; host.__paint = () => replace(host, render()); host.__paint(); hosts.add(host); return host; }
 async function repaint(env, doc) {
-  try { const f = await env.ctx.memory.store.getFolder(env.bot.id, env.chatItem.id); if (f && env.folder) { env.folder.nsfw = f.nsfw; env.folder.life = f.life; } } catch { /* 아래에서 전체 다시 그림 */ }
+  try { const f = await memStore(env.ctx).getFolder(env.bot.id, env.chatItem.id); if (f && env.folder) { env.folder.nsfw = f.nsfw; env.folder.life = f.life; } } catch { /* 아래에서 전체 다시 그림 */ }
   let n = 0; for (const x of [...hosts]) { if (!x.isConnected) { hosts.delete(x); continue; } if (x.__doc === doc.id) { x.__paint(); n++; } }
   if (!n) env.redraw?.();
 }
-const saveN = (env, doc, fn) => env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; f.nsfw[doc.id] = fn(f.nsfw[doc.id] ?? { sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] }); }).then(() => repaint(env, doc));
+const saveN = (env, doc, fn) => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; f.nsfw[doc.id] = fn(f.nsfw[doc.id] ?? { sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] }); })).then(() => repaint(env, doc)).catch((e) => env.ctx.toast?.(e?.message ?? String(e), { error: true }));
 // 몸·마음 값 직접 고치기(엔진 값 덮어쓰기). 다음 턴부터 엔진이 이어서 계산해요
-const saveLife = (env, doc, fn) => env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.life ??= { turn: null, p: {} }; f.life.p ??= {}; f.life.p[doc.id] = fn({ ...emptyLife(), ...(f.life.p[doc.id] ?? {}) }); }).then(() => repaint(env, doc));
+const saveLife = (env, doc, fn) => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { f.life ??= { turn: null, p: {} }; f.life.p ??= {}; f.life.p[doc.id] = fn({ ...emptyLife(), ...(f.life.p[doc.id] ?? {}) }); })).then(() => repaint(env, doc)).catch((e) => env.ctx.toast?.(e?.message ?? String(e), { error: true }));
 export function openLifeEditor(env, doc) {
   const L = env.folder?.life?.p?.[doc.id] ?? emptyLife();
   const num = (k, label, v) => h("label", { class: "rb-mem-edrow", style: "justify-content:space-between;gap:10px" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min: 0, max: 100, "data-k": k, value: String(Math.round(v ?? 0)), style: "width:90px" }));
@@ -75,7 +76,7 @@ export const LIFE_INFO = Object.freeze({
   since: "마지막으로 관계한 뒤 지난 응답 수예요. 40턴이 넘으면 성욕이 더 빨리 올라요.",
   cnt: "이야기 속 관계 횟수 + 이야기 전 경험(입력·로어북에서 드러난 것)을 합친 수예요.",
   fam: "상대와의 익숙함. 처음 → 한 번 → 몇 번 → 익숙해지는 중 → 익숙함. 이야기 전 경험도 합쳐요. ‘밝혀지지 않음’은 횟수가 안 나와서 AI가 짐작한 값이에요.",
-  boost: "켜 두면 응답에 이 인물의 성적 욕망·이상성향과 관련된 상황이 나올 때 성욕이 더 빨리 차요(글을 맞대어 엔진이 판단, 호출 없음).",
+  boost: "기본으로 켜져 있어요. 켜 두면 응답에 이 인물의 성적 욕망·이상성향과 관련된 상황이 나올 때 성욕이 더 빨리 차요(글을 맞대어 엔진이 판단, 호출 없음).",
   temp: "관계 온도 = 끌림 + 호감 − 적대감. 최근 10번의 흐름이에요. 3 넘게 오르면 가까워지는 중, 내리면 식는 중.",
   miss: "보고 싶음. 이 인물이 안 나온 지 30턴이 넘으면, 지난 턴 수와 호감으로 계산해요.",
   jeal: "질투. 소유욕·독점욕(또는 끌림)이 있는 상대가 다른 사람에게 끌리거나 애인이면 생겨요.",
@@ -104,8 +105,8 @@ function lustCard0(env, card, doc, { cycle = null } = {}) {
   const cyc = cycle ? h("div", { class: "rb-lcyc" }, h("small", { class: "rb-lh" }, "월경·임신"), cycle) : null;
   // 달아오르는 속도(배수) · 욕망·이상성향 스위치
   const mult = n?.lustMult ?? 1;
-  const sw = (k, label, has) => h("button", { type: "button", class: ["rb-lsw", n?.boost?.[k] && "on"], "aria-pressed": n?.boost?.[k] ? "true" : "false", disabled: !has, title: has ? null : "위키에 이 글이 아직 없어요",
-    onClick: () => saveN(env, doc, (cur) => ({ ...cur, boost: { ...(cur.boost ?? {}), [k]: !cur.boost?.[k] } })) }, h("i", { class: "knob" }), label);
+  const sw = (k, label, has) => h("button", { type: "button", class: ["rb-lsw", n?.boost?.[k] !== false && "on"], "aria-pressed": n?.boost?.[k] !== false ? "true" : "false", disabled: !has, title: has ? null : "위키에 이 글이 아직 없어요",
+    onClick: () => saveN(env, doc, (cur) => ({ ...cur, boost: { ...(cur.boost ?? {}), [k]: cur.boost?.[k] === false } })) }, h("i", { class: "knob" }), label);
   const ctl = h("div", { class: "rb-lctl" },
     h("div", { class: "rb-lmult" }, h("small", null, "달아오르는 속도", infoBtn(LIFE_INFO.mult)), h("div", { class: "row" }, h("b", null, `×${mult.toFixed(1)}`))),
     h("div", { class: "rb-lsws" }, h("small", null, "관련 상황에 더 빨리", infoBtn(LIFE_INFO.boost)), h("div", { class: "row" }, sw("desire", "성적 욕망", !!pr?.sexualDesire?.text), sw("para", "이상성향", !!pr?.paraphilia?.text), h("span", { style: "flex:1" }), btn("직접 고치기", { size: "sm", onClick: () => openLifeEditor(env, doc) }))));

@@ -52,7 +52,7 @@ export function applyLifeTurn(f, { events = [], present = [], gauge = null, text
   const actors = events.map((e) => e.name), who = [...new Set([...present, ...actors])];
   const when = [...(f?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
   const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = f?.wiki?.people?.profiles?.[d.id];
-    return { interest: n?.sexual?.eroticInterest ?? 50, mult: n?.lustMult ?? 1, spont: n?.sexual?.sexualSpontaneity, initiative: n?.axes?.initiative, when, boost: [n?.boost?.desire && pr?.sexualDesire?.text, n?.boost?.para && pr?.paraphilia?.text].filter(Boolean) }; };
+    return { interest: n?.sexual?.eroticInterest ?? 50, mult: n?.lustMult ?? 1, spont: n?.sexual?.sexualSpontaneity, initiative: n?.axes?.initiative, when, boost: [n?.boost?.desire !== false && pr?.sexualDesire?.text, n?.boost?.para !== false && pr?.paraphilia?.text].filter(Boolean) }; };
   const changed = tickLife(f, { turn, present: who, events, gauge, text }, profOf);
   // 자주 쓴 체위·플레이 → 선호
   for (const [id, L] of Object.entries(f.life?.p ?? {})) {

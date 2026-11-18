@@ -1,3 +1,4 @@
+import { memStore } from "./memstore.js";
 import { memoryFileItems } from "./memoryfileui.js";
 import { withMemoryAffinity } from "../../../engine/identity.js";
 import { trustBadges } from "../../../engine/memoryedit.js";
@@ -25,7 +26,8 @@ import { deleteRecord, relatedOf } from "../../../engine/memorydelete.js";
 
 const PAGE = 100;
 // 폴더 수정 헬퍼(로컬 저장소만). fn(folder) 안에서 고친다.
-export const editFolder = (env, fn) => env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, fn).then(() => env.redraw()).catch(fail(env.ctx));
+
+export const editFolder = (env, fn) => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, fn)).then(() => env.redraw()).catch(fail(env.ctx));
 
 export async function newChatFrom(env, atIdx) {
   const { ctx, bot, chatItem, folder } = env, M = ctx.memory;
@@ -220,7 +222,7 @@ export const wikiEditable = (env) => potOn(env.idx?.settings) && env.backend.id 
 export const wikiEdit = (env, fn, okText) => editFolder(env, (f) => { f.wiki = fn(f.wiki); }).then(() => okText && env.ctx.toast(okText));
 export async function pausePerson(env, p) {
   const on = !isPaused(env.idx.bots?.[env.bot.id]?.ignore, p);
-  await env.ctx.memory.store.updateIndex((i) => { const b = i.bots[env.bot.id] ??= { on: true, ignore: [], fails: 0 }; b.ignore = setPaused(b.ignore, p, on); }).catch(fail(env.ctx));
+  await memStore(env.ctx).updateIndex((i) => { const b = i.bots[env.bot.id] ??= { on: true, ignore: [], fails: 0 }; b.ignore = setPaused(b.ignore, p, on); }).catch(fail(env.ctx));
   env.ctx.toast(on ? `${p.name}의 사건 기록을 쉬어요. 이미 쌓인 기록은 그대로예요.` : `${p.name}의 기록을 다시 시작해요.`);
   env.redraw();
 }

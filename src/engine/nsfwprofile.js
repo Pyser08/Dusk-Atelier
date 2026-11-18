@@ -77,7 +77,7 @@ export function normalizeNsfw(raw, { by = "ai", at = new Date().toISOString(), l
   const lm = Number(raw.lustMult); if (Number.isFinite(lm) && lm > 0) out.lustMult = Math.round(Math.max(0.5, Math.min(2, lm)) * 10) / 10;
   const past = (Array.isArray(raw.past) ? raw.past : []).map((p) => ({ name: text(p?.name, 40), count: Math.max(0, Math.min(999, Math.round(Number(p?.count) || 0))), est: p?.est === true || /estim|추정/i.test(String(p?.source ?? "")) })).filter((p) => p.name && p.count > 0).slice(0, 8);
   if (past.length) out.past = past;
-  if (raw.boost && typeof raw.boost === "object") out.boost = { desire: raw.boost.desire === true, para: raw.boost.para === true };
+  if (raw.boost && typeof raw.boost === "object") out.boost = { desire: raw.boost.desire !== false, para: raw.boost.para !== false };
   return Object.keys(sexual).length || Object.keys(axes).length || positions.length || hu || ex || zo.length ? out : null;
 }
 

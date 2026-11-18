@@ -187,3 +187,14 @@ test("기록기 mood·bond·touch·sat → 엔진", () => {
   tickLife(f, { turn: 5, present: ["유나"] }); assert.equal(f.life.p.a.mood.irritation, 20);
   const v = lifeView(f, f.wiki.documents.a, 5); assert.ok(v.trace.length > 0); assert.equal(v.moodTop.label, "짜증");
 });
+
+test("욕망·이상성향 반응은 기본 켜짐(끈 것만 꺼짐)", () => {
+  const f = folder(); f.wiki.people = { profiles: { a: { sexualDesire: { text: "손목 구속에 흥분" } } } };
+  f.cursor = { at: 1 }; applyLifeTurn(f, { present: ["유나"] });
+  f.cursor = { at: 2 }; applyLifeTurn(f, { present: ["유나"], text: "손목을 묶었다" });
+  const on = f.life.p.a.lust;
+  const g = folder(); g.wiki.people = { profiles: { a: { sexualDesire: { text: "손목 구속에 흥분" } } } }; g.nsfw.a.boost = { desire: false };
+  g.cursor = { at: 1 }; applyLifeTurn(g, { present: ["유나"] });
+  g.cursor = { at: 2 }; applyLifeTurn(g, { present: ["유나"], text: "손목을 묶었다" });
+  assert.ok(on > g.life.p.a.lust + 5);
+});

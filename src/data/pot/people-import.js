@@ -196,7 +196,7 @@ export class PeopleImportController{
     try{return await this.applyPromise;}finally{this.applyPromise=null;}
   }
   async applySelection(){
-    const retry=this.phase==='save-error'&&this.pendingSave;
+    const retry=this.phase==='save-error'&&this.pendingSave;let saved=null;
     this.error='';this.applying=true;this.stage=retry?'인물 저장 다시 시도':'인물 반영 중';this.startedAt=Date.now();
     try{
       if(this.disposed)throw new Error('인물 가져오기가 종료되었습니다.');
@@ -207,7 +207,7 @@ export class PeopleImportController{
       if(!retry&&token!==this.scopeToken)throw new Error('분석 후 현재 채팅 Wiki가 바뀌었습니다. 인물 찾기를 다시 실행해주세요.');
       this.phase='applying';this.emit();
       if(retry){
-        const pending=this.pendingSave;if(key!==pending.scopeKey||this.wikiController.requireStore()!==pending.store)throw new Error('채팅의 저장 상태가 바뀌었습니다. 원래 채팅에서 저장을 다시 시도해주세요.');
+        const pending=this.pendingSave;saved=pending;if(key!==pending.scopeKey||this.wikiController.requireStore()!==pending.store)throw new Error('채팅의 저장 상태가 바뀌었습니다. 원래 채팅에서 저장을 다시 시도해주세요.');
         if(typeof pending.store.retry==='function')await pending.store.retry();else await pending.store.flush();
       }else{
         if(this.sourceValidation&&!await this.sourceValidation())throw new Error('선택한 로어북이나 현재 조건이 바뀌었습니다. 로어북을 다시 선택해주세요.');
@@ -215,11 +215,14 @@ export class PeopleImportController{
         if(freshToken!==this.scopeToken)throw new Error('반영 전에 현재 채팅 Wiki가 바뀌었습니다. 인물 찾기를 다시 실행해주세요.');
         const store=this.wikiController.requireStore(),selectedIds=[...this.selected],requestRef='people-import:'+Date.now().toString(36);let report;
         store.replace(scope=>{const result=applyPeopleImportCandidates(scope,this.candidates,selectedIds,{requestRef,batchRef:requestRef});report=result.report;return result.scope;});
-        this.applyReport=report;this.pendingSave={store,scopeKey:key,report};await store.flush();
+        this.applyReport=report;saved={store,scopeKey:key,report};this.pendingSave=saved;await store.flush();
       }
-      const pending=this.pendingSave;
+      // 저장을 기다리는 사이 인물 찾기를 다시 시작하면(begin) this.pendingSave가 비워진다 → 이번 저장 정보는 지역 변수로 들고 간다
+      const pending=saved??this.pendingSave;
+      if(!pending)throw new Error('저장하는 동안 인물 찾기가 다시 시작됐어요. 인물 위키에서 반영 결과를 확인해 주세요.');
       if(pending.store.status().phase==='save-error')throw new Error('인물은 메모리에 반영됐지만 저장에 실패했습니다. 저장 다시 시도를 눌러주세요.');
       const now=this.wikiController.snapshot();if(!now||now.scope.characterId+'\n'+now.scope.chatKey!==pending.scopeKey)throw new Error('저장 중 채팅이 바뀌었습니다. 원래 채팅의 저장 결과를 확인해주세요.');
+      if(this.pendingSave!==pending)return pending.report;   // 그새 새 인물 찾기가 시작됨: 그 상태는 건드리지 않는다
       this.applyReport=pending.report;this.pendingSave=null;this.phase='applied';this.stage='반영 완료';this.candidates=[];this.selected.clear();return this.applyReport;
     }catch(error){this.phase=this.pendingSave?'save-error':'review';this.stage=this.pendingSave?'저장 실패':'반영 보류';this.error=peopleImportText(error?.message||'인물 반영에 실패했습니다.',800);throw error;}
     finally{this.applying=false;this.finish();}
