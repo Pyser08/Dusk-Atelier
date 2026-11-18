@@ -1,5 +1,7 @@
 // 2.2.6 장기기억 애드온이 직접 넣는 CSS(애인 분홍·새 감정 색, 게이지 배수 카드, 관계도 시점 막대·관계도 바꾸기 단추).
 // 코어 styles.js에 두면 애드온만 올려서는 반영되지 않으므로, 화면을 그릴 때 한 번 <style>로 붙인다.
+import { SUBTABS_CSS } from "./subtabs.js";
+import { LIFE_CSS } from "./lifecards.js";
 import { h } from "../../dom.js";
 
 export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.rb-ns-pos>.rb-wk2-ero-row{margin-top:0}
@@ -390,7 +392,7 @@ export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repe
 export function ensureMemAddonCss(ctx) {
   try {
     const docs = new Set([ctx?.win?.ownerDocument, typeof document !== "undefined" ? document : null].filter(Boolean));
-    for (const d of docs) if (!d.getElementById("rb-memaddon-css")) d.head.appendChild(h("style", { id: "rb-memaddon-css" }, MEM_ADDON_CSS));
+    for (const d of docs) if (!d.getElementById("rb-memaddon-css")) d.head.appendChild(h("style", { id: "rb-memaddon-css" }, MEM_ADDON_CSS + SUBTABS_CSS + LIFE_CSS));
   } catch { /* 문서 없음 */ }
 }
 

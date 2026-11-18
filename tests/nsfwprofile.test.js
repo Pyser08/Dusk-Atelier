@@ -121,3 +121,16 @@ test("체위·플레이는 한 묶음(체위/플레이), 장소는 따로 — �
   const ui = fs.readFileSync(new URL("../src/ui/screens/memory/nsfwcard.js", import.meta.url), "utf8");
   assert.ok(ui.includes("POS_GROUPS") && !ui.includes('["position", "place", "play"]'), "카드·고치기 창 모두 두 묶음");
 });
+
+test("RP 주입: 이름이 글에 안 나와도 장면 인물(present)이면 넣고, 성적 지향·8축·농담도 줄에", () => {
+  const f = { wiki: { documents: { d1: { id: "d1", type: "Character", title: "민지" } } }, nsfw: { d1: normalizeNsfw({ ...RAW, humor: { frequency: 30, directness: 40, styles: ["야한 농담"] } }) } };
+  assert.equal(nsfwSection(f, "그녀가 웃었다"), "");
+  const t = nsfwSection(f, "그녀가 웃었다", 4, { present: ["민지"] });
+  assert.match(t, /민지:/); assert.match(t, /성적 지향: 여 20%·남 80%/); assert.match(t, /주도성 30/); assert.match(t, /성적 농담: 야한 농담/);
+});
+
+test("RP 주입: 채팅 성인 프로필이 아직 없어도 위키 성적 욕망·이상성향은 넣는다", () => {
+  const f = { wiki: { documents: { d1: { id: "d1", type: "Character", title: "민지" } }, people: { profiles: { d1: { sexualDesire: { text: "주도하는 걸 좋아한다" }, paraphilia: { text: "미확인" } } } } } };
+  const t = nsfwSection(f, "민지가 웃었다");
+  assert.match(t, /민지: 성적 욕망: 주도하는 걸 좋아한다/); assert.doesNotMatch(t, /이상성향/);
+});

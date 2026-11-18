@@ -8,7 +8,20 @@ const POLL_MS = 1500, POLL_FAILS = 6;
 const KEEP = ["role", "data", "content", "text", "mes", "message", "chatId", "isUser", "is_user", "type", "isStreaming", "streaming", "time"];
 export const slimMessages = (msgs) => (msgs ?? []).map((m) => { const o = {}; for (const k of KEEP) if (m && m[k] !== undefined) o[k] = m[k]; return o; });
 
-export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+// 2.2.11 서버 분석 엔진 버전 확인: 엔진은 Atelier 소스로 만든 묶음이라 플러그인과 버전이 어긋나면 고친 버그(예: 사고 출력 <Thoughts> 처리)가 서버에선 그대로다.
+//   status.engine: Cellar health가 알려 주는 엔진 버전(옛 Cellar는 없음). 맞거나 알 수 없으면 null, 아니면 사용자에게 보일 문구.
+const PLUGIN_VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "";
+export function engineNotice(pluginVer, status) {
+  if (!pluginVer || !status?.ok || !status.features?.includes("analysis")) return null;
+  const eng = String(status.engine ?? "");
+  if (eng === pluginVer) return null;
+  return eng ? `Dusk Cellar의 분석 엔진(v${eng})이 플러그인(v${pluginVer})과 달라요. 서버 분석 결과가 기기 분석과 다를 수 있으니 Cellar를 업데이트해 주세요.`
+    : `Dusk Cellar의 분석 엔진이 오래된 버전이에요(플러그인 v${pluginVer}). 서버 분석에서 실패가 잦을 수 있으니 Cellar를 업데이트해 주세요.`;
+}
+
+export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), version = PLUGIN_VERSION }) {
+  let noticed = false;   // 버전 알림은 한 세션에 한 번
+  const noticeOf = (c) => { if (noticed) return null; const t = engineNotice(version, c); if (t) noticed = true; return t; };
   // 서버로 보낼 수 있으면 { conn, model, why:null }, 아니면 null (기기에서 분석)
   async function prepare(pick) {
     try {
@@ -19,8 +32,9 @@ export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sl
       const conn = { url: c.url, via: c.via };
       // 서버가 직접 부를 수 있는 모델이면 서버가 호출한다(플러그인 창이 꺼져도 계속 돎). 아니면 모델 호출만 플러그인이 대신 한다(중계).
       const m = await serverModelOf(api, pick);
-      if (m.ok) return { conn, model: m.model };
-      if (c.features.includes("analysis-relay")) return { conn, model: { kind: "relay" }, relay: true };
+      const notice = noticeOf(c);
+      if (m.ok) return { conn, model: m.model, ...(notice ? { notice } : {}) };
+      if (c.features.includes("analysis-relay")) return { conn, model: { kind: "relay" }, relay: true, ...(notice ? { notice } : {}) };
       return null;
     } catch { return null; }
   }

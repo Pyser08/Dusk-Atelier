@@ -14,6 +14,7 @@ import { sectionPinKey, metricPinKey, scopeKeyOf, isPinned, setPin } from "../..
 import { deletePersonItem } from "../../../engine/pot/people-records.js";
 import { EMO_TAGS, EMO_LABEL } from "../../../engine/memoryemo.js";
 import { effectiveTags, nowOf } from "../../../engine/memoryhuman.js";
+import { pruneWiki, PRUNE_LIMITS } from "../../../engine/wikiprune.js";
 
 const SHORT = { "affinity.score": "호감도", "affinity.taste_band": "첫인상", "openness.score": "음란도", "suspicion.score": "의심도" };
 const CHIP = { relationship: "관계 태도·인지 차이" };
@@ -156,6 +157,10 @@ export function infoTab(env, B) {
       const mineS = list.filter((s) => (s.provenance?.targetRefs ?? []).includes("actor:user")), rest = list.filter((s) => !mineS.includes(s)), open = !!speechOpen[doc.id];
       if (rest.length && mineS.length) { list = open ? [...mineS, ...rest] : mineS; foot = h("button", { type: "button", class: "rb-wk2-link", onClick: () => { speechOpen[doc.id] = !open; redraw(); } }, open ? "다른 인물 대상 말투 접기" : `다른 인물 대상 말투 ${rest.length}개 펼치기`); }
     }
+    // 알고 있는 정보·비밀: 상한(중요도 낮은 것은 자동으로 지움) 표시 + 지금 정리
+    const slotOf = { knowledge: "core.knowledge", secret: "perception.secret" }[id], lim = slotOf ? PRUNE_LIMITS[slotOf] : 0;
+    if (lim) foot = h("div", { class: "rb-wk3-prune" }, foot, h("small", { class: "rb-muted" }, `${secsOf(id).length}/${lim} · 넘으면 중요도 낮은 것부터 자동으로 지워요(고정·직접 쓴 것은 남김)`),
+      ed && secsOf(id).length > lim ? btn("지금 정리", { size: "sm", onClick: () => run(commit((w) => pruneWiki(w, { [slotOf]: lim }).wiki)) }) : null);
     return card(i === 0 ? "rec" : "rec-" + id, h("span", null, K.LABEL[id], h("small", { class: "rb-muted" }, ` ${secsOf(id).length}`)), [K.SUB[id] ? h("small", { class: "rb-muted" }, K.SUB[id]) : null, ...list.map((x) => secItem(x, K.LABEL[id])), foot], addFor(id === "npc" ? "npc" : id), "rb-wk3-rec rg-" + id);
   });
 

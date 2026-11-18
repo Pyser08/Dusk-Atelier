@@ -74,6 +74,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
     active = sel.id;
     if (sel.id === "local") {
       await injector.start().catch((e) => log("주입 시작 실패", e?.message ?? e));
+      await injector.startTrim?.().catch((e) => log("옛 대화 빼기 시작 실패", e?.message ?? e));
       await runner.start();
       if (flow) await flow.start().catch((e) => log("턴 흐름 시작 실패", e?.message ?? e));
     } else {
@@ -88,6 +89,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   async function stop() {
     try { await flow?.stop?.(); } catch (e) { log("턴 흐름 정지 실패", e?.message ?? e); }
     try { await injector.stop?.(); } catch (e) { log("주입 정지 실패", e?.message ?? e); }
+    try { await injector.stopTrim?.(); } catch { /* 이미 없음 */ }
     try { runner.stop?.(); } catch { /* 이미 멈춤 */ }
     active = "off"; readyP = null; readyDone = false;
   }

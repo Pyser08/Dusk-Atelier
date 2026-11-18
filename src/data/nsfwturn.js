@@ -3,6 +3,10 @@ import { applyNsfwReports } from "../engine/nsfwprofile.js";
 import { applyDrive, emptyDrive } from "../engine/scenedrive.js";
 import { sameKoreanPerson } from "../engine/namekr.js";
 import { logEvent } from "./memlog.js";
+import { applyHumanReports } from "../engine/humanitems.js";
+import { tickLife, usesToPrefs } from "../engine/nsfwlife.js";
+import { readGauge } from "./gaugemult.js";
+import { pruneWiki } from "../engine/wikiprune.js";
 
 const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 const empty = () => ({ sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] });
@@ -20,8 +24,10 @@ export function applyNsfwQueue(f, reports) {
   const out = [];
   for (const { doc, list } of byDoc.values()) {
     f.nsfw ??= {};
-    const { nsfw, changed } = applyNsfwReports(f.nsfw[doc.id] ?? empty(), list);
-    if (changed.length) { f.nsfw[doc.id] = nsfw; out.push({ name: doc.title, changed }); }
+    const a = applyNsfwReports(f.nsfw[doc.id] ?? empty(), list.filter((r) => r.kind === "taste" || r.kind === "sexval"));
+    const b = applyHumanReports(a.nsfw, list.filter((r) => r.kind === "trait" || r.kind === "zone"));
+    const changed = [...a.changed, ...b.changed];
+    if (changed.length) { f.nsfw[doc.id] = b.nsfw; out.push({ name: doc.title, changed }); }
   }
   return out;
 }
@@ -39,13 +45,36 @@ export function applyDriveQueue(f, list) {
   return changed;
 }
 
-export async function applyNsfwTurn(memory, log = () => {}) {
-  const q = memory?.flow?.takeNsfw?.() ?? [], dq = memory?.flow?.takeDrive?.() ?? [];
-  if (!q.length && !dq.length) return 0;
+// 엔진 계산(성욕·피로·경험·기념일 등): 이번 턴 행위·잠 보고와 장면 인물로 folder.life를 한 턴 진행. 반환: 바뀐 글
+export function applyLifeTurn(f, { events = [], present = [], gauge = null, text = "" } = {}) {
+  const turn = Number.isInteger(f?.cursor?.at) ? f.cursor.at : null;
+  if (turn == null) return [];
+  const actors = events.map((e) => e.name), who = [...new Set([...present, ...actors])];
+  const when = [...(f?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
+  const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = f?.wiki?.people?.profiles?.[d.id];
+    return { interest: n?.sexual?.eroticInterest ?? 50, mult: n?.lustMult ?? 1, spont: n?.sexual?.sexualSpontaneity, initiative: n?.axes?.initiative, when, boost: [n?.boost?.desire && pr?.sexualDesire?.text, n?.boost?.para && pr?.paraphilia?.text].filter(Boolean) }; };
+  const changed = tickLife(f, { turn, present: who, events, gauge, text }, profOf);
+  // 자주 쓴 체위·플레이 → 선호
+  for (const [id, L] of Object.entries(f.life?.p ?? {})) {
+    if (!f.nsfw?.[id] || !Object.keys(L.uses ?? {}).length) continue;
+    const r = usesToPrefs(f.nsfw[id], L.uses); if (r.changed.length) { f.nsfw[id] = r.nsfw; changed.push(...r.changed); }
+  }
+  return changed;
+}
+
+export async function applyNsfwTurn(memory, log = () => {}, info = null, api = null) {
+  const q0 = memory?.flow?.takeNsfw?.() ?? [], dq = memory?.flow?.takeDrive?.() ?? [];
+  const events = q0.filter((r) => ["act", "sleep", "gauge", "past", "mood", "bond", "touch", "sat"].includes(r.kind)), q = q0.filter((r) => !events.includes(r));
+  const present = (info?.people ?? []).map((p) => p?.name).filter(Boolean);
+  if (!q.length && !dq.length && !events.length && !present.length) return 0;
   const cur = await memory.switches?.currentChat?.().catch?.(() => null);
   if (!cur) return 0;
-  let out = [], drive = [];
-  await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (q.length) out = applyNsfwQueue(f, q); if (dq.length) drive = applyDriveQueue(f, dq); });
+  const gauge = await readGauge(api).catch(() => null);
+  let out = [], drive = [], life = [], pruned = [];
+  await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (q.length) out = applyNsfwQueue(f, q); if (dq.length) drive = applyDriveQueue(f, dq); life = applyLifeTurn(f, { events, present, gauge, text: String(info?.rp ?? "") });
+    if (f.wiki?.documents) { const pr = pruneWiki(f.wiki); if (pr.removed.length) { f.wiki = pr.wiki; pruned = pr.removed; } } });
+  if (pruned.length) logEvent({ area: "위키 정리", title: `중요도 낮은 정보 ${pruned.length}개를 지웠어요 · ${[...new Set(pruned.map((x) => x.doc))].join(", ")}`, detail: pruned.map((x) => `${x.doc}: ${x.text}`) });
+  if (life.length) logEvent({ area: "몸·마음 계산", title: life.join(" · ").slice(0, 160), detail: life });
   for (const o of out) logEvent({ area: "성인 프로필", title: `${o.name} · ${o.changed.join(" · ")}` });
   if (drive.length) logEvent({ area: "장면 판단", title: drive.join(" · ").slice(0, 160), detail: drive });
   else if (dq.length) logEvent({ kind: "skip", area: "장면 판단", title: "이번 응답엔 새 계획·반응이 없었어요" });

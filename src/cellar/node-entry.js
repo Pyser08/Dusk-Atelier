@@ -6,3 +6,5 @@ export { createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX } from "../data/memorysto
 export { callWriterModel } from "../data/pot/llm-client.js";
 export { toPrompt, fromReply } from "../engine/modelcfg.js";
 export { folderIdOf } from "../data/memorystore.js";
+// 2.2.11: 엔진을 만든 Atelier 버전(Cellar health의 engine으로 플러그인에 알려 버전 어긋남을 안내한다)
+export const ENGINE_VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";

@@ -12,6 +12,7 @@ import { peopleSourceKeys, peopleSourceKeywordMatches } from '../../engine/pot/p
 import { traceModelCall } from './runtime-trace.js';
 import { refusalText, blockedError, censorMessage, problemMessage } from '../../engine/refusal.js';
 import { NSFW_SHAPE, NSFW_RULES } from '../../engine/nsfwprofile.js';
+import { salvageJson, stripModelNoise } from '../../engine/jsonparse.js';
 import { createWikiDocument, normalizeWikiScope, updateWikiDocument } from '../../engine/pot/wiki-schema.js';
 
 const PEOPLE_IMPORT_LIMITS=Object.freeze({totalChars:2000000,sourceChars:100000,chunkChars:100000,candidates:100,aliases:64,sourcesPerCandidate:48});
@@ -27,7 +28,10 @@ const peopleImportEntryContent=entry=>peopleImportText(entry?.content??entry?.pr
 function peopleImportKeys(entry){return peopleSourceKeys(entry);}
 function peopleImportDisabled(entry){return !entry||entry.enabled===false||entry.disabled===true||entry.disable===true||entry.isDisabled===true||entry.mode==='disabled'||entry.mode==='folder'||entry.type==='folder'||entry.isFolder===true;}
 function peopleImportAlways(entry){return entry?.alwaysActive===true||entry?.constant===true||entry?.forceActivation===true||entry?.mode==='constant'||entry?.activationReason==='alwaysActive';}
-function peopleImportParseJson(raw){const text=String(raw||'').trim(),fenced=text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i),candidates=[text,...(fenced?[fenced[1]]:[])];let depth=0,start=-1,inString=false,escaped=false;for(let index=0;index<text.length;index++){const char=text[index];if(inString){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"')inString=false;continue}if(char==='"'){inString=true;continue}if(char==='{'){if(depth===0)start=index;depth++;}else if(char==='}'&&depth>0){depth--;if(depth===0&&start>=0)candidates.push(text.slice(start,index+1));}}for(const candidate of candidates)try{const parsed=JSON.parse(candidate);if(peopleImportRecord(parsed))return parsed}catch{}throw new Error('People 모델 응답에서 JSON 객체를 찾지 못했습니다.');}
+export function peopleImportParseJson(raw){const text=stripModelNoise(raw),fenced=text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i),candidates=[text,...(fenced?[fenced[1]]:[])];let depth=0,start=-1,inString=false,escaped=false;for(let index=0;index<text.length;index++){const char=text[index];if(inString){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"')inString=false;continue}if(char==='"'){inString=true;continue}if(char==='{'){if(depth===0)start=index;depth++;}else if(char==='}'&&depth>0){depth--;if(depth===0&&start>=0)candidates.push(text.slice(start,index+1));}}for(const candidate of candidates)for(const c of [candidate,candidate.replace(/,\s*([}\]])/g,'$1')])try{const parsed=JSON.parse(c);if(peopleImportRecord(parsed))return parsed}catch{}
+  // 토큰이 모자라 잘린 답: 첫 { 부터 닫아 살리고, 마지막(잘렸을) 인물 하나는 버린다
+  const first=text.indexOf('{');if(first>=0){const v=salvageJson(text.slice(first));if(peopleImportRecord(v)){for(const k of ['people','candidates','profiles'])if(Array.isArray(v[k])&&v[k].length>1)v[k].pop();return v;}}
+  throw new Error('People 모델 응답에서 JSON 객체를 찾지 못했습니다.');}
 function peopleImportPreset(settings){const stage=settings.models.stages.writer;return stage.mode==='dedicated'?stage.preset:settings.models.shared;}
 function peopleImportScope(wikiController){return wikiController.status().scope||{};}
 

@@ -160,7 +160,41 @@ export const NSFW_STAGE1 = [
   "Sexual profile tracking is on — ALSO write these lines only when newest clearly shows it (most replies have none):",
   "taste|Name|like or dislike|position, place or play|its plain Korean name|exact quote      a character newly shows liking or disliking a specific sex position, place to have sex or kind of play",
   "sexval|Name|eroticInterest, sexualSpontaneity, sexualOpenness or sexualMomentum|+1..+10 or -1..-10|exact quote      a clear change in that sexual trait shown in newest",
+  "act|Name|partner|sex, climax, kiss or touch|Korean positions/plays used, comma separated      one per character and partner",
+  "sleep|Name",
+  "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      something clearly pushes arousal or tiredness beyond normal (teasing, aphrodisiac, cold shower, exhaustion)",
+  "past|Name|partner|count|stated or estimated      they had sex before the story (newest, user message or lorebook); estimate the count when none is given",
+  "zone|Name|Korean body part|1-3 (3 = weak spot)|short Korean note      a sexually sensitive spot shows",
+  "trait|Name|first, fantasy, voice, after, yes, no or contra|short Korean phrase      first time, fantasy, bed voice, aftercare, signs of liking/refusing, contraception attitude",
+  "touch|Name|Korean body parts stimulated, comma separated      sexual stimulation of this character's body",
+  "sat|Name|partner|good, ok or bad      how satisfied they were after sex",
 ].join("\n");
+// 장기기억 애드온: 사람다운 항목(말버릇·습관·민감한 주제·꿈·비밀·사랑 표현·화날 때·슬플 때). 성인 항목과 상관없이 받는다. 대부분의 턴엔 없다.
+export const HUMAN_STAGE1 = [
+  "",
+  "",
+  "Only when newest newly shows it (usually none):",
+  "trait|Name|speech, habit, trigger, dream, secret, love, anger or sad|short Korean phrase      verbal tic, habit, sensitive topic, goal, secret, how they love / get angry / grieve",
+  "mood|Name|joy, irritation, anxiety, sadness or excitement|+n or -n (max 40)      a clear mood swing",
+  "bond|Name|partner|short Korean phrase      a pet name, inside joke or ritual only these two share",
+].join("\n");
+export function humanFrom(raw, known = [], allow = null) {
+  const out = [];
+  for (const line0 of String(raw ?? "").split(/\r?\n/)) {
+    const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
+    if (!["trait", "mood", "bond"].includes(tag) || !f[2]) continue;
+    const name = canonName(String(f[1] ?? "").trim(), known); if (!name || name === "{{user}}") continue;
+    if (tag === "mood") { const m = String(f[2]).toLowerCase(), key = /joy|기쁨|행복/.test(m) ? "joy" : /irrit|짜증|화/.test(m) ? "irritation" : /anx|불안|긴장/.test(m) ? "anxiety" : /sad|슬픔|우울/.test(m) ? "sadness" : /excit|설렘|들뜸/.test(m) ? "excitement" : ""; if (key) out.push({ kind: "mood", name, mood: key, delta: Number(String(f[3] ?? "").replace(/[^\d+-]/g, "")) || 0 }); continue; }
+    if (tag === "bond") { if (f[3]) out.push({ kind: "bond", name, partner: /\{\{user\}\}|^user$/i.test(f[2]) ? "{{user}}" : canonName(String(f[2]).trim(), known) || String(f[2]).trim(), text: f[3].slice(0, 60) }); continue; }
+    if (!f[3]) continue;
+    const field = f[2].toLowerCase(); if (allow && !allow.has(field)) continue;
+    out.push({ kind: "trait", name, field, text: f[3].slice(0, 100) });
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+const EXT_TRAITS = new Set(["first", "fantasy", "voice", "after", "yes", "no", "contra"]);
+const HUMAN_TRAITS = new Set(["speech", "habit", "trigger", "dream", "secret", "love", "anger", "sad"]);
 export function nsfwFrom(raw, known = []) {
   const out = [];
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
@@ -169,6 +203,15 @@ export function nsfwFrom(raw, known = []) {
     if (tag === "taste" && f[3]) { const k = /^(position|place|play|체위|장소|플레이)$/i.test(f[3]) && f[4] ? f[3] : "", lab = k ? f[4] : f[3], q = k ? f[5] : f[4];   // 예전 줄(갈래 없음)도 읽는다
       out.push({ kind: "taste", posKind: k, name, preference: /dislike|싫/i.test(f[2] ?? "") ? "disliked" : "preferred", label: lab.slice(0, 60), quote: (q ?? "").slice(0, 160) }); }
     else if (tag === "sexval" && f[2] && f[3]) out.push({ kind: "sexval", name, key: f[2], delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });
+    else if (tag === "act" && f[3]) { const a = String(f[3]).toLowerCase(), act = /sex|관계|섹스/.test(a) ? "sex" : /climax|절정|사정|오르가/.test(a) ? "climax" : /kiss|키스/.test(a) ? "kiss" : "touch";
+      out.push({ kind: "act", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), act, labels: String(f[4] ?? "").split(/[,，、·]/).map((x) => x.trim()).filter((x) => x && !/^(none|없음|-)$/i.test(x)).slice(0, 4) }); }
+    else if (tag === "sleep") out.push({ kind: "sleep", name });
+    else if (tag === "touch" && f[2]) out.push({ kind: "touch", name, parts: String(f[2]).split(/[,，、·]/).map((x) => x.trim()).filter(Boolean).slice(0, 4) });
+    else if (tag === "sat" && f[3]) out.push({ kind: "sat", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), level: /good|좋|만족/i.test(f[3]) ? "good" : /bad|아쉬|불만/i.test(f[3]) ? "bad" : "ok" });
+    else if (tag === "gauge" && f[2] && f[3]) out.push({ kind: "gauge", name, key: /fat|피로/i.test(f[2]) ? "fat" : "lust", delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });
+    else if (tag === "past" && f[2] && f[3]) out.push({ kind: "past", name, partner: canonName(String(f[2]).trim(), known) || String(f[2]).trim(), count: Number(String(f[3]).replace(/[^\d]/g, "")) || 0, est: /estim|추정/i.test(f[4] ?? "") });
+    else if (tag === "zone" && f[2]) out.push({ kind: "zone", name, part: f[2], level: Number(f[3]) || 2, note: (f[4] ?? "").slice(0, 80) });
+    else if (tag === "trait" && f[2] && f[3] && EXT_TRAITS.has(f[2].toLowerCase())) out.push({ kind: "trait", name, field: f[2].toLowerCase(), text: f[3].slice(0, 100) });
     if (out.length >= 12) break;
   }
   return out;
@@ -205,8 +248,8 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
   const key = nk(source).slice(0, 4000);
-  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "");
-  const extra = (cycle ? CYCLE_STAGE1 : "") + (nsfw ? NSFW_STAGE1 + DRIVE_STAGE1 : "");   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
+  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "") + "|human";
+  const extra = (cycle ? CYCLE_STAGE1 : "") + (nsfw ? NSFW_STAGE1 + DRIVE_STAGE1 : "") + HUMAN_STAGE1;   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
   let stage1 = cache?.get(ckey) ?? null;
   if (!stage1) {
     const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: cut(run.recent || (dusk?.recent ?? []).join("\n"), 4000), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
@@ -215,6 +258,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
       const got = fromStage1(lines, { known, source, openIds });
       // addon-rebuild: women| 줄이 있었는지 — 없으면 '모델이 월경 줄을 빠뜨림', 있으면 '여성이 없다고 보고'로 구분한다
       if (cycle) { got.cycle = cycleFrom(raw, known); got.cycleDeclared = /(^|\n)\s*(?:[-*•>]+\s*)?women\s*[|｜¦]/i.test(String(raw ?? "")) || got.cycle.length > 0; }
+      got.human = humanFrom(raw, known, HUMAN_TRAITS);
       if (nsfw) { got.nsfw = nsfwFrom(raw, known); got.drive = driveFrom(raw, (n) => { const c = canonName(String(n ?? "").trim(), known); return c && c !== "{{user}}" ? c : (/\{\{user\}\}/i.test(String(n)) ? "{{user}}" : ""); }); }
       return got.scene || got.people.length ? got : null;
     }, { minimal: LINES_STAGE1_MIN + extra });   // 2.2.8: 짧은 지침 재시도에도 월경 줄(빠지면 그 턴만 월경 보고가 비었다)

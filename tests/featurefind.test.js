@@ -49,3 +49,14 @@ test("2.2.6 게이지 배수·관계도 이전 턴을 찾는다", () => {
   assert.equal(findFeatures("성인 항목 무작위")[0].t, "처음 등장 때 성인 항목 무작위로");
   assert.equal(findFeatures("버셀")[0].t, "Jev 재정렬 (선택)");
 });
+test("‘동시 처리’로 찾으면 지난 대화 분석 속도 설정이 나온다 (2.2.11)", () => {
+  const r = findFeatures("동시 처리");
+  assert.equal(r[0].t, "지난 대화 분석 속도 (묶음 크기·동시 처리)");
+});
+
+test("‘플러그인 허용’으로 찾으면 Dusk 기능 허용(플러그인 › 연동 설정)이 나온다", () => {
+  const r = findFeatures("플러그인 허용");
+  const f = r.find((x) => x.t === "다른 플러그인의 Dusk 기능 허용");
+  assert.ok(f, "결과에 있어야 함");
+  assert.equal(f.tab, "plugins"); assert.equal(f.sub, "interop");
+});

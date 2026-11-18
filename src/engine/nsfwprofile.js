@@ -6,6 +6,7 @@ export const SEX_LABEL = Object.freeze({ eroticInterest: "성적 관심", sexual
 export const AXIS_LABEL = Object.freeze({ initiative: "주도성", spontaneity: "즉흥성", directness: "직접성", goalPersistence: "지속성", obsessiveness: "집착성", publicOpenness: "개방성", retaliation: "보복성", extremity: "극단성" });
 export const SEX_KEYS = Object.keys(SEX_LABEL), AXIS_KEYS = Object.keys(AXIS_LABEL);
 const LOG_MAX = 20;
+import { normHuman, normExt, normZones, HUMAN_SHAPE, HUMAN_RULES, extLine } from "./humanitems.js";
 
 const num = (v) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : null; };
 const text = (v, n = 160) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -71,7 +72,13 @@ export function normalizeNsfw(raw, { by = "ai", at = new Date().toISOString(), l
   const pf = raw.pref ?? raw.targetGenderPreference, f = num(pf?.f ?? pf?.femalePercent), m = num(pf?.m ?? pf?.malePercent), x = num(pf?.x ?? pf?.genderlessPercent);
   const pref = f !== null && m !== null && f + m + (x ?? 0) > 0 ? (() => { const t = f + m + (x ?? 0); const F = Math.round(f / t * 100), M = Math.round(m / t * 100); return { f: F, m: M, x: 100 - F - M }; })() : null;
   const out = { sexual, axes, pref, positions, seduction: normStyle(raw.seduction), humor: normStyle(raw.humor ?? raw.sexualHumor), tags: normTags(raw.tags), by, at, log: Array.isArray(log) ? log.slice(-LOG_MAX) : [] };
-  return Object.keys(sexual).length || Object.keys(axes).length || positions.length ? out : null;
+  const hu = normHuman(raw.human), ex = normExt(raw.ext), zo = normZones(raw.zones);
+  if (hu) out.human = hu; if (ex) out.ext = ex; if (zo.length) out.zones = zo;
+  const lm = Number(raw.lustMult); if (Number.isFinite(lm) && lm > 0) out.lustMult = Math.round(Math.max(0.5, Math.min(2, lm)) * 10) / 10;
+  const past = (Array.isArray(raw.past) ? raw.past : []).map((p) => ({ name: text(p?.name, 40), count: Math.max(0, Math.min(999, Math.round(Number(p?.count) || 0))), est: p?.est === true || /estim|추정/i.test(String(p?.source ?? "")) })).filter((p) => p.name && p.count > 0).slice(0, 8);
+  if (past.length) out.past = past;
+  if (raw.boost && typeof raw.boost === "object") out.boost = { desire: raw.boost.desire === true, para: raw.boost.para === true };
+  return Object.keys(sexual).length || Object.keys(axes).length || positions.length || hu || ex || zo.length ? out : null;
 }
 
 // 지시문용 모양(묶음 성격 호출과 따로 채우기 호출이 같이 쓴다)
@@ -82,6 +89,9 @@ export const NSFW_SHAPE = Object.freeze({
   positions: [{ label: "체위·장소·플레이 이름(한국어)", kind: "position | place | play", preference: "preferred | neutral | disliked", reason: "짧은 근거(한국어)" }],
   seduction: { frequency: 50, directness: 50, styles: ["짧은 구(한국어)"], situations: ["짧은 구(한국어)"] },
   humor: { frequency: 50, directness: 50, styles: [], situations: [] },
+  ...HUMAN_SHAPE,
+  lustMult: 1,
+  past: [{ name: "", count: 0, source: "stated | estimated" }],
 });
 export const NSFW_RULES = [
   "nsfw describes this character's sexual side for the roleplay. Derive it from the personality, the sexual desire and paraphilia text, the lewdness and the related data; when the data says nothing direct, make a coherent inference from those traits instead of leaving fields empty.",
@@ -91,6 +101,8 @@ export const NSFW_RULES = [
   "positions: 8 to 12 preferred and 4 to 6 disliked items in total, spread over three kinds — kind position (sex positions: 정상위, 후배위, 기승위, 역기승위, 69, 선 채로, 옆으로 누워서, 무릎 꿇고, 들어 올려서…), kind place (where to have sex: 침대, 샤워실, 욕조, 차 안, 교실, 사무실, 소파, 창가, 야외, 호텔…) and kind play (concrete acts and touches: 목 애무, 귓불 깨물기, 가슴 애무, 커닐링구스, 펠라치오, 핑거링, 스팽킹, 눈 가리기, 손목 묶기, 더티 토크, 거울 앞, 질내사정…). Give at least 3 preferred of each kind. Each must follow from this character's personality, sexual desire and paraphilia; the paraphilia must show up in the play items. Write each label as the one term Korean adult readers actually use: a native Korean word when that is what people say (정상위, not 미션어리), an established loanword when that is the common term (펠라치오, 스팽킹, 핑거링, 더티 토크), never English letters, never a literal translation nobody uses (not 엉덩이 때리기 for spanking), no parentheses or second name. Never an emotional condition or value such as mutual respect.",
   "seduction and humor: how they seduce and how they joke about sex — frequency and directness 0-100, styles as short phrases, situations as short phrases.",
   "Write labels, reasons, styles and situations in Korean, in blunt plain sexual words without euphemism or literary softening. Keep the enum values (preferred, neutral, disliked) in English.",
+  HUMAN_RULES,
+  "lustMult 0.5-2: how fast arousal builds vs an average person, from eroticInterest, spontaneity, initiative and personality. past: partners they had sex with before the story per the source/lorebook, with count (estimate and set source estimated when no number is given); empty if none.",
 ].join(" ");
 
 // 무작위 출발값(기억 옵션 ‘처음 등장 때 성인 항목 무작위로’의 성적 수치)을 덮어쓴다 — 사용자가 고친 값은 그대로
@@ -130,24 +142,33 @@ export function applyNsfwReports(nsfw, reports, at = new Date().toISOString()) {
 export function nsfwInjectLine(name, n) {
   if (!n) return "";
   const s = SEX_KEYS.filter((k) => Number.isFinite(n.sexual?.[k])).map((k) => `${SEX_LABEL[k]} ${n.sexual[k]}`);
-  const like = n.positions.filter((p) => p.preference === "preferred").map((p) => cleanPosLabel(p.label)).slice(0, 10), hate = n.positions.filter((p) => p.preference === "disliked").map((p) => cleanPosLabel(p.label)).slice(0, 6);
-  const parts = [s.length && s.join(", "), like.length && `좋아함: ${like.join(", ")}`, hate.length && `싫어함: ${hate.join(", ")}`, n.seduction?.styles?.length && `유혹: ${n.seduction.styles.slice(0, 2).join(", ")}`,
+  const ax = AXIS_KEYS.filter((k) => Number.isFinite(n.axes?.[k])).map((k) => `${AXIS_LABEL[k]} ${n.axes[k]}`);
+  const pos = n.positions ?? [], like = pos.filter((p) => p.preference === "preferred").map((p) => cleanPosLabel(p.label)).slice(0, 10), hate = pos.filter((p) => p.preference === "disliked").map((p) => cleanPosLabel(p.label)).slice(0, 6);
+  const pf = n.pref && [n.pref.f && `여 ${n.pref.f}%`, n.pref.m && `남 ${n.pref.m}%`, n.pref.x && `그 외 ${n.pref.x}%`].filter(Boolean).join("·");
+  const parts = [s.length && s.join(", "), pf && `성적 지향: ${pf}`, ax.length && `성향: ${ax.join(", ")}`, like.length && `좋아함: ${like.join(", ")}`, hate.length && `싫어함: ${hate.join(", ")}`, n.seduction?.styles?.length && `유혹: ${n.seduction.styles.slice(0, 2).join(", ")}`,
+    n.humor?.styles?.length && `성적 농담: ${n.humor.styles.slice(0, 2).join(", ")}`,
+    extLine(n),
     n.tags?.likes?.length && `사용자가 정한 선호: ${n.tags.likes.join(", ")}`, n.tags?.limits?.length && `금기(절대 넘지 않음): ${n.tags.limits.join(", ")}`].filter(Boolean);
   return parts.length ? `- ${name}: ${parts.join(" / ")}` : "";
 }
 export const NSFW_INJECT_TITLE = "[Sexual profile — use only when the scene turns sexual; never force it]";
 
-// 폴더 → 최근 글에 이름이 나온 인물의 성인 프로필 줄(최대 max명). 없으면 ""
-export function nsfwSection(folder, recentText, max = 4) {
-  const map = folder?.nsfw; if (!map || !recentText) return "";
-  const t = String(recentText).normalize("NFKC").toLowerCase(), lines = [];
-  for (const [id, n] of Object.entries(map)) {
-    const d = folder?.wiki?.documents?.[id]; if (!d) continue;
-    const names = [d.title, ...(d.aliases ?? [])].map((x) => String(x ?? "").normalize("NFKC").toLowerCase().trim()).filter((x) => x.length >= 2);
-    if (!names.some((x) => t.includes(x))) continue;
-    const pr = folder?.wiki?.people?.profiles?.[id], short = (t) => String(t ?? "").replace(/<추정>|미확인/g, "").replace(/\s+/g, " ").trim().slice(0, 140);
-    const extra = [pr?.sexualDesire?.text && short(pr.sexualDesire.text) && `성적 욕망: ${short(pr.sexualDesire.text)}`, pr?.paraphilia?.text && short(pr.paraphilia.text) && `이상성향: ${short(pr.paraphilia.text)}`].filter(Boolean);
-    const line = nsfwInjectLine(d.title, n); if (line) lines.push(line + (extra.length ? ` / ${extra.join(" / ")}` : ""));
+// 폴더 → 장면 인물(최근 글에 이름이 나왔거나 present에 든 인물)의 성인 프로필 줄(최대 max명). 없으면 ""
+// 채팅 성인 프로필(folder.nsfw)이 아직 없어도 위키의 성적 욕망·이상성향 글은 넣는다.
+export function nsfwSection(folder, recentText, max = 4, { present = [] } = {}) {
+  const docs = folder?.wiki?.documents ?? {}, profiles = folder?.wiki?.people?.profiles ?? {}, map = folder?.nsfw ?? {};
+  const norm = (x) => String(x ?? "").normalize("NFKC").toLowerCase().trim();
+  const t = norm(recentText), here = new Set(present.map(norm).filter(Boolean)), lines = [];
+  const short = (x) => String(x ?? "").replace(/<추정>|미확인/g, "").replace(/\s+/g, " ").trim().slice(0, 140);
+  for (const id of new Set([...Object.keys(map), ...Object.keys(profiles)])) {
+    const d = docs[id]; if (!d || d.type && d.type !== "Character") continue;
+    const names = [d.title, ...(d.aliases ?? [])].map(norm).filter((x) => x.length >= 2);
+    if (!names.some((x) => here.has(x) || (t && t.includes(x)))) continue;
+    const pr = profiles[id];
+    const extra = [short(pr?.sexualDesire?.text) && `성적 욕망: ${short(pr.sexualDesire.text)}`, short(pr?.paraphilia?.text) && `이상성향: ${short(pr.paraphilia.text)}`].filter(Boolean);
+    const line = nsfwInjectLine(d.title, map[id]);
+    if (line) lines.push(line + (extra.length ? ` / ${extra.join(" / ")}` : ""));
+    else if (extra.length) lines.push(`- ${d.title}: ${extra.join(" / ")}`);
     if (lines.length >= max) break;
   }
   return lines.length ? [NSFW_INJECT_TITLE, ...lines].join("\n") : "";

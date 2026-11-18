@@ -15,7 +15,7 @@ import { createHostToast } from './ui/toast.js';
 import { createWatcher, readUi } from './ui/watch.js';
 import { CSS2 } from './ui/styles.js';
 import { applyPreset, isMobileDevice, loadPresets, pairSwitchTarget, savePresets } from './data/presets.js';
-import { createLoreRuntime } from './data/lorerules.js';
+import { createLoreRuntime, loadLoreSettings, saveLoreSettings } from './data/lorerules.js';
 import { createLoreLog } from './data/lorelog.js';
 import { createTurnInfo } from './data/turninfo.js';
 import { createReplacerWatch } from './data/replacerorder.js';
@@ -31,6 +31,8 @@ import { createSkillStore } from './data/skillstore.js';
 import { setWebWrapProvider } from './engine/webhook.js';
 import { createWebTools } from './data/webtools.js';
 import { trackedRunLLM } from './engine/aistop.js';
+import { r64Opts } from './data/risu64link.js';
+import { createDuskBridge } from './data/duskbridge.js';
 import { createAiStopButton } from './ui/aistopbtn.js';
 import { restoreActiveTheme } from './data/themes.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
@@ -59,7 +61,8 @@ async function start() {
   };
   const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
   // 생성 중지(2.1.0): 플러그인·애드온이 직접 부르는 모델 호출도 세어 '생성 중지' 버튼으로 끊을 수 있게
-  if (typeof raw.runLLMModel === "function") wrapped.runLLMModel = trackedRunLLM((...a) => raw.runLLMModel(...a));
+  // Risu64 연동(2.2.11): Risu64가 DA Interop 'obfuscate' 동작을 등록해 두면 보내기 전에 메시지를 난독화(data/risu64link.js)
+  if (typeof raw.runLLMModel === "function") wrapped.runLLMModel = trackedRunLLM(async (opts, ...a) => raw.runLLMModel(await r64Opts(raw, opts), ...a));
   // 스크립트 훅(input·output·display)은 종류마다 하나만 호스트에 달고 안에서 나눠 부른다(호스트 왕복 감소, v1.8.1)
   if (typeof raw.addRisuScriptHandler === "function" && typeof raw.removeRisuScriptHandler === "function") {
     const bus = createHookBus(raw);
@@ -291,6 +294,16 @@ async function start() {
   app.ctx.fairPlay = fairPlay;
   app.ctx.imgFix = imgFix;
   memoryRef.toast = (t) => app.ctx.toast(t, { seconds: 8 });
+  // DA Interop 역방향(2.2.11): 다른 플러그인이 스니펫 createDuskClient로 Dusk 기능을 부른다(data/duskbridge.js). 허용은 화면 오른쪽 위 알림을 눌러서
+  const askToast = ({ title, text }) => new Promise((res) => {
+    let fin = false; const end = (v) => { if (!fin) { fin = true; res(v); } };
+    toast.show({ title, text, action: "눌러서 허용 (그냥 두면 거절)", icon: "🔌", ms: 25e3, compact: true, onClick: () => end(true) }).catch(() => end(false));
+    setTimeout(() => end(false), 25e3);
+  });
+  const bridge = createDuskBridge(api, { version: VERSION, memory: mem, runAI, loadLore: loadLoreSettings, saveLore: saveLoreSettings,
+    open: (tab) => app.open(tab ? { tab } : undefined), toast: (t) => app.ctx.toast?.(t, { seconds: 6 }), ask: askToast });
+  app.ctx.bridge = bridge;
+  bridge.start().catch((e) => console.log(`[${TITLE}] 플러그인 연동 시작 실패: ${e?.message ?? e}`));
   refreshPersonaHandlers().catch(() => {
   });
   // 새 버전이 있으면 메인 화면 오른쪽 위에 작은 알림 (켜질 때 한 번, 업데이트 알림을 끄면 안 띄움)

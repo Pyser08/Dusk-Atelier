@@ -43,3 +43,23 @@ test("묶음 빼기: 분석이 덜 된 경계는 이전 묶음으로 물러난�
   assert.equal(trimCovered(rq, c, { keepTurns: 5, step: 5, coveredAt: 15 }).dropped, 10, "경계 20 대신 10");
   assert.equal(trimCovered(rq, c, { keepTurns: 5, step: 5, coveredAt: 8 }).dropped, 0);
 });
+
+// 2.2.11: 요청 글 맞추기 대신 리스 처리 단계(process)에서 메시지 번호로 뺀다(HypaPlus 방식) — 글 모양이 바뀌어도 빠진다
+import { trimUntil, gateProcess } from "../src/engine/historytrim.js";
+test("trimUntil: 빼는 마지막 메시지 번호를 trimCovered와 같은 규칙으로 구한다", () => {
+  assert.equal(trimUntil(chat, { keepTurns: 5, coveredAt: 29 }), 19);
+  assert.equal(trimUntil(chat, { keepTurns: 5, coveredAt: 9 }), 9);
+  assert.equal(trimUntil(chat, { keepTurns: 5, coveredAt: -1 }), -1);
+  assert.equal(trimUntil(chat, { keepTurns: 50, coveredAt: 29 }), -1);
+});
+test("요청 글이 정규식·이름표로 바뀌어 trimCovered가 못 맞춰도, 번호 기준은 그대로 뺀다", () => {
+  const q = req().map((m) => (m.role === "user" ? { ...m, content: `[유저] ${m.content.replace("나 ", "")}` } : m));
+  assert.equal(trimCovered(q, chat, { keepTurns: 5, coveredAt: 29 }).dropped < 20, true, "글 맞추기는 유저 글을 놓침");
+  assert.equal(trimUntil(chat, { keepTurns: 5, coveredAt: 29 }), 19);
+});
+test("gateProcess: 번호 조건으로 감싸고, 첫 메시지(-1)는 남긴다", () => {
+  assert.equal(gateProcess("본문", 0), "본문");
+  const g = gateProcess("본문", 20);
+  assert.match(g, /\{\{#if \{\{greater_equal::\{\{chat_index\}\}::20\}\}\}\}\n본문\n\{\{\/if\}\}/);
+  assert.match(g, /less::\{\{chat_index\}\}::0/);
+});

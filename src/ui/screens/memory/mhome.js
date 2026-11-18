@@ -58,11 +58,17 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
   // 2.2.4 기억 토큰 절약: 칸별 예산을 줄여 기억 블록 약 4,100 → 2,900토큰(LoCoMo 정답률 약 1~2점 손해)
-  memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver === true, (o, v) => { o.saver = v; }));
+  memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver !== false, (o, v) => { o.saver = v; }));
   memOptions.append(orow("분기한 채팅에 기억 이어받기", "채팅을 분기·복사하면 갈라지기 전까지의 기억을 원래 채팅에서 이어받아요(기억이 빈 채팅만). 갈라진 뒤의 기록은 들어오지 않아요.", inj.forkInherit !== false, (o, v) => { o.forkInherit = v; }));
-  // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 꺼짐
-  memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요. 매 턴이 아니라 남길 턴만큼 쌓일 때마다 한꺼번에 빼서 그 사이엔 프롬프트 캐시가 그대로 맞아요.", inj.trimOld === true, (o, v) => { o.trimOld = v; }));
+  // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 켜짐(끈 사람만 false)
+  memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요. 매 턴이 아니라 남길 턴만큼 쌓일 때마다 한꺼번에 빼서 그 사이엔 프롬프트 캐시가 그대로 맞아요.", inj.trimOld !== false, (o, v) => { o.trimOld = v; }));
   memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
+  // 2.2.11 지난 대화 분석 속도: 묶음 크기(한 번에 묻는 AI 응답 수)·동시 처리(요청 한도가 나면 자동으로 줄임)
+  const selS = (label, v0, opts, set) => h("select", { class: "rb-input", "aria-label": label, style: "width:auto", onChange: (e) => save((st) => set(st, Number(e.target.value))) }, opts.map(([v, l]) => h("option", { value: v, selected: v === v0 }, l)));
+  memOptions.append(h("div", { class: "rb-srow", id: "rb-mem-bfspeed" }, h("span", { class: "t" }, "지난 대화 분석 속도", h("small", null, "묶음을 크게 하면 호출 수가 줄고, 동시에 2~3개를 보내면 빨라져요. 요청 한도(429)가 나면 동시 처리를 자동으로 줄여요. 동시 처리는 앞 묶음 결과를 모른 채 읽어 기록이 조금 덜 이어질 수 있어요.")),
+    h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
+      selS("묶음 크기", Number(S.backfillBatch) || 3, [[1, "1개씩"], [2, "2개씩"], [3, "3개씩(기본)"], [5, "5개씩"], [8, "8개씩"]], (st, v) => { st.backfillBatch = v; }),
+      selS("동시 처리", Number(S.backfillParallel) || 1, [[1, "하나씩(기본)"], [2, "2개 동시"], [3, "3개 동시"]], (st, v) => { st.backfillParallel = v; }))));
   // addon-rebuild: ‘지난 대화 분석에 Erosync도’는 뺐다 — 성인 프로필은 장기기억이 기본 성격과 함께 만든다
   memOptions.append(adultSeedRow(ctx));   // 2.2.6 처음 등장 때 성인 항목 무작위로(누르면 설정 창, 기본 꺼짐)
   // 숫자 칸(기억 넣기 토큰·남길 최근 턴)은 맨 아래(2.1.5). 리수폿 일괄 사용은 리수폿 화면에 있어 여기선 뺐다.
@@ -82,7 +88,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     budgetRow.hidden = false;
   })().catch(() => {});
   memOptions.append(h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "‘요약된 옛 대화 빼고 보내기’를 켰을 때 이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요. 두 배가 쌓이면 이만큼으로 한 번에 줄여요.")),
-    num("턴", () => inj.trimKeep ?? 20, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
+    num("턴", () => inj.trimKeep ?? 10, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
 
   return { memorySettings, memOptions };
 }
@@ -164,7 +170,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   if (!hasCachedPlan) chatPromise.then((loaded) => {
     if (!loaded) return;
     const loadedMsgs = loaded.message ?? [];
-    const nextPlan = caps.analyze && M.runner ? M.runner.planBackfill(loadedMsgs, { from: 0, to: Math.max(0, loadedMsgs.length - 1) }, folder) : null;
+    const nextPlan = caps.analyze && M.runner ? M.runner.planBackfill(loadedMsgs, { from: 0, to: Math.max(0, loadedMsgs.length - 1), size: idx.settings?.backfillBatch }, folder) : null;
     m.homeChatPlan = { key: cacheKey, plan: nextPlan, t: Date.now() };
     if (m.homeChatPromise?.key === cacheKey) m.homeChatPromise = null;
     if (ctx.state.tab === "memory" && mem(ctx) === m) redraw();
@@ -195,7 +201,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       activeChat = await chatPromise;
       if (!activeChat) activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
       activeMsgs = activeChat?.message ?? [];
-      activePlan = activeChat && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, folder) : activePlan;
+      activePlan = activeChat && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1), size: idx.settings?.backfillBatch }, folder) : activePlan;
     } else {
       activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
       activeMsgs = activeChat?.message ?? [];
@@ -203,7 +209,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     let redo = false;
     if (!activePlan?.todo) {
       // 새로 분석할 응답이 없어도, 눌렀다면 처음부터 다시 분석할지 묻는다
-      const all = activeMsgs.length && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1), all: true }, folder) : null;
+      const all = activeMsgs.length && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1), all: true, size: idx.settings?.backfillBatch }, folder) : null;
       if (!all?.total) return ctx.toast("분석할 AI 응답이 없어요.");
       const again = await confirmDialog(ctx.win, { title: "미분석 응답이 없어요", body: `AI 응답 ${all.total}개가 모두 분석돼 있어서 전체를 다시 분석해요. 호출 ${all.calls}회 · 대략 ${all.tokens.toLocaleString()} 토큰이 들어요. 기존 기록은 지워지지 않고, 새로 확인된 내용이 더해지거나 바뀔 수 있어요.`, ok: "전체 분석" });
       if (!again) return;

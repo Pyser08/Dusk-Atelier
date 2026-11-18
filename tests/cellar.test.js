@@ -9,7 +9,7 @@ test("nativeFetch(GET)로 health를 읽어 연결됨", async () => {
   const calls = [];
   const api = { nativeFetch: async (u, o) => { calls.push([u, o.method]); return res(200, { ok: true, name: "dusk-cellar", version: "0.1.0", auth: true }); } };
   const r = await probeCellar(api, "http://127.0.0.1:6011");
-  assert.deepEqual(r, { ok: true, version: "0.1.0", url: "http://127.0.0.1:6011", via: "native", auth: true, features: [] });
+  assert.deepEqual(r, { ok: true, version: "0.1.0", engine: "", url: "http://127.0.0.1:6011", via: "native", auth: true, features: [] });
   assert.deepEqual(calls, [["http://127.0.0.1:6011/cellar/health", "GET"]]);
 });
 

@@ -8,6 +8,8 @@ import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
 import { nsfwCard, nsfwStatusCard, nsfwTempCard, nsfwTagsCard } from "./nsfwcard.js";
 import { adultCandCard } from "./adultcands.js";
+import { subTabs } from "./subtabs.js";
+import { lustCard, moodCard, bodyCard, humanCard, heatOf, heatFx, compareCard } from "./lifecards.js";
 import { eroLoad, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
 import { eroPerson, eroPersonByName } from "../../../engine/erosyncview.js";
 import { EMO_TAGS, EMO_LABEL, GAUGE_MAX, setTag, tagsFor } from "../../../engine/memoryemo.js";
@@ -313,7 +315,11 @@ export function personTabs(env, parts) {
         open ? h("div", { class: "rb-wk2-cbody" }, duel(x.name, P), P.tl, h("div", { class: "rb-wk2-grid2" }, filled(P)), emptyRow(P), relDel(x.name)) : null);
     }), hint());
   };
-  const relation = () => {
+  // 세부 탭(PC 왼쪽 레일 · 모바일 아래 반원 다이얼). 고른 세부 탭은 인물·탭마다 기억
+  const subSel = (m.wkSub ??= {});
+  const sub2 = (tab, items) => subTabs(ctx, subSel, `${pk}|${tab}`, items, { label: "세부 탭" });
+  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "진도·감정·호칭·추억", n: people.length, render: relation0 }, { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }]);
+  const relation0 = () => {
     if (lay === "A") return layoutA();
     if (fam === "B") return layoutB();
     if (!people.length) return noPeople();
@@ -326,7 +332,24 @@ export function personTabs(env, parts) {
 
   // ── 상세 정보 · 기록 ──
   const go = (tab, w) => { if (w) withSel[pk] = w; tabs[pk] = tab; paint(); root.scrollIntoView?.({ block: "start" }); };
-  const info = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean), null);   // addon-rebuild: Erosync 8가지 성향은 NSFW 탭의 Erosync 카드로 옮김(상세 정보의 성향과 헷갈려서)
+  const info0 = () => h("div", { class: "rb-wk2-pane" }, typeof parts.info === "function" ? parts.info(go) : (parts.infoBlocks ?? []).filter(Boolean), null);
+  // 상세 정보를 세부 탭으로: 성격(기본 성격·수치) / 감정 / 사람다움 / 기록(기록 묶음·비어 있는 항목·위키 패널). 카드의 data-sec로 나눈다
+  const INFO_SUB = (sec) => (sec === "prof" || sec === "num" ? "prof" : sec === "emo" ? "emo" : "rec");
+  // 상세 정보는 한 번만 그려서 카드를 구역별로 나눈다(예전엔 구역마다 다시 그려 같은 계산이 3번 돌았다)
+  let infoCache = null;
+  const infoPart = (which) => {
+    if (!infoCache) {
+      const el = info0(), grid = el.querySelector?.(".rb-wk3-grid"), parts = { prof: [], emo: [], rec: [] };
+      if (grid) { el.querySelector(".rb-wk3-toc")?.remove(); for (const c of [...grid.children]) parts[INFO_SUB(c.getAttribute("data-sec") || "panel")].push(c); }
+      infoCache = { el, grid, parts };
+      queueMicrotask?.(() => { infoCache = null; });
+    }
+    const { el, grid, parts } = infoCache;
+    if (!grid) return which === "prof" ? el : null;
+    return h("div", { class: "rb-wk2-pane" }, h("div", { class: "rb-wk3 rb-wk3-solo" }, h("div", { class: "rb-wk3-grid" }, parts[which])));
+  };
+  const info = () => doc ? sub2("info", [{ id: "prof", label: "성격·수치", icon: "🧭", hint: "기본 성격과 수치", render: () => infoPart("prof") }, { id: "emo", label: "감정", icon: "💗", hint: "상대별 감정", render: () => infoPart("emo") },
+    { id: "human", label: "사람다움", icon: "🧩", hint: "말버릇·습관·꿈·비밀", render: () => h("div", { class: "rb-wk2-pane" }, humanCard(env, card, doc, "human")) }, { id: "rec", label: "기록", icon: "📒", hint: "기록 묶음·빈 항목", render: () => infoPart("rec") }]) : info0();   // addon-rebuild: Erosync 8가지 성향은 NSFW 탭의 Erosync 카드로 옮김(상세 정보의 성향과 헷갈려서)
   // NSFW 탭: Dusk 성인 항목(월경·임신, 성적 욕망·이상성향 후보) + Erosync 성적 항목(켜져 있을 때만). 항상 보인다.
   // 월경·임신 한눈에: 주기 띠(생리·가임기·오늘) + 다음 월경·배란까지 남은 날 / 임신이면 주차·출산 예정까지
   const dayN = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5 : NaN; };
@@ -360,10 +383,26 @@ export function personTabs(env, parts) {
     // 값이 없어도 기본 칸은 보인다: 월경·임신 / 성적 욕망·이상성향 후보 / 성인 프로필
     const cv = lay && a.cyc ? cycleViz() : null;
     const cycCard = card("월경·임신", [cv ?? cyc ?? note("아직 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.")], null, "rb-nsfw-base");
-    const kids = [nsfwStatusCard(env, card, doc), cycCard, adultCandCard(env, card, doc), nsfwCard(env, card, doc), nsfwTempCard(env, card, doc), nsfwTagsCard(env, card, doc)].filter(Boolean);   // addon-rebuild: 후보 카드 새로(다시 뽑기·직접 추가는 그 카드 우상단)
-    return h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, kids);
+    // 세부 탭: 상태(성욕·몸) / 몸(성감대·월경) / 취향(프로필·잠자리·후보·태그) / 장면(장면 판단)
+    const pane = (...k) => h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, k.filter(Boolean));
+    if (!doc) return pane(nsfwStatusCard(env, card, doc), cycCard, adultCandCard(env, card, doc), nsfwCard(env, card, doc), nsfwTempCard(env, card, doc), nsfwTagsCard(env, card, doc));
+    const zn = (env.folder?.nsfw?.[doc.id]?.zones ?? []).length;
+    const el = sub2("nsfw", [
+      { id: "state", label: "상태", icon: "🌡️", hint: "성욕 게이지·피로·경험·월경·임신", render: () => pane(nsfwStatusCard(env, card, doc), lustCard(env, card, doc, { cycle: cv ?? cyc ?? note("아직 월경·임신 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.") }), compareCard(env, card, doc)) },
+      { id: "taste", label: "취향", icon: "🫦", hint: "프로필·잠자리·후보·태그", render: () => pane(nsfwCard(env, card, doc), humanCard(env, card, doc, "ext"), adultCandCard(env, card, doc), nsfwTagsCard(env, card, doc)) },
+      { id: "body", label: "몸", icon: "💋", hint: "성감대", n: zn, render: () => pane(bodyCard(env, card, doc)) },
+      { id: "scene", label: "장면", icon: "🎬", hint: "장면 판단", render: () => pane(nsfwTempCard(env, card, doc)) }]);
+    // 달아오름에 따라 배경 효과(60↑ 따뜻하게, 80↑ 하트가 떠오름)
+    const heat = heatOf(env, doc);
+    if (heat > 0.3) { el.classList.add("rb-heat"); el.style.setProperty("--heat", heat.toFixed(2)); if (heat >= 0.8) el.classList.add("hot"); if (heat >= 0.6) el.prepend(heatFx()); }
+    return el;
   };
-  const log = () => h("div", { class: "rb-wk2-pane" }, lay === "B4" ? summary("log") : null, ...(parts.logBlocks ?? []).filter(Boolean));
+  const log = () => {
+    const blocks = (parts.logBlocks ?? []).filter(Boolean), sum = lay === "B4" ? summary("log") : null;
+    const items = [sum && { id: "sum", label: "달라진 점", icon: "✨", hint: "바뀐 것·남은 순간", render: () => h("div", { class: "rb-wk2-pane" }, summary("log")) },
+      ...blocks.map((b, i) => ({ id: `b${i}`, label: b.querySelector?.("summary b, .rb-wk2-ch b, h4, summary")?.textContent?.trim()?.slice(0, 10) || (i ? "이야기 기록" : "문서 관리"), icon: i ? "📖" : "🗂️", render: () => h("div", { class: "rb-wk2-pane" }, b) }))].filter(Boolean);
+    return items.length > 1 ? sub2("log", items) : h("div", { class: "rb-wk2-pane" }, sum, ...blocks);
+  };
 
   // C안: 탭 없이 한 장. 위에 붙는 목차를 누르면 그 구역으로 스크롤.
   const onePage = () => {

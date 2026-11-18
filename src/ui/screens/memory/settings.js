@@ -151,13 +151,13 @@ export function renderBotAnalysis(env) {
   const est = h("div", { class: "rb-muted" }), prog = h("div"), msgs = chatItem.chat?.message ?? [];
   const range = () => ({ from: Math.max(0, +from.value - 1), to: Math.max(0, +to.value - 1) });
   const paintEst = () => {
-    const p = M.runner.planBackfill(msgs, range(), env.folder);
+    const p = M.runner.planBackfill(msgs, { ...range(), size: idx.settings?.backfillBatch }, env.folder);
     est.textContent = `AI 응답 ${p.total}개 · 분석됨 ${p.done} · 미처리 ${p.todo}${p.failed ? ` (지난번 실패 ${p.failed})` : ""} → 예상 호출 ${p.calls}회 · 대략 ${p.tokens.toLocaleString()} 토큰`;
   };
   from.addEventListener("input", paintEst); to.addEventListener("input", paintEst); if (caps.analyze) paintEst();
   let ctrl = null, failed = [];
   const run = async (only) => {
-    const pl = M.runner.planBackfill(msgs, range(), env.folder);
+    const pl = M.runner.planBackfill(msgs, { ...range(), size: idx.settings?.backfillBatch }, env.folder);
     const redo = !pl.todo && pl.total > 0;   // 미분석이 없으면 전체를 다시 분석한다
     if (!pl.total) return ctx.toast("분석할 AI 응답이 없어요.");
     if (redo) ctx.toast("미분석 응답이 없어요. 전체를 다시 분석해요.");

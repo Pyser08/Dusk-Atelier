@@ -57,7 +57,7 @@ export function findPersonKey(folder, name) {
 export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find((s) => !s.orphan) ?? null;
 
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
-export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true, userNames = [], smooth = false, gauge = null, userGuard = false } = {}) {
+export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true, userNames = [], smooth = false, gauge = null, userGuard = false, keepAhead = false } = {}) {
   result = normalizeUserNames(result, userNames);   // 플레이어를 가리키는 이름은 모두 {{user}} 한 사람으로
   const named = normalizeKnownNames(result, folder); result = named.result;
   for (const [from, to] of named.moved) {   // 부른 이름을 별칭으로 남겨 다음부터 바로 찾고, 위키·Erosync·관계도도 같은 사람으로 본다
@@ -108,7 +108,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   out.human = applyHuman(folder, result?.human, anchor, { important, now });   // v1.8.3: 호칭·말투, 둘만의 추억(중요할 때만), 잘못된 믿음
   out.startSeed = seedFromStart(folder, anchor, now);   // addon-rebuild: 이미 아는 사이면 인간적 호감·신뢰를 바닥값까지(처음 만남처럼 2에서 시작하지 않게)
   folder.runs = (folder.runs ?? 0) + 1;
-  folder.cursor = { ...anchor };
+  if (!(keepAhead && folder.cursor && Number(folder.cursor.at) > Number(anchor?.at))) folder.cursor = { ...anchor };   // keepAhead: 지난 대화 동시 처리에서 늦게 끝난 앞 묶음이 커서를 되돌리지 않게(2.2.11)
   noteTension(folder, tBefore); clearHints(folder);  // 7-4: 감정 태그가 새로 어긋나면 자기 감정 기록을 유도
   if (folder.wiki?.documents) { try { out.renamed = alignDocTitles(folder); } catch { /* 이름 맞추기 실패는 기록에 영향 없음 */ } }   // 2.2.2 이름 통일(장기 기억 기준)
   if (!folder.emoConvOff && folder.wiki?.documents) convertAffinity(folder, Object.values(folder.wiki.documents).filter((d) => d?.type === "Character"), "{{user}}", now);  // 위키 호감도 → 애정 태그(처음 한 번씩)

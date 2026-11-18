@@ -53,6 +53,8 @@ export function applyDrive(drive0, obs, { spont = () => null, at = Date.now() } 
   const note = (t) => { changed.push(t); d.log.push({ at, turn: d.turn, text: t }); };
   // 반응: 받은 쪽 몸이 받아 주면 보폭만큼, 멈추면 그대로, 밀어내면 한 칸 내려간다
   for (const r of obs?.replies ?? []) {
+    // 사용자가 몸·말로 분명히 밀어내면(no) 그 인물은 잠깐 쉰다 — 달아오름 90↑ 강제 계획도 이걸로만 끊긴다
+    if (r.answer === "no" && isUser(r.target)) { d.rest[nk(r.actor)] = d.turn + REST_TURNS; note(`${r.actor} ${REST_TURNS}턴 쉬어요({{user}}가 밀어냄)`); }
     const g = d.goals[gkey(r.actor, r.target)]; if (!g) continue;
     const before = g.rung ?? 0, w = g.kind === "sex" ? stepWidth(spont(g.actor), g.desire) : 1;
     const after = r.answer === "yes" ? clamp(before + w, 0, 5) : r.answer === "no" ? clamp(before - 1, 0, 5) : before;
@@ -88,24 +90,34 @@ export function applyDrive(drive0, obs, { spont = () => null, at = Date.now() } 
 export function seeded(seed) { let s = 0; for (const c of String(seed)) s = (s * 31 + c.charCodeAt(0)) >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
 // 이번 요청에 넣을 계획: 장면(최근 글)에 행위자와 대상이 다 나온 목표만, 쉬는 인물 빼고, 욕구 확률로 고른다. 반환 [{goal, toRung}]
-export function pickPlans(drive, recentText, { spont = () => null, random = Math.random, max = 3 } = {}) {
-  const t = String(recentText ?? "").normalize("NFKC").toLowerCase();
-  const here = (n) => isUser(n) || (String(n ?? "").length >= 2 && t.includes(String(n).normalize("NFKC").toLowerCase()));
+// lustOf(name) → 달아오름 0~100(없으면 null): 높을수록 움직일 확률이 오르고 90 이상이면 반드시 움직인다.
+// hot: [{actor, target}] — 달아오름 90 이상인데 목표가 없는 인물에게 성관계 계획을 새로 잡아 준다(가장 끌리는 장면 속 상대).
+export const LUST_FORCE = 90;
+export function pickPlans(drive, recentText, { spont = () => null, random = Math.random, max = 3, present = [], lustOf = () => null, hot = [] } = {}) {
+  const t = String(recentText ?? "").normalize("NFKC").toLowerCase(), pres = new Set(present.map(nk).filter(Boolean));   // present: 이름이 글에 안 나와도 장면에 있는 인물(기억 블록에 든 인물·봇 캐릭터)
+  const here = (n) => isUser(n) || pres.has(nk(n)) || (String(n ?? "").length >= 2 && t.includes(String(n).normalize("NFKC").toLowerCase()));
   const out = [], used = new Set();
   const goals = Object.values(drive?.goals ?? {}).filter((g) => here(g.actor) && here(g.target) && !(drive.rest?.[nk(g.actor)] >= (drive.turn ?? 0)) && g.move)
     .sort((a, b) => (b.desire ?? 0) - (a.desire ?? 0));
   for (const g of goals) {
     if (used.has(nk(g.actor)) || out.length >= max) continue;
-    if (random() * 100 >= (g.desire ?? 50)) continue;   // 욕구 = 이번 턴에 움직일 확률(Erosync director.sexualTargets)
+    const lust = g.kind === "sex" || g.kind === "romance" ? lustOf(g.actor) : null;
+    if (!(lust >= LUST_FORCE) && random() * 100 >= Math.min(100, (g.desire ?? 50) + (lust ?? 0) * 0.5)) continue;   // 욕구(+달아오름 절반) = 이번 턴에 움직일 확률
+
     used.add(nk(g.actor));
     out.push({ goal: g, toRung: g.kind === "sex" ? clamp((g.rung ?? 0) + stepWidth(spont(g.actor), g.desire), 0, 5) : null });
+  }
+  for (const x of hot) {
+    if (out.length >= max || used.has(nk(x.actor)) || !here(x.actor) || !here(x.target) || drive?.rest?.[nk(x.actor)] >= (drive?.turn ?? 0)) continue;
+    const lust = lustOf(x.actor) ?? LUST_FORCE, g = { actor: x.actor, target: x.target, kind: "sex", want: "참아 온 성욕을 풀고 싶다", move: "몸이 먼저 반응해 욕구를 숨기지 못하고, 자기 성격대로 상대에게 다가가 신호를 보낸다", desire: lust, rung: 0, hot: true };
+    used.add(nk(x.actor)); out.push({ goal: g, toRung: clamp(stepWidth(spont(x.actor), lust), 0, 5) });
   }
   return out;
 }
 
 export const DRIVE_HEAD = "[Scene plan — hidden direction for the next reply. Apply each move through the actor's own personality and voice, only from what the actor knows. Never control {{user}}'s character. Do not mention this block.]";
-export function driveSection(drive, recentText, { spont, random, limitsOf = () => [] } = {}) {
-  const plans = pickPlans(drive, recentText, { spont, random });
+export function driveSection(drive, recentText, { spont, random, limitsOf = () => [], present = [], lustOf, hot } = {}) {
+  const plans = pickPlans(drive, recentText, { spont, random, present, lustOf, hot });
   if (!plans.length) return "";
   const lines = plans.map(({ goal: g, toRung }) => {
     const lim = limitsOf(g.actor), lim2 = isUser(g.target) ? [] : limitsOf(g.target);

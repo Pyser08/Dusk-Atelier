@@ -2,14 +2,14 @@
 // 오르고 내리는 폭에 곱하는 값. 오를 때(up)·내릴 때(down) 따로. 1이 원래대로, 0이면 그 방향으로 움직이지 않는다.
 export const GAUGE_KEY = "dusk.gauge.mult";
 export const GAUGE_MULT_MIN = 0, GAUGE_MULT_MAX = 3;
-export const GAUGE_DEFAULT = Object.freeze({ up: 1, down: 1 });
+export const GAUGE_DEFAULT = Object.freeze({ up: 1, down: 1, lust: 1 });   // lust: 성욕 게이지(달아오름)가 차는 속도 — 인물별 AI 배수(0.5~2) 위에 곱한다
 
 const one = (v) => { const n = Number(v); return Number.isFinite(n) ? Math.round(Math.max(GAUGE_MULT_MIN, Math.min(GAUGE_MULT_MAX, n)) * 10) / 10 : 1; };
 export function normalizeGauge(v) {
   const s = v && typeof v === "object" ? v : {};
-  return { up: s.up == null ? 1 : one(s.up), down: s.down == null ? 1 : one(s.down) };
+  return { up: s.up == null ? 1 : one(s.up), down: s.down == null ? 1 : one(s.down), lust: s.lust == null ? 1 : one(s.lust) };
 }
-export const isDefaultGauge = (g) => { const n = normalizeGauge(g); return n.up === 1 && n.down === 1; };
+export const isDefaultGauge = (g) => { const n = normalizeGauge(g); return n.up === 1 && n.down === 1 && n.lust === 1; };
 
 // 정수 변화량 d에 배수를 곱한다. 0.5배여도 1칸 변화는 사라지지 않게(0이 아닌 배수면 최소 1칸), 0배면 0.
 // max: 한 번에 움직일 수 있는 최대 폭(있으면 그 안으로).
