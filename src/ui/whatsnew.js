@@ -68,7 +68,7 @@ export function openChangelog(ctx, entries = LOG.slice(0, 1), title = "새로 �
   }
   return modal(ctx.win, (done) => h("div", { class: "rb-wn", role: "dialog", "aria-label": title },
     h("div", { class: "rb-wn-top rb-wn-rune" }, runeSd("cheer", "rb-rune-sd sm"), h("div", null, h("b", null, `✨ ${title}`), h("div", { class: "rb-muted", style: "font-size:12px;margin-top:2px" }, `Dusk Atelier v${ctx.version}`))),
-    h("div", { class: "rb-wn-scroll" }, ...entries.flatMap((e) => [h("div", { class: "rb-wn-ver" }, `v${e.v}`, e.date ? h("small", null, e.date) : null), ...body(e.body)])),
+    h("div", { class: "rb-wn-scroll" }, ...entries.flatMap((e) => [h("div", { class: "rb-wn-ver" }, e.label ?? `v${e.v}`, e.date ? h("small", null, e.date) : null), ...body(e.body)])),
     h("div", { class: "rb-wn-foot" }, btn("확인", { kind: "primary", onClick: () => done(true) }))));
 }
 
@@ -90,4 +90,12 @@ export async function maybeShowWhatsNew(ctx) {
   const entries = LOG.filter((e) => cmp(e.v, seen) > 0 && cmp(e.v, cur) <= 0);
   await save();
   if (entries.length) await openChangelog(ctx, entries, `v${seen} → v${cur} 새로 바뀐 점`);
+}
+
+// 2.2.10 애드온이 업데이트됐으면 그 패치노트를 한 번 보여 준다(목록 addons.json에 실린 notes)
+export async function maybeShowAddonNotes(ctx) {
+  let list = [];
+  try { list = (await ctx.addons?.takeNotes?.()) ?? []; } catch { return; }
+  const entries = list.flatMap((a) => (a.notes ?? []).map((n) => ({ label: `${a.name} ${n.v}`, date: n.date, body: n.body })));
+  if (entries.length) await openChangelog(ctx, entries, list.length === 1 ? `${list[0].name} 애드온 v${list[0].from} → v${list[0].to}` : "애드온 새로 바뀐 점");
 }

@@ -22,7 +22,7 @@ export function parseManifest(raw) {
     const bad = !a || !ID.test(a.id ?? "") ? "id" : !VER.test(a.version ?? "") ? "version" : !HEX.test(a.sha256 ?? "") ? "sha256" : !/^https:\/\//.test(a.url ?? "") ? "url" : a.minCore && !VER.test(a.minCore) ? "minCore" : ids.has(a.id) ? "중복 id" : "";
     if (bad) { errors.push(`${a?.id ?? "?"}: ${bad}`); continue; }
     ids.add(a.id);
-    addons.push({ id: a.id, name: String(a.name || a.id), version: a.version, minCore: a.minCore || "0.0.0", url: a.url, sha256: a.sha256, size: Number(a.size) || 0, desc: String(a.desc ?? ""), hooks: !!a.hooks, category: CAT_IDS.includes(a.category) && a.category !== "custom" ? a.category : "", requires: Array.isArray(a.requires) ? a.requires.filter((r) => ID.test(String(r)) && r !== a.id) : [] });
+    addons.push({ notes: cleanNotes(a.notes), id: a.id, name: String(a.name || a.id), version: a.version, minCore: a.minCore || "0.0.0", url: a.url, sha256: a.sha256, size: Number(a.size) || 0, desc: String(a.desc ?? ""), hooks: !!a.hooks, category: CAT_IDS.includes(a.category) && a.category !== "custom" ? a.category : "", requires: Array.isArray(a.requires) ? a.requires.filter((r) => ID.test(String(r)) && r !== a.id) : [] });
   }
   return { addons, errors };
 }
@@ -112,3 +112,24 @@ export function extractAddonCode(text) {
 export const ADDON_EXT = ".dka";
 export const ADDON_ACCEPT = ".dka,.js,.mjs,text/javascript,text/plain,application/octet-stream";
 export const customFileName = (m) => `${m.id}-${m.version}${ADDON_EXT}`;
+
+// 2.2.10 애드온 패치노트: 빌드 때 CHANGELOG.md에서 그 애드온 절(## <이름 앞부분> … <버전>)을 최근 4개까지 뽑아 목록에 싣는다.
+export function addonNotesFrom(md, name, max = 4) {
+  const key = String(name ?? "").split(/[·(]/)[0].trim();
+  if (!key) return [];
+  const out = [];
+  for (const sec of String(md ?? "").split(/^## /m).slice(1)) {
+    const nl = sec.indexOf("\n"), head = nl < 0 ? sec : sec.slice(0, nl), body = nl < 0 ? "" : sec.slice(nl + 1).trim();
+    const at = head.indexOf(key); if (at < 0) continue;
+    const v = /(\d+\.\d+\.\d+)/.exec(head.slice(at + key.length))?.[1]; if (!v || out.some((x) => x.v === v)) continue;
+    out.push({ v, date: /(\d{4}-\d{2}-\d{2})/.exec(head)?.[1] ?? "", body: body.slice(0, 3000) });
+    if (out.length >= max) break;
+  }
+  return out;
+}
+function cleanNotes(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((n) => n && VER.test(n.v ?? "") && typeof n.body === "string").slice(0, 4).map((n) => ({ v: n.v, date: String(n.date ?? "").slice(0, 10), body: n.body.slice(0, 3000) }));
+}
+// from 초과 ~ to 이하
+export const notesBetween = (notes, from, to) => (notes ?? []).filter((n) => cmpVer(n.v, from) > 0 && cmpVer(n.v, to) <= 0);

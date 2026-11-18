@@ -35,6 +35,9 @@ const src = JSON.parse(fs.readFileSync(path.join(root, "addons/addons.src.json")
 const dist = path.join(root, "addons/dist");
 fs.mkdirSync(dist, { recursive: true });
 const out = { format: 1, addons: [] }, usedLib = new Set();
+// 2.2.10: 애드온 업데이트 뒤 보여 줄 패치노트(CHANGELOG.md의 그 애드온 절)
+const { addonNotesFrom } = await import(new URL("../src/engine/addons.js", import.meta.url).href);
+const changelogMd = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
 let same = true;
 for (const a of src.addons) {
   const shared = new Set();
@@ -58,7 +61,7 @@ for (const a of src.addons) {
   const file = path.join(dist, `${a.id}.js`);
   if (check) same &&= fs.existsSync(file) && fs.readFileSync(file, "utf8") === code;
   else fs.writeFileSync(file, code);
-  out.addons.push({ ...a, url: `https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/${branch}/addons/dist/${a.id}.js`, sha256: crypto.createHash("sha256").update(code, "utf8").digest("hex"), size: Buffer.byteLength(code) });
+  out.addons.push({ ...a, notes: addonNotesFrom(changelogMd, a.name), url: `https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/${branch}/addons/dist/${a.id}.js`, sha256: crypto.createHash("sha256").update(code, "utf8").digest("hex"), size: Buffer.byteLength(code) });
   if (!check) console.log(`${a.id} v${a.version} ${(Buffer.byteLength(code) / 1024).toFixed(1)}KB · 코어 모듈 ${shared.size}개 공유`);
 }
 
