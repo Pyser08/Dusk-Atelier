@@ -276,6 +276,24 @@ Output rules:
   ].filter(Boolean).join("\n\n");
   return { messages: [{ role: "system", content: sys }, { role: "user", content: ask }], target: all ? null : target };
 }
+// 번역(칸 번호 방식): 칸 이름(라벨)을 모델이 한국어로 바꿔 버리면 원래 방식(readValues)은 어느 칸인지 못 찾아 번역이 안 보였다.
+// 칸마다 [번호]를 붙여 보내고 번호로 되찾는다. 여러 줄 값은 ⏎로 이어 보냈다가 되돌린다.
+export function translateItemsPrompt(items) {
+  const body = items.map(([, v], i) => `[${i + 1}] ${String(v).replace(/\r?\n/g, " ⏎ ")}`).join("\n");
+  return [
+    { role: "system", content: "Translate each numbered line into natural Korean. Keep the [n] marker at the start of every line exactly as given, one output line per input line, same order. Keep ⏎ marks where they are. Do not add notes, headers or code fences." },
+    { role: "user", content: body }
+  ];
+}
+export function readTranslatedItems(text, items) {
+  const out = {};
+  for (const line of String(text ?? "").replace(/```[a-z]*\n?/gi, "").split(/\r?\n/)) {
+    const m = /^\s*\[(\d+)\]\s*(.*)$/.exec(line); if (!m) continue;
+    const it = items[Number(m[1]) - 1]; if (!it || !m[2].trim()) continue;
+    out[it[0]] = m[2].replace(/\s*⏎\s*/g, "\n").trim();
+  }
+  return out;
+}
 export function translatePrompt(text) {
   return [
     { role: "system", content: "Translate the persona sheet into natural Korean. Keep the exact markdown structure: keep every \"### Section\" header and every \"* Label\" label in English unchanged; translate only the values and free-form lines. Keep {{user}} and {{char}} as is. Output the sheet only." },

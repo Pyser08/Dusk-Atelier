@@ -3,7 +3,7 @@
 // 여기서는 화면이 쓸 항목 종류 표·묶음 판별·목록 만들기만 더한다.
 import { updatePersonRecord, deletePersonItem } from "./pot/people-records.js";
 import { NPC_EMOTION_SLOT, NPC_EMOTION_LIMIT, npcEmotionParts } from "./pot/npc-emotion.js";
-import { scopeKeyOf } from "./personedit.js";
+import { scopeKeyOf, normItem } from "./personedit.js";
 
 // 대상: none(대상 없음) · user(나) · npc(다른 인물 1명) · required(대상 필수: 나 또는 인물) · optional(대상은 선택)
 export const RECORD_GROUPS = [
@@ -57,13 +57,13 @@ export function addRecord(scope, docId, { group, slotId, targetRef = "", title =
   return updatePersonRecord(scope, docId, { group, slotId, targetRef, title, text, scopeKey: scopeKeyOf(scope) });
 }
 export function editRecord(scope, docId, sectionId, text, title) {
-  const sec = scope?.documents?.[docId]?.sections?.find((s) => s.id === sectionId);
+  const sec = normItem(scope, docId, "section", sectionId);
   if (!sec) throw new Error("고칠 항목을 찾지 못했어요.");
   const group = recordGroupOf(sec); if (!group) throw new Error("이 항목은 여기서 고칠 수 없어요. 인물 페이지의 ✎를 써 주세요.");
   return updatePersonRecord(scope, docId, { id: sectionId, group, title: title ?? sec.heading, text, expected: JSON.stringify(sec), scopeKey: scopeKeyOf(scope) });
 }
 export function removeRecord(scope, docId, sectionId) {
-  const sec = scope?.documents?.[docId]?.sections?.find((s) => s.id === sectionId);
+  const sec = normItem(scope, docId, "section", sectionId);
   if (!sec) throw new Error("지울 항목을 찾지 못했어요.");
   return deletePersonItem(scope, docId, { id: sectionId, kind: "section", expected: JSON.stringify(sec), scopeKey: scopeKeyOf(scope) });
 }

@@ -269,5 +269,5 @@ test("위키 모델이 ‘내 API’면 기본(메모리·보조) 분석 모델�
   assert.deepEqual(followHubPick({ mode: "memory", timeoutSec: 600 }, hub), { mode: "custom", presetId: "p1", timeoutSec: 600 });
   assert.deepEqual(followHubPick({ mode: "submodel", timeoutSec: 60 }, hub), { mode: "custom", presetId: "p1", timeoutSec: 60 });
   assert.deepEqual(followHubPick({ mode: "model", timeoutSec: 600 }, hub), { mode: "model", timeoutSec: 600 });
-  assert.deepEqual(followHubPick({ mode: "memory", timeoutSec: 600 }, null), { mode: "memory", timeoutSec: 600 });
+  assert.deepEqual(followHubPick({ mode: "memory", timeoutSec: 600 }, null), { mode: "submodel", timeoutSec: 600 });   // 11-19: 기본 메모리 모델은 보조 모델로
 });

@@ -37,22 +37,38 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {
   const featHost = h("div", { class: "rb-mem-feats" }), lvHost = h("div");
   // 설정을 고칠 때마다 선행 조건을 함께 맞춘다(engine/settingdeps.js). 함께 켠 것이 있으면 바로 알려 준다.
   const save = (fn) => { let added = []; st.update((s) => { fn(s); added = healDeps(s); }); if (added.length) ctx.toast(`필요한 설정을 함께 켰어요: ${added.join(" · ")}`); return added; };
-  const edit = (fn) => { save(fn); paint(); paintAdult(); };
-  const paint = () => {
-    const snap = st.rawSnapshot(), f = snap.features, lv = levelOf(f);
-    replace(lvHost, optionCards(LEVELS.map((l) => ({ value: l.id, label: l.label, text: l.text })), lv, (v) => edit((s) => { s.features = applyLevel(s.features, v); }), "추적 수준"),
-      lv === "custom" ? h("p", { class: "rb-muted" }, "직접 고른 ‘맞춤’ 상태예요. 위에서 하나를 누르면 그 수준으로 맞춰져요.") : null);
-    replace(featHost, FEATURE_CARDS.map((c) => featureCard(c, snap, edit)));
+  // 바뀐 카드만 다시 그린다(id가 있을 때). 함께 켜진 설정(healDeps)이 있거나 여러 카드가 바뀌면 전체를 다시 그리되 열어 둔 '세부 설정'은 지킨다.
+  const edit = (fn, id = null) => {
+    const lv0 = levelOf(st.rawSnapshot().features), added = save(fn), snap = st.rawSnapshot();
+    if (id && !added.length) { swapCard(id, snap); if (levelOf(snap.features) !== lv0) paintLv(snap); }
+    else { paint(); paintAdult(); }
   };
-  const featureCard = (c, snap, edit) => {
+  const paintLv = (snap) => { const lv = levelOf(snap.features);
+    replace(lvHost, optionCards(LEVELS.map((l) => ({ value: l.id, label: l.label, text: l.text })), lv, (v) => edit((s) => { s.features = applyLevel(s.features, v); }), "추적 수준"),
+      lv === "custom" ? h("p", { class: "rb-muted" }, "직접 고른 ‘맞춤’ 상태예요. 위에서 하나를 누르면 그 수준으로 맞춰져요.") : null); };
+  const openIds = () => new Set([...featHost.querySelectorAll(".rb-mem-feat")].filter((a) => a.querySelector("details")?.open).map((a) => a.dataset.feat));
+  const swapCard = (id, snap) => {
+    const old = featHost.querySelector(`.rb-mem-feat[data-feat="${id}"]`), c = FEATURE_CARDS.find((x) => x.id === id);
+    if (!old || !c) return paint();
+    const wasOpen = !!old.querySelector("details")?.open, next = featureCard(c, snap, edit);
+    if (wasOpen) { const d = next.querySelector("details"); if (d) d.open = true; }
+    old.replaceWith(next);
+  };
+  const paint = () => {
+    const snap = st.rawSnapshot(), open = openIds();
+    paintLv(snap);
+    replace(featHost, FEATURE_CARDS.map((c) => { const el = featureCard(c, snap, edit); if (open.has(c.id)) { const d = el.querySelector("details"); if (d) d.open = true; } return el; }));
+  };
+  const featureCard = (c, snap, edit0) => {
+    const edit = (fn) => edit0(fn, c.id);   // 이 카드 안의 바꿈은 이 카드만 다시 그린다
     const f = snap.features[c.id] ?? {}, needs = f.enabled ? needsOf(c.id, snap) : [];
     const body = detailRows(c, f, edit);
     const sw = switchEl(f.enabled === true, { label: c.label, onChange: (v, el) => { setSwitch(el, v); edit((s) => { s.features[c.id].enabled = v; }); } });
-    return h("article", { class: ["rb-card", "rb-mem-feat", f.enabled && "on"] },
+    return h("article", { class: ["rb-card", "rb-mem-feat", f.enabled && "on"], dataset: { feat: c.id } },
       h("div", { class: "rb-mem-shead" }, h("b", null, c.label), h("span", { style: "flex:1" }), sw),
       h("p", { class: "rb-muted" }, c.desc), h("div", { class: "rb-mem-featsum" }, summaryOf(c.id, f)),
       snap.relationshipOnlyMode && c.id === "rhythm" ? h("div", { class: "rb-note" }, "서사관계 전용 모드에서는 쉬어요. (고급 설정에서 끌 수 있어요)") : null,
-      needs.map((n) => h("div", { class: "rb-note warn" }, n.label, " ", btn("켜기", { size: "sm", onClick: () => edit((s) => n.fix(s)) }))),
+      needs.map((n) => h("div", { class: "rb-note warn" }, n.label, " ", btn("켜기", { size: "sm", onClick: () => edit0((s) => n.fix(s)) }))),   // 다른 기능을 켜므로 전체
       body ? h("details", { class: "rb-mem-man" }, h("summary", null, "세부 설정"), body, btn("기본값으로", { size: "sm", onClick: () => edit((s) => { s.features[c.id] = { ...levelPatch("basic")[c.id], enabled: s.features[c.id].enabled }; }) })) : null);
   };
   const numRow = (label, v, set, { min = 0, max = 5, step = 1, def } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label, defHint(def)), h("input", { class: "rb-input", type: "number", min, max, step, value: v, onChange: (e) => { const raw = Number(e.target.value); const n = Math.min(max, Math.max(min, Number.isFinite(raw) ? Math.round(raw * 100) / 100 : min)); set(n); } }));

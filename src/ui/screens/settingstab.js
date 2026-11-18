@@ -18,7 +18,9 @@ import { createCellarBackups } from '../../data/cellarbackup.js';
 import { createCellarUpdate } from '../../data/cellarupdate.js';
 import { addonCard } from './addonsui.js';
 
-export async function renderSettingsTab(ctx) {
+// 고급 칸 값(채팅 메뉴·로어북 설정)을 한 번 읽어 두고, 화면 안 토글로 다시 그릴 땐 그대로 써서 ‘불러오는 중…’이 다시 안 보이게 한다
+let advData = null;
+export async function renderSettingsTab(ctx, { reuse = false } = {}) {
   if (ctx.state.sub === "prompts") return renderPrompts(ctx);
   if (ctx.state.sub === "theme") return renderSettings(ctx);
   if (ctx.state.sub === "updset") return renderUpdateSettings(ctx);
@@ -62,10 +64,13 @@ export async function renderSettingsTab(ctx) {
     toc,
     h("div", { class: ["rb-mem2-grid", adv && "has-adv"] },
       main,
-      adv ? h("div", { class: "rb-mem2-side" }, h("div", { class: "rb-card bordered" }, h("span", { class: "h" }, "고급 설정"), h("span", { class: "rb-muted" }, "불러오는 중…"))) : null
+      adv ? h("div", { class: "rb-mem2-side" }, reuse && advData ? null : h("div", { class: "rb-card bordered" }, h("span", { class: "h" }, "고급 설정"), h("span", { class: "rb-muted" }, "불러오는 중…"))) : null
     )
   );
   const advSide = shell.querySelector(".rb-mem2-side");
+  // 다시 그리기 전 스크롤 위치·열어 둔 접이식(details)을 기억했다가 되돌린다
+  const prevScroll = reuse ? ctx.main.querySelector(".rb-set2")?.scrollTop ?? null : null;
+  const prevOpen = reuse ? [...ctx.main.querySelectorAll(".rb-set2 details[open] > summary")].map((x) => x.textContent.trim()) : [];
   replace(ctx.main, shell);
   paintToc(shell, toc);
 
@@ -73,11 +78,12 @@ export async function renderSettingsTab(ctx) {
   // ── 고급 영역 ──
   let advBlocks = [true];
   if (adv) {
-    const [memBtnOn, lore, chatQuickOn] = await Promise.all([
+    const [memBtnOn, lore, chatQuickOn] = reuse && advData ? advData : await Promise.all([
       loadMemoryButtonOn(ctx.api),
       loadLoreSettings(ctx.api).catch(() => ({ ...LORE_DEFAULTS })),
       ctx.chatMenu ? ctx.chatMenu.isOn().catch(() => true) : Promise.resolve(true)
     ]);
+    advData = [memBtnOn, lore, chatQuickOn];
     const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
     const setLore = async (patch) => {
       Object.assign(lore, patch);
@@ -96,7 +102,7 @@ export async function renderSettingsTab(ctx) {
     const btnSeg = segmented([["on", "보이기"], ["off", "숨기기"]], lore.button === false ? "off" : "on", (v) => setLore({ button: v === "on" }), "응답 아래 로어북 버튼");
     const bdSeg = segmented([["off", "끄기"], ["short", "짧은 이름만"], ["all", "모든 키"]], ["off", "all"].includes(lore.boundary) ? lore.boundary : "short", (v) => setLore({ boundary: v }), "이름 경계 기본값");
     const memBtnSeg = segmented([["on", "보이기"], ["off", "숨기기"]], memBtnOn ? "on" : "off", async (v) => {
-      const ok = await ctx.memoryButton?.set(v === "on");
+      const ok = await ctx.memoryButton?.set(v === "on"); if (advData) advData[0] = v === "on";
       ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 관계도 버튼을 보여요" : "채팅 메뉴의 관계도 버튼을 숨겼어요");
     }, "채팅 메뉴 관계도 버튼");
     // 한 줄: 제목·설명 + 현재 값(오른쪽). 누르면 고르는 메뉴가 뜬다.
@@ -120,11 +126,11 @@ export async function renderSettingsTab(ctx) {
         valRow("로어북 로그", "응답마다 들어간 로어북을 남겨요", [["on", "켜짐"], ["off", "꺼짐"]], lore.log === false ? "off" : "on", (v) => setLore({ log: v === "on" }), "rb-set-lorelog"),
         valRow("응답 아래 로어북 버튼", "응답 아래 [📖 로어북] 버튼", [["on", "보임"], ["off", "숨김"]], lore.button === false ? "off" : "on", (v) => setLore({ button: v === "on" }), "rb-set-lorebtn"),
         valRow("채팅 메뉴의 [관계도] 버튼", "누르면 인물 관계도가 열려요. 기억 기능 자체는 그대로예요", [["on", "보임"], ["off", "숨김"]], memBtnOn ? "on" : "off", async (v) => {
-          const ok = await ctx.memoryButton?.set(v === "on");
+          const ok = await ctx.memoryButton?.set(v === "on"); if (advData) advData[0] = v === "on";
           ctx.toast(ok === false ? "저장했어요. 이 화면에선 바로 안 바뀌어서 리스를 새로 고치면 적용돼요." : v === "on" ? "채팅 메뉴에 관계도 버튼을 보여요" : "채팅 메뉴의 관계도 버튼을 숨겼어요");
         }, "rb-set-membtn"),
         valRow("채팅 메뉴의 빠른 설정", "입력창 옆 메뉴에 공정한 전개·유저 편향·주사위 결과 표시", [["on", "보임"], ["off", "숨김"]], chatQuickOn ? "on" : "off", async (v) => {
-          try { await ctx.chatMenu?.setOn(v === "on"); ctx.toast(v === "on" ? "채팅 메뉴에 빠른 설정을 보여요" : "채팅 메뉴의 빠른 설정을 숨겼어요"); } catch (e) { fail(e); }
+          try { await ctx.chatMenu?.setOn(v === "on"); if (advData) advData[2] = v === "on"; ctx.toast(v === "on" ? "채팅 메뉴에 빠른 설정을 보여요" : "채팅 메뉴의 빠른 설정을 숨겼어요"); } catch (e) { fail(e); }
         }, "rb-set-chatquick"),
         saved),
       card("정리 · 기록",
@@ -135,17 +141,21 @@ export async function renderSettingsTab(ctx) {
       experimentalCard(ctx, () => {
         ctx.refreshTabs();
         ctx.provider?.sync?.().catch(() => {});
-        renderSettingsTab(ctx);
+        renderSettingsTab(ctx, { reuse: true });
       }),
       devToggleCard(ctx, () => {
         ctx.refreshTabs();
-        renderSettingsTab(ctx);
+        renderSettingsTab(ctx, { reuse: true });
       })
     ];
   }
   // 고급은 점선 '고급' 칸 없이 묶음 카드를 그대로 오른쪽 열에 둔다
   if (advSide) replace(advSide, ...(adv ? advBlocks : [advFold(ctx, "settings", true)]));
   paintToc(shell, toc);
+  if (reuse) {
+    for (const sm of shell.querySelectorAll("details > summary")) if (prevOpen.includes(sm.textContent.trim())) sm.parentElement.open = true;
+    if (prevScroll != null) shell.scrollTop = prevScroll;
+  }
 }
 
 var TOC_ICON = { "화면": "eye", "서버": "network", "애드온": "plugin", "백업": "download", "도움말": "info", "이야기 도우미": "sparkle", "로어북 · 채팅 메뉴": "book", "정리 · 기록": "refresh" };

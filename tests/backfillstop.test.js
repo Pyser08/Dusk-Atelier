@@ -118,3 +118,16 @@ test("서버 엔진 버전이 플러그인과 다르면 알림 문구, 같거나
   assert.match(engineNotice("2.2.10", { ok: true, features: ["analysis"] }), /오래된|업데이트/);
   assert.equal(engineNotice("", { ok: true, features: ["analysis"], engine: "2.2.4" }), null, "플러그인 버전을 모르면(시험) 조용히");
 });
+
+import { hubPickOf, followHubPick } from "../src/data/memoryrunner.js";
+test("지난 대화 분석 모델: Writer 단계만 내 API로 둬도 그 모델을 따른다(리스 보조 모델로 가서 키 없음 오류 나던 것)", () => {
+  const cfg = { easy: { kind: "risuai", presetId: "" }, presets: [{ id: "p1", name: "내 키", preset: { kind: "openai", model: "gpt" } }], stages: { writer: { mode: "dedicated", presetId: "p1" }, router: { mode: "shared" }, director: { mode: "shared" } } };
+  const hub = hubPickOf(cfg); assert.deepEqual(hub, { mode: "custom", presetId: "p1" });
+  assert.equal(followHubPick({ mode: "submodel", timeoutSec: 600 }, hub).presetId, "p1");
+  assert.equal(hubPickOf({ easy: { kind: "risuai" }, presets: [], stages: {} }), null);
+});
+test("리스 보조 모델 설정: 기본값(메모리 모델)은 보조 모델로, 직접 고른 메모리 모델은 그대로", () => {
+  assert.equal(followHubPick({ mode: "memory", timeoutSec: 600 }, null).mode, "submodel");
+  assert.equal(followHubPick({ mode: "memory", explicit: true }, null).mode, "memory");
+  assert.equal(followHubPick({ mode: "model" }, null).mode, "model");
+});
