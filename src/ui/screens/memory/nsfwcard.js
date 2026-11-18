@@ -1,5 +1,6 @@
 // addon-rebuild: 인물 위키 NSFW 탭의 성인 프로필 카드 — 이 채팅 장기기억(folder.nsfw[문서 id]) 값. Erosync 프로필을 쓰지 않는다.
 // 게이지·칩 모양은 예전 Erosync 카드와 같다(bar·eroDetailRows를 같이 씀).
+import { memStore } from "./memstore.js";
 import { h } from "../../dom.js";
 import { btn, confirmDialog, modal } from "../../kit.js";
 import { pickFiles } from "../../dom.js";
@@ -28,7 +29,7 @@ export async function regenerate(env, doc, { keep = null, quiet = false } = {}) 
   const { ctx } = env, flow = ctx.memory?.flow, imp = flow?.tools?.()?.importer, rt = flow?.runtime?.();
   if (!imp?.runNsfw || !rt?.wiki) return ctx.toast("장기 기억 위키가 켜져 있어야 만들 수 있어요.", { error: true });
   // 방금 바뀐 성적 욕망·이상성향(다시 뽑기 등)이 들어 있는 저장본을 먼저 본다
-  const stored = await ctx.memory.store.getFolder(env.bot.id, env.chatItem.id).catch(() => null);
+  const stored = await memStore(ctx).getFolder(env.bot.id, env.chatItem.id).catch(() => null);
   const prof = stored?.wiki?.people?.profiles?.[doc.id] ?? rt.wiki.snapshot?.()?.people?.profiles?.[doc.id];
   if (!prof) return ctx.toast("이 인물은 기본 성격이 아직 없어요. 다음 턴에 기본 성격과 함께 만들어져요.", { error: true });
   if (!quiet) ctx.toast("성인 프로필을 만드는 중이에요…");
@@ -39,7 +40,7 @@ export async function regenerate(env, doc, { keep = null, quiet = false } = {}) 
     logFailure({ area: "성인 프로필 만들기", title: `‘${doc.title}’ 성인 프로필 ${cen ? "— 검열" : "— 문제"}`, error: msg });
     return ctx.toast(cen ? "모델이 거절했어요(검열). 실패 기록에서 자세히 볼 수 있어요." : `만들지 못했어요 · ${msg.replace(/^문제[:：]\s*/, "")}`, { error: true });
   }
-  await env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; const old = f.nsfw[doc.id];
+  await memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; const old = f.nsfw[doc.id];
     f.nsfw[doc.id] = { ...n, human: n.human ?? old?.human, ext: n.ext ?? old?.ext, zones: n.zones ?? old?.zones, sexual: keep?.sexual ? { ...n.sexual, ...keep.sexual } : n.sexual, tags: normTags(old?.tags), log: [...(old?.log ?? []), { at: new Date().toISOString(), text: keep ? "다시 뽑기로 새로 만듦" : "다시 만듦" }].slice(-20) }; });
   logEvent({ area: "성인 프로필 만들기", title: `${doc.title} ${keep ? "다시 뽑기 반영" : "다시 만들기"} · 체위·장소·플레이 ${n.positions.length}` });
   env.redraw?.();
@@ -83,7 +84,7 @@ export function nsfwCard(env, card, doc) {
 }
 
 // ── 고치기 창: 성적 수치·8가지 성향·끌리는 상대·체위·장소·유혹·성적 농담 전부 ──
-const save = (env, doc, fn) => env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; f.nsfw[doc.id] = fn(f.nsfw[doc.id]); }).then(() => env.redraw?.());
+const save = (env, doc, fn) => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; f.nsfw[doc.id] = fn(f.nsfw[doc.id]); })).then(() => env.redraw?.()).catch((e) => env.ctx.toast?.(e?.message ?? String(e), { error: true }));
 export function openNsfwEditor(env, doc, n0) {
   const n = n0 ?? normalizeNsfw({ sexual: { eroticInterest: 50 } }, { by: "user" });
   const numIn = (k, v) => h("input", { type: "number", min: 0, max: 100, step: 1, value: Number.isFinite(v) ? v : "", "data-k": k, class: "rb-input", style: "width:72px" });
@@ -207,7 +208,7 @@ async function writeDesire(env, doc, field, title, cur) {
   const text = String(ta.value ?? "").trim().slice(0, 700);
   try {
     const { updatePeopleSexualField } = await import("../../../engine/pot/people-profile.js");
-    await env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.wiki = updatePeopleSexualField(f.wiki, doc.id, field, text, { manualEdited: true }); });
+    await memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { f.wiki = updatePeopleSexualField(f.wiki, doc.id, field, text, { manualEdited: true }); });
     // 장기 기억 위키 쪽(작동 중인 위키)에도 같은 글을 넣는다(다음 기록이 옛 글로 덮지 않게)
     try { const st = env.ctx.memory?.flow?.runtime?.()?.wiki?.requireStore?.(); if (st) { st.replace((v) => updatePeopleSexualField(v, doc.id, field, text, { manualEdited: true })); await st.flush?.(); } } catch { /* 위키가 꺼져 있으면 저장본만 */ }
     logEvent({ area: "성적 욕망·이상성향", title: `${doc.title} ${title} 직접 씀` });

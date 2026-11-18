@@ -1,5 +1,6 @@
 // 장기기억 애드온: 인물 위키 카드 — 성욕 게이지·몸 상태(NSFW), 마음 흐름(관계), 성감대 인체 모형(NSFW), 사람다운 항목(상세·NSFW).
 // 수치는 엔진 계산(engine/nsfwlife.js), 글은 기록기·성인 프로필이 채우고 여기서 고칠 수 있다.
+import { memStore } from "./memstore.js";
 import { h, replace } from "../../dom.js";
 import { btn, modal, promptDialog, confirmDialog } from "../../kit.js";
 import { mem } from "./common.js";
@@ -12,13 +13,13 @@ const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:nor
 const hosts = new Set();
 function live(docId, render) { const host = h("div", { class: "rb-live" }); host.__doc = docId; host.__paint = () => replace(host, render()); host.__paint(); hosts.add(host); return host; }
 async function repaint(env, doc) {
-  try { const f = await env.ctx.memory.store.getFolder(env.bot.id, env.chatItem.id); if (f && env.folder) { env.folder.nsfw = f.nsfw; env.folder.life = f.life; } } catch { /* 아래에서 전체 다시 그림 */ }
+  try { const f = await memStore(env.ctx).getFolder(env.bot.id, env.chatItem.id); if (f && env.folder) { env.folder.nsfw = f.nsfw; env.folder.life = f.life; } } catch { /* 아래에서 전체 다시 그림 */ }
   let n = 0; for (const x of [...hosts]) { if (!x.isConnected) { hosts.delete(x); continue; } if (x.__doc === doc.id) { x.__paint(); n++; } }
   if (!n) env.redraw?.();
 }
-const saveN = (env, doc, fn) => env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; f.nsfw[doc.id] = fn(f.nsfw[doc.id] ?? { sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] }); }).then(() => repaint(env, doc));
+const saveN = (env, doc, fn) => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { f.nsfw ??= {}; f.nsfw[doc.id] = fn(f.nsfw[doc.id] ?? { sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] }); })).then(() => repaint(env, doc)).catch((e) => env.ctx.toast?.(e?.message ?? String(e), { error: true }));
 // 몸·마음 값 직접 고치기(엔진 값 덮어쓰기). 다음 턴부터 엔진이 이어서 계산해요
-const saveLife = (env, doc, fn) => env.ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => { f.life ??= { turn: null, p: {} }; f.life.p ??= {}; f.life.p[doc.id] = fn({ ...emptyLife(), ...(f.life.p[doc.id] ?? {}) }); }).then(() => repaint(env, doc));
+const saveLife = (env, doc, fn) => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { f.life ??= { turn: null, p: {} }; f.life.p ??= {}; f.life.p[doc.id] = fn({ ...emptyLife(), ...(f.life.p[doc.id] ?? {}) }); })).then(() => repaint(env, doc)).catch((e) => env.ctx.toast?.(e?.message ?? String(e), { error: true }));
 export function openLifeEditor(env, doc) {
   const L = env.folder?.life?.p?.[doc.id] ?? emptyLife();
   const num = (k, label, v) => h("label", { class: "rb-mem-edrow", style: "justify-content:space-between;gap:10px" }, h("span", null, label), h("input", { class: "rb-input", type: "number", min: 0, max: 100, "data-k": k, value: String(Math.round(v ?? 0)), style: "width:90px" }));
