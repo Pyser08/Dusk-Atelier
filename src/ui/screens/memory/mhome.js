@@ -20,6 +20,8 @@ import { takePendingReason } from "../../../data/memlog.js";
 import { openEmbedModal } from "./embedmodal.js";
 import { maybeAskBardWiki } from "./modebar.js";
 import { gaugeMultCard } from "./gaugemultui.js";
+import { aiTag, aiLegend } from "./aicost.js";
+import { ensureMemAddonCss } from "./memaddoncss.js";
 import { adultSeedRow } from "./adultseedmodal.js";
 
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -41,28 +43,29 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   const memorySettings = h("section", { class: "rb-card bordered rb-scard rb-mem-integrated-settings" },
     h("span", { class: "h" }, "설정"),
     srow("기억·인물 위키 프롬프트", "앞·중간·뒤에 덧붙일 프롬프트", () => ctx.go("settings", "prompts")),
-    srow("임베딩 (의미 검색)", embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }),
+    srow(h("span", null, "임베딩 (의미 검색)", aiTag("embed")), embedLine, () => { if (M.embedder) openEmbedModal(ctx); else ctx.toast("기억 기능을 쓸 수 없는 상태예요.", { error: true }); }, { "data-tour": "mem-embed" }),
     // 2.2.0 자동 기록 세부(인물 위키 설정 값): 임베딩 아래 줄 → 누르면 창으로
     M.flow ? srow("자동 기록 세부", "장면 정리 역할 · 최근 대화 턴 · 서사관계 전용 모드", () => openWriterDetails(ctx).catch(fail(ctx)), { id: "rb-mem-writer-row" }) : null,
-    M.jev ? srow("Jev 재정렬 (선택)", jevLine, () => openJevModal(ctx).catch(fail(ctx)), { id: "rb-mem-jev-row" }) : null);
+    M.jev ? srow(h("span", null, "Jev 재정렬 (선택)", aiTag("jev")), jevLine, () => openJevModal(ctx).catch(fail(ctx)), { id: "rb-mem-jev-row" }) : null);
 
   // 기억 옵션 3개(고급 모드 '대화에 넣기'와 같은 설정)
   const { S, save, num } = builders(ctx, idx, redraw, "");
   const inj = S.inject ?? {};
-  const orow = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
+  const orow = (title, text, v0, set, cost) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, h("span", null, title, cost ? aiTag(cost) : null), h("small", null, text)),
     switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => { st.inject ??= {}; set(st.inject, v); }); } }));
-  const orowS = (title, text, v0, set) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, title, h("small", null, text)),
+  const orowS = (title, text, v0, set, cost) => h("div", { class: "rb-srow" }, h("span", { class: "t" }, h("span", null, title, cost ? aiTag(cost) : null), h("small", null, text)),
     switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); save((st) => set(st, v)); } }));
-  const memOptions = h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"),
-    orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }),
-    orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }),
-    orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }));
+  ensureMemAddonCss(ctx);
+  const memOptions = h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"), aiLegend(),
+    orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }, "human"),
+    orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }, "cool"),
+    orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }, "beliefs"));
   // 2.2.4 기억 토큰 절약: 칸별 예산을 줄여 기억 블록 약 4,100 → 2,900토큰(LoCoMo 정답률 약 1~2점 손해)
-  memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver !== false, (o, v) => { o.saver = v; }));
-  memOptions.append(orow("분기한 채팅에 기억 이어받기", "채팅을 분기·복사하면 갈라지기 전까지의 기억을 원래 채팅에서 이어받아요(기억이 빈 채팅만). 갈라진 뒤의 기록은 들어오지 않아요.", inj.forkInherit !== false, (o, v) => { o.forkInherit = v; }));
+  memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver !== false, (o, v) => { o.saver = v; }, "saver"));
+  memOptions.append(orow("분기한 채팅에 기억 이어받기", "채팅을 분기·복사하면 갈라지기 전까지의 기억을 원래 채팅에서 이어받아요(기억이 빈 채팅만). 갈라진 뒤의 기록은 들어오지 않아요.", inj.forkInherit !== false, (o, v) => { o.forkInherit = v; }, "fork"));
   // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 켜짐(끈 사람만 false)
-  memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요. 매 턴이 아니라 남길 턴만큼 쌓일 때마다 한꺼번에 빼서 그 사이엔 프롬프트 캐시가 그대로 맞아요.", inj.trimOld !== false, (o, v) => { o.trimOld = v; }));
-  memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }));
+  memOptions.append(orow("요약된 옛 대화 빼고 보내기", "장기 기억에 이미 정리된 옛 대화는 모델에 보내지 않아 전체 토큰이 줄어요. 최근 대화와 아직 정리 안 된 대화는 그대로 보내요. 매 턴이 아니라 남길 턴만큼 쌓일 때마다 한꺼번에 빼서 그 사이엔 프롬프트 캐시가 그대로 맞아요.", inj.trimOld !== false, (o, v) => { o.trimOld = v; }, "trim"));
+  memOptions.append(orowS("지난 대화 분석에 함께 기록", "지난 대화 분석 때 인물 위키도 함께 채워요. 묶음마다 AI 호출이 1번쯤 더 들어요.", S.backfillExtras !== false, (st, v) => { st.backfillExtras = v; }, "backfill"));
   // 2.2.11 지난 대화 분석 속도: 묶음 크기(한 번에 묻는 AI 응답 수)·동시 처리(요청 한도가 나면 자동으로 줄임)
   const selS = (label, v0, opts, set) => h("select", { class: "rb-input", "aria-label": label, style: "width:auto", onChange: (e) => save((st) => set(st, Number(e.target.value))) }, opts.map(([v, l]) => h("option", { value: v, selected: v === v0 }, l)));
   memOptions.append(h("div", { class: "rb-srow", id: "rb-mem-bfspeed" }, h("span", { class: "t" }, "지난 대화 분석 속도", h("small", null, "묶음을 크게 하면 호출 수가 줄고, 동시에 2~3개를 보내면 빨라져요. 요청 한도(429)가 나면 동시 처리를 자동으로 줄여요. 동시 처리는 앞 묶음 결과를 모른 채 읽어 기록이 조금 덜 이어질 수 있어요.")),

@@ -90,7 +90,7 @@ export function imageFoldCss() {
 [x-st-fw] { display: block; position: relative; width: 100%; margin: 2px 0 8px; }
 ${L} { width: fit-content; max-width: 100%; display: flex; align-items: center; ${lab} }
 ${L}::before { content: "›_"; display: inline-block; width: 1.6em; font-family: var(--st-mono); letter-spacing: -.08em; }
-${L}::after { content: "›"; display: inline-block; margin-left: .5em; font-size: 1.15em; transition: transform .15s; }
+${L}::after { content: "›"; display: inline-block; margin-left: .5em; font-size: 1.15em; transition: transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)); }
 [x-st-fw][x-open="1"] > [x-st-fl]::after { transform: rotate(90deg); }
 ${L}:hover { color: var(--st-fg); }
 [x-st-fw][x-open="0"] > :not([x-st-fl]) { ${hide} }
@@ -306,7 +306,7 @@ body[x-dusk-st][x-dusk-fold="0"] { padding-left: var(--st-sw) !important; box-si
 .st-user .st-body::before { content: "›"; color: var(--st-accent); font-weight: 700; margin-right: .6em; }
 .st-char .st-body::before { content: "•"; color: var(--st-dim); margin-right: .6em; }
 .st-user { align-items: stretch; }` : "",
-    `.st-btns { opacity: 0; transition: opacity .15s; font-size: 12px; margin-top: 2px; }
+    `.st-btns { opacity: 0; transition: opacity .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)); font-size: 12px; margin-top: 2px; }
 .st-msg:hover .st-btns { opacity: .8; }
 .st-btns button { color: var(--st-dim) !important; }
 .st-btns button:hover { color: var(--st-fg) !important; }

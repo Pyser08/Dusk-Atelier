@@ -9,7 +9,7 @@ export var NAV_CSS = `
 @media (hover:hover){.rb-nav-sec:hover{background:var(--rb-hover)}}
 .rb-nav-sec:focus-visible{outline:3px solid var(--rb-focus);outline-offset:2px}
 .rb-nav-sec .t{flex:1}
-.rb-nav-sec .chev{display:grid;place-items:center;color:var(--rb-mute);transition:transform .18s}
+.rb-nav-sec .chev{display:grid;place-items:center;color:var(--rb-mute);transition:transform .18s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .rb-nav-sec[aria-expanded=true] .chev{transform:rotate(90deg)}
 .rb-nav .ci{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:none;color:#fff;background:var(--k-grad)}
 .rb-nav .sec-memory{--k:#c48bff;--k-grad:linear-gradient(135deg,#ff8ec6,#8a7bff)}
@@ -62,7 +62,7 @@ export var NAV_CSS = `
 /* 레일(늘 펼침이 아닐 때): 아이콘만, 마우스를 올린 동안만 내용 위로 펼침(떼면 접힘). 키보드로 들어오면 .rb-nav-kbd */
 @media (min-width:761px){
   .rb-win:not(.rb-nav-pinned) .rb-navwrap{width:calc(68px + var(--nav-pl,0px))}
-  .rb-win:not(.rb-nav-pinned) .rb-nav{position:absolute;top:0;bottom:var(--nav-pb,0px);left:var(--nav-pl,0px);width:68px;z-index:30;padding:14px 10px;transition:width .18s ease,box-shadow .18s}
+  .rb-win:not(.rb-nav-pinned) .rb-nav{position:absolute;top:0;bottom:var(--nav-pb,0px);left:var(--nav-pl,0px);width:68px;z-index:30;padding:14px 10px;transition:width .18s ease,box-shadow .18s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
   .rb-win:not(.rb-nav-pinned) .rb-nav:hover{width:216px;box-shadow:var(--rb-shadow)}
   .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover) :is(a>span,a>small,.rb-nav-sec .t,.rb-nav-sec .chev,.rb-nav-mini .t,.rb-nav-more){opacity:0;pointer-events:none}
   .rb-win:not(.rb-nav-pinned) .rb-nav:not(:hover) .rb-nav-group{margin-left:0;padding-left:0;border-left-color:transparent}
@@ -107,7 +107,7 @@ export var NAV_CSS = `
 @media (max-width:760px){
   .rb-tabbar{height:72px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
   .rb-tabbar a{gap:3px;border-radius:16px;margin:0 3px}
-  .rb-tabbar a .ci{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;color:var(--rb-sub);background:var(--rb-hover);transition:background .15s,box-shadow .15s,color .15s}
+  .rb-tabbar a .ci{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;color:var(--rb-sub);background:var(--rb-hover);transition:background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),box-shadow .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),color .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
   .rb-tabbar a[aria-current=page]{color:var(--rb-text)}
   .rb-tabbar a[aria-current=page]::before{display:none}
   /* 2.2.0 네온 아이콘: 사이드바와 같은 모양, 지금 탭은 더 밝게 */

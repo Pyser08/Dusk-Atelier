@@ -94,8 +94,8 @@ export const SHEET_CSS = `
 .qs-list{display:flex;flex-direction:column}
 .qs-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);cursor:pointer}
 .qs-row small{display:block;font-size:11px;color:var(--muted)}
-.qs-row input[type=checkbox]{appearance:none;-webkit-appearance:none;flex-shrink:0;width:42px;height:24px;margin:0;border-radius:999px;background:var(--line);position:relative;cursor:pointer;transition:background .15s}
-.qs-row input[type=checkbox]::before{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}
+.qs-row input[type=checkbox]{appearance:none;-webkit-appearance:none;flex-shrink:0;width:42px;height:24px;margin:0;border-radius:999px;background:var(--line);position:relative;cursor:pointer;transition:background .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
+.qs-row input[type=checkbox]::before{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1))}
 .qs-row input[type=checkbox]:checked{background:var(--accent)}.qs-row input[type=checkbox]:checked::before{transform:translateX(18px)}
 .qs-field{display:grid;gap:5px;margin-bottom:10px;font-size:12px;color:var(--muted)}.qs-field input{min-height:40px;padding:6px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px}
 .qs-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
