@@ -81,11 +81,16 @@
       "id": "memory",
       "name": "장기기억·관계도",
       "category": "memory",
-      "version": "0.3.14",
+      "version": "0.3.15",
       "minCore": "2.2.4",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "notes": [
+        {
+          "v": "0.3.15",
+          "date": "2026-11-19",
+          "body": "- 관계 탭 같은 사람 두 번 뜨던 문제, 유저 이름 인물이 따로 생기던 문제를 고쳤어요."
+        },
         {
           "v": "0.3.14",
           "date": "2026-11-19",
@@ -100,16 +105,11 @@
           "v": "0.3.12",
           "date": "2026-11-19",
           "body": "- **전환이 더 쫀득하고 부드러워졌어요** — 화면이 바뀌거나 카드·창이 나타날 때 끝에서 아주 살짝 넘쳤다 돌아와요. 사라질 땐 빠르게 빠져요. 버튼을 누르면 살짝 눌렸다 튕기듯 돌아와요. ‘움직임 줄이기’를 켜 둔 기기에선 그대로 꺼져 있어요."
-        },
-        {
-          "v": "0.3.11",
-          "date": "2026-11-18",
-          "body": "- **설정에서 AI 호출이 드는 기능을 색으로 보여 줘요** — 장기 기억 설정의 기억 옵션·성인 항목·임베딩·Jev 옆에 배지가 붙어요: 초록 ‘호출 없음’, 파랑 ‘호출 +0 · 줄 추가’, 주황 ‘AI 호출 늘어남’, 보라 ‘다른 API 호출’. 배지의 i를 누르면 몇 번 부르는지 볼 수 있고, 기억 옵션 맨 위 ‘한 채팅에서 몇 번?’에서 전체 대략값을 봐요."
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "c1c8302d09c73c4d532a90ed144556eb226666adf095f24ddedb26795eba4988",
-      "size": 2053046
+      "sha256": "b3d1a2718a77f4efac86160a79e383aa19d6f604a69d2da3acc89485ce40fb34",
+      "size": 2054544
     },
     {
       "id": "cards",
@@ -130,8 +130,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/cards.js",
-      "sha256": "23a60b2b028c896948773a7b975df2cbe802bd1f3af5baef2a40d7ec104f45e2",
-      "size": 674739
+      "sha256": "cac61d19290ba5f86fe9bab97cf6eb9dde779e164aeec35560000c99d96fb500",
+      "size": 675029
     },
     {
       "id": "protlink",
