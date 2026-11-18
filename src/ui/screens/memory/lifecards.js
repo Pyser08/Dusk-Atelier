@@ -465,6 +465,8 @@ export const LIFE_CSS = `
 .rb-blegend .dv{margin-left:6px}.rb-blegend .dv::before{background:#9b7fe0!important;border-radius:2px!important}
 .rb-bz .hd{position:relative}.rb-bz .acts{order:9;display:inline-flex;gap:2px;margin-left:6px}.rb-bzb{width:22px;height:22px;border-radius:50%;border:0;background:transparent;color:var(--rb-mute);cursor:pointer;font-size:12px}@media (hover:hover){.rb-bzb:hover{background:var(--rb-surf);color:var(--rb-text)}}
 .rb-live{display:contents}
+.rb-ailegend .rb-ibub,.rb-aitag .rb-ibub{bottom:auto;top:calc(100% + 8px)}
+.rb-aitag .rb-ibub{left:auto;right:-8px;transform:translateY(-4px)}.rb-aitag .rb-ibtn.open+.rb-ibub{transform:none}@media (hover:hover){.rb-aitag .rb-ibtn:hover+.rb-ibub{transform:none}}
 `;
 
 export const lustCard = (env, card, doc, o) => live(doc.id, () => lustCard0(env, card, doc, o));

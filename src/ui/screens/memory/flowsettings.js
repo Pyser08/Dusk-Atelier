@@ -1,5 +1,9 @@
 // 기억 탭 설정: 추적 수준 3종 · 기능 카드 6장 · AI 모델(쉬운/고급) · 가져오기·사용량.
 // 리수폿 기능과 Dusk 기능을 구분 없이 "무엇을 기억하나"로 보여 준다. 저장 버튼 없이 바로 저장, 다음 턴부터 적용.
+import { aiTag } from "./aicost.js";
+import { ensureMemAddonCss } from "./memaddoncss.js";
+// 설정 줄 제목 옆에 AI 호출 배지(스위치 이름표는 글자 그대로 둔다)
+const withTag = (key, title, ...rest) => { const row = toggleRow(title, ...rest); row.querySelector("b")?.append(aiTag(key)); return row; };
 import { noteEdits, DUSK_FOLLOW } from "../../../engine/defaultfollow.js";
 import { h, replace, pickFiles } from "../../dom.js";
 import { defHint } from "../../defhint.js";
@@ -19,7 +23,8 @@ const NEEDS_URL = new Set(["ollama", "custom"]);
 const fmt = (n) => Number(n ?? 0).toLocaleString();
 
 const GK = { "무엇을 기억할까요?": "level", "기억 방식": "mode", "AI 모델": "model" };
-export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2.2.0 part: "basic"(설정 탭: 고급 모드·AI 모델·성인 항목 없음) · "adv"(고급 탭) · "adult"(NSFW 설정 장면·수위 탭)
+export async function flowSections(ctx, host, { redraw, part = "all" }) {
+  ensureMemAddonCss(ctx);   // i 설명(AI 호출 배지)용   // 2.2.0 part: "basic"(설정 탭: 고급 모드·AI 모델·성인 항목 없음) · "adv"(고급 탭) · "adult"(NSFW 설정 장면·수위 탭)
   const M = ctx.memory;
   if (!M.flow) return replace(host);
   const st = tracked(ctx, await M.flow.settings()), blocked = st.status().blocked;
@@ -122,7 +127,7 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
 
   // ---- 3) 흐름 방식
   const modeHost = h("div");
-  const paintMode = () => replace(modeHost, optionCards([{ value: "accurate", label: "더 정확하게 (권장)", text: "관련 인물 찾기·장면 정리를 더해 기억을 더 잘 찾아요. 호출이 늘어요." }, { value: "fast", label: "빠르게", text: "응답 뒤 모델 호출 1회. 키워드로 인물을 골라요. 오류가 더 잦을 수 있어요." }], flow.mode === "fast" ? "fast" : "accurate", async (v) => { await M.store.updateIndex((i) => { const before = structuredClone(i.settings); i.settings.flow = { ...(i.settings.flow ?? {}), mode: v }; i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); }); flow.mode = v; await apply(); }, "기억 방식"));
+  const paintMode = () => replace(modeHost, optionCards([{ value: "accurate", label: "더 정확하게 (권장)", text: "관련 인물 찾기·장면 정리를 더해 기억을 더 잘 찾아요. 응답 전 AI 호출이 1~2번 늘어요." }, { value: "fast", label: "빠르게", text: "응답 뒤 모델 호출 1회. 키워드로 인물을 골라요. 오류가 더 잦을 수 있어요." }], flow.mode === "fast" ? "fast" : "accurate", async (v) => { await M.store.updateIndex((i) => { const before = structuredClone(i.settings); i.settings.flow = { ...(i.settings.flow ?? {}), mode: v }; i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); }); flow.mode = v; await apply(); }, "기억 방식"));
   paintMode();
 
   // ---- 3-2) 성인 항목 (기본 꺼짐, 접힌 곳): 욕구 기록 → 월경·임신 기록(스위치 + 임신 확률 배수)
@@ -134,10 +139,10 @@ export async function flowSections(ctx, host, { redraw, part = "all" }) {   // 2
     const rateLabel = h("b", null, `×${rate}`, defHint("×1"));
     const slider = h("input", { type: "range", class: "rb-range", min: 0.5, max: 3, step: 0.1, value: rate, "aria-label": "임신 확률 배수", onInput: (e) => { rateLabel.textContent = `×${Number(e.target.value)}`; }, onChange: (e) => ed((s) => { s.features.openness.cycleRate = Math.min(3, Math.max(0.5, Number(e.target.value) || 1)); }) });
     replace(adultHost, sec("성인 항목 (기본 꺼짐)", "성인 인물의 욕구·월경·임신을 따라가요. 켜지 않으면 아무것도 기록하지 않아요.",
-      toggleRow("욕구 기록", "성인 항목이에요. 성적 욕망·이상성향을 함께 기록하고, 성인 프로필·장면 판단·월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; s.paraphiliaEnabled = v; if (!v) s.features.openness.cycle = false; })),   // addon-rebuild: 이상성향 기록은 욕구 기록과 늘 함께
-      toggleRow("월경·임신 기록", "이야기 속 날짜로 주기·임신·출산을 프로그램이 셈해요. 날짜가 없는 턴은 아무것도 움직이지 않아요. 켜면 필요한 설정도 함께 켜져요.", cycle, (v) => ed((s) => { if (v) s.features.openness.enabled = true; s.features.openness.cycle = v; })),
+      withTag("desire", "욕구 기록",  "성인 항목이에요. 성적 욕망·이상성향을 함께 기록하고, 성인 프로필·장면 판단·월경·임신 기록의 바탕이 돼요.", desire, (v) => ed((s) => { s.sexualDesireEnabled = v; s.paraphiliaEnabled = v; if (!v) s.features.openness.cycle = false; })),   // addon-rebuild: 이상성향 기록은 욕구 기록과 늘 함께
+      withTag("cycle", "월경·임신 기록",  "이야기 속 날짜로 주기·임신·출산을 프로그램이 셈해요. 날짜가 없는 턴은 아무것도 움직이지 않아요. 켜면 필요한 설정도 함께 켜져요.", cycle, (v) => ed((s) => { if (v) s.features.openness.enabled = true; s.features.openness.cycle = v; })),
       cycleNote(snap, ed),
-      desire ? toggleRow("노골적인 묘사 수위", "기록 문장이 직설적이 돼요. 꺼 두면 순화해서 적어요.", snap.explicitSexualStyleEnabled === true, (v) => ed((s) => { s.explicitSexualStyleEnabled = v; })) : null,
+      desire ? withTag("explicit", "노골적인 묘사 수위",  "기록 문장이 직설적이 돼요. 꺼 두면 순화해서 적어요.", snap.explicitSexualStyleEnabled === true, (v) => ed((s) => { s.explicitSexualStyleEnabled = v; })) : null,
       cycle ? h("label", { class: "rb-mem-field" }, h("span", null, "임신 확률 배수 (0.5~3)"), slider, rateLabel) : null,
       cycle ? btn("기본값으로", { size: "sm", onClick: () => ed((s) => { s.features.openness.cycleRate = 1; }) }) : null));
   };
