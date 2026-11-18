@@ -333,6 +333,21 @@ const isAdultProfileOf = (f, d) => Object.keys(f?.nsfw?.[d.id]?.sexual ?? {}).le
 export function hotActors(f, at = 90) {
   const out = [], turn = Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0;
   for (const d of docsOf(f)) { const L = f?.life?.p?.[d.id]; if (!L || L.lust < at || turn <= L.refr || !isAdultProfileOf(f, d)) continue;
-    const fe = feelOf(f, namesOf(d), turn); if (fe.top) out.push({ actor: d.title, target: fe.top }); }
+    const fe = feelOf(f, namesOf(d), turn); out.push({ actor: d.title, target: fe.top || "{{user}}" }); }   // 끌림 기록이 아직 없으면 {{user}}에게
   return out;
+}
+// 확정된 계획을 장면 판단(folder.drive)에 실제 목표로 저장한다(지금 상태 카드에 보이고, 다음 요청에서 반드시 움직임). 반환: 바뀐 글
+const gk = (a, t) => `${nk(a)}>${nk(t)}`;
+export function ensureHotGoals(f, at = 90) {
+  const changed = []; if (!f) return changed;
+  const hot = hotActors(f, at); if (!hot.length) return changed;
+  f.drive ??= { turn: 0, goals: {}, rest: {}, log: [] }; f.drive.goals ??= {};
+  for (const { actor, target } of hot) {
+    const lust = Math.round(lustOfName(f, actor) ?? at);
+    const mine = Object.entries(f.drive.goals).filter(([, g]) => nk(g.actor) === nk(actor) && g.kind === "sex");
+    if (mine.length) { for (const [k, g] of mine) if ((g.desire ?? 0) < lust) f.drive.goals[k] = { ...g, desire: lust }; continue; }
+    f.drive.goals[gk(actor, target)] = { actor, target, kind: "sex", want: "참아 온 성욕을 풀고 싶다", move: "몸이 먼저 반응해 욕구를 숨기지 못하고, 자기 성격대로 상대에게 다가가 신호를 보낸다", desire: lust, rung: 0, fulfilled: 0, streak: 0, at: f.drive.turn ?? 0, last: null, hot: true };
+    changed.push(`${actor}→${target === "{{user}}" ? "{{user}}" : target} 달아오름 ${lust} · 성관계 계획 확정`);
+  }
+  return changed;
 }

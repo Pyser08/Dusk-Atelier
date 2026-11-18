@@ -101,7 +101,7 @@ export var MANAGEHUB_CSS = `
 .rb-toc-hit{animation:rbtochit 1.2s ease}
 @keyframes rbtochit{0%{box-shadow:0 0 0 2px #6f9dff,0 0 18px color-mix(in srgb,#6f9dff 45%,transparent)}100%{box-shadow:none}}
 .rb-skin-glass .rb-settoc{background:var(--rb-glass-bg);border-color:var(--rb-glass-line,rgba(255,255,255,.2))}
-@media (max-width:760px){.rb-set2{grid-template-columns:minmax(0,1fr);gap:12px}.rb-settoc{position:static;flex-direction:row;overflow-x:auto;scrollbar-width:none;padding:6px}.rb-settoc-i{padding:7px 12px}}
+@media (max-width:760px){.rb-set2{grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;align-content:start;gap:12px}.rb-settoc{position:static;flex-direction:row;overflow-x:auto;scrollbar-width:none;padding:6px 22px 6px 6px;min-height:max-content;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent)}.rb-settoc-i{padding:7px 12px}}
 .rb-lite .rb-mantile .ico,.rb-lite .rb-plcat::before,.rb-lite .rb-pl-tl::before,.rb-lite .rb-pl-tl li::before{box-shadow:none}
 @media (prefers-reduced-motion:reduce){.rb-toc-hit{animation:none}}
 /* 편집기(B안): 목록 색띠 + 색 설명 · 탭 개수/경고 · 묶음 카드 · 상태 줄 */

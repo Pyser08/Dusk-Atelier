@@ -4,7 +4,7 @@ import { applyDrive, emptyDrive } from "../engine/scenedrive.js";
 import { sameKoreanPerson } from "../engine/namekr.js";
 import { logEvent } from "./memlog.js";
 import { applyHumanReports } from "../engine/humanitems.js";
-import { tickLife, usesToPrefs } from "../engine/nsfwlife.js";
+import { tickLife, usesToPrefs, ensureHotGoals } from "../engine/nsfwlife.js";
 import { readGauge } from "./gaugemult.js";
 import { pruneWiki } from "../engine/wikiprune.js";
 
@@ -54,6 +54,7 @@ export function applyLifeTurn(f, { events = [], present = [], gauge = null, text
   const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = f?.wiki?.people?.profiles?.[d.id];
     return { interest: n?.sexual?.eroticInterest ?? 50, mult: n?.lustMult ?? 1, spont: n?.sexual?.sexualSpontaneity, initiative: n?.axes?.initiative, when, boost: [n?.boost?.desire !== false && pr?.sexualDesire?.text, n?.boost?.para !== false && pr?.paraphilia?.text].filter(Boolean) }; };
   const changed = tickLife(f, { turn, present: who, events, gauge, text }, profOf);
+  changed.push(...ensureHotGoals(f));   // 달아오름 90↑ → 장면 판단에 성관계 계획을 실제로 저장
   // 자주 쓴 체위·플레이 → 선호
   for (const [id, L] of Object.entries(f.life?.p ?? {})) {
     if (!f.nsfw?.[id] || !Object.keys(L.uses ?? {}).length) continue;

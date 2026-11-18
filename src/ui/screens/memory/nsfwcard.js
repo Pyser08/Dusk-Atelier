@@ -149,6 +149,7 @@ export async function importNsfw(env, doc) {
 
 // ── 지금 상태: 이 인물이 노리는 것·이 인물을 노리는 쪽·쉬는 턴(장면 판단) ──
 export function nsfwStatusCard(env, card, doc) {
+  if (!doc) return null;   // 위키 문서가 아직 없는 인물
   const d = driveOf(env.folder?.drive, doc.title);
   if (!d.aiming.length && !d.aimedAt.length && !d.restLeft) return card("지금 상태", [note("아직 장면 계획이 없어요. 성인 항목이 켜져 있으면 대화에서 이 인물이 누군가를 원할 때 생겨요.")], null, "rb-nsfw-base");
   const rung = (g) => h("span", { class: "track", role: "img", "aria-label": `단계 ${g.rung ?? 0}/5`, style: "display:inline-block;width:80px;height:6px;border-radius:3px;background:var(--rb-line2);overflow:hidden;vertical-align:middle;margin:0 6px" }, h("i", { style: { display: "block", height: "100%", width: `${((g.rung ?? 0) / 5) * 100}%`, background: "var(--rb-accent, #e07aa6)" } }));
@@ -163,6 +164,7 @@ export function nsfwStatusCard(env, card, doc) {
 const NS = "http://www.w3.org/2000/svg";
 const svgEl = (tag, attrs = {}, ...kids) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v)); for (const c of kids) if (c) e.append(c); return e; };
 export function nsfwTempCard(env, card, doc) {
+  if (!doc) return null;
   const list = emoTemp(env.folder, doc.title); if (!list.length) return null;
   const w = 300, hh = 96, padR = 34;
   const rows = list.map((t) => {

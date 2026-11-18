@@ -198,3 +198,14 @@ test("욕망·이상성향 반응은 기본 켜짐(끈 것만 꺼짐)", () => {
   g.cursor = { at: 2 }; applyLifeTurn(g, { present: ["유나"], text: "손목을 묶었다" });
   assert.ok(on > g.life.p.a.lust + 5);
 });
+
+test("달아오름 90↑ 확정: 장면 판단에 계획이 실제로 저장되고, 끌림 기록이 없어도 상대({{user}})를 정한다", () => {
+  const f = folder(); f.cursor = { at: 10 }; f.drive = { turn: 3, goals: {}, rest: {}, log: [] };
+  f.life = { turn: 9, p: { a: { lust: 96, refr: -1, fat: 0, sex: { n: 0, by: {} }, uses: {}, met: {}, lover: {}, temp: {} } } };
+  applyLifeTurn(f, { present: ["유나"] });
+  const goals = Object.values(f.drive.goals).filter((g) => g.actor === "유나");
+  assert.equal(goals.length, 1); assert.equal(goals[0].kind, "sex"); assert.equal(goals[0].target, "{{user}}"); assert.ok(goals[0].desire >= 90);
+  // 이미 성관계 목표가 있으면 새로 만들지 않고 욕구만 올린다
+  applyLifeTurn(f, { present: ["유나"] });
+  assert.equal(Object.values(f.drive.goals).filter((g) => g.actor === "유나").length, 1);
+});
