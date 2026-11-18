@@ -36,12 +36,12 @@ export async function inheritFromParent(store, chaId, chatId, messages, folder =
 }
 
 // messages가 비었으면(채팅을 못 읽은 경우 등) 전부 고아로 오인하지 않도록 대조를 건너뛴다.
-export async function loadReconciled(store, chaId, chatId, messages) {
+export async function loadReconciled(store, chaId, chatId, messages, index = null) {
   let folder = await store.getFolder(String(chaId), String(chatId));
   if (!hasMemory(folder) && Array.isArray(messages) && messages.length >= 6) {
     try { if (await inheritFromParent(store, String(chaId), String(chatId), messages, folder)) folder = await store.getFolder(String(chaId), String(chatId)); }
     catch (e) { logFailure({ area: "분기 기억 이어받기", title: "분기한 채팅이 원래 채팅의 기억을 이어받지 못했어요", error: e, fallback: "기억 없이 시작해요", ctx: { 채팅: String(chatId), 메시지: messages.length } }); }
   }
-  if (folder && Array.isArray(messages) && messages.length) reconcile(folder, messages);
+  if (folder && Array.isArray(messages) && messages.length) reconcile(folder, messages, index);
   return folder;
 }

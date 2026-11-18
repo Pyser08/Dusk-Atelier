@@ -19,7 +19,8 @@ function salvage(s) {
 }
 export const looksLikeAnalysis = (o) => o && typeof o === "object" && !Array.isArray(o) && (Array.isArray(o.people) || (o.scene && typeof o.scene === "object"));
 export function parseJson(raw) {
-  const s = String(raw ?? "").replace(/```(?:json)?/gi, "").trim();
+  // 2.2.11: 사고 출력 모델의 <Thoughts>…</Thoughts>(provider-manager)·<think>…</think> 안 중괄호를 JSON으로 잘못 잡지 않게 먼저 지운다
+  const s = String(raw ?? "").replace(/<(Thoughts|think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, "").replace(/^[\s\S]*?<\/(?:Thoughts|think|thinking|reasoning)>/i, "").replace(/```(?:json)?/gi, "").trim();
   const a = s.indexOf("{"), b = s.lastIndexOf("}");
   if (a < 0) throw new Error("JSON 객체를 찾을 수 없어요.");
   if (b > a) {

@@ -33,7 +33,7 @@ async function readJson(res) {
   try { const t = typeof res.text === "function" ? await res.text() : res.body ?? res.data; return typeof t === "string" ? JSON.parse(t) : t; } catch { return null; }
 }
 
-// { ok, version, url, via, error }
+// { ok, version, engine(서버 분석 엔진을 만든 Atelier 버전, 2.2.11~ · 옛 서버는 ""), url, via, error }
 export async function probeCellar(api, url) {
   if (!(await loadCellarEnabled(api))) return { ok: false, url, off: true, error: "Cellar를 꺼 두었어요" };
   const target = `${url}/cellar/health`;
@@ -47,7 +47,7 @@ export async function probeCellar(api, url) {
       if (!res || !(res.status >= 200 && res.status < 300)) { error = res ? `응답 ${res.status}` : "응답이 없어요"; continue; }
       const j = await readJson(res);
       if (j?.name !== "dusk-cellar") { error = "Dusk Cellar가 아닌 곳이 응답했어요"; continue; }
-      return { ok: true, version: String(j.version ?? ""), url, via, auth: j.auth !== false, features: Array.isArray(j.features) ? j.features.map(String) : [] };
+      return { ok: true, version: String(j.version ?? ""), engine: String(j.engine ?? ""), url, via, auth: j.auth !== false, features: Array.isArray(j.features) ? j.features.map(String) : [] };
     } catch (e) { error = String(e?.message ?? e); }
   }
   return { ok: false, url, error };

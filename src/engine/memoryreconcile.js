@@ -83,8 +83,9 @@ export function cleanOrphans(folder, messages) {
 
 // legacy(앵커 없는) 기록·장면은 건드리지 않는다. 반환: 고아로 바뀐 기록·장면 수.
 // rels/open 항목은 src가 있으면 그 응답으로, 없으면(옛 데이터) 같은 at_ms의 기록·장면이 전부 고아인지로 판정한다.
-export function reconcile(folder, messages) {
-  const idx = indexMessages(messages);
+// index: 같은 메시지 목록으로 미리 만든 indexMessages 결과(지난 대화 분석이 묶음마다 채팅 전체를 다시 해시하지 않게, 2.2.11)
+export function reconcile(folder, messages, index = null) {
+  const idx = index ?? indexMessages(messages);
   let orphans = 0;
   const items = [...Object.values(folder.people ?? {}).flatMap((p) => p.records ?? []), ...(folder.scenes ?? [])];
   const byMs = new Map();

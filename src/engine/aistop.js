@@ -8,7 +8,7 @@ var GRACE_MS = 3000;   // 중지 직후 자동 재시도·대기 작업이 곧�
 
 var active = new Map();   // id → { ctrl, label, at }
 var listeners = new Set();
-var tasks = new Map();    // id → { label, stopped } — aiTask로 연 '작업'(여러 AI 호출을 묶는 단위: 기억 기록, 로어북 정리…)
+var tasks = new Map();    // id → { label, stopped, ctrl } — aiTask로 연 '작업'(여러 AI 호출을 묶는 단위: 기억 기록, 로어북 정리…)
 var seq = 0, stoppedAt = 0;
 var emit = () => { for (const f of listeners) { try { f(active.size); } catch { /* 화면 쪽 오류는 무시 */ } } };
 
@@ -33,11 +33,12 @@ export function activeTasks() {
   return out;
 }
 // 여러 AI 호출을 하나의 작업으로 묶는다. 생성 중지를 누르면 이 작업은 끝날 때까지 새 AI 호출이 바로 막힌다(뒤에 줄 선 호출까지 멈춤)
+// 2.2.11: fn(signal) — 생성 중지를 누르면 이 신호가 끊긴다(지난 대화 분석처럼 오래 도는 작업이 다음 묶음으로 넘어가지 않게·서버 작업 취소)
 export async function aiTask(label, fn) {
-  const id = ++seq;
-  tasks.set(id, { label: describeAi(label) || String(label ?? ""), stopped: false });
+  const id = ++seq, ctrl = new AbortController();
+  tasks.set(id, { label: describeAi(label) || String(label ?? ""), stopped: false, ctrl });
   emit();
-  try { return await fn(); }
+  try { return await fn(ctrl.signal); }
   finally { tasks.delete(id); emit(); }
 }
 // 중지 뒤에 막을 때인가: 중지된 작업이 아직 열려 있거나, 중지(또는 막힌 시도) 직후
@@ -72,7 +73,7 @@ export function trackAi(label = "", signal = null) {
 }
 export function stopAll() {
   stoppedAt = Date.now();
-  for (const t of tasks.values()) t.stopped = true;
+  for (const t of tasks.values()) { t.stopped = true; try { t.ctrl?.abort(); } catch { /* 이미 끊김 */ } }
   const list = [...active.values()];
   for (const a of list) { try { a.ctrl.abort(); } catch { /* 이미 끝남 */ } }
   if (tasks.size) emit();   // 중지된 작업 이름을 버튼에서 뺀다
