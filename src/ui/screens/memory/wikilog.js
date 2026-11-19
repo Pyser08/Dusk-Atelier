@@ -6,7 +6,7 @@ import { fail } from "./common.js";
 import { toolsFor } from "./aitools.js";
 
 const ACTION = { create: "새로 만듦", update: "고침", delete: "지움", restore: "되돌림" };
-const STATUS = { pending: "대기", completed: "완료", failed: "실패", manual: "직접", "rolled-back": "취소됨" };
+const STATUS = { pending: "대기", completed: "완료", failed: "실패", manual: "직접", "rolled-back": "취소됨", superseded: "이전 변경 유지" };
 const titleOf = (e) => e.after?.title ?? e.before?.title ?? e.documentId;
 
 // 순수: 화면에 쓸 요약(시험 가능). scope = 위키 범위 스냅샷

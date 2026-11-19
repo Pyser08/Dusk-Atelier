@@ -23,7 +23,7 @@ export function docByName(f, name) {
 }
 
 // ── 월경 주기 단계(성욕 보정용) ──
-const dayN = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5 : NaN; };
+const dayN = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); if (!m) return NaN; const t = new Date(0); t.setUTCFullYear(+m[1], +m[2] - 1, +m[3]); return t.getTime() / 864e5; };   // 0~99년도 그대로(판타지 연호)
 export function cycleOf(doc) {
   const sec = (doc?.sections ?? []).find((x) => x?.provenance?.slotId === "cycle.state" || x?.heading === "월경·임신");
   return sec ? parseCycleBody(sec.body) : null;

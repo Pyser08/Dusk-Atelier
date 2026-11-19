@@ -40,6 +40,7 @@ export const FEATURES = [
   { t: "게이지 배수 (오를 때 · 내릴 때)", k: "호감도 배수 감정 게이지 속도 올라가는 내려가는 배율 multiplier 성격 막대 소유욕 독점욕 달아오름 성욕 게이지 달아오르는 속도", path: `${M} › 설정 › 게이지 배수`, tab: "memory", mem: MSET, find: "게이지 배수", addon: "memory" },
   { t: "기억 넣기 토큰 · 남길 최근 턴", k: "주입 토큰 예산 inject 요약된 옛 대화 빼기 trim", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "기억 넣기", addon: "memory" },
   { t: "나에 대한 기억", k: "user 페르소나 내 정보 감정", path: `${M} › 나에 대한 기억`, tab: "memory", mem: { page: "me" }, addon: "memory" },
+  { t: "장기 기억 옮기기 (파일로 내보내기·불러오기)", k: "장기 기억 백업 이사 옮기기 다른 기기 포켓바드 리스바드 새 폴더 내보내기 가져오기 불러오기 파일 export import 이전", path: `${M} › 채팅 고르기 › 기록 보기 › 더보기 › 장기 기억 파일로 내보내기`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "다른 채팅의 기억 보기", k: "봇별 기억 채팅 목록 인물 위키", path: `${M} › 다른 채팅`, tab: "memory", mem: { page: "bots" }, addon: "memory" },
   // 2.2.4 기능 찾기 보강: 자주 찾는 기억 기능
   { t: "임베딩 (의미 검색)", k: "embedding 의미 검색 voyage 보야지 벡터 뜻 비슷한 기억 원문 회상 raw recall api 키", path: `${M} › 설정 › 임베딩`, tab: "memory", mem: MSET, find: "임베딩", addon: "memory" },
