@@ -61,3 +61,8 @@ test("‘플러그인 허용’으로 찾으면 Dusk 기능 허용(플러그인 
   assert.ok(f, "결과에 있어야 함");
   assert.equal(f.tab, "plugins"); assert.equal(f.sub, "interop");
 });
+
+test("장기기억 0.3.20 갈래 보기를 찾는다", () => {
+  const f = findFeatures("분기").find((x) => x.t === "갈래 보기");
+  assert.ok(f && f.tab === "branches" && f.addon === "memory");
+});

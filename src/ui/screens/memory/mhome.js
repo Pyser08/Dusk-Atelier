@@ -138,7 +138,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   if (!cur) {
     // 열린 채팅이 없어도 전체 설정(기억 옵션·임베딩·프롬프트·고급)은 바꿀 수 있다
     const idx0 = await M.store.getIndex();
-    const { memorySettings, memOptions } = await settingsCards(ctx, M, idx0, redraw);
+  const { memorySettings, memOptions } = await settingsCards(ctx, M, idx0, redraw);
     const gHost = h("div");
     if (ctx.prefs.advanced) {
       const body = h("div");
@@ -267,6 +267,12 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     h("span", { class: "t" }, "인물 관계도", h("small", null, npcN ? `인물 ${npcN}명의 거리와 관계를 한눈에 봐요.` : "인물이 쌓이면 거리와 관계를 한눈에 볼 수 있어요.")),
     h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
 
+  // 갈래 보기 한 줄 카드(장기기억 0.3.20): 분기한 채팅들을 나무로, 갈래별 호감 비교
+  const branchRow = h("button", { type: "button", class: "rb-card bordered rb-srow rb-me-entry", id: "rb-mem-go-branches", onClick: () => ctx.go("branches") },
+    h("span", { class: "rb-mem-av rb-me-av sm", "aria-hidden": "true" }, icon("split", 18)),
+    h("span", { class: "t" }, "갈래 보기", h("small", null, "분기한 채팅들을 나무로 보고 갈래마다 호감을 비교해요.")),
+    h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+
   const { memorySettings, memOptions } = await settingsCards(ctx, M, idx, redraw, cur, sw);
 
   // ── 고급: 한 줄씩 접은 묶음. PC에서는 기억 방식을 접지 않고 오른쪽 맨 위에 둔다 ──
@@ -307,7 +313,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   const panels = {
     // 기록 칸은 없앰: 한눈에 위쪽 = 바로가기 | 나·관계도, 아래 = 최근 기록(12건) 전체 폭
     // 나·관계도는 바로가기와 같은 칸 모양(조금 더 넓게, 설명 읽기)
-    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow))), failBtn, allBtn, recFull),
+    glance: h("div", { class: "rb-mem4-col" }, h("div", { class: "rb-mem4-top" }, shortcuts, h("section", { class: "rb-mem4-wide", "aria-label": "인물" }, h("h2", null, "인물"), h("div", { class: "rb-mem4-widegrid" }, meRow, mapRow, branchRow))), failBtn, allBtn, recFull),
     opt: h("div", { class: "rb-mem4-col rb-mem4-set" }, h("div", { class: "rb-mem4-two rb-mem4-optrow" }, h("div", { class: "rb-mem4-col" }, memOptions), h("div", { class: "rb-mem4-col rb-mem4-side" }, potRow(ctx, m, redraw), erosyncRow(ctx, m, redraw), gaugeMultCard(ctx), memorySettings)), advEl),
   };
   const { tabs: tabRow, panels: panelEls } = memTabs(m, TABS4, panels);

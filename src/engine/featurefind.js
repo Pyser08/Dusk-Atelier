@@ -55,6 +55,7 @@ export const FEATURES = [
   { t: "지난 대화 분석 속도 (묶음 크기·동시 처리)", k: "백필 backfill 묶음 크기 동시 처리 병렬 빠르게 429", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "지난 대화 분석 속도", addon: "memory" },
   { t: "인물 위키 (인물·상황·시간선)", k: "인물 위키 wiki 문서 인물 정보 상황 시간선 타임라인 장면 기록 보기 성격 기본 성격 6축 호감 관계 진도 감정", path: `${M} › 채팅 고르기 › 기록 보기`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "인물 관계도", k: "관계도 relationship map 관계 그래프 연결 누가 누구 남매 연인 애인 이전 턴 지난 턴 되돌려 보기", path: "장기 기억 › 인물 관계도", tab: "relmap", addon: "memory" },
+  { t: "갈래 보기", k: "갈래 분기 브랜치 branch fork 복사한 채팅 갈라진 채팅 나무 다른 선택 비교 호감 비교", path: "장기 기억 › 갈래 보기", tab: "branches", addon: "memory" },
   { t: "같은 인물 합치기 · 위키 점검", k: "합치기 중복 같은 이름 별칭 merge 되돌리기 위키 점검 문서 이름 맞추기 빈 문서", path: `${M} › 인물 › 더보기`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   // 설정·도구
   { t: "캐시 배치 (하이파 분리·이어붙이기)", k: "cache 캐시 하이파 hypa 연관 랜덤 이어붙이기 로어북 제미나이 gemini", path: "작업실 › 프로바이더 › 캐시 배치", tab: "provider" },
