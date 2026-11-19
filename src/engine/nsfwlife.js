@@ -36,6 +36,15 @@ export function phaseOf(st) {
   const day = (diff % L) + 1, ov = L - 14;
   return day <= 5 ? "period" : day < ov - 4 ? "after" : day <= ov + 1 ? "fertile" : day <= L - 4 ? "luteal" : "pre";
 }
+// 2.2.19: 주기 단계별 기분·몸 상태(성격 자체는 그대로, 그날의 결만 바꿈). 주입은 한국어 짧은 구절, 화면은 label.
+export const PHASE_MOOD = Object.freeze({
+  period: { label: "생리 중 · 몸이 무겁고 예민", line: "생리 중: 아랫배가 묵직하고 쉽게 지침, 평소보다 예민하고 혼자 쉬고 싶어함" },
+  after: { label: "생리 끝 · 가볍고 개운", line: "생리 끝남: 몸이 가볍고 기분이 맑아 활발함" },
+  fertile: { label: "배란기 · 자신감·끌림 올라감", line: "배란기: 자신감이 오르고 꾸미고 싶어하며 끌리는 상대에게 더 적극적" },
+  luteal: { label: "배란 지남 · 차분하고 나른함", line: "배란 지남: 차분하고 나른하며 따뜻한 것·단 것이 당김" },
+  pre: { label: "생리 앞 · 짜증·감정 기복", line: "생리 앞(PMS): 붓고 피곤해 작은 일에 짜증·서운함이 커지고 감정 기복이 있음" },
+  preg: { label: "임신 중 · 몸 변화에 민감", line: "임신 중: 몸 변화에 민감하고 쉽게 피곤하며 보호받고 싶어함" },
+});
 export const PHASE_MULT = Object.freeze({ period: 0.6, after: 1, fertile: 1.6, luteal: 1.1, pre: 0.9, preg: 0.8 });
 
 // ── 감정(이 인물이 남에게 느끼는 것 중 가장 큰 값) ──
@@ -284,7 +293,7 @@ export function lifeView(f, doc, turn) {
     partners: by.map((b) => ({ name: b.name, n: b.n ?? 0, prior: b.prior ?? null, est: !!b.est, total: b.total, fam: famStep(b.total), sat: satAvg(b.sat) })), uses,
     miss: missOf(L, turn, fe.aff), jealous: jealousyOf(f, names, turn),
     temp: Object.values(L.temp ?? {}).map((t) => ({ name: t.name, h: t.h, trust: t.trust ?? [], ...trendOf(t.h), trustTrend: trendOf(t.trust ?? []) })).filter((t) => t.h.length).slice(0, 6),
-    ann, alerts: annAlerts(ann, turn, cyc?.date ?? ""), phase, preg: PREG_CHANCE[phase] ?? null,
+    ann, alerts: annAlerts(ann, turn, cyc?.date ?? ""), phase, phaseMood: PHASE_MOOD[phase] ?? null, preg: PREG_CHANCE[phase] ?? null,
     mood, moodTop: mood[0] ?? null, habits: Object.values(L.habits ?? {}).filter((x) => x.list?.length),
     trace: [...(L.trace ?? [])].reverse(), sat: satAvg(L.sat),
   };
@@ -295,14 +304,14 @@ export const LIFE_INJECT_TITLE = "[Body & mood state — computed; let it colour
 // adult: 성인 프로필이 있는 인물만 성욕·경험 줄을 넣는다. 토큰 절약: '오늘' 한 줄 + 꼭 필요한 것만
 export function lifeLine(name, v, adult = true) {
   if (!v) return "";
-  const parts = [`오늘 ${todayLine(v, adult)}`,
+  const parts = [`오늘 ${todayLine(v, adult)}`, v.phaseMood?.line,
     adult && v.sinceSex != null && v.sinceSex >= ABSTAIN_AT && `오래 못 함(${v.sinceSex}턴)`,
     adult && v.partners.length && `경험: ${v.partners.slice(0, 2).map((p) => `${p.name === "{{user}}" ? "{{user}}" : p.name}와 ${p.fam}`).join(", ")}`, adult && v.lust >= 90 && "욕구가 행동으로 드러남",
     v.miss && `${v.miss.label}(${v.miss.gap}턴 못 봄)`, v.jealous[0] && `${v.jealous[0].of}가 ${v.jealous[0].rival}에게 끌려 질투`,
     ...v.temp.filter((t) => t.label !== "그대로" && t.label !== "변화 없음").slice(0, 2).map((t) => `${t.name}와 ${t.label}`),
     ...v.habits.slice(0, 1).map((x) => `${x.name}와 둘만의 버릇: ${x.list.slice(-2).join(", ")}`),
     ...v.alerts.slice(0, 1).map((a) => `${a.label} ${a.why} — 의식하고 있음`)].filter(Boolean);
-  return `- ${name}: ${parts.join(" / ")}`.slice(0, 260);
+  return `- ${name}: ${parts.join(" / ")}`.slice(0, 320);
 }
 export const isAdultProfile = (n) => !!n && Object.keys(n.sexual ?? {}).length > 0;
 export function lifeSection(f, present = [], turn, max = 4) {
