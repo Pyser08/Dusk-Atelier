@@ -13,11 +13,14 @@ function cycleRate(settings) { const value = Number(settings?.features?.openness
 
 // ---- dates ----
 const cyclePad = n => String(n).padStart(2, '0');
-const cycleIsoDate = (y, m, d) => y + '-' + cyclePad(m) + '-' + cyclePad(d);
-const cycleValidDate = (y, m, d) => { const t = new Date(Date.UTC(y, m - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d; };
-function cycleDayNumber(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '')); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000 : NaN; }
+const cycleIsoDate = (y, m, d) => String(y).padStart(4, '0') + '-' + cyclePad(m) + '-' + cyclePad(d);
+// 2.2.18: Date.UTC는 0~99년을 1900년대로 바꾼다 → setUTCFullYear로 연도를 그대로(판타지 연호 300년·12년)
+const cycleUtc = (y, m, d) => { const t = new Date(Date.UTC(2000, m - 1, d)); t.setUTCFullYear(y, m - 1, d); return t; };
+const cycleValidDate = (y, m, d) => { const t = cycleUtc(y, m, d); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d; };
+function cycleDayNumber(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '')); return m ? cycleUtc(+m[1], +m[2], +m[3]).getTime() / 86400000 : NaN; }
 function cycleAddDays(iso, days) { const t = new Date((cycleDayNumber(iso) + days) * 86400000); return cycleIsoDate(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate()); }
-const CYCLE_FULL_DATE = /(\d{4})\s*(?:년|[.\-/])\s*(\d{1,2})\s*(?:월|[.\-/])\s*(\d{1,2})\s*일?/g;
+// 2.2.18: '년'이 붙으면 1~4자리 연도도(제국력 300년). 구분자(./-)만 쓴 날짜는 4자리 연도만.
+const CYCLE_FULL_DATE = /(?<!\d)(?:(\d{1,4})\s*년|(\d{4})\s*[.\-/])\s*(\d{1,2})\s*(?:월|[.\-/])\s*(\d{1,2})\s*일?/g;
 const CYCLE_MONTH_DAY = /(\d{1,2})\s*월\s*(\d{1,2})\s*일/g;
 /**
  * The story date of this reply. A date on a short or bracketed line (a status line) wins over one inside prose.
@@ -28,7 +31,7 @@ export function storyDateFromText(text, previous = '') {
   lines.forEach((line, index) => {
     const status = line.trim().length <= 80 || /[\[\]【】|]/.test(line);
     const full = [...line.matchAll(CYCLE_FULL_DATE)];
-    for (const m of full) if (cycleValidDate(+m[1], +m[2], +m[3])) found.push({ iso: cycleIsoDate(+m[1], +m[2], +m[3]), status, index, full: true });
+    for (const m of full) { const y = +(m[1] ?? m[2]); if (cycleValidDate(y, +m[3], +m[4])) found.push({ iso: cycleIsoDate(y, +m[3], +m[4]), status, index, full: true }); }
     if (full.length) return;
     for (const m of line.matchAll(CYCLE_MONTH_DAY)) {
       const base = /^\d{4}/.exec(previous)?.[0] || '2000';

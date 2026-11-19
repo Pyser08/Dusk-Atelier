@@ -13,6 +13,7 @@ test("띄어쓰기·가운뎃점이 달라도 찾는다", () => {
   assert.equal(findFeatures("월경 임신")[0].t, "월경·임신 기록");
   assert.equal(findFeatures("서사 관계")[0].t, "서사관계 전용 모드 · 자동 기록 세부");
   assert.ok(findFeatures("api 키").some((f) => /AI 모델/.test(f.t)));
+  assert.ok(findFeatures("장기 기억 옮기기").some((f) => /장기 기억 옮기기/.test(f.t)), "11-19 제보: 기억 이사 메뉴 찾기");
 });
 
 test("이름에 든 낱말이 다른 말에만 든 것보다 먼저 나온다", () => {

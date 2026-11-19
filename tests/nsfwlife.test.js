@@ -209,3 +209,14 @@ test("달아오름 90↑ 확정: 장면 판단에 계획이 실제로 저장되�
   applyLifeTurn(f, { present: ["유나"] });
   assert.equal(Object.values(f.drive.goals).filter((g) => g.actor === "유나").length, 1);
 });
+
+test("월경 단계별 기분이 지금 상태와 주입 줄에 들어간다(제국력 연도 포함)", () => {
+  const f = folder();
+  f.wiki.documents.a.sections = [{ id: "c", heading: "월경·임신", provenance: { slotId: "cycle.state" }, body: "주기: 28일 · 생리 시작 기준일: 0300-01-01\n날짜: 0300-01-26 · 생리 예정일 가까움\n임신: 아님" }];
+  tickLife(f, { turn: 10, present: ["유나"] }, () => 80);
+  const v = lifeView(f, f.wiki.documents.a, 10);
+  assert.equal(v.phase, "pre"); assert.match(v.phaseMood.label, /짜증/);
+  assert.match(lifeSection(f, ["유나"], 10), /유나: [^\n]*PMS/);
+  f.wiki.documents.b.sections = [];
+  assert.doesNotMatch(lifeSection(f, ["민호"], 10), /생리|배란/);
+});

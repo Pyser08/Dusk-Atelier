@@ -125,6 +125,7 @@ function lustCard0(env, card, doc, { cycle = null } = {}) {
       h("span", { class: "rb-lhi" }, infoBtn(LIFE_INFO.lust)),
       v.refractory ? h("span", { class: "rb-lbadge" }, "막 끝나서 잠잠") : v.lust >= 90 ? h("span", { class: "rb-lbadge hot" }, "한계 · 장면 계획 확정") : null),
     h("div", { class: "rb-ltoday" }, h("small", null, "오늘"), h("b", null, v.today)),
+    v.phaseMood ? h("div", { class: "rb-ltoday" }, h("small", null, "주기"), h("b", null, v.phaseMood.label)) : null,
     v.mood.length ? h("div", { class: "rb-lmood" }, hd("기분", "mood"), h("div", { class: "bars" }, v.mood.map((m) => h("div", { class: ["mb", m.key] }, h("span", null, m.label), h("i", null, h("i", { style: { width: `${m.v}%` } })), h("small", null, String(m.v)))))) : null,
     ctl,
     h("div", { class: "rb-ltiles" },

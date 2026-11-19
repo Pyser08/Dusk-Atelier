@@ -145,6 +145,9 @@ export async function openImport(env) {
           h("ul", { class: "rb-mem-reclist" }, cands.map((c) => h("li", { class: "rb-mem-rec" }, h("label", { class: "rb-mem-check" },
             h("input", { type: "checkbox", checked: !!c.selected, disabled: !!c.ambiguous || running, onChange: (e) => imp.toggle(c.id, e.target.checked) }), h("b", null, c.name), (c.aliases ?? []).length ? h("small", { class: "rb-muted" }, ` · ${c.aliases.join(", ")}`) : null, c.ambiguous ? h("small", { class: "rb-muted" }, " · 이름이 겹쳐 고를 수 없어요") : null)))),
           h("div", { class: "rb-mem-sact" }, btn("고른 인물 반영", { kind: "primary", disabled: running || !cands.some((c) => c.selected), onClick: () => run(imp.applySelection()) }))) : null,
+        (s.failedPeople ?? []).length && !running ? h("div", null, note("warn", `프로필을 못 만든 인물 ${s.failedPeople.length}명 — 나머지는 위 후보에 남아 있어요.`),
+          h("ul", { class: "rb-mem-reclist" }, s.failedPeople.map((f) => h("li", { class: "rb-mem-rec" }, h("div", { class: "txt" }, h("b", null, f.name), h("div", { class: "rb-muted" }, f.error))))),
+          h("div", { class: "rb-mem-sact" }, btn("실패한 인물만 다시", { onClick: () => run(imp.retryFailed()) }))) : null,
         s.applyReport ? note("ok", "반영했어요. 닫으면 인물 화면에서 볼 수 있어요.") : null);
     };
     unsub = imp.subscribe(() => paint());
