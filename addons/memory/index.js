@@ -12,6 +12,7 @@ import { setUserPromptProvider } from "../../src/engine/runai.js";
 import { iconMarkup } from "../../src/ui/icons.js";
 import { renderMemory } from "../../src/ui/screens/memory/index.js";
 import { renderRelMap } from "../../src/ui/screens/relmap.js";
+import { renderBranches } from "../../src/ui/screens/branches.js";
 import { tracked } from "../../src/ui/screens/memory/settingstools.js";
 import { STAGE_NAMES } from "../../src/ui/screens/memory/advanced.js";
 import { cardSettings } from "../../src/ui/screens/memory/settings.js";
@@ -57,8 +58,10 @@ export async function activate(api, ctx) {
     ext.add("svc", "memoryui", { tracked, STAGE_NAMES, cardSettings }),
     ext.add("tab", "memory", renderMemory),
     ext.add("tab", "relmap", renderRelMap),
+    ext.add("tab", "branches", renderBranches),
     ext.add("needsMemory", "memory", true),
-    ext.add("needsMemory", "relmap", true)
+    ext.add("needsMemory", "relmap", true),
+    ext.add("needsMemory", "branches", true)
   ];
   // 채팅 메뉴 바로가기는 리스와 여러 번 오가서 느리다 → 기다리지 않는다(켜기를 막지 않게, 뒤따르는 애드온도 안 늦게)
   const menuOff = [];
