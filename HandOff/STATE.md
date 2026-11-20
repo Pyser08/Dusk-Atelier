@@ -1,4 +1,5 @@
-## regress-rename (2026-11-20, addon-rebuild 79a777a에서 분기) — 장기기억 새 기능(미배포·버전 안 올림)
+## regress-rename (2026-11-20, addon-rebuild 79a777a에서 분기) — **v2.2.21 릴리스 + 장기기억 0.3.22 배포(11-21)** · Cellar 엔진 재빌드(Cellar main 4a46b58)
+- 릴리스 전 e2e 66개: 실패한 sdstudio·addons-top·adultseed·erosync-ui·home-dice·lorexport·mem-trim·memed·persona-sop·persona·username은 v2.2.20에서도 같은 개수로 실패(기존 실패, 이번 변경과 무관). 나머지 통과.
 - 이름: 회귀 → ‘회귀 / 채팅 옮기기’(addons/memory/index.js 링크, data/chatmenu.js(코어), ui/screens/regress.js 제목, people.js 메뉴, engine/discover.js, 안내서).
 - `addons/memory/FEATURES.md`: 장기기억 애드온 기능 전체 목록 + 새 기능 후보(사용자 요청 문서). 새 기능을 만들면 같이 고칠 것.
 - **engine/memextra.js(애드온 전용)**: 기록기 1단계 줄 EXTRA_STAGE1(told·goal·place·item·faction, 항상) + MARK_STAGE1(mark, 성인 항목일 때) → extraFrom. folder.extra {rumors, goals, world{place,item,faction}, marks, diary}. applyExtra(턴·이야기 날짜), activeMarks(날짜 dayGap, 없으면 TURNS_PER_DAY 6턴=1일), extraSection 주입(돌아온 인물 근황 AWAY_AT 20 — 최근 글에 이름이 나온 인물만, 목표, 들은 말, 흔적, 세계 문서, @인물), mentionsOf, compatOf, personPack/insertPack.
