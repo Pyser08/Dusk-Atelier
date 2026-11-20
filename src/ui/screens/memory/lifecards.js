@@ -7,6 +7,9 @@ import { mem } from "./common.js";
 import { lifeView, LUST_STEPS, DEV_LEVELS, MOOD_KEYS, MOOD_LABEL, emptyLife } from "../../../engine/nsfwlife.js";
 import { nowOf } from "../../../engine/memoryhuman.js";
 import { HUMAN_FIELDS, EXT_FIELDS, BODY_PARTS, normHuman, normExt, partOf } from "../../../engine/humanitems.js";
+import { randomZones, spotXY } from "../../../engine/zonegen.js";
+import { raceFor } from "../../../engine/races.js";
+import { raceShapes, RACE_BODY_CSS } from "./racebody.js";   // 0.3.22 종족별 모형(귀·뿔·꼬리·날개·하반신)
 
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
 // 버튼을 눌러 값만 바뀔 땐 화면 전체를 다시 불러오지 않고 이 인물의 카드만 다시 그린다(스크롤·펼침 유지)
@@ -104,9 +107,10 @@ const ring = (v, cool) => {
     h("circle", { svg: true, class: "fg", cx: 50, cy: 50, r: R, stroke: `url(#${id})`, "stroke-dasharray": C.toFixed(1), "stroke-dashoffset": off.toFixed(1) }));
 };
 const dots = (n, max = 5) => h("span", { class: "rb-fam", "aria-hidden": "true" }, Array.from({ length: max }, (_, i) => h("i", { class: i < n ? "on" : "" })));
-function lustCard0(env, card, doc, { cycle = null } = {}) {
+function lustCard0(env, card, doc, { cycle = null, after = null } = {}) {
   const v = viewOf(env, doc), n = env.folder?.nsfw?.[doc.id] ?? null, pr = env.folder?.wiki?.people?.profiles?.[doc.id];
-  const cyc = cycle ? h("div", { class: "rb-lcyc" }, h("small", { class: "rb-lh" }, "월경·임신"), cycle) : null;
+  // 0.3.22 임신·피임 카드는 월경 바로 아래
+  const cyc = cycle || after ? h("div", { class: "rb-lcyc" }, cycle ? h("small", { class: "rb-lh" }, "월경·임신") : null, cycle, after) : null;
   // 달아오르는 속도(배수) · 욕망·이상성향 스위치
   const mult = n?.lustMult ?? 1;
   const sw = (k, label, has) => h("button", { type: "button", class: ["rb-lsw", n?.boost?.[k] !== false && "on"], "aria-pressed": n?.boost?.[k] !== false ? "true" : "false", disabled: !has, title: has ? null : "위키에 이 글이 아직 없어요",
@@ -209,49 +213,125 @@ function moodCard0(env, card, doc) {
   ], null, "rb-life");
 }
 
-// ── 성감대 인체 모형 ──
-const HEAD = { cx: 50, cy: 17, rx: 9.5, ry: 11.5 };
-const SIL = "M45 28C45 32 44 34 41 35C33 37 27 40 25 47L20 77C19 83 19 89 21 95C22 98 25 98 26 95L29 79L32 60C33 70 34 78 32 88C30 96 31 104 33 112L36 150C36 165 37 178 38 189C38 193 44 193 45 189L48 140C49 128 49.5 118 50 112C50.5 118 51 128 52 140L55 189C56 193 62 193 62 189C63 178 64 165 64 150L67 112C69 104 70 96 68 88C66 78 67 70 68 60L71 79L74 95C75 98 78 98 79 95C81 89 81 83 80 77L75 47C73 40 67 37 59 35C56 34 55 32 55 28Z";
+// ── 성감대 인체 모형 (0.3.22 새 모양: 팔·다리가 떨어진 부드러운 실루엣, 여성·남성 체형, 앞·뒤 윤곽선) ──
+const HEAD = { cx: 50, cy: 16.5, rx: 8.6, ry: 10.6 };
+// 왼쪽 반신(목 → 어깨 → 팔 → 손 → 옆구리 → 다리 → 발 → 가랑이). [시작점, [c1, c2, 끝점]…]. 오른쪽은 거울로 만든다
+const HALF = {
+  f: [[46.4,  26.5],  [[46.2,  30],  [45.8,  32.6],  [44,  34]],  [[41,  35.6],  [36.4,  36.1],  [33,  37.4]],  [[29.4,  39],  [27.8,  42.4],  [27.6,  47]],  [[27.4,  53],  [26.8,  61],  [26.2,  68]],  [[26.0,  71],  [25.4,  74],  [24.6,  79]],  [[23.8,  84],  [23.2,  87.6],  [23.0,  90]],  [[22.2,  94],  [21.6,  98.6],  [23.2,  101.4]],  [[24.4,  102.8],  [26.6,  102],  [26.8,  99.6]],  [[27.0,  96],  [26.4,  93],  [26.8,  90.4]],  [[27.6,  84],  [28.4,  76],  [28.8,  70]],  [[29.4,  62],  [30.8,  55],  [32.4,  50]],  [[32.2,  57],  [36.8,  68],  [38,  78]],  [[38.6,  86],  [31.2,  92],  [30.6,  101]],  [[30.4,  110],  [32.6,  124],  [35.4,  138]],  [[36.8,  144],  [37.8,  147],  [37.6,  151]],  [[37.2,  156],  [36.2,  162],  [37.2,  170]],  [[38,  176],  [39.4,  181],  [39.6,  185]],  [[39.4,  188.6],  [37.8,  191.6],  [39.2,  193.4]],  [[41.2,  195],  [45,  194.8],  [45.4,  192]],  [[45.8,  188],  [45.4,  184],  [45.6,  180]],  [[46.2,  172],  [45.6,  163],  [46.4,  156]],  [[46.8,  152],  [47,  148],  [47,  144]],  [[47.4,  130],  [48.4,  116],  [50,  108]]],
+  m: [[46, 26.5], [[45.8, 30.4], [45.4, 33], [43, 34.4]], [[39.4, 35.6], [32.4, 35.8], [29.2, 37.4]], [[25.6, 39], [24.4, 42.8], [24.4, 47.6]],
+    [[24.2, 54], [23.8, 61.4], [23.6, 68]], [[23.4, 71.2], [23, 74.4], [22.4, 79]], [[21.8, 84], [21.4, 87.6], [21.2, 90]],
+    [[20.4, 94.2], [19.8, 99], [21.6, 101.8]], [[23, 103.2], [25.4, 102.4], [25.6, 99.8]], [[25.8, 96], [25.2, 93], [25.6, 90.4]],
+    [[26.2, 84], [26.8, 76], [27.2, 70]], [[27.8, 62], [29.2, 55], [31, 50]], [[32.6, 60], [35.6, 71], [36.6, 81]],
+    [[37.2, 88], [34.8, 94], [34.6, 101]], [[34.4, 110], [35.2, 124], [36.6, 138]], [[37.2, 144], [38, 147], [37.8, 151]],
+    [[37.2, 156], [36, 162], [37, 170]], [[37.8, 176], [39.4, 181], [39.6, 185]], [[39.4, 188.6], [37.8, 191.6], [39.2, 193.4]],
+    [[41.2, 195], [45, 194.8], [45.4, 192]], [[45.8, 188], [45.4, 184], [45.6, 180]], [[46.2, 172], [45.6, 163], [46.4, 156]],
+    [[46.8, 152], [47, 148], [47, 144]], [[47.4, 130], [48.4, 117], [50, 109]]],
+};
+export function silPath(kind = "f") {
+  const [p0, ...seg] = HALF[kind] ?? HALF.f, f = (p) => `${+p[0].toFixed(2)} ${+p[1].toFixed(2)}`, mir = (p) => [100 - p[0], p[1]];
+  const pts = [p0, ...seg.map((x) => x[2])];
+  let d = `M${f(p0)}` + seg.map(([c1, c2, e]) => `C${f(c1)} ${f(c2)} ${f(e)}`).join("");
+  for (let i = seg.length - 1; i >= 0; i--) d += `C${f(mir(seg[i][1]))} ${f(mir(seg[i][0]))} ${f(mir(pts[i]))}`;
+  return d + "Z";
+}
+// 몸의 결을 보여 주는 가는 선(앞: 쇄골·가슴·배꼽·무릎 / 뒤: 날개뼈·등줄기·엉덩이)
+const DETAIL = {
+  ff: ["M39.6 40Q44.6 41.6 48.8 40.6", "M51.2 40.6Q55.4 41.6 60.4 40", "M50 42.4V47", "M35 49.6C34.2 57.4 38.2 62.8 43.4 62.6C47 62.4 48.8 59.4 49.2 56.6", "M65 49.6C65.8 57.4 61.8 62.8 56.6 62.6C53 62.4 51.2 59.4 50.8 56.6",
+    "M40.6 66Q45 68.4 48 67.6", "M59.4 66Q55 68.4 52 67.6", "M40.4 93Q45.6 100.6 50 104.4", "M59.6 93Q54.4 100.6 50 104.4", "M39.8 146.6Q42.2 149.8 44.8 147", "M55.2 147Q57.8 149.8 60.2 146.6", "M40.6 166Q41.4 170 41 174", "M59.4 166Q58.6 170 59 174"],
+  fm: ["M38.6 40Q44 41.8 48.6 40.6", "M51.4 40.6Q56 41.8 61.4 40", "M50 42V88", "M37 51.4Q42.6 56.6 49 55.4", "M51 55.4Q57.4 56.6 63 51.4",
+    "M42.6 64.4H48M52 64.4H57.4", "M43 71.4H48M52 71.4H57", "M43.6 78.4H48M52 78.4H56.4", "M40.6 92Q45.6 100 50 104.6", "M59.4 92Q54.4 100 50 104.6", "M40 146.6Q42.4 149.8 45 147", "M55 147Q57.6 149.8 60 146.6"],
+  b: ["M38.4 46.6Q36.6 54 41.6 60.4Q45.4 58.4 45.6 50", "M61.6 46.6Q63.4 54 58.4 60.4Q54.6 58.4 54.4 50", "M50 32C49.4 50 50.6 70 50 94", "M45.6 89.4a1 1 0 1 0 .01 0", "M54.4 89.4a1 1 0 1 0 .01 0",
+    "M36.4 98C37 108 44 112.4 49.6 108.6", "M63.6 98C63 108 56 112.4 50.4 108.6", "M50 100V110", "M38.6 114Q43 116.4 47.4 115", "M61.4 114Q57 116.4 52.6 115",
+    "M40.4 151.4Q42.6 149.6 45 151.4", "M55 151.4Q57.4 149.6 59.6 151.4", "M42.4 178V186", "M57.6 178V186"],
+};
+const NAVEL = { cx: 50, cy: 76.5, r: 0.9 };
+const LAB_L = 12, LAB_R = 88;   // 이름표 x(왼쪽은 끝 맞춤, 오른쪽은 시작 맞춤)
+// 같은 쪽 이름표가 겹치지 않게 세로 자리를 정한다. gap(id) = 그 이름표가 차지하는 높이
+export function labelRows(parts, gap = () => 7.6) {
+  const out = new Map();
+  for (const right of [false, true]) {
+    const list = parts.filter((p) => (p.x >= 50) === right).sort((a, b) => a.y - b.y);
+    let prev = -Infinity, prevGap = 0;
+    for (const p of list) { const y = Math.max(p.y, prev + prevGap); out.set(p.id, y); prev = y; prevGap = gap(p.id); }
+    const over = prev - 194; if (over > 0) for (const p of list) out.set(p.id, out.get(p.id) - over);   // 아래로 넘치면 전체를 올린다
+  }
+  return out;
+}
+const EARS = [{ cx: 41.2, cy: 18, rx: 1.8, ry: 3 }, { cx: 58.8, cy: 18, rx: 1.8, ry: 3 }];
+const sexOfDoc = (env, doc) => { const g = env.folder?.orient?.[String(doc.title ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "")]?.g; return g === "m" ? "m" : "f"; };
 function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
   const n = env.folder?.nsfw?.[doc.id] ?? null, zones = n?.zones ?? [], m = mem(env.ctx), sides = (m.bodySide ??= {});
-  const side = side0 ?? sides[doc.id] ?? "f";
-  const lv = (id) => zones.find((z) => z.part === id)?.level ?? 0;
+  const side = side0 ?? sides[doc.id] ?? "f", sex = sexOfDoc(env, doc);
+  const zOf = (id) => zones.find((z) => z.part === id);
+  const lv = (id) => zOf(id)?.level ?? 0;
   const cycle = (id) => saveN(env, doc, (cur) => {
-    const zs = [...(cur.zones ?? [])], i = zs.findIndex((z) => z.part === id), next = ((zs[i]?.level ?? 0) + 1) % 4;
-    if (i >= 0) { if (next) zs[i] = { ...zs[i], level: next }; else zs.splice(i, 1); } else zs.push({ part: id, level: 1, note: "" });
-    return { ...cur, zones: zs, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: `성감대 ${partOf(id)?.label} ${next ? "♥".repeat(next) : "지움"}` }].slice(-20) };
+    // 누를 때마다: 없음 → 1 → 2 → 3(약점) → 불감 → 없음
+    const zs = [...(cur.zones ?? [])], i = zs.findIndex((z) => z.part === id), o = zs[i];
+    const next = !o ? 1 : o.numb ? -1 : o.level >= 3 ? 0 : (o.level ?? 0) + 1;
+    if (next === -1) zs.splice(i, 1); else if (next === 0) zs[i] = { ...o, level: 0, numb: true, spot: undefined }; else if (o) zs[i] = { ...o, level: next, numb: undefined }; else zs.push({ part: id, level: 1, note: "" });
+    return { ...cur, zones: zs, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: `성감대 ${partOf(id)?.label} ${next === -1 ? "지움" : next === 0 ? "불감" : "♥".repeat(next)}` }].slice(-20) };
   });
-  const parts = BODY_PARTS.filter((p) => p.side === side);
-  const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back"], viewBox: "-14 0 128 200", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
-    h("defs", { svg: true }, h("linearGradient", { svg: true, id: "rbSilG", x1: "0", y1: "0", x2: "1", y2: "1" }, h("stop", { svg: true, class: "s0", offset: "0" }), h("stop", { svg: true, class: "s1", offset: "1" })),
+  const reroll = (keepManual = true) => saveN(env, doc, (cur) => {
+    const keep = keepManual ? (cur.zones ?? []).filter((z) => z.src !== "random") : [];
+    return { ...cur, zones: randomZones(`${doc.id}|${Date.now()}`, { keep, female: sex === "f" }), zonesSeeded: true, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: "성감대 무작위로 채움" }].slice(-20) };
+  });
+  const race = raceFor(env.folder, [doc.title, ...(doc.aliases ?? [])]), rs = raceShapes(race.body ?? {});
+  const parts = BODY_PARTS.filter((p) => p.side === side && (!p.sex || p.sex === sex) && (!p.race || rs.has[p.race]) && !(p.id === "feet" && rs.clipLegs) && !(p.id === "knees" && rs.clipLegs))
+    .map((p) => (p.id === "ears" && rs.earAt ? { ...p, ...rs.earAt } : p));   // 여성 부위(질·자궁·클리토리스)는 여성 모형에만
+  const labY = labelRows(parts, (id) => (lv(id) >= 3 && zOf(id)?.spot ? 17.5 : 10.8));
+  const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back", `sx-${sex}`], viewBox: "-44 -14 188 216", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
+    h("defs", { svg: true }, h("linearGradient", { svg: true, id: "rbSilG", x1: "0", y1: "0", x2: "0", y2: "1" }, h("stop", { svg: true, class: "s0", offset: "0" }), h("stop", { svg: true, class: "s1", offset: "1" })),
+      h("radialGradient", { svg: true, id: "rbShadeG", cx: "0.5", cy: "0.36", r: "0.62" }, h("stop", { svg: true, class: "h0", offset: "0" }), h("stop", { svg: true, class: "h1", offset: "0.55" }), h("stop", { svg: true, class: "h2", offset: "1" })),
+      h("linearGradient", { svg: true, id: "rbRimG", x1: "0", y1: "0", x2: "1", y2: "0" }, h("stop", { svg: true, class: "r0", offset: "0" }), h("stop", { svg: true, class: "r1", offset: "0.5" }), h("stop", { svg: true, class: "r2", offset: "1" })),
       h("radialGradient", { svg: true, id: "rbZoneG" }, h("stop", { svg: true, class: "z0", offset: "0" }), h("stop", { svg: true, class: "z1", offset: "1" }))),
-    h("ellipse", { svg: true, class: "sil", ...HEAD }), h("path", { svg: true, class: "sil", d: SIL }),
-    side === "b" ? h("path", { svg: true, class: "spine", d: "M50 32 C49 50 51 70 50 92" }) : h("path", { svg: true, class: "spine", d: "M42 46 Q50 50 58 46" }),
-    ...parts.map((p) => { const l = lv(p.id), right = p.x >= 50;
-      return h("g", { svg: true, class: ["pt", `l${l}`], tabindex: "0", role: "button", "aria-label": `${p.label} ${l ? `${l}단계` : "없음"} — 눌러서 바꾸기`,
+    h("ellipse", { svg: true, class: "shadow", cx: 50, cy: 196, rx: 15, ry: 2.2 }),
+    rs.clipLegs ? h("linearGradient", { svg: true, id: "rbLegFade", gradientUnits: "userSpaceOnUse", x1: 0, y1: 96, x2: 0, y2: 114 }, h("stop", { svg: true, offset: 0, "stop-color": "#fff" }), h("stop", { svg: true, offset: 1, "stop-color": "#000" })) : null,
+    rs.clipLegs ? h("mask", { svg: true, id: "rbLegClip" }, h("rect", { svg: true, x: -44, y: -14, width: 188, height: 216, fill: "url(#rbLegFade)" })) : null,
+    rs.clipLegs ? h("linearGradient", { svg: true, id: "rbLowG", gradientUnits: "userSpaceOnUse", x1: 0, y1: 98, x2: 0, y2: 116 }, h("stop", { svg: true, class: "l0", offset: 0 }), h("stop", { svg: true, class: "l1", offset: 1 })) : null,
+    ...rs.behind,
+    h("g", { svg: true, mask: rs.clipLegs ? "url(#rbLegClip)" : null },
+      h("path", { svg: true, class: "sil", d: silPath(sex) }), h("path", { svg: true, class: "shade", d: silPath(sex) }), h("path", { svg: true, class: "rim", d: silPath(sex) }),
+      ...(side === "b" ? DETAIL.b : sex === "m" ? DETAIL.fm : DETAIL.ff).map((d) => h("path", { svg: true, class: "dl", d }))),
+    ...(rs.hideEars ? [] : EARS.map((e) => h("ellipse", { svg: true, class: "sil", ...e }))), h("ellipse", { svg: true, class: "sil", ...HEAD }), ...rs.over,
+    side === "f" ? h("circle", { svg: true, class: "navel", ...NAVEL }) : null,
+    ...(side === "f" && sex === "f" ? [42.4, 57.6].flatMap((cx) => [h("ellipse", { svg: true, class: "bust", cx, cy: 55.4, rx: 7, ry: 6.6 }), h("ellipse", { svg: true, class: "bust-hl", cx: cx + (cx < 50 ? -1.6 : 1.6), cy: 52.6, rx: 2.8, ry: 2 })]) : []),
+    ...parts.map((p) => { const z = zOf(p.id), l = z?.numb ? 0 : lv(p.id), numb = !!z?.numb, right = p.x >= 50, pin = l >= 3 && z?.spot ? (() => { const q = spotXY(p.id, z.spot), o = BODY_PARTS.find((b) => b.id === p.id); return q && o ? { x: q.x + p.x - o.x, y: q.y + p.y - o.y } : q; })() : null, ly = labY.get(p.id) ?? p.y, ax = pin?.x ?? p.x, ay = pin?.y ?? p.y;
+      return h("g", { svg: true, class: ["pt", `l${l}`, numb && "numb"], tabindex: "0", role: "button", "aria-label": `${p.label} ${numb ? "불감" : l ? `${l}단계` : "없음"}${z?.note ? ` — ${z.note}` : ""} — 눌러서 바꾸기`,
         onClick: () => cycle(p.id), onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycle(p.id); } } },
-        h("circle", { svg: true, class: "hit", cx: p.x, cy: p.y, r: 7 }),
+        h("circle", { svg: true, class: "hit", cx: p.x, cy: p.y, r: p.sex ? 3 : 7 }),
         l ? h("circle", { svg: true, class: "aura", cx: p.x, cy: p.y, r: 4 + l * 3 }) : null,
-        l >= 3 ? h("circle", { svg: true, class: "pulse", cx: p.x, cy: p.y, r: 6 }) : null,
-        h("circle", { svg: true, class: "dot", cx: p.x, cy: p.y, r: l ? 1.8 + l * 0.9 : 1.5 }),
-        l ? h("line", { svg: true, class: "lead", x1: p.x + (right ? 3 : -3), y1: p.y, x2: right ? 94 : 6, y2: p.y }) : null,
-        l ? h("text", { svg: true, class: "lbl", x: right ? 96 : 4, y: p.y + 2, "text-anchor": right ? "start" : "end" }, p.label) : null,
-        h("title", { svg: true }, p.label)); }));
-  const list = [...zones].sort((a, b) => b.level - a.level || (b.dev ?? 0) - (a.dev ?? 0));
+        h("circle", { svg: true, class: "dot", cx: p.x, cy: p.y, r: numb ? 2.4 : l ? 1.6 + l * 0.8 : 1.4 }),
+        numb ? h("path", { svg: true, class: "nx", d: `M${p.x - 1.6} ${p.y - 1.6}L${p.x + 1.6} ${p.y + 1.6}M${p.x + 1.6} ${p.y - 1.6}L${p.x - 1.6} ${p.y + 1.6}` }) : null,
+        pin ? h("g", { svg: true, class: "pin" }, h("circle", { svg: true, class: "pulse", cx: pin.x, cy: pin.y, r: 3.4 }), h("circle", { svg: true, class: "ring", cx: pin.x, cy: pin.y, r: 2.2 }),
+          h("path", { svg: true, class: "cross", d: `M${pin.x - 3.6} ${pin.y}h2M${pin.x + 1.6} ${pin.y}h2M${pin.x} ${pin.y - 3.6}v2M${pin.x} ${pin.y + 1.6}v2` }), h("circle", { svg: true, class: "core", cx: pin.x, cy: pin.y, r: 0.9 })) : null,
+        // 0.3.22 모든 부위 이름을 양옆에 보여 준다(성감대가 아닌 곳은 흐리게). 이름이 겹치지 않게 세로 자리를 벌린다
+        h("path", { svg: true, class: "lead", d: `M${ax + (right ? 2.4 : -2.4)} ${ay}L${right ? LAB_R - 6 : LAB_L + 6} ${ly}H${right ? LAB_R - 1.5 : LAB_L + 1.5}` }),
+        h("text", { svg: true, class: "lbl", x: right ? LAB_R : LAB_L, y: ly + 2, "text-anchor": right ? "start" : "end" }, numb ? `${p.label} · 불감` : p.label),
+        pin ? h("text", { svg: true, class: "lbl2", x: right ? LAB_R : LAB_L, y: ly + 9.6, "text-anchor": right ? "start" : "end" }, `◎ ${z.spot}`) : null,
+        h("title", { svg: true }, [p.label, z?.spot, z?.note].filter(Boolean).join(" · "))); }));
+  const list = [...zones].sort((a, b) => (a.numb ? 1 : 0) - (b.numb ? 1 : 0) || b.level - a.level || (b.dev ?? 0) - (a.dev ?? 0));
+  const allRandom = list.length > 0 && list.every((z) => z.src === "random");
   const segBtn = (s, l) => h("button", { type: "button", class: s === side ? "on" : "", "aria-pressed": s === side ? "true" : "false", onClick: () => { sides[doc.id] = s; repaint(env, doc); } }, l);
+  const editZone = (z, key, title, label, max) => async () => { const v = await promptDialog(env.ctx.win, { title: `${partOf(z.part)?.label} ${title}`, label, value: z[key] ?? "", ok: "저장" }); if (v == null) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).map((x) => x.part === z.part ? { ...x, [key]: String(v).trim().slice(0, max), src: undefined } : x) })); };
   return card("💋 성감대", [
     h("div", { class: "rb-body-wrap" },
       h("div", { class: "rb-body-fig" },
         h("div", { class: ["rb-bseg", side === "b" && "b"], role: "group", "aria-label": "앞뒤" }, h("i", { class: "pill" }), segBtn("f", "앞"), segBtn("b", "뒤")),
         svg),
       h("div", { class: "rb-body-list" },
-        h("div", { class: "rb-blegend" }, h("span", { class: "l1" }, "약간"), h("span", { class: "l2" }, "민감"), h("span", { class: "l3" }, "약점"), infoBtn(LIFE_INFO.zone), h("span", { class: "dv" }, "개발도"), infoBtn(LIFE_INFO.dev)),
+        h("div", { class: "rb-blegend" }, h("span", { class: "l1" }, "약간"), h("span", { class: "l2" }, "민감"), h("span", { class: "l3" }, "약점"), h("span", { class: "l0n" }, "불감"), infoBtn(LIFE_INFO.zone), h("span", { class: "dv" }, "개발도"), infoBtn(LIFE_INFO.dev),
+          h("span", { style: "flex:1" }), !list.length || allRandom ? btn(list.length ? "다시 뽑기" : "무작위로 채우기", { size: "sm", onClick: () => reroll(true) }) : null),
         list.length ? list.map((z) => h("div", { class: ["rb-bz", `l${z.level}`] }, h("div", { class: "hd" }, h("span", { class: "acts" },
-            h("button", { type: "button", class: "rb-bzb", title: "메모 고치기", "aria-label": "메모 고치기", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: `${partOf(z.part)?.label} 메모`, label: "메모", value: z.note ?? "", ok: "저장" }); if (v == null) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).map((x) => x.part === z.part ? { ...x, note: String(v).trim().slice(0, 80) } : x) })); } }, "✎"),
-            h("button", { type: "button", class: "rb-bzb", title: "지우기", "aria-label": "지우기", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 성감대를 지울까요?", body: partOf(z.part)?.label ?? "", ok: "지우기", danger: true }))) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).filter((x) => x.part !== z.part) })); } }, "✕")), h("b", null, partOf(z.part)?.label ?? z.part), z.level >= 3 ? h("span", { class: "weak" }, "약점") : z.level === 0 ? h("span", { class: "devn" }, "개발 중") : null, h("span", { style: "flex:1" }), h("span", { class: "meter", "aria-label": `${z.level}단계` }, ...[1, 2, 3].map((i) => h("i", { class: i <= z.level ? "on" : "" })))),
-          z.dev != null ? h("div", { class: "dev" }, h("small", null, "개발도"), h("i", { class: "db" }, h("i", { style: { width: `${z.dev}%` } }), ...DEV_LEVELS.map((at) => h("i", { class: "mk", style: { left: `${at}%` } }))), h("small", null, String(z.dev))) : null,
-          z.note ? h("small", null, z.note) : null))
-          : note("아직 없어요. 모형의 점을 누르면 1→2→3(약점)→없음으로 바뀌어요. 대화에서 드러나면 기록기가 채워요."))),
+            h("button", { type: "button", class: "rb-bzb", title: "특징 고치기", "aria-label": "특징 고치기", onClick: editZone(z, "note", "특징", "한 줄 특징(어떻게 반응하는지)", 80) }, "✎"),
+            z.level >= 3 ? h("button", { type: "button", class: "rb-bzb", title: "정확한 자리 고치기", "aria-label": "정확한 자리 고치기", onClick: editZone(z, "spot", "정확한 자리", "정확한 자리(예: 왼쪽 귓불)", 40) }, "◎") : null,
+            h("button", { type: "button", class: "rb-bzb", title: "지우기", "aria-label": "지우기", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 성감대를 지울까요?", body: partOf(z.part)?.label ?? "", ok: "지우기", danger: true }))) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).filter((x) => x.part !== z.part) })); } }, "✕")),
+            h("b", null, partOf(z.part)?.label ?? z.part), z.numb ? h("span", { class: "numbb" }, "불감") : z.level >= 3 ? h("span", { class: "weak" }, "약점") : z.level === 0 ? h("span", { class: "devn" }, "개발 중") : null,
+            z.src === "random" ? h("span", { class: "rnd", title: "대화에서 드러나기 전에 무작위로 정한 값이에요. 대화에서 드러나면 기록기가 고쳐요." }, "무작위") : null,
+            h("span", { style: "flex:1" }), h("span", { class: "meter", "aria-label": `${z.level}단계` }, ...[1, 2, 3].map((i) => h("i", { class: i <= z.level ? "on" : "" })))),
+          z.level >= 3 && z.spot ? h("div", { class: "spot" }, h("span", { class: "tg" }, "◎ 정확한 자리"), h("b", null, z.spot)) : null,
+          z.note ? h("p", { class: "feat" }, z.note) : h("button", { type: "button", class: "rb-bz-add", onClick: editZone(z, "note", "특징", "한 줄 특징(어떻게 반응하는지)", 80) }, "+ 한 줄 특징"),
+          z.dev != null ? h("div", { class: "dev" }, h("small", null, "개발도"), h("i", { class: "db" }, h("i", { style: { width: `${z.dev}%` } }), ...DEV_LEVELS.map((at) => h("i", { class: "mk", style: { left: `${at}%` } }))), h("small", null, String(z.dev))) : null))
+          : note("아직 없어요. ‘무작위로 채우기’를 누르거나 모형의 점을 누르면 1→2→3(약점)→없음으로 바뀌어요. 대화에서 드러나면 기록기가 채워요."))),
   ], null, "rb-life");
 }
 
@@ -338,10 +418,12 @@ export const LIFE_CSS = `
 .rb-mann li .dot{position:absolute;left:0;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:var(--rb-surf);border:2px solid var(--rb-acc)}
 .rb-mann li small{margin-left:auto;color:var(--rb-mute);font-size:11.5px}
 /* 성감대 */
-.rb-body-wrap{display:grid;grid-template-columns:minmax(170px,240px) minmax(0,1fr);gap:16px;align-items:start}
-@media (max-width:520px){.rb-body-wrap{grid-template-columns:1fr}.rb-body-fig{max-width:210px;margin:0 auto}}
+.rb-body-wrap{display:grid;grid-template-columns:minmax(220px,310px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:520px){.rb-body-wrap{grid-template-columns:1fr}.rb-body-fig{max-width:340px;margin:0 auto}}
 .rb-body-fig{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;border-radius:18px;background:radial-gradient(80% 60% at 50% 40%,color-mix(in srgb,#ec4f86 10%,var(--rb-surf2)),var(--rb-surf2))}
-.rb-bodymap{width:100%;height:auto;max-height:340px;overflow:visible}
+.rb-bodymap{width:100%;height:auto;max-height:420px;overflow:visible}
+${RACE_BODY_CSS}
+.rb-bodymap .bust{fill:color-mix(in srgb,#ec4f86 9%,transparent);stroke:color-mix(in srgb,#ec4f86 16%,transparent);stroke-width:.5;pointer-events:none}.rb-bodymap .bust-hl{fill:rgba(255,255,255,.35);pointer-events:none}
 .rb-bodymap .s0{stop-color:var(--rb-surf)}.rb-bodymap .s1{stop-color:var(--rb-surf2)}
 .rb-bodymap .sil{fill:url(#rbSilG);stroke:color-mix(in srgb,#ec4f86 25%,var(--rb-line));stroke-width:.8}
 .rb-bodymap .pt{cursor:pointer;outline:none}.rb-bodymap .hit{fill:transparent}
@@ -473,6 +555,27 @@ export const LIFE_CSS = `
 .rb-live{display:contents}
 .rb-ailegend .rb-ibub,.rb-aitag .rb-ibub{bottom:auto;top:calc(100% + 8px)}
 .rb-aitag .rb-ibub{left:auto;right:-8px;transform:translateY(-4px)}.rb-aitag .rb-ibtn.open+.rb-ibub{transform:none}@media (hover:hover){.rb-aitag .rb-ibtn:hover+.rb-ibub{transform:none}}
+/* 0.3.22 닫힌 i 말풍선이 자리를 차지해 휴대폰에서 화면이 옆으로 밀리던 문제: 닫혀 있으면 아예 빼 둔다 */
+.rb-ibub{display:none}.rb-ibtn.open+.rb-ibub{display:block}@media (hover:hover){.rb-ibtn:hover+.rb-ibub{display:block}}
+/* 0.3.22 새 인체 모형·부위 특징·정확한 약점 */
+.rb-bodymap .s0{stop-color:color-mix(in srgb,#f6d5dd 40%,var(--rb-surf))}.rb-bodymap .s1{stop-color:color-mix(in srgb,#ec4f86 8%,var(--rb-surf2))}
+.rb-bodymap .sil{stroke-width:.7;stroke-linejoin:round}
+.rb-bodymap .shade{fill:url(#rbShadeG);pointer-events:none}.rb-bodymap .h0{stop-color:#fff;stop-opacity:.55}.rb-bodymap .h1{stop-color:#fff;stop-opacity:0}.rb-bodymap .h2{stop-color:#b84a6c;stop-opacity:.16}
+.rb-bodymap .rim{fill:url(#rbRimG);pointer-events:none}.rb-bodymap .r0,.rb-bodymap .r2{stop-color:#9c3b5c;stop-opacity:.14}.rb-bodymap .r1{stop-color:#9c3b5c;stop-opacity:0}
+.rb-bodymap .shadow{fill:color-mix(in srgb,#ec4f86 14%,transparent)}
+.rb-bodymap .dl{fill:none;stroke:color-mix(in srgb,#b84a6c 34%,var(--rb-line));stroke-width:.42;stroke-linecap:round;opacity:.85}
+.rb-bodymap .navel{fill:color-mix(in srgb,#ec4f86 30%,var(--rb-line))}
+.rb-bodymap .lbl{font-size:7px;font-weight:600;fill:var(--rb-sub)}.rb-bodymap .pt.l1 .lbl,.rb-bodymap .pt.l2 .lbl{fill:var(--rb-text);font-weight:800}.rb-bodymap .pt.l3 .lbl{fill:#c2185b;font-weight:800}
+.rb-bodymap .lbl2{font-size:6.2px;font-weight:700;fill:#c2185b}
+.rb-bodymap .lead{fill:none;stroke:color-mix(in srgb,var(--rb-mute) 35%,transparent);stroke-width:.35}.rb-bodymap .pt.l1 .lead,.rb-bodymap .pt.l2 .lead,.rb-bodymap .pt.l3 .lead{stroke:color-mix(in srgb,#ec4f86 60%,transparent);stroke-width:.45;stroke-dasharray:none}
+@media (hover:hover){.rb-bodymap .pt:hover .lbl{fill:var(--rb-acc);opacity:1}}
+.rb-bodymap .pt.numb .dot{fill:var(--rb-surf);stroke:#8a8fa3;stroke-width:.6;opacity:1}.rb-bodymap .nx{stroke:#8a8fa3;stroke-width:.6;stroke-linecap:round}.rb-bodymap .pt.numb .lbl{fill:#8a8fa3;font-weight:700;opacity:1}
+.rb-bz .numbb{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:#8a8fa3;color:#fff}.rb-blegend .l0n::before{background:#8a8fa3!important}
+.rb-bodymap .pin .ring{fill:none;stroke:#c2185b;stroke-width:.7}.rb-bodymap .pin .cross{stroke:#c2185b;stroke-width:.6;stroke-linecap:round}.rb-bodymap .pin .core{fill:#c2185b}
+.rb-bz .rnd{font-size:10px;padding:1px 6px;border-radius:999px;border:1px dashed var(--rb-line);color:var(--rb-mute)}
+.rb-bz .spot{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:12px}.rb-bz .spot .tg{font-size:10.5px;font-weight:700;color:#c2185b}
+.rb-bz .feat{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--rb-text)}
+.rb-bz-add{align-self:flex-start;margin-top:3px;border:1px dashed var(--rb-line);background:transparent;color:var(--rb-mute);border-radius:999px;font:inherit;font-size:11.5px;padding:2px 9px;cursor:pointer}
 `;
 
 export const lustCard = (env, card, doc, o) => !doc ? null : live(doc.id, () => lustCard0(env, card, doc, o));

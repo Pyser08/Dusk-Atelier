@@ -22,6 +22,7 @@ export function docByName(f, name) {
   return docsOf(f).find((d) => namesOf(d).some((n) => nk(n) === k)) ?? null;
 }
 
+import { raceFor, raceLustK } from "./races.js";   // 0.3.22 종족 체질(발정기·보름·성욕 배수)
 // ── 월경 주기 단계(성욕 보정용) ──
 const dayN = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); if (!m) return NaN; const t = new Date(0); t.setUTCFullYear(+m[1], +m[2] - 1, +m[3]); return t.getTime() / 864e5; };   // 0~99년도 그대로(판타지 연호)
 export function cycleOf(doc) {
@@ -149,13 +150,14 @@ export function tickLife(f, { turn, present = [], events = [], date = "", gauge 
     if (dt > 0) {
       const sinceSex = L.sex.last == null ? null : turn - L.sex.last, phase = phaseOf(cycleOf(d));
       const satAdj = satFactor(L.sat);
+      const rk = raceLustK(raceFor(f, names), date, { cal: f?.extra?.climate?.mdays ? f.extra.climate : null, hemi: f?.extra?.climate?.hemi ?? "N", seed: d.id });
       // 성욕은 저절로 오르지 않는다(AI가 장면을 보고 gauge 줄로 판단). 성향·주기·끌림은 AI가 올린 폭에만 곱한다
-      lustK = mult * (g.lust ?? 1) * day.lust * satAdj * lustRate({ interest: pr.interest ?? 50, phase, att: fe.att, hos: fe.hos, lover, sinceSex, refractory: turn <= L.refr, fat: L.fat }) / LUST_BASE;
+      lustK = rk.k * mult * (g.lust ?? 1) * day.lust * satAdj * lustRate({ interest: pr.interest ?? 50, phase, att: fe.att, hos: fe.hos, lover, sinceSex, refractory: turn <= L.refr, fat: L.fat }) / LUST_BASE;
       const before = L.lust;
       L.fat = r1(clamp(L.fat - 2 * dt * g.down + day.fat * dt));
       // 기분은 시간이 지나면 0으로 돌아간다(턴당 5)
       L.mood = Object.fromEntries(Object.entries(L.mood ?? {}).map(([k, v]) => [k, Math.max(0, r1(v - MOOD_DECAY * dt))]).filter(([, v]) => v > 0));
-      const why = [PHASE_WHY[phase], fe.att >= 5 && "끌림", fe.hos >= 5 && "적대감", lover && "애인", sinceSex != null && sinceSex >= ABSTAIN_AT && "오래 안 함", turn <= L.refr && "막 끝남", L.fat >= 70 && "피로", day.label, satAdj > 1 && "아쉬움", mult !== 1 && `속도 ×${mult.toFixed(2)}`].filter(Boolean);
+      const why = [PHASE_WHY[phase], fe.att >= 5 && "끌림", fe.hos >= 5 && "적대감", lover && "애인", sinceSex != null && sinceSex >= ABSTAIN_AT && "오래 안 함", turn <= L.refr && "막 끝남", L.fat >= 70 && "피로", day.label, satAdj > 1 && "아쉬움", mult !== 1 && `속도 ×${mult.toFixed(2)}`, rk.heat.on && rk.heat.label, rk.k !== 1 && !rk.heat.on && `종족 ×${rk.k}`].filter(Boolean);
       if (L.lust !== before) tr(`자연 ${L.lust > before ? "+" : ""}${r1(L.lust - before)}${why.length ? ` (${why.join("·")})` : ""}`);
     }
     // 만남

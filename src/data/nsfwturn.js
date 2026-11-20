@@ -1,4 +1,5 @@
 // addon-rebuild: 매 턴 기록기가 보고한 성인 프로필 변화(taste·sexval)를 이 채팅 폴더(folder.nsfw)에 반영한다.
+import { raceFor, raceZones } from "../engine/races.js";
 import { applyNsfwReports } from "../engine/nsfwprofile.js";
 import { applyDrive, emptyDrive } from "../engine/scenedrive.js";
 import { sameKoreanPerson } from "../engine/namekr.js";
@@ -7,6 +8,8 @@ import { applyHumanReports } from "../engine/humanitems.js";
 import { tickLife, usesToPrefs, ensureHotGoals } from "../engine/nsfwlife.js";
 import { readGauge } from "./gaugemult.js";
 import { pruneWiki } from "../engine/wikiprune.js";
+import { applyExtra, EXTRA_KINDS } from "../engine/memextra.js";
+import { randomZones } from "../engine/zonegen.js";
 
 const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 const empty = () => ({ sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] });
@@ -63,18 +66,47 @@ export function applyLifeTurn(f, { events = [], present = [], gauge = null, text
   return changed;
 }
 
+const latestWhen = (f) => [...(f?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
+// 0.3.22 성감대가 비어 있는 성인 프로필 인물(이번 턴 장면 인물)에게 무작위 성감대를 넣는다. 반환: 채운 인물 이름
+export function seedZones(f, present = []) {
+  const docs = Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character"), done = [];
+  const here = new Set(present.map(key));
+  for (const d of docs) {
+    const n = f?.nsfw?.[d.id];
+    if (!n || n.zonesSeeded || (n.zones ?? []).length || !Object.keys(n.sexual ?? {}).length) continue;
+    if (here.size && ![d.title, ...(d.aliases ?? [])].some((x) => here.has(key(x)))) continue;
+    const male = f?.orient?.[key(d.title)]?.g === "m";
+    f.nsfw[d.id] = { ...n, zones: randomZones(d.id, { female: !male }), zonesSeeded: true };
+    done.push(d.title);
+  }
+  // 0.3.22 종족 성감대 기본값(종족이 정해지거나 바뀌면 한 번) — 직접 고친 부위는 건드리지 않음
+  for (const d of docs) {
+    const n = f?.nsfw?.[d.id]; if (!n || !Object.keys(n.sexual ?? {}).length) continue;
+    const r = raceFor(f, [d.title, ...(d.aliases ?? [])]); if (!r.known || n.raceSeeded === r.id) continue;
+    const zs = [...(n.zones ?? [])];
+    for (const z of raceZones(r)) { const i = zs.findIndex((x) => x.part === z.part); if (i < 0) zs.push(z); else if (zs[i].src === "random" || zs[i].src === "race") zs[i] = { ...zs[i], level: Math.max(zs[i].level ?? 0, z.level), note: zs[i].note || z.note }; }
+    f.nsfw[d.id] = { ...n, zones: zs, raceSeeded: r.id };
+    if (raceZones(r).length) done.push(`${d.title}(${r.label})`);
+  }
+  return done;
+}
 export async function applyNsfwTurn(memory, log = () => {}, info = null, api = null) {
   const q0 = memory?.flow?.takeNsfw?.() ?? [], dq = memory?.flow?.takeDrive?.() ?? [];
-  const events = q0.filter((r) => ["act", "sleep", "gauge", "past", "mood", "bond", "touch", "sat"].includes(r.kind)), q = q0.filter((r) => !events.includes(r));
+  const ex = q0.filter((r) => EXTRA_KINDS.has(r.kind)), q1 = q0.filter((r) => !ex.includes(r));
+  const events = q1.filter((r) => ["act", "sleep", "gauge", "past", "mood", "bond", "touch", "sat"].includes(r.kind)), q = q1.filter((r) => !events.includes(r));
   const present = (info?.people ?? []).map((p) => p?.name).filter(Boolean);
-  if (!q.length && !dq.length && !events.length && !present.length) return 0;
+  if (!q.length && !dq.length && !events.length && !present.length && !ex.length) return 0;
   const cur = await memory.switches?.currentChat?.().catch?.(() => null);
   if (!cur) return 0;
   const gauge = await readGauge(api).catch(() => null);
-  let out = [], drive = [], life = [], pruned = [];
-  await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (q.length) out = applyNsfwQueue(f, q); if (dq.length) drive = applyDriveQueue(f, dq); life = applyLifeTurn(f, { events, present, gauge, text: String(info?.rp ?? "") });
+  let out = [], drive = [], life = [], pruned = [], extra = [], zoned = [];
+  await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (q.length) out = applyNsfwQueue(f, q);
+    if (ex.length) extra = applyExtra(f, ex, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0, when: latestWhen(f) });
+    zoned = seedZones(f, present); if (dq.length) drive = applyDriveQueue(f, dq); life = applyLifeTurn(f, { events, present, gauge, text: String(info?.rp ?? "") });
     if (f.wiki?.documents) { const pr = pruneWiki(f.wiki); if (pr.removed.length) { f.wiki = pr.wiki; pruned = pr.removed; } } });
   if (pruned.length) logEvent({ area: "위키 정리", title: `중요도 낮은 정보 ${pruned.length}개를 지웠어요 · ${[...new Set(pruned.map((x) => x.doc))].join(", ")}`, detail: pruned.map((x) => `${x.doc}: ${x.text}`) });
+  if (extra.length) logEvent({ area: "이야기 기록", title: extra.join(" · ").slice(0, 160), detail: extra });
+  if (zoned.length) logEvent({ area: "성감대", title: `성감대를 무작위로 채웠어요 · ${zoned.join(", ")}` });
   if (life.length) logEvent({ area: "몸·마음 계산", title: life.join(" · ").slice(0, 160), detail: life });
   for (const o of out) logEvent({ area: "성인 프로필", title: `${o.name} · ${o.changed.join(" · ")}` });
   if (drive.length) logEvent({ area: "장면 판단", title: drive.join(" · ").slice(0, 160), detail: drive });

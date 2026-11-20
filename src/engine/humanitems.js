@@ -21,15 +21,19 @@ export const isExtField = (k) => FIELD_OF.get(k)?.[0] === "ext";
 // 인체 모형 부위: id, 이름, 앞/뒤, 모형 좌표(0~100 기준 viewBox 100×200), 찾을 말
 export const BODY_PARTS = Object.freeze([
   { id: "lips", label: "입술", side: "f", x: 50, y: 24, re: /입술|입|lip/ },
-  { id: "ears", label: "귀", side: "f", x: 39, y: 18, re: /귀|ear/ },
+  { id: "ears", label: "귀", side: "f", x: 40.6, y: 18, re: /귀|ear/ },
   { id: "neck", label: "목", side: "f", x: 50, y: 32, re: /^목$|목덜미|목선|neck/ },
   { id: "collar", label: "쇄골", side: "f", x: 57, y: 40, re: /쇄골|collar/ },
   { id: "chest", label: "가슴", side: "f", x: 43, y: 52, re: /가슴|유방|breast|chest/ },
   { id: "nipples", label: "유두", side: "f", x: 57, y: 54, re: /유두|젖꼭지|nipple/ },
-  { id: "armpit", label: "겨드랑이", side: "f", x: 31, y: 47, re: /겨드랑|armpit/ },
+  { id: "armpit", label: "겨드랑이", side: "f", x: 32.4, y: 50, re: /겨드랑|armpit/ },
   { id: "belly", label: "배·배꼽", side: "f", x: 50, y: 76, re: /배꼽|아랫배|배$|belly|navel/ },
-  { id: "waist", label: "허리·옆구리", side: "f", x: 34, y: 80, re: /허리|옆구리|waist/ },
-  { id: "groin", label: "사타구니", side: "f", x: 50, y: 105, re: /사타구니|음부|성기|클리|클리토리스|질|groin|genital|clit/ },
+  { id: "waist", label: "허리·옆구리", side: "f", x: 38, y: 80, re: /허리|옆구리|waist/ },
+  // 0.3.22 여성 부위(sex:"f" — 여성 모형에만 찍힌다). 사타구니보다 먼저 찾게 앞에 둔다
+  { id: "womb", label: "자궁", side: "f", sex: "f", x: 50, y: 90, re: /자궁|포르치오|womb|uterus|cervix/i },
+  { id: "clit", label: "클리토리스", side: "f", sex: "f", x: 50, y: 102.4, re: /클리|음핵|clit/i },
+  { id: "vagina", label: "질", side: "f", sex: "f", x: 50, y: 106.4, re: /^질|질\s*(입구|안|속|벽|내)|vagina/i },
+  { id: "groin", label: "사타구니", side: "f", x: 44.6, y: 103, re: /사타구니|음부|성기|groin|genital/ },
   { id: "thighs", label: "허벅지 안쪽", side: "f", x: 44, y: 122, re: /허벅지|thigh/ },
   { id: "hands", label: "손·손가락", side: "f", x: 22, y: 94, re: /손|손가락|hand|finger/ },
   { id: "feet", label: "발", side: "f", x: 40, y: 188, re: /발|발가락|foot|feet|toe/ },
@@ -37,12 +41,17 @@ export const BODY_PARTS = Object.freeze([
   { id: "back", label: "등", side: "b", x: 50, y: 55, re: /^등|등줄기|척추|back|spine/ },
   { id: "lowback", label: "허리 뒤", side: "b", x: 50, y: 84, re: /허리 ?뒤|꼬리뼈|lower back/ },
   { id: "butt", label: "엉덩이", side: "b", x: 50, y: 100, re: /엉덩이|둔부|butt|ass/ },
-  { id: "anus", label: "뒤", side: "b", x: 50, y: 107, re: /항문|애널|anal|anus/ },
+  { id: "anus", label: "항문", side: "b", x: 50, y: 107, re: /항문|애널|anal|anus/ },
   { id: "knees", label: "무릎 뒤", side: "b", x: 43, y: 150, re: /무릎|오금|knee/ },
+  // 0.3.22 종족 부위(race: 그 몸 특징이 있는 종족 모형에만 찍힌다). 허리 뒤(꼬리뼈)보다 뒤에 둬서 '꼬리뼈'는 허리 뒤로
+  { id: "tail", label: "꼬리 뿌리", side: "b", race: "tail", x: 56, y: 93, re: /꼬리|tail/i },
+  { id: "wings", label: "날개 뿌리", side: "b", race: "wings", x: 41, y: 44, re: /날개|wing/i },
+  { id: "horns", label: "뿔·더듬이", side: "f", race: "horns", x: 44.6, y: 6.5, re: /뿔|더듬이|horn|antenna/i },
 ]);
 export function partOf(s) {
   const t = String(s ?? "").trim(); if (!t) return null;
-  return BODY_PARTS.find((p) => p.id === t.toLowerCase()) ?? BODY_PARTS.find((p) => p.re.test(t)) ?? null;
+  // 여성 부위를 먼저 본다(‘질 입구’의 ‘입’이 입술로 잡히지 않게)
+  return BODY_PARTS.find((p) => p.id === t.toLowerCase()) ?? BODY_PARTS.find((p) => p.sex && p.re.test(t)) ?? BODY_PARTS.find((p) => p.re.test(t)) ?? null;
 }
 
 const listOf = (v) => [...new Set((Array.isArray(v) ? v : String(v ?? "").split(/[,，\n]/)).map((x) => text(typeof x === "string" ? x : x?.text ?? "", 100)).filter(Boolean))].slice(0, LIST_MAX);
@@ -58,8 +67,8 @@ export function normZones(raw) {
   const seen = new Set(), out = [];
   for (const z of Array.isArray(raw) ? raw : []) {
     const p = partOf(z?.part ?? z?.label); if (!p || seen.has(p.id)) continue;
-    seen.add(p.id); const dev = Number.isFinite(Number(z?.dev)) ? Math.max(0, Math.min(100, Math.round(Number(z.dev)))) : undefined; const lv = z?.level === 0 && dev != null ? 0 : Math.max(1, Math.min(3, Math.round(Number(z?.level) || 2)));
-    out.push({ part: p.id, level: lv, note: text(z?.note, 80), ...(dev != null ? { dev } : {}) });
+    seen.add(p.id); const dev = Number.isFinite(Number(z?.dev)) ? Math.max(0, Math.min(100, Math.round(Number(z.dev)))) : undefined; const numb = z?.numb === true; const lv = numb || (z?.level === 0 && dev != null) ? 0 : Math.max(1, Math.min(3, Math.round(Number(z?.level) || 2)));
+    out.push({ part: p.id, level: lv, note: text(z?.note, 80), ...(dev != null ? { dev } : {}), ...(z?.spot ? { spot: text(z.spot, 40) } : {}), ...(z?.src === "random" ? { src: "random" } : {}), ...(numb ? { numb: true } : {}) });
   }
   return out.slice(0, BODY_PARTS.length);
 }
@@ -77,9 +86,17 @@ export function applyHumanReports(nsfw, reports) {
       changed.push(`${label}: ${t}`);
     } else if (r.kind === "zone") {
       const p = partOf(r.part); if (!p) continue;
-      const level = Math.max(1, Math.min(3, Math.round(Number(r.level) || 2))), i = next.zones.findIndex((z) => z.part === p.id);
-      if (i >= 0 && next.zones[i].level >= level) continue;
-      const z = { part: p.id, level, note: text(r.note, 80) || next.zones[i]?.note || "" };
+      const i = next.zones.findIndex((z) => z.part === p.id);
+      if (Number(r.level) === 0) {   // 0.3.22 불감 부위
+        const o = next.zones[i]; if (o?.numb) continue;
+        const z = { part: p.id, level: 0, numb: true, note: text(r.note, 80) || o?.note || "" }; if (i >= 0) next.zones[i] = z; else next.zones.push(z);
+        changed.push(`불감 ${p.label}`); continue;
+      }
+      const level = Math.max(1, Math.min(3, Math.round(Number(r.level) || 2)));
+      const o = i >= 0 ? next.zones[i] : null, note = text(r.note, 80), spot = level >= 3 ? text(r.spot, 40) : "";
+      if (o && o.level >= level && !(note && !o.note) && !(spot && spot !== o.spot)) continue;
+      const z = { ...(o ?? {}), part: p.id, level: Math.max(level, o?.level ?? 0), note: note || o?.note || "", ...(spot || o?.spot ? { spot: spot || o.spot } : {}) };
+      delete z.src;
       if (i >= 0) next.zones[i] = z; else next.zones.push(z);
       changed.push(`성감대 ${p.label}${"♥".repeat(level)}`);
     }
@@ -98,7 +115,8 @@ export function humanLine(name, n) {
 export function extLine(n) {
   const e = n?.ext ?? {}, z = n?.zones ?? [];
   const parts = EXT_FIELDS.filter(([k]) => e[k] && (!Array.isArray(e[k]) || e[k].length)).map(([k, l]) => `${l}: ${Array.isArray(e[k]) ? e[k].slice(0, 2).join(", ") : e[k]}`);
-  if (z.some((x) => x.level > 0)) parts.unshift(`성감대: ${[...z].filter((x) => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 5).map((x) => `${partOf(x.part)?.label}${x.level >= 3 ? "(약점)" : ""}`).join(", ")}`);
+  if (z.some((x) => x.numb)) parts.unshift(`불감(아무 느낌 없음): ${z.filter((x) => x.numb).map((x) => partOf(x.part)?.label).join(", ")}`);
+  if (z.some((x) => x.level > 0)) parts.unshift(`성감대: ${[...z].filter((x) => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 5).map((x) => `${partOf(x.part)?.label}${x.level >= 3 ? `(약점${x.spot ? `: ${x.spot}` : ""}${x.note ? ` — ${x.note}` : ""})` : ""}`).join(", ")}`);
   return parts.join(" / ").slice(0, 200);
 }
 export const HUMAN_INJECT_TITLE = "[Personal details — show through behaviour; secrets stay hidden unless the story reveals them]";
@@ -107,6 +125,6 @@ export const HUMAN_INJECT_TITLE = "[Personal details — show through behaviour;
 export const HUMAN_SHAPE = Object.freeze({
   human: { speech: [], habit: [], trigger: [], dream: [], secret: [], love: "", anger: "", sad: "" },
   ext: { first: "", fantasy: [], voice: "", after: "", yes: [], no: [], contra: "" },
-  zones: [{ part: "한국어 부위", level: 2, note: "" }],
+  zones: [{ part: "한국어 부위", level: 2, note: "한 줄 특징(어떻게 반응하는지)", spot: "약점(3)일 때만 정확한 자리" }],
 });
 export const HUMAN_RULES = "human (everyday): speech=verbal tics, habit, trigger=sensitive topics, dream=goals, secret, love/anger/sad=how they show love, anger, sadness. ext (bed): first=first time, fantasy, voice=moans and bed talk, after=aftercare, yes/no=signs of liking/refusing, contra=contraception attitude. zones: 3-6 erogenous spots, level 1-3 (3=weak spot). Short Korean phrases, at most 3 per list; omit fields with nothing to say.";

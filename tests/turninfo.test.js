@@ -45,11 +45,13 @@ test("한 턴: 요청→출력→화면에 주사위·호출 블록, 저장된 �
   await t.setDiceShow(false); assert.ok(!(await t.onDisplay(resp + " 칼날이 번뜩였다.")).includes('x-dusk="dice"'));
   assert.equal(t.onDisplay.length >= 0, true);
 });
-test("RisuBard(bardWiki 있음)에서는 훅을 달지 않고 표시도 안 함", async () => {
+test("RisuBard(bardWiki 있음): 주사위 결과 표시용 훅만 쓰고, 요청 글은 건드리지 않으며 호출 표시는 안 붙인다", async () => {
   let hooks = 0; const { api } = mem({ bardWiki: { getDocuments: () => [] }, addRisuReplacer: async () => { hooks++; }, addRisuScriptHandler: async () => { hooks++; } });
-  const t = createTurnInfo(api, { chip: false }); await t.start();
-  assert.equal(t.supported(), false); assert.equal(hooks, 0);
-  assert.equal(await t.onDisplay("아무 글"), "아무 글");
+  const t = createTurnInfo(api, { chip: false }); await t.start(); await t.setCallShow(true);
+  assert.ok(hooks > 0, "주사위 표시를 위해 훅을 단다");
+  const msgs = [{ role: "system", content: "S" }, { role: "system", content: "[Dusk Memory] x" }, { role: "user", content: "3" }];
+  assert.deepEqual(await t.beforeRequest(msgs, "model"), msgs);
+  assert.equal(await t.onDisplay("아무 글"), "아무 글", "호출 표시는 RisuBard에서 안 붙음");
 });
 
 test("리스 자체 Gemini 연결이면 마지막 사용자 말 앞의 바뀌는 블록을 뒤로 옮겨 앞부분을 지킨다(Dusk 프로바이더·다른 모델은 그대로)", async () => {

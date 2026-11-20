@@ -8,7 +8,9 @@
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
 import { cycleOnlyInScene } from "../engine/cyclescene.js";
 import { logFailure, logEvent } from "./memlog.js";
-import { applyCycleEvents } from "./cyclesync.js";
+import { applyCycleEvents, syncCycles } from "./cyclesync.js";
+import { extraOf } from "../engine/memextra.js";
+import { raceFor } from "../engine/races.js";
 import { potState } from "../engine/memoryswitch.js";
 import { aiTask, describeAi, trackAi } from "../engine/aistop.js";
 import { folderIdOf } from "./memorystore.js";
@@ -38,6 +40,8 @@ import { makeTools } from "./memorytools.js";
 import { potConfirm } from "../engine/memoryswitch.js";
 import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
 import { chatKeyOf } from "../engine/chatkey.js";
+import { gateReports } from "../engine/fertility.js";   // 0.3.22 피임·체내 정액량·이력
+const nkey = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 import { readGauge } from "./gaugemult.js";
 import { readSeedOpt } from "./adultseed.js";
 import { cleanJsonReply } from "../engine/jsonreply.js";
@@ -186,7 +190,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (rec) retryHits++;
       else {
         const cast = await castNow(s0);
-        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, cycle: cyc, nsfw: (() => { try { return settings.snapshot()?.sexualDesireEnabled === true; } catch { return false; } })(), onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, world: s0.inject?.world === true, status: s0.inject?.status !== false, outfit: s0.inject?.outfit !== false, weather: s0.inject?.scenePanel !== false, race: s0.inject?.race !== false, cycle: cyc, nsfw: (() => { try { return settings.snapshot()?.sexualDesireEnabled === true; } catch { return false; } })(), onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
         if (!rec.people.some((p) => p.failed)) boundedSet(recDone, fullKey, rec, 4);
       }
       run.gauge = await readGauge(api);   // 2.2.6 게이지 배수(위키 호감도·성격 막대)
@@ -203,12 +207,26 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
           if (R.length) logEvent({ area: "월경·임신", title: parts.join(" · ") });
           else if (rec.stage1?.cycleDeclared) logEvent({ kind: "skip", area: "월경·임신", title: "기록기가 이번 응답 장면에 여성이 없다고 보고했어요(women|none)" });
           else logFailure({ area: "월경·임신", title: "기록기가 월경 줄을 빠뜨렸어요 — 문제", error: "문제: 월경 추적이 켜져 있는데 기록 모델 답에 women| 줄이 없어요", why: "기록 모델이 월경 지침을 따르지 않았어요(검열이 아니라 지침 누락).", todo: "계속되면 장기 기억 보조 모델을 지침을 더 잘 따르는 모델로 바꿔 보세요.", fallback: "이번 응답은 월경·임신을 기록하지 않았어요" }); }
+        // 0.3.22 피임·강제 피임·체내 정액량·출산/유산 이력으로 관계마다 보호 여부를 정한다(코어 월경 추적이 비보호만 배란일 확률로 굴림)
+        try {
+          const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(), ch = await api.getCharacterFromIndex(ci), chat0 = await api.getChatFromIndex(ci, ti);
+          const fo = ch && chat0 ? await store.getFolder(String(ch.chaId), chatKeyOf(chat0, ti)) : null;
+          const docOf = (n) => Object.values(fo?.wiki?.documents ?? {}).find((d) => d?.type === "Character" && [d.title, ...(d.aliases ?? [])].some((x) => nkey(x) === nkey(n)));
+          const cums = (rec.stage1?.extra ?? []).filter((x) => x.kind === "cum" && x.where === "inside");
+          const when0 = [...(fo?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
+          const g = gateReports(cs.reports, (n) => { const d = docOf(n); return d ? { nsfw: fo?.nsfw?.[d.id] ?? null, L: fo?.life?.p?.[d.id] ?? null, race: raceFor(fo, [d.title, ...(d.aliases ?? [])]) } : {}; },
+            { turn: Number.isInteger(fo?.cursor?.at) ? fo.cursor.at : 0, now: when0, cumOf: (her, him) => cums.find((x) => nkey(x.name) === nkey(her) && (!him || nkey(x.partner) === nkey(him))) ?? null });
+          cs.reports = g.reports;
+          if (g.log.length) logEvent({ area: "임신·피임", title: g.log.join(" · ").slice(0, 160), detail: g.log });
+          for (const x of cs.reports) { if (x.birth) nsfwQueue.push({ kind: "hist", name: x.name, ev: "birth" }); if (x.loss) nsfwQueue.push({ kind: "hist", name: x.name, ev: "loss" }); }
+        } catch (e) { log("기록기: 피임 계산 건너뜀", e?.message ?? e); }
         env = applyCycleReportObject({ ...env, cycle_report: cs.reports }, wiki.snapshot(), cy).obj;
         // addon-rebuild: 생리 시작·유산은 주기 계산이 끝난 뒤(settle) 위키 구획에 맞춘다
         const ev = cs.reports.filter((x) => x.period || x.loss).map((x) => ({ name: x.name, period: !!x.period, loss: !!x.loss }));
         if (ev.length) cycleSync.push(...ev); } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
       if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
       if (rec.stage1?.human?.length) { nsfwQueue.push(...rec.stage1.human); while (nsfwQueue.length > 40) nsfwQueue.shift(); }
+      if (rec.stage1?.extra?.length) { nsfwQueue.push(...rec.stage1.extra); while (nsfwQueue.length > 60) nsfwQueue.shift(); }   // 0.3.22 소문·목표·세계·흔적
       if (rec.stage1?.nsfw?.length) { nsfwQueue.push(...rec.stage1.nsfw); while (nsfwQueue.length > 40) nsfwQueue.shift(); }
       if (rec.stage1?.drive) { driveQueue.push(rec.stage1.drive); while (driveQueue.length > 6) driveQueue.shift(); }   // 장면 판단 관찰(턴 하나 = 한 묶음)   // addon-rebuild: 채팅별 성인 프로필 변화(애드온이 턴 뒤 폴더에 반영)
       lastRecord = { at: Date.now(), batch: run.batch, ...summarize(rec, env) };
@@ -394,6 +412,14 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         const ok = await r.auto.waitForScope(ci, ti, { timeoutMs: 180000 });
         try { if (cyclePending) { const ev = milestonesBetween(cyclePending, cycleStates(r.wiki.snapshot())); cyclePending = null; cycleEvents.push(...ev); } } catch { cyclePending = null; }
         if (ok && cycleSync.length) { const ev = cycleSync.splice(0); try { let changed = []; const st = r.wiki.requireStore(); st.replace((v) => { const o = applyCycleEvents(v, ev); changed = o.changed; return o.scope; }); await st.flush(); if (changed.length) { log(`월경 기록 맞춤: ${changed.join(", ")}`); logEvent({ area: "월경·임신", title: `생리 시작·유산 반영 · ${changed.join(", ")}`, detail: ev }); } } catch (e) { log("월경 기록 맞춤 실패", e?.message ?? e); } }
+        // 0.3.22 동거 여성 월경 주기 동기화(한 주기 지날 때마다 조금씩)
+        if (ok) { try {
+          const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(), ch = await api.getCharacterFromIndex(ci), chat0 = await api.getChatFromIndex(ci, ti);
+          const chaId = ch ? String(ch.chaId) : "", ck = chat0 ? chatKeyOf(chat0, ti) : "", fo = chaId && ck ? await store.getFolder(chaId, ck) : null, e = extraOf(fo);
+          if (e.cohabit.length) { let res = null; const st = r.wiki.requireStore(); st.replace((v) => { res = syncCycles(v, e.cohabit, e.cycleSync); return res.scope; }); await st.flush();
+            if (res && JSON.stringify(res.last) !== JSON.stringify(e.cycleSync)) await store.updateFolder(chaId, ck, (f) => { const x = extraOf(f); x.cycleSync = res.last; f.extra = x; });
+            if (res?.changed.length) { log(`월경 주기 동기화: ${res.changed.join(", ")}`); logEvent({ area: "월경·임신", title: `함께 사는 사람끼리 주기가 조금 가까워졌어요 · ${res.changed.join(", ")}` }); } }
+        } catch (e) { log("월경 주기 동기화 실패", e?.message ?? e); } }
         return ok;
       };
       link.takeCycle = () => cycleEvents.splice(0);

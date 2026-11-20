@@ -10,9 +10,10 @@ import { renderOpen, renderRels, renderTimeline } from "./ledger.js";
 import { openItems, timelineOf } from "../../../engine/memoryplus.js";
 import { renderBotSettings } from "./settings.js";
 import { loadUserName, watchUserName } from "./username.js";
+import { renderWorld, worldCount } from "./worldtab.js";
 
-export const DETAIL_TABS = [["people", "인물 위키"], ["scenes", "상황"], ["timeline", "시간선"], ["open", "열린 항목"], ["rels", "관계"]];
-const DRAW = { people: renderPeopleTab, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels };
+export const DETAIL_TABS = [["people", "인물 위키"], ["world", "세계"], ["scenes", "상황"], ["timeline", "시간선"], ["open", "열린 항목"], ["rels", "관계"]];
+const DRAW = { people: renderPeopleTab, world: renderWorld, scenes: renderScenes, timeline: renderTimeline, open: renderOpen, rels: renderRels };
 
 export async function renderMemoryDetail(ctx, host, { redraw }) {
   const m = mem(ctx), M = ctx.memory;
@@ -39,6 +40,7 @@ export async function renderMemoryDetail(ctx, host, { redraw }) {
   // 구역별 개수(칩에 표시)
   const counts = {
     people: Object.values(folder.people ?? {}).filter((p) => !p.orphan).length,
+    world: (() => { try { return worldCount(folder); } catch { return 0; } })(),
     scenes: (folder.scenes ?? []).filter((x) => !x.orphan).length,
     timeline: (() => { try { return timelineOf(folder).length; } catch { return 0; } })(),
     open: (() => { try { return openItems(folder).length; } catch { return 0; } })(),
@@ -46,7 +48,9 @@ export async function renderMemoryDetail(ctx, host, { redraw }) {
   };
   if (!DRAW[m.tab]) m.tab = "people";
   const body = h("div", { class: "rb-mem-secbody", role: "tabpanel" });
-  const tabBtns = DETAIL_TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip rb-mem-sectab", dataset: { sec: id }, "aria-selected": m.tab === id ? "true" : "false", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; if (id !== "people") m.personKey = ""; paintTabs(); drawSec(); } }, label, h("span", { class: "n" }, String(counts[id]))));
+  const worldOn = idx.settings?.inject?.world === true;   // 0.3.22 세계 탭은 설정에서 켤 때만(기본 꺼짐)
+  if (!worldOn && m.tab === "world") m.tab = "people";
+  const tabBtns = DETAIL_TABS.filter(([id]) => id !== "world" || worldOn).map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip rb-mem-sectab", dataset: { sec: id }, "aria-selected": m.tab === id ? "true" : "false", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; if (id !== "people") m.personKey = ""; paintTabs(); drawSec(); } }, label, h("span", { class: "n" }, String(counts[id]))));
   const paintTabs = () => tabBtns.forEach((b) => { const on = b.dataset.sec === m.tab; b.setAttribute("aria-pressed", on ? "true" : "false"); b.setAttribute("aria-selected", on ? "true" : "false"); });
   let drawTok = 0;
   const drawSec = async () => {

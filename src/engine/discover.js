@@ -18,7 +18,7 @@ export const DISCOVER = [
     when: (s) => s.opens >= 5, go: { tab: "home" } },
   { id: "cards", icon: "sparkle", title: "기억 카드 만들기", text: "쌓인 기억을 카드 한 장으로 꾸며 두고, 그 카드로 새 봇을 이어 갈 수 있어요.",
     when: (s) => s.records >= 15, needs: "cards", go: { tab: "cards" }, done: (s) => s.visited.has("cards") },
-  { id: "regress", icon: "history", title: "회귀 · 이어서 하기", text: "고른 인물만 기억을 안고 처음부터 다시 시작하거나, 긴 대화를 기억만 들고 새 채팅에서 이어 가요. 채팅 입력창 옆 메뉴의 ⏳에서 열어요.",
+  { id: "regress", icon: "history", title: "회귀 / 채팅 옮기기", text: "고른 인물만 기억을 안고 처음부터 다시 시작하거나, 긴 대화를 기억만 들고 새 채팅에서 이어 가요. 채팅 입력창 옆 메뉴의 ⏳에서 열어요.",
     when: (s) => s.addons.has("memory") && s.records >= 30, go: { tab: "memory" } },
   { id: "advanced", icon: "tools", title: "고급 모드", text: "세부 설정과 개발 도구까지 모두 보여요. 기능에 익숙해졌다면 설정 → 화면 모드에서 켜 보세요.",
     when: (s) => !s.advanced && s.opens >= 10, go: { tab: "settings" } },

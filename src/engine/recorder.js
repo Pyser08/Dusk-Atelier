@@ -154,6 +154,8 @@ export const CYCLE_STAGE1 = [
   "birth|Name      she gives birth in newest",
 ].join("\n");
 import { DRIVE_STAGE1, driveFrom } from "./scenedrive.js";
+import { EXTRA_STAGE1, MARK_STAGE1, STATUS_STAGE1, OUTFIT_STAGE1, WEATHER_STAGE1, COHABIT_STAGE1, extraFrom } from "./memextra.js";
+import { RACE_STAGE1 } from "./races.js";   // 0.3.22 소문·목표·세계 문서·몸 흔적
 // addon-rebuild: 채팅별 성인 프로필(체위·장소·성적 수치) 변화 — 성인 항목이 켜졌을 때만 1단계에 줄 두 개를 더 받는다. 대부분의 턴엔 아무 줄도 없다.
 export const NSFW_STAGE1 = [
   "",
@@ -165,7 +167,7 @@ export const NSFW_STAGE1 = [
   "sleep|Name",
   "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      arousal never rises on its own — YOU decide it: write lust when newest actually moves this character's arousal (flirting, sexual tension, touch, their own desire or kink being touched, aphrodisiac → up; awkwardness, upset, fear, interruption, cold shower → down). Size it to what happened (small hint +2..5, clear tease +6..12, strong +13..30). Nothing sexual happened → no lust line. fatigue: exhaustion or rest",
   "past|Name|partner|count|stated or estimated      they had sex before the story (newest, user message or lorebook); estimate the count when none is given",
-  "zone|Name|Korean body part|1-3 (3 = weak spot)|short Korean note      a sexually sensitive spot shows",
+  "zone|Name|Korean body part|0-3 (0 = numb, feels nothing there; 3 = weak spot — only when touching it clearly breaks their composure)|one-line Korean trait: how it reacts|exact spot, Korean (e.g. 왼쪽 귓불 뒤) — for 3 only      a sexually sensitive spot shows",
   "trait|Name|first, fantasy, voice, after, yes, no or contra|short Korean phrase      first time, fantasy, bed voice, aftercare, signs of liking/refusing, contraception attitude",
   "touch|Name|Korean body parts stimulated, comma separated      sexual stimulation of this character's body",
   "sat|Name|partner|good, ok or bad      how satisfied they were after sex",
@@ -211,7 +213,7 @@ export function nsfwFrom(raw, known = []) {
     else if (tag === "sat" && f[3]) out.push({ kind: "sat", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), level: /good|좋|만족/i.test(f[3]) ? "good" : /bad|아쉬|불만/i.test(f[3]) ? "bad" : "ok" });
     else if (tag === "gauge" && f[2] && f[3]) out.push({ kind: "gauge", name, key: /fat|피로/i.test(f[2]) ? "fat" : "lust", delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });
     else if (tag === "past" && f[2] && f[3]) out.push({ kind: "past", name, partner: canonName(String(f[2]).trim(), known) || String(f[2]).trim(), count: Number(String(f[3]).replace(/[^\d]/g, "")) || 0, est: /estim|추정/i.test(f[4] ?? "") });
-    else if (tag === "zone" && f[2]) out.push({ kind: "zone", name, part: f[2], level: Number(f[3]) || 2, note: (f[4] ?? "").slice(0, 80) });
+    else if (tag === "zone" && f[2]) out.push({ kind: "zone", name, part: f[2], level: /^\s*0\s*$|numb|불감/i.test(String(f[3] ?? "")) ? 0 : Number(f[3]) || 2, note: (f[4] ?? "").slice(0, 80), spot: (f[5] ?? "").slice(0, 40) });
     else if (tag === "trait" && f[2] && f[3] && EXT_TRAITS.has(f[2].toLowerCase())) out.push({ kind: "trait", name, field: f[2].toLowerCase(), text: f[3].slice(0, 100) });
     if (out.length >= 12) break;
   }
@@ -251,13 +253,13 @@ export const GROUP_MAX = 3;   // 2.1.4: 한 번에 묻는 인물 수
 const names = (chunk) => chunk.map((t) => t.name).join("·");
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
 // cast(name, aliases) → bool: 로어북에 있는 인물만 새로 만들기(설정 '로어북에 있는 인물만 새로 기록'). 없으면 막지 않는다. 이미 위키에 있는 인물은 묻지 않고 통과.
-export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, nsfw = false, onWarn = () => {} } = {}) {
+export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, nsfw = false, world = false, status = false, outfit = false, weather = false, race = false, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
   const key = nk(source).slice(0, 4000);
-  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "") + "|human";
-  const extra = (cycle ? CYCLE_STAGE1 : "") + (nsfw ? NSFW_STAGE1 + DRIVE_STAGE1 : "") + HUMAN_STAGE1;   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
+  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "") + "|human" + (world ? "|world" : "") + (status ? "|status" : "") + (outfit ? "|outfit" : "") + (weather ? "|weather" : "") + (race ? "|race" : "");
+  const extra = (cycle ? CYCLE_STAGE1 + COHABIT_STAGE1 : "") + (nsfw ? NSFW_STAGE1 + MARK_STAGE1 + DRIVE_STAGE1 : "") + HUMAN_STAGE1 + (world ? EXTRA_STAGE1 : "") + (status ? STATUS_STAGE1 : "") + (outfit ? OUTFIT_STAGE1 : "") + (weather ? WEATHER_STAGE1 : "") + (race ? RACE_STAGE1 : "");   // 0.3.22 소문·목표·세계 문서는 설정 ‘세계 탭’(기본 꺼짐)   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
   let stage1 = cache?.get(ckey) ?? null;
   if (!stage1) {
     const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: cut(run.recent || (dusk?.recent ?? []).join("\n"), 4000), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
@@ -267,6 +269,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
       // addon-rebuild: women| 줄이 있었는지 — 없으면 '모델이 월경 줄을 빠뜨림', 있으면 '여성이 없다고 보고'로 구분한다
       if (cycle) { got.cycle = cycleFrom(raw, known); got.cycleDeclared = /(^|\n)\s*(?:[-*•>]+\s*)?women\s*[|｜¦]/i.test(String(raw ?? "")) || got.cycle.length > 0; }
       got.human = humanFrom(raw, known, HUMAN_TRAITS);
+      got.extra = extraFrom(raw, (n) => canonName(String(n ?? "").trim(), known) || String(n ?? "").trim(), { marks: nsfw, world, status, outfit, weather, cohabit: cycle, race });
       if (nsfw) { got.nsfw = nsfwFrom(raw, known); got.drive = driveFrom(raw, (n) => { const c = canonName(String(n ?? "").trim(), known); return c && c !== "{{user}}" ? c : (/\{\{user\}\}/i.test(String(n)) ? "{{user}}" : ""); }); }
       return got.scene || got.people.length ? got : null;
     }, { minimal: LINES_STAGE1_MIN + extra });   // 2.2.8: 짧은 지침 재시도에도 월경 줄(빠지면 그 턴만 월경 보고가 비었다)

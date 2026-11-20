@@ -48,3 +48,18 @@ test("주사위 결과 표시: 응답에 판정 표식이 있으면 실제 행�
   const html = diceHtml({ dice: { rolls: [62, 80, 5], cuts: { easy: 20, normal: 50, hard: 75, extreme: 95 } } }, [{ act: "설득", diff: "hard", roll: 62, result: "fail" }]);
   assert.ok(html.includes("설득") && html.includes("어려움") && html.includes("성공 26%"));
 });
+
+test("RisuBard(bardWiki 있음): 주사위 결과 표시가 켜지고, 출력 훅이 안 불려도 다음 새 응답 아래에 붙는다", async () => {
+  const { api } = memApi(); api.bardWiki = { getDocuments: async () => [] };
+  let dice = null;
+  const t = createTurnInfo(api, { chip: false, diceSource: () => dice }); await t.start(); await t.setDiceShow(true);
+  const sent = [{ role: "system", content: "S" }, { role: "user", content: "문을 연다" }];
+  const out = await t.beforeRequest(sent, "model");
+  assert.deepEqual(out, sent, "RisuBard에선 요청 글을 건드리지 않는다(순서 바꾸기·캐시 처리 안 함)");
+  dice = { at: Date.now(), rolls: [42], cuts: [20, 50, 75, 95], mode: "reinterpret" };
+  const reply = "문이 삐걱 열렸다. 안은 어두웠다. <!-- dusk-roll: 문 열기 | normal | 42 | fail -->";
+  const shown = await t.onDisplay(reply);
+  assert.match(shown, /x-dusk="dice"/, "출력 훅 없이도 주사위 상자");
+  assert.equal(await t.onDisplay(reply), shown, "같은 응답을 다시 그려도 같다");
+  assert.doesNotMatch(await t.onDisplay("전혀 다른 예전 응답입니다 아주 오래된"), /x-dusk="dice"/, "주사위 하나는 응답 하나에만");
+});

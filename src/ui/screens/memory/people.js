@@ -66,7 +66,7 @@ export function peopleMenuItems(env, people) {
   const m = mem(env.ctx), { caps } = env;
   return [
     ...memoryFileItems(env.ctx, env.redraw),
-    env.backend.id === "local" && { label: "회귀 (인물 골라 새 채팅)", onClick: () => regressFrom(env).catch(fail(env.ctx)) },
+    env.backend.id === "local" && { label: "회귀 / 채팅 옮기기 (인물 골라 새 채팅)", onClick: () => regressFrom(env).catch(fail(env.ctx)) },
     caps.analyze && { label: "인물 합치기", onClick: () => openMerge(env, people).catch(fail(env.ctx)) },
     caps.analyze && { label: "같은 이름 한 번에 합치기", onClick: () => mergeSameNames(env, people).catch(fail(env.ctx)) },
     env.folder.wiki?.documents && { label: "위키 점검", onClick: () => openWikiHealth(env, people).catch(fail(env.ctx)) },

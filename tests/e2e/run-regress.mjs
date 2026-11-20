@@ -26,7 +26,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const rb = page.locator(".rb-btn", { hasText: "⏳ 회귀" });
   ok(`[${tag}] 인물 상세에 '⏳ 회귀' 버튼`, (await rb.count()) === 1);
   await rb.click(); await page.waitForTimeout(500);
-  ok(`[${tag}] 회귀 창이 열림(시계 SVG·제목)`, (await page.locator(".rb-rg .rb-rg-clock").count()) === 1 && (await page.locator(".rb-rg h3").textContent()) === "회귀");
+  ok(`[${tag}] 회귀 창이 열림(시계 SVG·제목)`, (await page.locator(".rb-rg .rb-rg-clock").count()) === 1 && (await page.locator(".rb-rg h3").textContent()) === "회귀 / 채팅 옮기기");
   ok(`[${tag}] 인물 목록에 시로코·카엘, 시로코가 골라져 있음`, (await page.locator(".rb-rg-p").count()) >= 2 && /시로코/.test(await page.locator(".rb-rg-p[aria-pressed=true]").textContent()));
   ok(`[${tag}] 이름 기본값`, (await page.locator(".rb-rg-field input").inputValue()) === "회귀 · 시로코");
   const w = await page.evaluate(() => { const b = document.querySelector(".rb-rg").getBoundingClientRect(); return { w: b.width, right: b.right, vw: innerWidth, sw: document.documentElement.scrollWidth }; });
