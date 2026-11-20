@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { tickLife, lustRate, lifeView, lifeSection, usesToPrefs, jealousyOf, trendOf, missOf, famStep, lustStep, humanSection } from "../src/engine/nsfwlife.js";
+import { tickLife, lustRate, lifeView, lifeSection, usesToPrefs, jealousyOf, trendOf, missOf, famStep, lustStep, humanSection, ensureHotGoals } from "../src/engine/nsfwlife.js";
 import { applyHumanReports, normZones, partOf, normHuman } from "../src/engine/humanitems.js";
 import { normalizeNsfw } from "../src/engine/nsfwprofile.js";
 import { nsfwFrom, humanFrom } from "../src/engine/recorder.js";
@@ -221,4 +221,28 @@ test("월경 단계별 기분이 지금 상태와 주입 줄에 들어간다(제
   assert.match(lifeSection(f, ["유나"], 10), /유나: [^\n]*PMS/);
   f.wiki.documents.b.sections = [];
   assert.doesNotMatch(lifeSection(f, ["민호"], 10), /생리|배란/);
+});
+
+// 2.2.22 버그리포트: 반영한 턴 번호(evAt)가 지금 턴보다 앞서 있으면(지난 대화 분석·메시지 삭제·분기) 관계·피로·게이지 보고를 전부 버렸다
+test("반영한 턴 번호가 지금보다 앞서 있어도 새 행위 보고는 반영(같은 턴 리롤만 건너뜀)", () => {
+  const f = folder(); tickLife(f, { turn: 10, present: ["유나"] }, () => 80);
+  f.life.evAt = 500; f.life.turn = 500;   // 지난 대화 분석이 더 큰 번호를 남긴 상태
+  tickLife(f, { turn: 11, present: ["유나"], events: [{ kind: "act", name: "유나", partner: "민호", act: "sex" }] }, () => 80);
+  const L = f.life.p[Object.keys(f.life.p)[0]];
+  assert.equal(L.sex.n, 1, "경험 수가 오름"); assert.equal(L.sex.last, 11, "마지막 관계 턴");
+  tickLife(f, { turn: 11, present: ["유나"], events: [{ kind: "act", name: "유나", partner: "민호", act: "sex" }] }, () => 80);
+  assert.equal(L.sex.n, 1, "같은 턴 리롤은 두 번 세지 않음");
+  tickLife(f, { turn: 12, present: ["유나"], events: [{ kind: "gauge", name: "유나", key: "fat", delta: 20 }] }, () => 80);
+  assert.ok(L.fat >= 15, `피로가 오름 ${L.fat}`);
+});
+
+test("달아오름 장면 계획은 관계(해소) 뒤나 진정되면 사라짐", () => {
+  const f = folder(); tickLife(f, { turn: 1, present: ["유나"] }, () => 80);
+  const id = Object.keys(f.life.p)[0]; f.life.p[id].lust = 95;
+  ensureHotGoals(f);
+  assert.ok(Object.values(f.drive.goals).some((g) => g.hot && g.kind === "sex"), "계획 생김");
+  tickLife(f, { turn: 2, present: ["유나"], events: [{ kind: "act", name: "유나", partner: "{{user}}", act: "sex" }] }, () => 80);
+  ensureHotGoals(f);
+  assert.ok(f.life.p[id].lust < 60, `해소로 내려감 ${f.life.p[id].lust}`);
+  assert.ok(!Object.values(f.drive.goals).some((g) => g.hot && g.kind === "sex"), "해소 뒤 계획 사라짐");
 });

@@ -18,9 +18,12 @@ export function builders(ctx, idx, redraw, kind = "all") {
   const M = ctx.memory, S = idx.settings;
   const save = (fn) => M.store.updateIndex((i) => { const before = structuredClone(i.settings); fn(i.settings, i); i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); }).then(() => redraw()).catch(fail(ctx));
   const num = (label, get, set, { min = 0, max = 99999, step = 1, def } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label, defHint(def)), h("input", { class: "rb-input", type: "number", min, max, step, value: get(), onChange: (e) => { const v = Math.min(max, Math.max(min, Number(e.target.value) || 0)); save((s) => set(s, v)); } }));
-  const sw = (label, on, set) => h("div", { class: "rb-mem-field row" }, h("span", null, label), switchEl(on, { label, onChange: (v, el) => { setSwitch(el, v); save((s) => set(s, v)); } }));
+  // 2.2.22: 스위치는 누른 줄만 바꾸고 화면 전체를 다시 그리지 않는다(누를 때마다 설정 카드가 ‘불러오는 중’으로 깜빡였다). 실패하면 되돌리고 알린다
+  const saveQuiet = (fn, el, v) => M.store.updateIndex((i) => { const before = structuredClone(i.settings); fn(i.settings, i); i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); })
+    .catch((e) => { if (el) setSwitch(el, !v); fail(ctx)(e); });
+  const sw = (label, on, set) => h("div", { class: "rb-mem-field row" }, h("span", null, label), switchEl(on, { label, onChange: (v, el) => { setSwitch(el, v); saveQuiet((s) => set(s, v), el, v); } }));
   const section = (title, ...kids) => { const [t, k = kind] = Array.isArray(title) ? title : [title]; return h("section", { class: "rb-card rb-mem-sec" }, h("h3", null, t, k ? scopeChip(k) : null), ...kids); };
-  return { M, S, save, num, sw, section };
+  return { M, S, save, saveQuiet, num, sw, section };
 }
 
 // 최근 기록 결과(Dusk 기록기): 무엇을 남겼는지 한눈에. 화면을 열 때의 값만 보여 준다(새로 기록되면 다시 열면 바뀜).

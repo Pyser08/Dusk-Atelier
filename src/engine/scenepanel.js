@@ -186,10 +186,10 @@ export function scenePanelHtml({ date = "", time = "", place = "", weather = "",
   const glass = "background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)";
   const chips = people.map((p) => {
     const init = esc([...String(p.name ?? "?")][0] ?? "?");
-    const dot = `<span style="display:inline-grid;place-items:center;width:18px;height:18px;margin-right:5px;border-radius:50%;background:rgba(255,255,255,.28);font-size:10px;font-weight:700;vertical-align:-4px">${init}</span>`;
+    const dot = `<span style="display:inline-grid;place-items:center;width:18px;height:18px;margin-right:5px;border-radius:50%;background:linear-gradient(140deg,#8b6fe0,#e8578e);color:#fff;font-size:10px;font-weight:700;vertical-align:-4px">${init}</span>`;
     return p.card
-      ? `<span style="display:inline-block;margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;${glass};color:${fg}">${dot}${linkHtml(p.name, p.card)}</span>`
-      : `<span style="display:inline-block;margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(255,255,255,.1);color:${fg};opacity:.8">${dot}${esc(p.name)}</span>`;
+      ? `<span style="display:inline-block;margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(139,111,224,.14);border:1px solid rgba(139,111,224,.3)">${dot}${linkHtml(p.name, p.card)}</span>`
+      : `<span style="display:inline-block;margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(127,127,127,.12);opacity:.85">${dot}${esc(p.name)}</span>`;
   }).join("");
   const up = (d) => `animation:dkUp .55s cubic-bezier(.22,1,.36,1) both ${d}s`;
   const temp = fc?.now && Number.isFinite(fc.now.t) ? `${fc.now.t}°` : "";
@@ -201,7 +201,7 @@ export function scenePanelHtml({ date = "", time = "", place = "", weather = "",
     + `<span style="font-size:11px;font-weight:700;letter-spacing:.04em;margin-top:2px">${esc(weather || "날씨")}${temp ? ` <span style="font-weight:800">${temp}</span>` : ""}</span>`
     + (fcBody ? `<span style="font-size:9px;opacity:.75;letter-spacing:.08em">예보 ▾</span>` : "") + `</summary>`;
   const wxDetails = `<details x-dusk="wx" style="display:block;margin:0">${box}${fcBody ? `<span style="display:block;position:relative;z-index:1;margin:0 10px 10px;padding:9px 8px 8px;border-radius:16px;background:rgba(0,0,0,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:dkUp .4s cubic-bezier(.22,1,.36,1)"><span style="display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 7px"><b style="font-size:11px;letter-spacing:.12em">4일 예보</b><span style="font-size:10px;opacity:.7">${zone}</span></span>${fcBody}<span style="display:block;margin:7px 4px 0;font-size:9.5px;opacity:.6">%는 그 날씨일 확률 · 💧 강수 확률 · 이야기 속 날씨에 따라 바뀌어요</span></span>` : ""}</details>`;
-  return `\n\n${SCENE_CSS}<div x-dusk="scene" style="position:relative;isolation:isolate;margin:14px 0 6px;border-radius:22px;overflow:hidden;color:${fg};background:${bg};animation:dkPop .7s cubic-bezier(.22,1,.36,1) both;box-shadow:0 12px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1px rgba(255,255,255,.08);font-style:normal;line-height:1.35;text-shadow:0 1px 3px rgba(0,0,0,.28)">`
+  return `\n\n${SCENE_CSS}<div x-dusk="scene" style="margin:14px 0 6px;font-style:normal">` + `<div style="position:relative;isolation:isolate;contain:paint;border-radius:22px;overflow:hidden;color:${fg};background:${bg};animation:dkPop .7s cubic-bezier(.22,1,.36,1) both;box-shadow:0 12px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1px rgba(255,255,255,.08);font-style:normal;line-height:1.35;text-shadow:0 1px 3px rgba(0,0,0,.28)">`
     + `<div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none">${fx}`
     + L(`top:0;bottom:0;left:0;width:35%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);animation:dkSheen 1.6s cubic-bezier(.4,0,.2,1) .35s both`)
     + L(`inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.22))`) + `</div>`
@@ -209,6 +209,8 @@ export function scenePanelHtml({ date = "", time = "", place = "", weather = "",
     + `<div style="font-size:11.5px;letter-spacing:.08em;opacity:.88;${up(.1)}">${esc(dateLabel(date, cl) || "날짜 미정")}${part ? ` · ${part}` : ""}</div>`
     + `<div style="font-size:36px;font-weight:800;letter-spacing:.01em;line-height:1.05;margin-top:3px;font-variant-numeric:tabular-nums;text-shadow:0 2px 14px rgba(0,0,0,.25);${up(.18)}">${esc(time || "--:--")}</div>`
     + `${place ? `<div style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:3px 10px 3px 8px;border-radius:999px;font-size:12.5px;max-width:100%;${glass};${up(.26)}"><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" style="flex:none"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(place)}</span></div>` : ""}</div>`
-    + (chips ? `<div style="position:relative;z-index:1;margin:0 10px 10px;padding:6px 8px;border-radius:14px;background:rgba(0,0,0,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:12px;white-space:nowrap;overflow-x:auto;${up(.38)}"><span style="font-size:10px;letter-spacing:.12em;opacity:.7;margin:0 7px 0 3px">등장</span>${chips}</div>` : "")
-    + wxDetails + `</div>`;
+    + wxDetails + `</div>`
+    // 2.2.22: 등장인물 띠는 카드 밖 아래로(카드 안 흐림·스크롤 상자에 상태창이 갇혀 작은 띠 안에서 열리던 문제)
+    + (chips ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px 0;margin:6px 4px 0;font-size:12px;${up(.38)}"><span style="font-size:10px;letter-spacing:.12em;opacity:.6;margin:0 7px 0 3px">등장</span>${chips}</div>` : "")
+    + `</div>`;
 }

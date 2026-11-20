@@ -5,6 +5,10 @@ export const CHAT_MENU_KEY = "dusk.ui.chatQuick";
 const ICON = { memory: "🧠", regress: "⏳", fair: "⚖️", dice: "🎲", show: "📊" };
 export function createChatMenu(api, { fairPlay, turnInfo, openMemory, openRegress, onChange = () => {}, log = (...a) => console.log("[Dusk 채팅 메뉴]", ...a) } = {}) {
   let shown = false;
+  // 2.2.22: 등록·떼기·바로가기 추가가 겹치면 서로 버튼을 지웠다 → 모든 작업을 한 줄로 세운다
+  let q = Promise.resolve();
+  const serial = (fn) => { const p = q.then(fn, fn); q = p.catch(() => {}); return p; };
+  const live = new Set();   // 지금 리스에 붙어 있는 버튼 id
   const items = [
     // 맨 위(등록 순서 = 메뉴 순서). 켜고 끄는 게 아니라 장기 기억 화면을 여는 바로가기라 이름에 켜짐/꺼짐이 없다.
     ...(typeof openMemory === "function" ? [{ id: "dusk-qt-memory", key: "memory", title: "장기 기억", link: true, open: openMemory }] : []),
@@ -16,35 +20,41 @@ export function createChatMenu(api, { fairPlay, turnInfo, openMemory, openRegres
   const nameOf = (x) => (x.link ? x.title : `${x.title} · ${x.get() ? "켜짐" : "꺼짐"}`);
   async function put(x, location = "chat") {
     await api.registerButton({ name: nameOf(x), icon: ICON[x.key], iconType: "html", location, id: x.id }, () => (x.link ? openLink(x) : toggle(x)));
+    live.add(x.id);
   }
+  async function drop(x) { try { await api.unregisterUIPart?.(x.id); } catch { /* 이미 없음 */ } live.delete(x.id); }
   async function openLink(x) { try { await x.open(); } catch (e) { log("열지 못함", e?.message ?? e); } }
   async function toggle(x) {
     try { await x.set(!x.get()); await refresh(); onChange(x.key, x.get()); } catch (e) { log("바꾸지 못함", e?.message ?? e); }
   }
-  async function refresh() { if (!shown) return; for (const x of items) { if (x.link) continue; try { await put(x); } catch (e) { log("이름 갱신 실패", e?.message ?? e); } } }
-  async function show() {
+  const refresh = () => serial(async () => { if (!shown) return; for (const x of items) { if (x.link) continue; try { await put(x); } catch (e) { log("이름 갱신 실패", e?.message ?? e); } } });
+  const show = () => serial(async () => {
     if (shown) return true;
     if (typeof api.registerButton !== "function") return false;
     try { shown = true; for (const x of items) await put(x); return true; } catch (e) { shown = false; log("버튼 등록 실패", e?.message ?? e); return false; }
-  }
-  async function hide() {
+  });
+  const hide = () => serial(async () => {
     if (!shown) return true;
     shown = false;
-    for (const x of items) { try { await api.unregisterUIPart?.(x.id); } catch { /* 이미 없음 */ } }
+    for (const x of items) await drop(x);
     return true;
-  }
+  });
   async function isOnSaved() { try { const v = await api.pluginStorage.getItem(CHAT_MENU_KEY); return !(v === "off" || v === false || v === "false"); } catch { return true; } }
   return {
     async start() { return (await isOnSaved()) ? show() : false; },
     async setOn(v) { await api.pluginStorage.setItem(CHAT_MENU_KEY, v ? "on" : "off"); return v ? show() : hide(); },
     isOn: isOnSaved,
     // 애드온이 바로가기(링크)를 맨 위에 붙인다(장기 기억·회귀 → 장기기억 애드온). 반환: 떼기. 메뉴 순서를 지키려고 다시 등록한다.
-    async addLink(item) {
-      const x = { link: true, ...item };
-      const at = items.filter((i) => i.link).length;
-      items.splice(at, 0, x);
-      if (shown) { await hide(); await show(); }
-      return async () => { const i = items.indexOf(x); if (i < 0) return; items.splice(i, 1); try { await api.unregisterUIPart?.(x.id); } catch { /* 이미 없음 */ } };
+    // 여러 개를 한 번에 붙일 수 있다(addLink([a, b, c])). 끼운 자리부터 뒤만 떼었다 다시 붙여 순서를 지킨다(리스 왕복 최소)
+    addLink(item) {
+      const list = (Array.isArray(item) ? item : [item]).map((x) => ({ link: true, ...x }));
+      const done = serial(async () => {
+        const at = items.filter((i) => i.link).length;
+        items.splice(at, 0, ...list);
+        if (shown) { const tail = items.slice(at); for (const x of tail) if (live.has(x.id)) await drop(x); for (const x of tail) { try { await put(x); } catch (e) { log("버튼 등록 실패", e?.message ?? e); } } }
+      });
+      const remove = () => serial(async () => { for (const x of list) { const i = items.indexOf(x); if (i >= 0) items.splice(i, 1); await drop(x); } });
+      return done.then(() => remove);
     },
     refresh,
     toggle: (key) => { const x = items.find((i) => i.key === key); return x ? (x.link ? openLink(x) : toggle(x)) : null; }

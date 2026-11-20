@@ -49,6 +49,8 @@ export function createSwitches({ api, store, flow = null, now = () => Date.now()
       if (!(ci >= 0) || !(ti >= 0)) return null;
       const last = curByPos?.pos === `${ci}:${ti}` ? curByPos.v : null;
       if (!last) return this.currentChat();
+      // 2.2.22 성능: 직전 확인이 10초 안이면 뒤에서 다시 통째로 읽지 않는다(큰 채팅은 캐릭터 한 번 읽는 데 수십 MB·수 초)
+      if (now() - curByPos.t < 10e3) return last;
       cachedCurrent(true).then((v) => { if (v && (v.chaId !== last.chaId || v.chatId !== last.chatId || v.botName !== last.botName || v.chatName !== last.chatName)) onChange?.(v); }).catch(() => {});
       return last;
     },

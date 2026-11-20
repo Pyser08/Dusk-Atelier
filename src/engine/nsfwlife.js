@@ -124,12 +124,13 @@ export function developZones(f, docId, parts, g = { up: 1 }) {
 export function tickLife(f, { turn, present = [], events = [], date = "", gauge = null, text = "" } = {}, interestOf = () => 50) {
   if (!f || !Number.isFinite(turn)) return [];
   f.life ??= { turn: null, p: {} }; f.life.p ??= {};
-  const last = Number.isFinite(f.life.turn) ? f.life.turn : turn;
+  const last = Number.isFinite(f.life.turn) && f.life.turn <= turn ? f.life.turn : turn;   // 앞선 번호가 남아 있으면 지금부터 다시 센다
   const dt = clamp(turn - last, 0, 60);                            // 아주 긴 공백(지난 대화 분석 처음)은 60턴까지만
   const g = normalizeGauge(gauge), here = new Set(present.map(nk)), changed = [];
   const evBy = new Map();
   // 같은 응답을 다시 받으면(리롤) 이미 반영한 턴의 행위·게이지 보고는 다시 세지 않는다. 한 턴에 인물·종류마다 게이지 보고는 하나만
-  const fresh = !(Number.isFinite(f.life.evAt) && turn <= f.life.evAt);
+  // 2.2.22: 같은 턴(리롤)만 건너뛴다. 번호가 앞서 있으면(지난 대화 분석·삭제·분기) 새 흐름으로 보고 반영(예전엔 영영 버렸다)
+  const fresh = !(Number.isFinite(f.life.evAt) && turn === f.life.evAt);
   if (events.length && fresh) f.life.evAt = turn;
   const seenG = new Set();
   events = fresh ? events.filter((e) => { if (e.kind !== "gauge") return true; const k = `${nk(e.name)}|${e.key}`; if (seenG.has(k)) return false; seenG.add(k); return true; }) : events.filter((e) => e.kind === "past");
@@ -353,6 +354,12 @@ export function hotActors(f, at = 90) {
 const gk = (a, t) => `${nk(a)}>${nk(t)}`;
 export function ensureHotGoals(f, at = 90) {
   const changed = []; if (!f) return changed;
+  // 2.2.22: 해소(관계·절정)로 달아오름이 내려가거나 진정되면(60 미만) 달아오름 계획을 지운다(예전엔 남아 계속 장면을 밀었다)
+  for (const [k, g] of Object.entries(f.drive?.goals ?? {})) {
+    if (!g?.hot || g.kind !== "sex") continue;
+    const v = lustOfName(f, g.actor);
+    if (v == null || v < 60) { delete f.drive.goals[k]; changed.push(`${g.actor} 달아오름 계획 끝(진정)`); }
+  }
   const hot = hotActors(f, at); if (!hot.length) return changed;
   f.drive ??= { turn: 0, goals: {}, rest: {}, log: [] }; f.drive.goals ??= {};
   for (const { actor, target } of hot) {

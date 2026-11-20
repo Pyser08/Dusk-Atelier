@@ -2,7 +2,7 @@
 // 게이지·칩 모양은 예전 Erosync 카드와 같다(bar·eroDetailRows를 같이 씀).
 import { memStore } from "./memstore.js";
 import { h } from "../../dom.js";
-import { btn, confirmDialog, modal } from "../../kit.js";
+import { btn, confirmDialog, modal, promptDialog } from "../../kit.js";
 import { pickFiles } from "../../dom.js";
 import { driveOf, emoTemp, RUNG_LABEL, KIND_LABEL } from "../../../engine/scenedrive.js";
 import { tempPath } from "../../../engine/erosyncview.js";
@@ -65,9 +65,20 @@ export function nsfwCard(env, card, doc) {
     h("div", { class: "bar" }, ...[["f", n.pref.f], ["m", n.pref.m], ["x", n.pref.x]].filter(([, v]) => v > 0).map(([k, v]) => h("i", { class: k, style: { flexGrow: v } }))),
     h("div", { class: "lg" }, h("span", { class: "f" }, `여성 ${n.pref.f}%`), h("span", { class: "m" }, `남성 ${n.pref.m}%`), h("span", { class: "x" }, `그 외 ${n.pref.x}%`))) : null;
   // 좋아하는·싫어하는 것을 체위·장소·플레이로 나눠 칩으로(값이 없는 갈래는 빼고, 하나도 없으면 빈 줄 안내는 eroDetailRows가 한다)
-  const kindOf = (p) => p.kind || posKind("", p.label), chipRow = (title, list, cls, id) => list.length ? h("div", { class: ["rb-wk2-ero-row", cls], "data-group": id }, h("small", { class: "rb-muted" }, title), h("div", { class: "rb-wk2-chips" }, list.map((x) => h("span", { class: "rb-wk2-chip", title: x.reason || "" }, cleanPosLabel(x.label))))) : null;
+  // 2.2.22: 좋아하는·싫어하는 체위/플레이·장소 줄은 비어 있어도 늘 보이고, 줄마다 ‘+ 추가’로 바로 적는다(예전엔 값이 없으면 줄이 사라졌다)
+  const kindOf = (p) => p.kind || posKind("", p.label);
+  const addPos = (pref, g) => async () => {
+    const v = await promptDialog(env.ctx.win, { title: `${pref === "preferred" ? "좋아하는" : "싫어하는"} ${g.label} 추가`, label: "쉼표로 여러 개(예: 기승위, 후배위)", ok: "추가" }); if (!v?.trim()) return;
+    const labels = v.split(/[,，\n]/).map((x) => x.trim()).filter(Boolean);
+    save(env, doc, (cur) => { const c = cur ?? n, have = new Set((c.positions ?? []).map((p) => `${p.preference}|${cleanPosLabel(p.label)}`));
+      const add = labels.filter((l) => !have.has(`${pref}|${cleanPosLabel(l)}`)).map((label) => ({ label, kind: g.id === "place" ? "place" : posKind("", label) === "position" ? "position" : "play", preference: pref }));
+      return { ...c, positions: [...(c.positions ?? []), ...add], by: "user", log: [...(c.log ?? []), { at: new Date().toISOString(), text: `${g.label} ${pref === "preferred" ? "좋아함" : "싫어함"} 추가: ${labels.join(", ")}` }].slice(-20) }; });
+  };
+  const chipRow = (title, list, cls, id, pref, g) => h("div", { class: ["rb-wk2-ero-row", cls], "data-group": id }, h("small", { class: "rb-muted" }, title),
+    h("div", { class: "rb-wk2-chips" }, list.length ? list.map((x) => h("span", { class: "rb-wk2-chip", title: x.reason || "" }, cleanPosLabel(x.label))) : h("small", { class: "rb-muted" }, "아직 없어요"),
+      h("button", { type: "button", class: "rb-wk2-chip rb-pos-add", "aria-label": `${title} 추가`, onClick: addPos(pref, g) }, "+ 추가")));
   // addon-rebuild: 체위·플레이는 한 묶음(체위/플레이), 장소는 따로
-  const grouped = POS_GROUPS.flatMap((g) => [chipRow(`좋아하는 ${g.label}`, n.positions.filter((p) => p.preference === "preferred" && posGroup(kindOf(p)) === g.id), "k-like", `like-${g.id}`), chipRow(`싫어하는 ${g.label}`, n.positions.filter((p) => p.preference === "disliked" && posGroup(kindOf(p)) === g.id), "k-hate", `hate-${g.id}`)]).filter(Boolean);
+  const grouped = POS_GROUPS.flatMap((g) => [chipRow(`좋아하는 ${g.label}`, n.positions.filter((p) => p.preference === "preferred" && posGroup(kindOf(p)) === g.id), "k-like", `like-${g.id}`, "preferred", g), chipRow(`싫어하는 ${g.label}`, n.positions.filter((p) => p.preference === "disliked" && posGroup(kindOf(p)) === g.id), "k-hate", `hate-${g.id}`, "disliked", g)]);
   // 유혹 방식 · 성적 농담: 빈도(자주/가끔/드물게)·직설 막대 + 방식 칩 + 주로 나오는 때
   const LV = (v) => !Number.isFinite(v) ? "" : v >= 70 ? "자주" : v >= 40 ? "가끔" : "드물게";
   const styleBox = (title, o, id) => o ? h("div", { class: "rb-ns-box", "data-box": id },
@@ -110,7 +121,7 @@ export function openNsfwEditor(env, doc, n0) {
           seduction: { ...(n.seduction ?? {}), styles: split("sed") }, humor: { ...(n.humor ?? {}), styles: split("hum") }, tags: n.tags, human: n.human, ext: n.ext, zones: n.zones };
         const next = normalizeNsfw(raw, { by: "user", log: [...(n.log ?? []), { at: new Date().toISOString(), text: "직접 고침" }] });
         if (!next) return env.ctx.toast("값이 하나도 없어요.", { error: true });
-        await save(env, doc, () => next); done(true);
+        await save(env, doc, (cur) => ({ ...(cur ?? {}), ...next })); done(true);   // 2.2.22: 고치기 창에 없는 값(강제 피임·체형·피임·속도·욕망 스위치 등)은 그대로 둔다
       } })));
     return box;
   });
