@@ -8,6 +8,8 @@ import { lifeView, LUST_STEPS, DEV_LEVELS, MOOD_KEYS, MOOD_LABEL, emptyLife } fr
 import { nowOf } from "../../../engine/memoryhuman.js";
 import { HUMAN_FIELDS, EXT_FIELDS, BODY_PARTS, normHuman, normExt, partOf } from "../../../engine/humanitems.js";
 import { randomZones, spotXY } from "../../../engine/zonegen.js";
+import { raceFor } from "../../../engine/races.js";
+import { raceShapes, RACE_BODY_CSS } from "./racebody.js";   // 0.3.22 종족별 모형(귀·뿔·꼬리·날개·하반신)
 
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
 // 버튼을 눌러 값만 바뀔 땐 화면 전체를 다시 불러오지 않고 이 인물의 카드만 다시 그린다(스크롤·펼침 유지)
@@ -215,14 +217,7 @@ function moodCard0(env, card, doc) {
 const HEAD = { cx: 50, cy: 16.5, rx: 8.6, ry: 10.6 };
 // 왼쪽 반신(목 → 어깨 → 팔 → 손 → 옆구리 → 다리 → 발 → 가랑이). [시작점, [c1, c2, 끝점]…]. 오른쪽은 거울로 만든다
 const HALF = {
-  f: [[46.4, 26.5], [[46.2, 30], [45.8, 32.6], [44, 34]], [[41, 35.6], [35, 36.2], [31.6, 37.6]], [[28.2, 39], [26.6, 42.4], [26.4, 47]],
-    [[26.2, 53], [25.6, 61], [25, 68]], [[24.8, 71], [24.2, 74], [23.4, 79]], [[22.6, 84], [22, 87.6], [21.8, 90]],
-    [[21, 94], [20.4, 98.6], [22, 101.4]], [[23.2, 102.8], [25.4, 102], [25.6, 99.6]], [[25.8, 96], [25.2, 93], [25.6, 90.4]],
-    [[26.4, 84], [27.2, 76], [27.6, 70]], [[28.2, 62], [29.6, 55], [31.4, 50]], [[31.8, 58], [34.8, 70], [36.2, 79]],
-    [[37, 86], [32.4, 93], [32.2, 101]], [[32, 110], [33.8, 124], [36, 138]], [[36.8, 144], [37.8, 147], [37.6, 151]],
-    [[37.2, 156], [36.2, 162], [37.2, 170]], [[38, 176], [39.4, 181], [39.6, 185]], [[39.4, 188.6], [37.8, 191.6], [39.2, 193.4]],
-    [[41.2, 195], [45, 194.8], [45.4, 192]], [[45.8, 188], [45.4, 184], [45.6, 180]], [[46.2, 172], [45.6, 163], [46.4, 156]],
-    [[46.8, 152], [47, 148], [47, 144]], [[47.4, 130], [48.4, 116], [50, 108]]],
+  f: [[46.4,  26.5],  [[46.2,  30],  [45.8,  32.6],  [44,  34]],  [[41,  35.6],  [36.4,  36.1],  [33,  37.4]],  [[29.4,  39],  [27.8,  42.4],  [27.6,  47]],  [[27.4,  53],  [26.8,  61],  [26.2,  68]],  [[26.0,  71],  [25.4,  74],  [24.6,  79]],  [[23.8,  84],  [23.2,  87.6],  [23.0,  90]],  [[22.2,  94],  [21.6,  98.6],  [23.2,  101.4]],  [[24.4,  102.8],  [26.6,  102],  [26.8,  99.6]],  [[27.0,  96],  [26.4,  93],  [26.8,  90.4]],  [[27.6,  84],  [28.4,  76],  [28.8,  70]],  [[29.4,  62],  [30.8,  55],  [32.4,  50]],  [[32.2,  57],  [36.8,  68],  [38,  78]],  [[38.6,  86],  [31.2,  92],  [30.6,  101]],  [[30.4,  110],  [32.6,  124],  [35.4,  138]],  [[36.8,  144],  [37.8,  147],  [37.6,  151]],  [[37.2,  156],  [36.2,  162],  [37.2,  170]],  [[38,  176],  [39.4,  181],  [39.6,  185]],  [[39.4,  188.6],  [37.8,  191.6],  [39.2,  193.4]],  [[41.2,  195],  [45,  194.8],  [45.4,  192]],  [[45.8,  188],  [45.4,  184],  [45.6,  180]],  [[46.2,  172],  [45.6,  163],  [46.4,  156]],  [[46.8,  152],  [47,  148],  [47,  144]],  [[47.4,  130],  [48.4,  116],  [50,  108]]],
   m: [[46, 26.5], [[45.8, 30.4], [45.4, 33], [43, 34.4]], [[39.4, 35.6], [32.4, 35.8], [29.2, 37.4]], [[25.6, 39], [24.4, 42.8], [24.4, 47.6]],
     [[24.2, 54], [23.8, 61.4], [23.6, 68]], [[23.4, 71.2], [23, 74.4], [22.4, 79]], [[21.8, 84], [21.4, 87.6], [21.2, 90]],
     [[20.4, 94.2], [19.8, 99], [21.6, 101.8]], [[23, 103.2], [25.4, 102.4], [25.6, 99.8]], [[25.8, 96], [25.2, 93], [25.6, 90.4]],
@@ -241,7 +236,7 @@ export function silPath(kind = "f") {
 }
 // 몸의 결을 보여 주는 가는 선(앞: 쇄골·가슴·배꼽·무릎 / 뒤: 날개뼈·등줄기·엉덩이)
 const DETAIL = {
-  ff: ["M39.6 40Q44.6 41.6 48.8 40.6", "M51.2 40.6Q55.4 41.6 60.4 40", "M50 42.4V47", "M35.6 50.4C35.2 56.6 38.6 61.4 43.6 61.2C46.6 61 48.4 58.6 48.8 56.6", "M64.4 50.4C64.8 56.6 61.4 61.4 56.4 61.2C53.4 61 51.6 58.6 51.2 56.6",
+  ff: ["M39.6 40Q44.6 41.6 48.8 40.6", "M51.2 40.6Q55.4 41.6 60.4 40", "M50 42.4V47", "M35 49.6C34.2 57.4 38.2 62.8 43.4 62.6C47 62.4 48.8 59.4 49.2 56.6", "M65 49.6C65.8 57.4 61.8 62.8 56.6 62.6C53 62.4 51.2 59.4 50.8 56.6",
     "M40.6 66Q45 68.4 48 67.6", "M59.4 66Q55 68.4 52 67.6", "M40.4 93Q45.6 100.6 50 104.4", "M59.6 93Q54.4 100.6 50 104.4", "M39.8 146.6Q42.2 149.8 44.8 147", "M55.2 147Q57.8 149.8 60.2 146.6", "M40.6 166Q41.4 170 41 174", "M59.4 166Q58.6 170 59 174"],
   fm: ["M38.6 40Q44 41.8 48.6 40.6", "M51.4 40.6Q56 41.8 61.4 40", "M50 42V88", "M37 51.4Q42.6 56.6 49 55.4", "M51 55.4Q57.4 56.6 63 51.4",
     "M42.6 64.4H48M52 64.4H57.4", "M43 71.4H48M52 71.4H57", "M43.6 78.4H48M52 78.4H56.4", "M40.6 92Q45.6 100 50 104.6", "M59.4 92Q54.4 100 50 104.6", "M40 146.6Q42.4 149.8 45 147", "M55 147Q57.6 149.8 60 146.6"],
@@ -280,18 +275,27 @@ function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
     const keep = keepManual ? (cur.zones ?? []).filter((z) => z.src !== "random") : [];
     return { ...cur, zones: randomZones(`${doc.id}|${Date.now()}`, { keep, female: sex === "f" }), zonesSeeded: true, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: "성감대 무작위로 채움" }].slice(-20) };
   });
-  const parts = BODY_PARTS.filter((p) => p.side === side && (!p.sex || p.sex === sex));   // 여성 부위(질·자궁·클리토리스)는 여성 모형에만
+  const race = raceFor(env.folder, [doc.title, ...(doc.aliases ?? [])]), rs = raceShapes(race.body ?? {});
+  const parts = BODY_PARTS.filter((p) => p.side === side && (!p.sex || p.sex === sex) && (!p.race || rs.has[p.race]) && !(p.id === "feet" && rs.clipLegs) && !(p.id === "knees" && rs.clipLegs))
+    .map((p) => (p.id === "ears" && rs.earAt ? { ...p, ...rs.earAt } : p));   // 여성 부위(질·자궁·클리토리스)는 여성 모형에만
   const labY = labelRows(parts, (id) => (lv(id) >= 3 && zOf(id)?.spot ? 17.5 : 10.8));
-  const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back", `sx-${sex}`], viewBox: "-44 0 188 202", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
+  const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back", `sx-${sex}`], viewBox: "-44 -14 188 216", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
     h("defs", { svg: true }, h("linearGradient", { svg: true, id: "rbSilG", x1: "0", y1: "0", x2: "0", y2: "1" }, h("stop", { svg: true, class: "s0", offset: "0" }), h("stop", { svg: true, class: "s1", offset: "1" })),
       h("radialGradient", { svg: true, id: "rbShadeG", cx: "0.5", cy: "0.36", r: "0.62" }, h("stop", { svg: true, class: "h0", offset: "0" }), h("stop", { svg: true, class: "h1", offset: "0.55" }), h("stop", { svg: true, class: "h2", offset: "1" })),
       h("linearGradient", { svg: true, id: "rbRimG", x1: "0", y1: "0", x2: "1", y2: "0" }, h("stop", { svg: true, class: "r0", offset: "0" }), h("stop", { svg: true, class: "r1", offset: "0.5" }), h("stop", { svg: true, class: "r2", offset: "1" })),
       h("radialGradient", { svg: true, id: "rbZoneG" }, h("stop", { svg: true, class: "z0", offset: "0" }), h("stop", { svg: true, class: "z1", offset: "1" }))),
     h("ellipse", { svg: true, class: "shadow", cx: 50, cy: 196, rx: 15, ry: 2.2 }),
-    h("path", { svg: true, class: "sil", d: silPath(sex) }), h("path", { svg: true, class: "shade", d: silPath(sex) }), h("path", { svg: true, class: "rim", d: silPath(sex) }), ...EARS.map((e) => h("ellipse", { svg: true, class: "sil", ...e })), h("ellipse", { svg: true, class: "sil", ...HEAD }),
-    ...(side === "b" ? DETAIL.b : sex === "m" ? DETAIL.fm : DETAIL.ff).map((d) => h("path", { svg: true, class: "dl", d })),
+    rs.clipLegs ? h("linearGradient", { svg: true, id: "rbLegFade", gradientUnits: "userSpaceOnUse", x1: 0, y1: 96, x2: 0, y2: 114 }, h("stop", { svg: true, offset: 0, "stop-color": "#fff" }), h("stop", { svg: true, offset: 1, "stop-color": "#000" })) : null,
+    rs.clipLegs ? h("mask", { svg: true, id: "rbLegClip" }, h("rect", { svg: true, x: -44, y: -14, width: 188, height: 216, fill: "url(#rbLegFade)" })) : null,
+    rs.clipLegs ? h("linearGradient", { svg: true, id: "rbLowG", gradientUnits: "userSpaceOnUse", x1: 0, y1: 98, x2: 0, y2: 116 }, h("stop", { svg: true, class: "l0", offset: 0 }), h("stop", { svg: true, class: "l1", offset: 1 })) : null,
+    ...rs.behind,
+    h("g", { svg: true, mask: rs.clipLegs ? "url(#rbLegClip)" : null },
+      h("path", { svg: true, class: "sil", d: silPath(sex) }), h("path", { svg: true, class: "shade", d: silPath(sex) }), h("path", { svg: true, class: "rim", d: silPath(sex) }),
+      ...(side === "b" ? DETAIL.b : sex === "m" ? DETAIL.fm : DETAIL.ff).map((d) => h("path", { svg: true, class: "dl", d }))),
+    ...(rs.hideEars ? [] : EARS.map((e) => h("ellipse", { svg: true, class: "sil", ...e }))), h("ellipse", { svg: true, class: "sil", ...HEAD }), ...rs.over,
     side === "f" ? h("circle", { svg: true, class: "navel", ...NAVEL }) : null,
-    ...parts.map((p) => { const z = zOf(p.id), l = z?.numb ? 0 : lv(p.id), numb = !!z?.numb, right = p.x >= 50, pin = l >= 3 && z?.spot ? spotXY(p.id, z.spot) : null, ly = labY.get(p.id) ?? p.y, ax = pin?.x ?? p.x, ay = pin?.y ?? p.y;
+    ...(side === "f" && sex === "f" ? [42.4, 57.6].flatMap((cx) => [h("ellipse", { svg: true, class: "bust", cx, cy: 55.4, rx: 7, ry: 6.6 }), h("ellipse", { svg: true, class: "bust-hl", cx: cx + (cx < 50 ? -1.6 : 1.6), cy: 52.6, rx: 2.8, ry: 2 })]) : []),
+    ...parts.map((p) => { const z = zOf(p.id), l = z?.numb ? 0 : lv(p.id), numb = !!z?.numb, right = p.x >= 50, pin = l >= 3 && z?.spot ? (() => { const q = spotXY(p.id, z.spot), o = BODY_PARTS.find((b) => b.id === p.id); return q && o ? { x: q.x + p.x - o.x, y: q.y + p.y - o.y } : q; })() : null, ly = labY.get(p.id) ?? p.y, ax = pin?.x ?? p.x, ay = pin?.y ?? p.y;
       return h("g", { svg: true, class: ["pt", `l${l}`, numb && "numb"], tabindex: "0", role: "button", "aria-label": `${p.label} ${numb ? "불감" : l ? `${l}단계` : "없음"}${z?.note ? ` — ${z.note}` : ""} — 눌러서 바꾸기`,
         onClick: () => cycle(p.id), onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycle(p.id); } } },
         h("circle", { svg: true, class: "hit", cx: p.x, cy: p.y, r: p.sex ? 3 : 7 }),
@@ -418,6 +422,8 @@ export const LIFE_CSS = `
 @media (max-width:520px){.rb-body-wrap{grid-template-columns:1fr}.rb-body-fig{max-width:340px;margin:0 auto}}
 .rb-body-fig{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;border-radius:18px;background:radial-gradient(80% 60% at 50% 40%,color-mix(in srgb,#ec4f86 10%,var(--rb-surf2)),var(--rb-surf2))}
 .rb-bodymap{width:100%;height:auto;max-height:420px;overflow:visible}
+${RACE_BODY_CSS}
+.rb-bodymap .bust{fill:color-mix(in srgb,#ec4f86 9%,transparent);stroke:color-mix(in srgb,#ec4f86 16%,transparent);stroke-width:.5;pointer-events:none}.rb-bodymap .bust-hl{fill:rgba(255,255,255,.35);pointer-events:none}
 .rb-bodymap .s0{stop-color:var(--rb-surf)}.rb-bodymap .s1{stop-color:var(--rb-surf2)}
 .rb-bodymap .sil{fill:url(#rbSilG);stroke:color-mix(in srgb,#ec4f86 25%,var(--rb-line));stroke-width:.8}
 .rb-bodymap .pt{cursor:pointer;outline:none}.rb-bodymap .hit{fill:transparent}

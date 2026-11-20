@@ -43,6 +43,10 @@ export const BODY_PARTS = Object.freeze([
   { id: "butt", label: "엉덩이", side: "b", x: 50, y: 100, re: /엉덩이|둔부|butt|ass/ },
   { id: "anus", label: "항문", side: "b", x: 50, y: 107, re: /항문|애널|anal|anus/ },
   { id: "knees", label: "무릎 뒤", side: "b", x: 43, y: 150, re: /무릎|오금|knee/ },
+  // 0.3.22 종족 부위(race: 그 몸 특징이 있는 종족 모형에만 찍힌다). 허리 뒤(꼬리뼈)보다 뒤에 둬서 '꼬리뼈'는 허리 뒤로
+  { id: "tail", label: "꼬리 뿌리", side: "b", race: "tail", x: 56, y: 93, re: /꼬리|tail/i },
+  { id: "wings", label: "날개 뿌리", side: "b", race: "wings", x: 41, y: 44, re: /날개|wing/i },
+  { id: "horns", label: "뿔·더듬이", side: "f", race: "horns", x: 44.6, y: 6.5, re: /뿔|더듬이|horn|antenna/i },
 ]);
 export function partOf(s) {
   const t = String(s ?? "").trim(); if (!t) return null;

@@ -7,6 +7,9 @@ import { lifeView } from "../../../engine/nsfwlife.js";
 import { mem, fail, loadBots, loadChats } from "./common.js";
 import { extraOf, activeMarks, markAge, compatOf, personPack, insertPack, nk, activeStatus, STATUS_LV, OUTFIT_PARTS } from "../../../engine/memextra.js";
 
+import { RACES, RACE_BY_ID, raceView } from "../../../engine/races.js";
+import { parseIso, isoOf } from "../../../engine/weather.js";
+
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
 const turnOf = (f) => (Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0);
 const whenOf = (f) => [...(f?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
@@ -122,6 +125,37 @@ export function outfitCard(env, card, doc) {
   ], null, "rb-life");
 }
 
+// 0.3.22 종족: 기록기가 알려 준 종족(직접 고르면 그대로 고정) · 일반 체질 · NSFW 체질 · 지금 발정기
+const RACE_GROUPS = [["인간형", ["human", "highelf", "elf", "darkelf", "woodelf", "halfelf", "dwarf", "halfling", "gnome", "giant", "halfgiant", "ogre"]], ["수인(케모미미)", null], ["비인간 몸", ["harpy", "lizard", "lamia", "naga", "mermaid", "siren", "shark", "scylla", "bee", "butterfly", "arachne", "ant", "mantis", "centaur"]],
+  ["용·신비", ["dragon", "phoenix", "unicorn", "angel", "fallen", "valkyrie", "god", "demigod", "spirit_fire", "spirit_water", "spirit_wind", "spirit_earth", "pixie", "dryad", "nymph"]], ["마족·어둠", ["succubus", "incubus", "demon", "vampire", "dhampir", "werewolf", "undead", "orc", "goblin", "hobgoblin", "troll", "oni"]],
+  ["동양 요괴", ["gumiho", "yukionna", "kappa", "tengu", "nekomata", "imugi", "xian"]], ["인공·기타", ["android", "cyborg", "golem", "homunculus", "slime", "alraune", "ghost"]]];
+export function raceCard(env, card, doc) {
+  if (!doc) return null;
+  const f = env.folder, e = extraOf(f), local = env.backend?.id === "local", k = nk(doc.title);
+  const p = parseIso(whenOf(f)), rv = raceView(f, doc, { iso: p ? isoOf(p) : "", cal: e.climate?.mdays ? e.climate : null, hemi: e.climate?.hemi ?? "N" });
+  const adult = !!f?.nsfw?.[doc.id] && Object.keys(f.nsfw[doc.id].sexual ?? {}).length > 0;
+  const rec = e.race[k] ?? Object.values(e.race).find((x) => namesOf(doc).has(nk(x.name)));
+  const set = (id, label = "") => save(env, (g) => { const x = extraOf(g); x.race[k] = { name: doc.title, id, label, manual: true, at: turnOf(g) }; g.extra = x; });
+  const groups = RACE_GROUPS.map(([g, ids]) => h("optgroup", { label: g }, (ids ?? RACES.filter((r) => r.frame === "beast" && !["werewolf", "centaur"].includes(r.id)).map((r) => r.id)).map((id) => h("option", { value: id, selected: id === rv.id ? "" : null }, RACE_BY_ID[id]?.label ?? id))));
+  const pick = local ? h("div", { class: "rb-race-pick" },
+    h("select", { class: "rb-input", "aria-label": "종족 고르기", onChange: (ev) => set(ev.target.value) }, groups),
+    btn("이름 직접", { size: "sm", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: "종족 이름", label: "표에 없는 이름(예: 은빛 늑대족). 체질은 위에서 고른 종족을 따라요", value: rv.custom || "", ok: "저장" }); if (v != null) set(rv.id, v.trim().slice(0, 20)); } }),
+    rec?.manual ? btn("기록기에 맡기기", { size: "sm", onClick: () => save(env, (g) => { const x = extraOf(g); delete x.race[k]; g.extra = x; }) }) : null) : null;
+  const B = rv.body ?? {}, feat = [B.ears && "귀", B.horns && "뿔·더듬이", B.tail && B.tail !== "none" && "꼬리", B.wings && "날개", B.lower && "하반신"].filter(Boolean);
+  return card("🧬 종족", [
+    h("div", { class: "rb-race-head" }, h("b", null, rv.custom || rv.label), rv.custom ? h("small", null, `체질: ${rv.base}`) : null,
+      rv.life ? h("span", { class: "rb-race-tag" }, `수명 ${rv.life >= 9999 ? "끝없음" : `${rv.life.toLocaleString()}년 안팎`}`) : null,
+      rv.size && rv.size !== "normal" ? h("span", { class: "rb-race-tag" }, { tiny: "아주 작음", small: "작은 체구", big: "큰 체구", huge: "아주 큰 체구" }[rv.size] ?? "") : null,
+      feat.length ? h("span", { class: "rb-race-tag" }, `모형: ${feat.join("·")}`) : null,
+      !rv.known ? h("span", { class: "rb-race-tag mute" }, "기록 없음 · 인간으로 봐요") : rec?.manual ? h("span", { class: "rb-race-tag" }, "직접 고름") : h("span", { class: "rb-race-tag" }, "기록기가 정함")),
+    rv.gen ? h("p", { class: "rb-race-tx" }, h("small", null, "일반"), rv.gen) : null,
+    adult && rv.nsfw ? h("p", { class: "rb-race-tx nsfw" }, h("small", null, "NSFW"), rv.nsfw) : null,
+    adult && rv.heat?.label ? h("p", { class: ["rb-race-heat", rv.heat.on && "on"] }, rv.heat.on ? `🔥 지금 ${rv.heat.label}` : rv.heat.label) : null,
+    note("성격·말투는 바꾸지 않고 몸·체질·생활만 장면에 넣어요. 날씨·발정기·임신·성감대 계산에 이어져요."),
+    pick,
+  ], null, "rb-life");
+}
+
 // 궁합: 두 인물의 취향·금기·주도성·성감대로 계산(호출 없음)
 export function compatCard(env, card, doc) {
   if (!doc) return null;
@@ -202,7 +236,12 @@ export async function openMovePerson(env, doc) {
   ctx.toast(`${bot.character.name} › ${chat.name ?? "채팅"}에 ‘${res?.title ?? doc.title}’을(를) 옮겼어요.`, { seconds: 8 });
 }
 
-export const EXTRA_CSS = `.rb-of-top{display:flex;gap:10px;align-items:flex-start}.rb-of-top>p{flex:1}
+export const EXTRA_CSS = `.rb-race-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.rb-race-head>b{font-size:16px}.rb-race-head>small{opacity:.7}
+.rb-race-tag{font-size:11px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,#3aa597 14%,transparent);border:1px solid color-mix(in srgb,#3aa597 35%,transparent)}.rb-race-tag.mute{opacity:.65;background:transparent}
+.rb-race-tx{margin:8px 0 0;font-size:13px;line-height:1.6;white-space:normal}.rb-race-tx small{display:inline-block;margin-right:6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#3aa597}.rb-race-tx.nsfw small{color:#e8578e}
+.rb-race-heat{margin:6px 0 0;font-size:12.5px;opacity:.8}.rb-race-heat.on{color:#e8578e;opacity:1;font-weight:700}
+.rb-race-pick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}.rb-race-pick select{flex:1;min-width:160px}
+.rb-of-top{display:flex;gap:10px;align-items:flex-start}.rb-of-top>p{flex:1}
 .rb-of-tg{flex:none;border:1px solid color-mix(in srgb,var(--rb-acc) 45%,transparent);background:transparent;color:var(--rb-acc);border-radius:999px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer}.rb-of-tg.on{background:color-mix(in srgb,var(--rb-acc) 14%,transparent)}
 .rb-of{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}
 .rb-of-row{display:grid;grid-template-columns:5em 1fr auto;gap:8px;align-items:start;padding:8px 10px;border-radius:12px;background:var(--rb-surf2)}.rb-of-row small{color:var(--rb-mute);font-size:11.5px;padding-top:2px}.rb-of-row.empty b{color:var(--rb-mute);font-weight:400}

@@ -1,4 +1,5 @@
 // addon-rebuild: 매 턴 기록기가 보고한 성인 프로필 변화(taste·sexval)를 이 채팅 폴더(folder.nsfw)에 반영한다.
+import { raceFor, raceZones } from "../engine/races.js";
 import { applyNsfwReports } from "../engine/nsfwprofile.js";
 import { applyDrive, emptyDrive } from "../engine/scenedrive.js";
 import { sameKoreanPerson } from "../engine/namekr.js";
@@ -77,6 +78,15 @@ export function seedZones(f, present = []) {
     const male = f?.orient?.[key(d.title)]?.g === "m";
     f.nsfw[d.id] = { ...n, zones: randomZones(d.id, { female: !male }), zonesSeeded: true };
     done.push(d.title);
+  }
+  // 0.3.22 종족 성감대 기본값(종족이 정해지거나 바뀌면 한 번) — 직접 고친 부위는 건드리지 않음
+  for (const d of docs) {
+    const n = f?.nsfw?.[d.id]; if (!n || !Object.keys(n.sexual ?? {}).length) continue;
+    const r = raceFor(f, [d.title, ...(d.aliases ?? [])]); if (!r.known || n.raceSeeded === r.id) continue;
+    const zs = [...(n.zones ?? [])];
+    for (const z of raceZones(r)) { const i = zs.findIndex((x) => x.part === z.part); if (i < 0) zs.push(z); else if (zs[i].src === "random" || zs[i].src === "race") zs[i] = { ...zs[i], level: Math.max(zs[i].level ?? 0, z.level), note: zs[i].note || z.note }; }
+    f.nsfw[d.id] = { ...n, zones: zs, raceSeeded: r.id };
+    if (raceZones(r).length) done.push(`${d.title}(${r.label})`);
   }
   return done;
 }

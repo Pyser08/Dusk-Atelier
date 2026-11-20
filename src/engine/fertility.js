@@ -1,4 +1,5 @@
 // 장기기억 애드온(0.3.22): 체내 정액량·포화도·피임·강제 피임·출산/유산 이력 → 임신 가능성(순수, 호출 없음).
+import { raceFert, raceFor } from "./races.js";   // 0.3.22 종족 임신 체질
 // 임신 여부는 코어 월경 추적(리수폿 cycle-tracking)이 '보호 안 된 관계'마다 배란일 기준 확률로 굴린다.
 // 여기서는 관계마다 보호됐는지(contraception used/none)를 정해 그 확률을 실제로 깎는다:
 //   최종 확률 = 배란일 기준 확률 × (양·이력 배수 ≤ 1) × (1 − 피임 효과). 양이 많을수록 배수가 1(원래 확률)에 가까워진다.
@@ -95,14 +96,15 @@ export function gateReports(reports, lookup, { turn = 0, now = "", rng = Math.ra
   const log = [];
   const out = (reports ?? []).map((r) => {
     if (!r?.sex?.length) return r;
-    const { nsfw = null, L = null } = lookup(r.name) ?? {};
+    const { nsfw = null, L = null, race = null } = lookup(r.name) ?? {};
+    const rf = race ? raceFert(race) : { k: 1, label: "" };
     const sex = r.sex.map((s) => {
       const ev = cumOf(r.name, s.partner);   // 이번 턴 cum 줄 {ml, contra}
       const eventContra = ev?.contra && ev.contra !== "none" ? ev.contra : String(s.contraception).toLowerCase() === "used" ? "condom" : "none";
       const pv = preventOf(nsfw, eventContra), ff = fertilityFactor(L ?? {}, nsfw, turn, now, { extraMl: ev?.ml ?? 4 });
-      const keep = pv.p >= 1 ? 0 : ff.factor * (1 - pv.p);
+      const keep = pv.p >= 1 ? 0 : ff.factor * (1 - pv.p) * rf.k;
       const open = rng() < keep;
-      log.push(`${r.name}↔${s.partner}: ${pv.label}${ff.why.length ? ` · ${ff.why.join(", ")}` : ""} → ${open ? "보호 안 됨(배란일 확률로 굴림)" : "막힘"} (남길 확률 ${Math.round(keep * 100)}%)`);
+      log.push(`${r.name}↔${s.partner}: ${pv.label}${ff.why.length ? ` · ${ff.why.join(", ")}` : ""}${rf.label ? ` · ${rf.label}` : ""} → ${open ? "보호 안 됨(배란일 확률로 굴림)" : "막힘"} (남길 확률 ${Math.round(keep * 100)}%)`);
       return { ...s, contraception: open ? "none" : "used" };
     });
     return { ...r, sex };
@@ -119,6 +121,8 @@ export function fertilitySection(f, present = [], turn = 0, now = "") {
     const n = f?.nsfw?.[d.id]; if (!n || !Object.keys(n.sexual ?? {}).length) continue;
     const L = f?.life?.p?.[d.id] ?? {}, c = cumNow(L, turn, now), body = bodyOf(n, f?.wiki?.people?.profiles?.[d.id]?.summary);
     const parts = [];
+    const rf = raceFert(raceFor(f, [d.title, ...(d.aliases ?? [])]));
+    if (rf.k === 0) parts.push(rf.label.includes("원할") ? "her race decides pregnancy by will — she won't conceive unless she wants to" : "her race cannot get pregnant");
     if (n.fert?.forced) parts.push("always protected — she will not get pregnant (contraception is certain)");
     else if (n.fert?.contra && n.fert.contra !== "none") parts.push(`uses ${n.fert.contra === "pill" ? "the pill" : n.fert.contra === "iud" ? "an IUD" : "an implant"}`);
     if (c.ml >= 1) { const sat = saturation(c.ml, body); parts.push(`semen still inside (${sat >= 80 ? "overflowing" : sat >= 40 ? "a lot" : sat >= 10 ? "some" : "a little"}${c.days != null && c.days < 0.2 ? ", fresh" : ""})`); }

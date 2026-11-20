@@ -58,6 +58,7 @@ export const FEATURES = [
   { t: "상태이상 (취함·부상·감기·최음제)", k: "상태이상 상태 이상 취함 술 부상 다침 감기 아픔 최음제 수면 부족 저주 컨디션 디버프", path: `${M} › 설정 › 기억 옵션 › 상태이상`, tab: "memory", mem: MSET, find: "상태이상", addon: "memory" },
   { t: "캐릭터 상태창 (본문 이름 링크)", k: "캐릭터 상태창 이름 링크 상태창 스탯창 이름 누르면 프로필 팝업 사진 요약 스탯 옷차림 nsfw 본문", path: `${M} › 설정 › 기억 옵션 (홈 빠른 설정에도)`, tab: "memory", mem: MSET, find: "캐릭터 상태창 (본문 이름 링크)", addon: "memory" },
   { t: "장면 상태창 (날짜·시간·장소·날씨·등장인물)", k: "장면 상태창 날씨 배경 날짜 시간 장소 등장인물 응답 아래 상태바", path: `${M} › 설정 › 기억 옵션 (홈 빠른 설정에도)`, tab: "memory", mem: MSET, find: "장면 상태창 (응답 아래)", addon: "memory" },
+  { t: "종족", k: "종족 엘프 수인 케모미미 서큐버스 흡혈귀 용족 인어 발정기 체질 몸 모형 꼬리 날개 뿔", path: `${M} › 설정 › 기억 옵션 · 인물 위키 › 관계 › 종족`, tab: "memory", mem: MSET, find: "종족", addon: "memory" },
   { t: "옷차림·액세서리", k: "옷 옷차림 복장 의상 액세서리 속옷 신발 삽화 상세 코디", path: `${M} › 설정 › 기억 옵션 · 인물 위키 › 관계 › 옷차림`, tab: "memory", mem: MSET, find: "옷차림·액세서리", addon: "memory" },
   { t: "임신·피임 · 강제 피임 · 체내 정액량", k: "임신 피임 강제 피임 콘돔 피임약 체내 정액 정액량 포화도 체형 출산 유산 임신 확률 nsfw", path: `${M} › 기록 보기 › 인물 위키 › NSFW › 상태 › 임신·피임`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "인물 일기", k: "일기 diary 인물 시점 회고 독백 속마음 응답 아래", path: `${M} › 기록 보기 › 인물 위키 › 📔 일기 (채팅 메뉴 ≡ › 인물 일기)`, tab: "memory", mem: { page: "home" }, addon: "memory" },

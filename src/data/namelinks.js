@@ -25,7 +25,7 @@ export function createNameLinks(memory, api = null) {
     if (api && character) await Promise.all(docs.map(async (d) => { const u = await charThumb(api, character, [d.title, ...(d.aliases ?? [])]).catch(() => null); if (u) imgs.set(d.id, u); }));
     const htmls = new Map(), cardOf = (d) => { if (!htmls.has(d.id)) htmls.set(d.id, statusCardHtml(f, d, { when, status: inj.status !== false, img: imgs.get(d.id) ?? null })); return htmls.get(d.id); };
     const people = docs.map((d) => ({ names: [d.title, ...(d.aliases ?? [])].filter((n) => String(n ?? "").trim().length >= 2), get html() { return cardOf(d); } }));
-    cache = { links, scene, people, folder: f, cardOf, botName: character?.name ?? "" };
+    cache = { links, scene, people, folder: f, cardOf, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, String(character?.desc ?? "").slice(0, 1500)].filter(Boolean).join(" ") };
   };
   const ready = async () => { loading ??= load().finally(() => { loading = null; }); await loading; return cache && !cache.off ? cache : null; };
   return {
@@ -39,7 +39,7 @@ export function createNameLinks(memory, api = null) {
       try {
         if (typeof text !== "string" || !text || text.includes('x-dusk="scene"')) return "";
         const c = await ready(); if (!c?.scene) return "";
-        const s = sceneOf(text, c.folder), ppl = peopleIn(text, c.folder, c.botName);
+        const s = sceneOf(text, c.folder, { seed: c.seed, hint: c.hint }), ppl = peopleIn(text, c.folder, c.botName);
         if (!s.fromLine && !(ppl.length && text.length >= 300)) return "";
         return scenePanelHtml({ ...s, people: ppl.map((p) => ({ name: p.name, card: p.doc && c.links ? c.cardOf(p.doc) : null })) });
       } catch { return ""; }

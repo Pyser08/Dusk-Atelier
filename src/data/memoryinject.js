@@ -10,7 +10,10 @@ import { nsfwByName } from "./nsfwturn.js";
 import { lifeSection, humanSection, lustOfName, hotActors } from "../engine/nsfwlife.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
 import { stateText } from "../engine/storytime.js";
 import { extraSection, mentionsOf } from "../engine/memextra.js";
-import { fertilitySection } from "../engine/fertility.js";   // 0.3.22 소문·목표·세계·흔적·근황·@인물
+import { fertilitySection } from "../engine/fertility.js";
+import { sceneOf } from "../engine/scenepanel.js";
+import { weatherLine } from "../engine/weather.js";
+import { raceSection } from "../engine/races.js";   // 0.3.22 기후·예보(장면 상태창 켜졌을 때)   // 0.3.22 소문·목표·세계·흔적·근황·@인물
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
@@ -93,7 +96,11 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
         if (Number.isInteger(folder?.cursor?.at)) add(lifeSection(folder, here, folder.cursor.at));
         const when = [...(folder?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
         add(fertilitySection(folder, here, Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when));
-        add(extraSection(folder, { present: here, recent, turn: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when, pinned, docs: chars, world: idx.settings.inject?.world === true, status: idx.settings.inject?.status !== false, outfit: idx.settings.inject?.outfit !== false })); }
+        add(extraSection(folder, { present: here, recent, turn: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when, pinned, docs: chars, world: idx.settings.inject?.world === true, status: idx.settings.inject?.status !== false, outfit: idx.settings.inject?.outfit !== false }));
+        { let sc = null; try { sc = sceneOf("", folder, { seed: `${character.chaId}|${chatKeyOf(chat)}`, hint: [character.name, String(character.desc ?? "").slice(0, 1500)].join(" ") }); } catch { sc = null; }
+          if (sc?.forecast && idx.settings.inject?.scenePanel !== false) add(weatherLine(sc.forecast, sc.climate));
+          // 0.3.22 종족 체질(몸·생물학만) + 지금 발정·날씨 반응
+          if (idx.settings.inject?.race !== false) { try { const h0 = sc?.forecast?.days?.[0]?.half?.find((x) => x?.now); add(raceSection(folder, here, { adult: true, iso: sc?.date ?? "", cal: sc?.climate?.mdays ? sc.climate : null, hemi: sc?.climate?.hemi ?? "N", weather: sc?.weather ?? "", temp: h0?.t ?? null, night: /밤/.test(String(sc?.time ?? "")) || (Number(String(sc?.time ?? "").split(":")[0]) >= 18) })); } catch {} } } }
       // 장면 판단 계획(Erosync 대신). 같은 턴을 다시 보내도 같은 계획이 나오게 턴 번호로 정한 난수
       const dv = driveSection(folder?.drive, recent, { spont: (n) => nsfwByName(folder, n)?.sexual?.sexualSpontaneity ?? null, limitsOf: (n) => nsfwByName(folder, n)?.tags?.limits ?? [], random: seeded(`${folder?.drive?.turn ?? 0}|${msgs.length}`), present, lustOf: (n) => lustOfName(folder, n), hot: hotActors(folder) });
       add(dv);

@@ -75,6 +75,19 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     await page.locator(".rb-bseg button", { hasText: "뒤" }).first().click(); await page.waitForTimeout(400);
     await page.locator(".rb-body-fig").first().screenshot({ path: `${OUT}/extra-${tag}-fig-b.png` });
     await page.locator(".rb-bseg button", { hasText: "앞" }).first().click(); await page.waitForTimeout(400); }
+  // 0.3.22 종족별 모형: 종족을 바꾸면 귀·뿔·꼬리·날개·하반신이 바뀜
+  const setRace = (id) => page.evaluate(async (id) => { await __app.ctx.memory.store.updateFolder("c1", "t1", (f) => { f.extra = { ...(f.extra ?? {}), race: id ? { 시로코: { name: "시로코", id, manual: true } } : {} }; }); __app.ctx.go("memory"); }, id);
+  const raceShots = [];
+  for (const id of ["fox", "succubus", "lamia", "mermaid", "centaur", "arachne", "harpy", "bunny".replace("bunny", "rabbit"), "dragon", "elf"]) {
+    await setRace(id); await page.waitForTimeout(900);
+    const got = await page.evaluate(() => ({ ear: document.querySelectorAll(".rb-bodymap .ear").length, tail: document.querySelectorAll(".rb-bodymap .tail").length, wing: document.querySelectorAll(".rb-bodymap .wing").length, low: document.querySelectorAll(".rb-bodymap .low").length, horn: document.querySelectorAll(".rb-bodymap .horn").length, lbl: [...document.querySelectorAll(".rb-bodymap .lbl")].map((x) => x.textContent) }));
+    raceShots.push([id, got]);
+    if (OUT && tag === "PC") { const fig = page.locator(".rb-body-fig").first(); if (await fig.count()) { await fig.scrollIntoViewIfNeeded(); await fig.screenshot({ path: `${OUT}/race-${id}-f.png` }); await page.locator(".rb-bseg button", { hasText: "뒤" }).first().click(); await page.waitForTimeout(300); await page.locator(".rb-body-fig").first().screenshot({ path: `${OUT}/race-${id}-b.png` }); await page.locator(".rb-bseg button", { hasText: "앞" }).first().click(); await page.waitForTimeout(300); } }
+  }
+  const R = Object.fromEntries(raceShots);
+  ok(`[${tag}] 종족별 몸 모형: 여우 귀·꼬리, 서큐버스 뿔·날개·꼬리, 라미아·인어·켄타우로스·아라크네 하반신, 하피 날개`, R.fox?.ear === 2 && R.fox?.tail === 1 && R.succubus?.horn === 2 && R.succubus?.wing === 2 && R.succubus?.tail >= 1 && R.lamia?.low === 1 && R.mermaid?.low === 1 && R.centaur?.low === 2 && R.arachne?.low === 3 && R.harpy?.wing === 2 && R.elf?.ear === 2, JSON.stringify(R).slice(0, 600));
+  ok(`[${tag}] 하반신 종족은 발·무릎 점이 없음`, !R.lamia?.lbl?.some((x) => x.startsWith("발")) && R.fox?.lbl?.some((x) => x.startsWith("발")));
+  await setRace(null); await page.waitForTimeout(600);
   // 세라는 성감대가 비어 있음 → 무작위로 채우기
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "세라" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
@@ -83,7 +96,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 빈 성감대에 ‘무작위로 채우기’`, (await rnd.count()) === 1);
   if (await rnd.count()) { await rnd.click(); await page.waitForTimeout(900); }
   const z = await page.evaluate(async () => { const f = await __app.ctx.memory.store.getFolder("c1", "t1"); const d = Object.values(f.wiki.documents).find((x) => x.title === "세라"); return f.nsfw[d.id].zones ?? []; });
-  ok(`[${tag}] 무작위: 3~5곳, 약점 1곳(정확한 자리), 모두 특징`, z.length >= 3 && z.length <= 5 && z.filter((x) => x.level === 3 && x.spot).length === 1 && z.every((x) => x.note), JSON.stringify(z));
+  ok(`[${tag}] 무작위: 3~5곳, 약점 1곳(정확한 자리), 모두 특징`, z.filter((x) => !x.numb).length >= 3 && z.filter((x) => !x.numb).length <= 5 && z.filter((x) => x.level === 3 && x.spot).length === 1 && z.every((x) => x.note), JSON.stringify(z));
   // 일기 표시: 저장된 일기가 맞는 응답 아래(게이지 자리)에 붙는다
   const shown = await page.evaluate(async () => {
     const M = __app.ctx.memory, reply = "세라는 창밖을 보며 한숨을 쉬었다. 내일은 기사단 시험이 있는 날이었다. 시로코가 조용히 곁에 앉았다.";
@@ -106,12 +119,21 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 상태창에 스탯·상태이상·NSFW`, /감기/.test(link.out) && />지금 상태</.test(link.out) && />NSFW</.test(link.out) && /왼쪽 귓불/.test(link.out));
   if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "pcdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px;line-height:1.7"; d.innerHTML = html; document.body.append(d); d.querySelector('details[x-dusk="pc"]').open = true; }, link.out);
     await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/extra-${tag}-namecard.png` }); await page.evaluate(() => document.getElementById("pcdemo")?.remove()); }
+  // 일반 / NSFW 탭: NSFW를 누르면 일반이 닫히고 NSFW만 보임(스크립트 없이 details name)
+  const tabs = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "tabdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px"; d.innerHTML = html; document.body.append(d);
+    const pc = d.querySelector('details[x-dusk="pc"]'); pc.open = true; const g = pc.querySelector('details[x-tab="g"]'), n = pc.querySelector('details[x-tab="n"]'); const before = [g.open, n.open];
+    n.querySelector("summary").click(); await new Promise((r) => setTimeout(r, 350)); return { before, after: [g.open, n.open], nsVis: n.querySelector("span").getBoundingClientRect().height > 50 }; }, link.out);
+  ok(`[${tag}] 캐릭터 상태창 일반/NSFW 탭 전환`, tabs.before.join() === "true,false" && tabs.after.join() === "false,true" && tabs.nsVis, JSON.stringify(tabs));
+  if (OUT) await page.screenshot({ path: `${OUT}/extra-${tag}-namecard-nsfw.png` });
+  await page.evaluate(() => document.getElementById("tabdemo")?.remove());
   // 장면 상태창(응답 아래, 로어북 위)
   const sc = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const out = await M.gauge.onDisplay("[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 쏟아졌다. 시로코가 세라를 바라봤다."); return out; });
   ok(`[${tag}] 장면 상태창: 날짜·시간·장소·날씨·등장인물(이름은 캐릭터 상태창)`, /x-dusk="scene"/.test(sc) && /22:40/.test(sc) && /은빛 여관/.test(sc) && /🌧️/.test(sc) && (sc.split('x-dusk="scene"')[1].match(/x-dusk="pc"/g) ?? []).length === 2, sc.slice(-300));
+  ok(`[${tag}] 장면 상태창 날씨 상자: 4일 예보(낮·밤·확률)`, /x-dusk="wx"/.test(sc) && /4일 예보/.test(sc) && /모레/.test(sc) && /💧/.test(sc) && /%/.test(sc));
   ok(`[${tag}] 캐릭터 상태창에 옷차림·삽화용 상세`, /옷차림/.test(link.out) && /흰 셔츠/.test(link.out) && /삽화용 상세 ›/.test(link.out) && /소매를 걷어 올림/.test(link.out));
   if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "scdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;font-size:15px;line-height:1.7;overflow:auto"; d.innerHTML = html; document.body.append(d); }, sc);
     await page.waitForTimeout(700); await page.screenshot({ path: `${OUT}/extra-${tag}-scene.png` });
+    await page.evaluate(() => { const d = document.querySelector('#scdemo details[x-dusk="wx"]'); if (d) d.open = true; }); await page.waitForTimeout(500); await page.screenshot({ path: `${OUT}/extra-${tag}-forecast.png` }); await page.evaluate(() => { const d = document.querySelector('#scdemo details[x-dusk="wx"]'); if (d) d.open = false; });
     await page.evaluate(() => { const d = document.querySelector('#scdemo details[x-dusk="pc"]'); if (d) d.open = true; }); await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/extra-${tag}-card2.png` }); await page.evaluate(() => document.getElementById("scdemo")?.remove()); }
   await page.evaluate(async () => { await __app.ctx.memory.store.updateIndex((i) => { i.settings.inject.scenePanel = false; }); __app.ctx.memory.nameLinks?.invalidate?.(); });
   ok(`[${tag}] 장면 상태창 끄면 안 붙음`, !/x-dusk="scene"/.test(await page.evaluate(() => __app.ctx.memory.gauge.onDisplay("[2026-03-02 22:40 | 여관]\n시로코가 웃었다."))));

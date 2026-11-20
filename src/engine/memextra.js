@@ -5,6 +5,8 @@
 import { detach } from "./regress.js";
 import { contraOf, addCum } from "./fertility.js";
 import { createEmptyWikiScope } from "./pot/wiki-schema.js";
+import { climateFrom, CLIMATE_STAGE1 } from "./weather.js";
+import { raceReport } from "./races.js";
 const text = (v, n = 120) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 export const nk = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 const isUser = (s) => /\{\{user\}\}|^user$|^유저$/i.test(String(s ?? "").trim());
@@ -26,7 +28,7 @@ export const STATUS_STAGE1 = "\nstatus|Name|condition in Korean (drunk, injured,
 export const OUTFIT_PARTS = Object.freeze([["head", "머리"], ["face", "얼굴"], ["outer", "겉옷"], ["top", "상의"], ["bra", "속옷(위)"], ["bottom", "하의"], ["panties", "속옷(아래)"], ["legs", "다리"], ["feet", "신발"], ["acc", "액세서리"]]);
 export const OUTFIT_LABEL = Object.freeze(Object.fromEntries(OUTFIT_PARTS));
 export const OUTFIT_STAGE1 = "\nwear|Name|head, face, outer, top, bra, bottom, panties, legs, feet or acc|short Korean (what people see)|detailed Korean for an illustrator (colour, material, cut, fit, pattern, current state like wet, torn, unbuttoned)      clothing or accessory newly shown or changed\nstrip|Name|part      that piece is taken off";
-export const WEATHER_STAGE1 = "\nweather|맑음, 구름, 흐림, 비, 폭우, 눈, 안개, 천둥, 바람 or 실내      the weather in newest's scene when it is shown or changes";
+export const WEATHER_STAGE1 = "\nweather|맑음, 구름, 흐림, 비, 폭우, 눈, 안개, 천둥, 바람 or 실내      the weather in newest's scene when it is shown or changes (also when {{user}}'s input changes it)" + CLIMATE_STAGE1;
 export const WEATHER_KINDS = Object.freeze(["맑음", "구름", "흐림", "비", "폭우", "눈", "안개", "천둥", "바람", "실내"]);
 export function weatherOf(s) {
   const t = String(s ?? "");
@@ -42,15 +44,20 @@ export function weatherOf(s) {
   if (/실내|indoor/i.test(t)) return "실내";
   return "";
 }
-export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure", "cum", "hist", "wear", "strip", "weather"]);
+export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure", "cum", "hist", "wear", "strip", "weather", "climate", "cohabit", "race"]);
+// 동거(월경 주기 동기화용): 같은 집에 사는 두 사람
+export const COHABIT_STAGE1 = "\ncohabit|Name|Name      two characters shown or stated to live together (same home or room)";
 // 기록기 답 → 보고 목록. canon(name) → 알려진 이름(없으면 "")
 export const WORLD_KINDS = new Set(["told", "goal", "place", "item", "faction"]);
 // world=false(설정 ‘세계 탭’ 꺼짐)면 소문·목표·세계 문서 줄은 버린다
-export function extraFrom(raw, canon = (n) => n, { marks = false, world = true, status = true, outfit = true, weather = true } = {}) {
+export function extraFrom(raw, canon = (n) => n, { marks = false, world = true, status = true, outfit = true, weather = true, cohabit = false, race = false } = {}) {
   const out = [];
   const who = (s) => (isUser(s) ? "{{user}}" : canon(String(s ?? "").trim()) || "");
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
     const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
+    if (tag === "climate") { if (!weather) continue; const c = climateFrom(f); if (c) out.push({ kind: "climate", ...c }); continue; }
+    if (tag === "race") { if (!race) continue; const r = raceReport(f, (n) => who(n)); if (r) out.push(r); continue; }
+    if (tag === "cohabit") { if (!cohabit) continue; const a = who(f[1]), b = who(f[2]); if (a && b && a !== b && a !== "{{user}}" && b !== "{{user}}") out.push({ kind: "cohabit", a, b }); continue; }
     if (tag === "weather" && f[1] && weather) { const w = weatherOf(f[1]) || (WEATHER_KINDS.includes(String(f[1]).trim()) ? String(f[1]).trim() : ""); if (w) out.push({ kind: "weather", w }); continue; }
     if (!EXTRA_KINDS.has(tag) || !f[1] || !f[2] || (!world && WORLD_KINDS.has(tag)) || (!status && (tag === "status" || tag === "cure"))) continue;
     if (tag === "weather") { if (!weather) continue; const w = weatherOf(f[1]) || (WEATHER_KINDS.includes(String(f[1]).trim()) ? String(f[1]).trim() : ""); if (w) out.push({ kind: "weather", w }); continue; }
@@ -82,11 +89,12 @@ export function partKey(s) {
 function clamp(v, lo, hi) { const n = Number(String(v ?? "").replace(/[^\d.-]/g, "")); return Number.isFinite(n) && String(v ?? "").trim() !== "" ? Math.max(lo, Math.min(hi, Math.round(n))) : null; }
 function statusOf(v) { const t = String(v ?? "").toLowerCase(); return /done|완료|이룸|성공/.test(t) ? "done" : /drop|포기|실패|abandon/.test(t) ? "dropped" : "active"; }
 
-export const emptyExtra = () => ({ rumors: [], goals: {}, world: { place: {}, item: {}, faction: {} }, marks: [], diary: [], status: [], outfit: {}, weather: null });
+export const emptyExtra = () => ({ rumors: [], goals: {}, world: { place: {}, item: {}, faction: {} }, marks: [], diary: [], status: [], outfit: {}, weather: null, climate: null, cohabit: [], cycleSync: {}, race: {} });
 export function extraOf(f) {
   const e = f?.extra && typeof f.extra === "object" ? f.extra : {};
   return { rumors: Array.isArray(e.rumors) ? e.rumors : [], goals: e.goals && typeof e.goals === "object" ? e.goals : {},
-    world: { place: e.world?.place ?? {}, item: e.world?.item ?? {}, faction: e.world?.faction ?? {} }, marks: Array.isArray(e.marks) ? e.marks : [], diary: Array.isArray(e.diary) ? e.diary : [], status: Array.isArray(e.status) ? e.status : [], outfit: e.outfit && typeof e.outfit === "object" ? e.outfit : {}, weather: e.weather ?? null };
+    world: { place: e.world?.place ?? {}, item: e.world?.item ?? {}, faction: e.world?.faction ?? {} }, marks: Array.isArray(e.marks) ? e.marks : [], diary: Array.isArray(e.diary) ? e.diary : [], status: Array.isArray(e.status) ? e.status : [], outfit: e.outfit && typeof e.outfit === "object" ? e.outfit : {}, weather: e.weather ?? null,
+    climate: e.climate?.zone ? e.climate : null, cohabit: Array.isArray(e.cohabit) ? e.cohabit : [], cycleSync: e.cycleSync && typeof e.cycleSync === "object" ? e.cycleSync : {}, race: e.race && typeof e.race === "object" ? e.race : {} };
 }
 export const RUMOR_MAX = 60, MARK_MAX = 30, GOAL_MAX = 4;
 
@@ -111,6 +119,13 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
     } else if (r.kind === "cure") {
       const n0 = e.status.length; e.status = e.status.filter((x) => !(nk(x.name) === nk(r.name) && sameEffect(x.effect, r.effect)));
       if (e.status.length < n0) changed.push(`회복 ${r.name} ${r.effect}`);
+    } else if (r.kind === "climate") {
+      const { kind: _k, ...c } = r; if (e.climate?.zone !== c.zone || e.climate?.region !== c.region || e.climate?.mdays !== c.mdays) changed.push(`기후 ${c.region || c.zone}`); e.climate = { ...c, at: turn };
+    } else if (r.kind === "race") {
+      const k = nk(r.name), old = e.race[k]; if (old?.manual) continue;
+      if (old?.id !== r.id || (old?.label ?? "") !== r.label) changed.push(`종족 ${r.name}: ${r.label || r.id}`); e.race[k] = { name: r.name, id: r.id, label: r.label, at: turn };
+    } else if (r.kind === "cohabit") {
+      const key = [nk(r.a), nk(r.b)].sort().join("|"); if (!e.cohabit.some((x) => x.key === key)) { e.cohabit.push({ key, a: r.a, b: r.b, at: turn }); changed.push(`동거 ${r.a}·${r.b}`); }
     } else if (r.kind === "weather") {
       if (e.weather?.w !== r.w) changed.push(`날씨 ${r.w}`); e.weather = { w: r.w, at: turn, when: text(when, 40) };
     } else if (r.kind === "wear" || r.kind === "strip") {

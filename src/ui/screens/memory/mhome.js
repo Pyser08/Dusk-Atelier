@@ -65,6 +65,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   memOptions.append(orow("세계 탭 (장소·물건·세력·목표·소문)", "기록 보기에 ‘세계’ 탭이 생기고, 응답에 나온 장소·물건·세력, 인물 목표, 누가 누구에게 무엇을 들었는지 기록해 장면에 맞는 것만 넣어요.", inj.world === true, (o, v) => { o.world = v; }, "world"));
   memOptions.append(orow("상태이상", "취함·부상·감기·최음제·수면 부족처럼 인물에게 생긴 상태를 기록하고, 나을 때까지(또는 정한 날만큼) 행동에 반영해요. 인물 위키와 이름 상태창에 보여요.", inj.status !== false, (o, v) => { o.status = v; }, "status"));
   memOptions.append(orow("옷차림·액세서리", "인물이 부위별로 입은 옷과 액세서리를 기록해요(간단히 + 삽화용 상세). 장면에 넣고 캐릭터 상태창·인물 위키에서 봐요.", inj.outfit !== false, (o, v) => { o.outfit = v; }, "outfit"));
+  memOptions.append(orow("종족", "인물의 종족(엘프·수인·서큐버스 등)을 기록해 체질·발정기·임신·성감대·몸 모형에 반영해요. 성격·말투는 바꾸지 않아요. 인물 위키 › 관계 › 종족에서 고칠 수 있어요.", inj.race !== false, (o, v) => { o.race = v; }, "race"));
   memOptions.append(orow("캐릭터 상태창 (본문 이름 링크)", "응답 본문에 나온 인물 이름을 누르면 그 인물의 캐릭터 상태창(사진·수치·상태·옷차림·요약·NSFW)이 떠요. 끄면 이름이 그대로 보여요.", inj.nameLinks !== false, (o, v) => { o.nameLinks = v; }, "namelinks"));
   memOptions.append(orow("장면 상태창 (응답 아래)", "응답 아래 로어북 버튼 위에 날짜·시간·장소·날씨·등장인물을 날씨에 맞게 움직이는 배경으로 보여 줘요. 날씨 줄을 기록기에 더해요.", inj.scenePanel !== false, (o, v) => { o.scenePanel = v; }, "scenepanel"));
   memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver !== false, (o, v) => { o.saver = v; }, "saver"));
