@@ -64,6 +64,7 @@ export function statusCardHtml(folder, doc, { turn = null, when = "", adult = tr
     ns = [weak ? `<span style="display:block;padding:8px 10px;border-radius:10px;background:rgba(208,69,122,.14);margin-bottom:6px"><span style="display:block;font-size:10.5px;font-weight:800;color:${C.deep}">약점</span><b style="font-size:13px">${esc(partOf(weak.part)?.label ?? weak.part)}${weak.spot ? ` · ${esc(weak.spot)}` : ""}</b>${weak.note ? `<span style="display:block;font-size:11.5px;${MUTE};margin-top:1px">${esc(cut(weak.note, 60))}</span>` : ""}</span>` : "",
       Number.isFinite(n.sexual?.eroticInterest) ? row("성적 관심", n.sexual.eroticInterest, 100, C.rose, String(n.sexual.eroticInterest)) : "",
       zs.filter((z) => z !== weak).length ? `<span style="display:block;margin-top:4px">${zs.filter((z) => z !== weak).map((z) => chip(`${partOf(z.part)?.label ?? z.part} ${"♥".repeat(z.level)}`, "rgba(208,69,122,.12)", C.deep)).join("")}</span>` : "",
+      (n.zones ?? []).some((z) => z.numb) ? `<span style="display:block;margin-top:4px">${(n.zones ?? []).filter((z) => z.numb).map((z) => chip(`불감 · ${partOf(z.part)?.label ?? z.part}`, "rgba(138,143,163,.18)", "#8a8fa3")).join("")}</span>` : "",
       likes.length ? `<span style="display:block;margin-top:4px">${likes.map((x) => chip(x)).join("")}</span>` : ""].filter(Boolean).join("");
   }
   return top + grid

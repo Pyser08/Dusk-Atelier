@@ -23,9 +23,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
       f.people["시로코"] = { name: "시로코", records: [{ id: "a1", act: "세라와 옥상에서 도시락을 먹었다", g: "A", at: 3, at_ms: 1, orphan: false }] };
       f.nsfw = {
         [id("시로코")]: { sexual: { eroticInterest: 70 }, axes: { initiative: 80 }, positions: [{ label: "기승위", preference: "preferred" }], tags: { likes: ["밧줄"], limits: [] },
-          zones: [{ part: "ears", level: 3, note: "숨결만 닿아도 움찔한다", spot: "왼쪽 귓불" }, { part: "neck", level: 2, note: "" }] },
+          zones: [{ part: "ears", level: 3, note: "숨결만 닿아도 움찔한다", spot: "왼쪽 귓불" }, { part: "neck", level: 2, note: "" }, { part: "feet", level: 0, numb: true, note: "무덤덤" }] },
         [id("세라")]: { sexual: { eroticInterest: 60 }, axes: { initiative: 30 }, positions: [{ label: "기승위", preference: "preferred" }], tags: { likes: ["밧줄"], limits: [] } },
       };
+      f.life = { p: { [id("시로코")]: { lust: 40, fat: 10, cum: { ml: 30, sperm: 30, at: 30, when: "" }, hist: [{ kind: "loss", at: 1 }] } } };
       f.extra = { rumors: [{ from: "시로코", to: "세라", info: "유나가 왕녀라는 것", at: 12 }], goals: { "세라": { name: "세라", list: [{ goal: "기사단장 되기", prog: 40, status: "active", at: 20, first: 5 }] } },
         world: { place: { "은빛여관": { name: "은빛 여관", desc: "항구 옆 2층 여관", at: 9, first: 2, n: 3 } }, item: {}, faction: {} },
         marks: [{ name: "시로코", part: "목", desc: "키스마크", days: 3, at: 29 }], diary: [], status: [{ name: "시로코", effect: "감기", lv: 2, days: 3, at: 29 }] };
@@ -56,6 +57,19 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 부위 한 줄 특징 · 빈 특징은 + 버튼`, (await win.getByText("숨결만 닿아도 움찔한다").count()) > 0 && (await page.locator(".rb-bz-add").count()) === 1);
   ok(`[${tag}] 몸 흔적: 목 키스마크`, (await page.locator(".rb-marks li", { hasText: "키스마크" }).count()) === 1);
   ok(`[${tag}] 궁합: 점수 고리·겹치는 취향`, (await page.locator(".rb-compat .ring").count()) === 1 && (await page.locator(".rb-compat .row.ok .tags span").count()) === 2);
+  ok(`[${tag}] 불감 부위: 모형에 ‘발 · 불감’, 목록에 불감 표시`, await page.evaluate(() => [...document.querySelectorAll(".rb-bodymap .lbl")].some((t) => t.textContent === "발 · 불감")) && (await page.locator(".rb-bz .numbb").count()) === 1);
+  ok(`[${tag}] 임신·피임 카드: 체내 정액량·포화도·이력`, (await page.locator(".rb-fert-tile", { hasText: "30 ml" }).count()) === 1 && (await page.locator(".rb-fert-tile", { hasText: "포화도" }).count()) === 1 && (await page.locator(".rb-fert-hist span.loss").count()) === 1);
+  ok(`[${tag}] 임신·피임 카드가 월경 칸 바로 아래(몸 상태 카드 안)`, await page.evaluate(() => { const f = document.querySelector(".rb-fert-force"); return !!f && !!f.closest(".rb-lcyc"); }));
+  await page.locator(".rb-fert-btn").first().click(); await page.waitForTimeout(900);
+  const forced = await page.evaluate(async () => { const f = await __app.ctx.memory.store.getFolder("c1", "t1"); const d = Object.values(f.wiki.documents).find((x) => x.title === "시로코"); return f.nsfw[d.id].fert?.forced === true; });
+  ok(`[${tag}] 강제 피임 버튼: 켜면 저장되고 가능성 0%`, forced && (await page.locator(".rb-fert-force.on").count()) === 1 && (await page.locator(".rb-fert-tile.chance b", { hasText: "0.00%" }).count()) === 1);
+  const over = await page.evaluate(() => { const out = []; const vw = document.documentElement.clientWidth; for (const el of document.querySelectorAll(".rb-win *")) { const r = el.getBoundingClientRect(); if (r.width > 0 && (r.right > vw + 1 || r.left < -1) && !el.closest("svg") && getComputedStyle(el).position !== "fixed") out.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} ${Math.round(r.left)}→${Math.round(r.right)}`); } const clipped = (el) => { for (let a = el.parentElement; a && !a.classList.contains("rb-mem2"); a = a.parentElement) { const o = getComputedStyle(a).overflowX; if (o === "auto" || o === "hidden" || o === "scroll" || o === "clip") return true; } return false; };
+    const wide = [...document.querySelectorAll(".rb-mem2 *")].filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1 + (document.querySelector(".rb-mem2")?.scrollLeft ?? 0) * 0 && !el.closest("svg") && !clipped(el); }).map((el) => `${el.tagName.toLowerCase()}.${String(el.className).replace(/\s+/g, ".")} w${Math.round(el.getBoundingClientRect().width)} r${Math.round(el.getBoundingClientRect().right)}`);
+    out.push(...wide.slice(0, 8).map((x) => "W " + x));
+    { const m2 = document.querySelector(".rb-mem2"); if (m2 && m2.scrollWidth > m2.clientWidth + 1) { let best = null; for (const el of m2.querySelectorAll("*")) { if (el.closest("svg") || clipped(el)) continue; const r = el.getBoundingClientRect(); if (!best || r.right > best.r) best = { r: r.right, n: `${el.tagName.toLowerCase()}.${String(el.className).split(" ").slice(0, 2).join(".")}` }; } out.push(`W SCROLL ${m2.scrollWidth}>${m2.clientWidth} widest ${best?.n} r${Math.round(best?.r ?? 0)}`); } }
+    const sc = [...document.querySelectorAll(".rb-win *")].filter((el) => el.scrollLeft > 0).map((el) => `${el.className} scrollLeft=${el.scrollLeft}`); return { out: out.filter((x) => x.startsWith("W ")).slice(0, 10).concat(out.filter((x) => !x.startsWith("W ")).slice(0, 2)), sc: sc.slice(0, 4) }; });
+  ok(`[${tag}] NSFW 탭이 화면 밖으로 넘치지 않음`, !over.out.some((x) => x.startsWith("W ")) && !over.sc.length, JSON.stringify(over));
+  if (OUT) { const fc = page.locator(".rb-fert-force").first(); await fc.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${OUT}/extra-${tag}-fert.png` }); }
   if (OUT) { const b = page.locator('.rb-sub-sec[data-sid="body"]').first(); if (await b.count()) await b.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${OUT}/extra-${tag}-body.png`, fullPage: true });
     const fig = page.locator(".rb-body-fig").first(); await fig.screenshot({ path: `${OUT}/extra-${tag}-fig-f.png` });
     await page.locator(".rb-bseg button", { hasText: "뒤" }).first().click(); await page.waitForTimeout(400);
@@ -103,6 +117,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 기억 넣기 토큰 줄도 글이 좁아지지 않음`, tk != null && tk >= (tag === "모바일" ? 95 : 30), String(tk));
   ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("본문 인물 이름 링크").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문)").count()) > 0);
   if (OUT) { await page.locator("#rb-mem-bfspeed").scrollIntoViewIfNeeded().catch(() => {}); await page.screenshot({ path: `${OUT}/extra-${tag}-opt.png` }); }
+  const alpha = await page.evaluate(async () => { const P = __app.ctx.prefs; P.ui ??= {}; const before = getComputedStyle(document.querySelector('.rb-win')).backgroundColor; P.ui.theme = { ...(P.ui.theme ?? {}), skin: 'classic', winAlpha: 40 }; __app.ctx.applyTheme(); const after = getComputedStyle(document.querySelector('.rb-win')).backgroundColor; P.ui.theme = { ...P.ui.theme, winAlpha: 0 }; __app.ctx.applyTheme(); return after + ' | was ' + before; });
+  ok(`[${tag}] 창 투명도 40%면 창 바탕이 비침`, /(rgba\([^)]*,\s*0?\.\d+\)|\/ 0?\.\d+\)) \|/.test(alpha), alpha);
   ok(`[${tag}] 전역 오류 없음`, !errs.length, errs.join(" | "));
 }
 await browser.close();

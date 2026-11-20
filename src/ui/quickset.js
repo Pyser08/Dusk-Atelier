@@ -80,7 +80,7 @@ export async function quickSettingsCard(ctx) {
   return h("section", { class: "rb-card bordered rb-story-helper" },
     (() => { const row = storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair); fairSw = row.querySelector("[role=switch]"); return row; })(),
     diceRow(ctx, { on: diceOn, setOn: setDice, fail: failStory }),
-    isBardHost(ctx.api) ? null : storyRow("주사위 결과 표시", "응답 아래에 굴린 값과 판정을 보여줘요.", diceShowOn, setDiceShow),
+    storyRow("주사위 결과 표시", "응답 아래에 굴린 값과 판정을 보여줘요.", diceShowOn, setDiceShow),
     isBardHost(ctx.api) ? null : storyRow("모델 호출 표시", "모델·걸린 시간·토큰·들어간 로어북을 보여줘요.", callShowOn, setCallShow),
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory),
     ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null,

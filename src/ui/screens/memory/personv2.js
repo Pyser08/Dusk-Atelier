@@ -8,7 +8,7 @@ import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
 import { nsfwCard, nsfwStatusCard, nsfwTempCard, nsfwTagsCard } from "./nsfwcard.js";
 import { adultCandCard } from "./adultcands.js";
-import { marksCard, compatCard, statusCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
+import { marksCard, compatCard, statusCard, fertilityCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
 import { subTabs } from "./subtabs.js";
 import { lustCard, moodCard, bodyCard, humanCard, heatOf, heatFx, compareCard } from "./lifecards.js";
 import { eroLoad, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
@@ -390,7 +390,7 @@ export function personTabs(env, parts) {
     if (!doc) return pane(nsfwStatusCard(env, card, doc), cycCard, adultCandCard(env, card, doc), nsfwCard(env, card, doc), nsfwTempCard(env, card, doc), nsfwTagsCard(env, card, doc));
     const zn = (env.folder?.nsfw?.[doc.id]?.zones ?? []).length;
     const el = sub2("nsfw", [
-      { id: "state", label: "상태", icon: "🌡️", hint: "성욕 게이지·피로·경험·월경·임신", render: () => pane(nsfwStatusCard(env, card, doc), lustCard(env, card, doc, { cycle: cv ?? cyc ?? note("아직 월경·임신 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.") }), compareCard(env, card, doc)) },
+      { id: "state", label: "상태", icon: "🌡️", hint: "성욕 게이지·피로·경험·월경·임신", render: () => pane(nsfwStatusCard(env, card, doc), lustCard(env, card, doc, { after: fertilityCard(env, card, doc), cycle: cv ?? cyc ?? note("아직 월경·임신 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.") }), compareCard(env, card, doc)) },
       { id: "taste", label: "취향", icon: "🫦", hint: "프로필·잠자리·후보·태그", render: () => pane(nsfwCard(env, card, doc), humanCard(env, card, doc, "ext"), adultCandCard(env, card, doc), nsfwTagsCard(env, card, doc)) },
       { id: "body", label: "몸", icon: "💋", hint: "성감대·몸 흔적", n: zn, render: () => pane(bodyCard(env, card, doc), marksCard(env, card, doc)) },
       { id: "compat", label: "궁합", icon: "💞", hint: "상대와 취향이 얼마나 맞는지", render: () => pane(compatCard(env, card, doc)) },

@@ -49,8 +49,12 @@ export function randomZones(seed, { keep = [], female = null } = {}) {
     if (weak) { const s = pick(B.s, r); z.spot = s[0]; }
     out.push(z);
   }
+  // 0.3.22 불감 부위 하나(약 35%): 성감대로 고르지 않은 곳에서
+  const rest = bag.slice(n).filter((p) => !p.sex);
+  if (rest.length && !keep.some((z) => z.numb) && r() < 0.35) { const p = rest[Math.floor(r() * rest.length)]; out.push({ part: p.id, level: 0, numb: true, note: pick(NUMB_NOTES, r), src: "random" }); }
   return [...keep, ...out];
 }
+export const NUMB_NOTES = Object.freeze(["닿아도 거의 아무 느낌이 없다", "간지럽지도 않고 무덤덤하다", "만져도 반응이 없어 본인도 신기해한다"]);
 // 정확한 자리 → 모형 좌표(부위 점 + 오프셋). 모르는 자리면 부위 점 그대로
 export function spotXY(part, spot) {
   const p = BODY_PARTS.find((x) => x.id === part); if (!p) return null;

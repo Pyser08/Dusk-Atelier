@@ -12,7 +12,7 @@ export var DEFAULT_THEME = {
   // 1.8.3 꾸미기 확장 (없으면 아래 기본값 = 예전과 똑같은 모습)
   set: "", grad: "", dir: "d", round: "normal", shadowLv: "soft", edge: "normal", font: "base", weight: "normal", lineH: "normal", iconW: "normal",
   motion: "normal", pattern: "none", bgGrad: false, glass: false, cBg: "", cCard: "", cText: "", cSide: "", accUse: "all", mine: [], useLight: "", useDark: "",
-  skin: "glass", lite: false, gtheme: "dusk"   // 2.2.0 글래스 화면(어두운 모드에서만)·가벼운 화면(블러 끔)
+  skin: "glass", lite: false, gtheme: "dusk", winAlpha: 0   // 2.2.0 글래스 화면(어두운 모드에서만)·가벼운 화면(블러 끔)
 };
 // 1.7.0: 'home'(홈 카드) 메뉴 위치는 새 홈 화면이 대신하므로 없앴다. 예전 저장값 home은 left로 옮긴다.
 export var LAYOUTS = [["left", "왼쪽 메뉴"], ["top", "위쪽 메뉴"]];
@@ -183,6 +183,7 @@ function normalizeLook(out) {
   out.glass = out.glass === true;
   out.skin = out.skin === "classic" ? "classic" : "glass";
   out.lite = out.lite === true;
+  out.winAlpha = Math.max(0, Math.min(70, Math.round(Number(out.winAlpha) || 0)));   // 창 투명도(%) — 0이면 불투명. 글자는 그대로, 창 바탕만 비친다
   out.gtheme = GLASS_IDS.includes(out.gtheme) ? out.gtheme : "dusk";
   out.accUse = out.accUse === "btn" ? "btn" : "all";
   for (const k of ["cBg", "cCard", "cText", "cSide"]) out[k] = hexOr(out[k]);

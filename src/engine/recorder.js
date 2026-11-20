@@ -166,7 +166,7 @@ export const NSFW_STAGE1 = [
   "sleep|Name",
   "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      arousal never rises on its own — YOU decide it: write lust when newest actually moves this character's arousal (flirting, sexual tension, touch, their own desire or kink being touched, aphrodisiac → up; awkwardness, upset, fear, interruption, cold shower → down). Size it to what happened (small hint +2..5, clear tease +6..12, strong +13..30). Nothing sexual happened → no lust line. fatigue: exhaustion or rest",
   "past|Name|partner|count|stated or estimated      they had sex before the story (newest, user message or lorebook); estimate the count when none is given",
-  "zone|Name|Korean body part|1-3 (3 = weak spot — only when touching it clearly breaks their composure)|one-line Korean trait: how it reacts|exact spot, Korean (e.g. 왼쪽 귓불 뒤) — for 3 only      a sexually sensitive spot shows",
+  "zone|Name|Korean body part|0-3 (0 = numb, feels nothing there; 3 = weak spot — only when touching it clearly breaks their composure)|one-line Korean trait: how it reacts|exact spot, Korean (e.g. 왼쪽 귓불 뒤) — for 3 only      a sexually sensitive spot shows",
   "trait|Name|first, fantasy, voice, after, yes, no or contra|short Korean phrase      first time, fantasy, bed voice, aftercare, signs of liking/refusing, contraception attitude",
   "touch|Name|Korean body parts stimulated, comma separated      sexual stimulation of this character's body",
   "sat|Name|partner|good, ok or bad      how satisfied they were after sex",
@@ -212,7 +212,7 @@ export function nsfwFrom(raw, known = []) {
     else if (tag === "sat" && f[3]) out.push({ kind: "sat", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), level: /good|좋|만족/i.test(f[3]) ? "good" : /bad|아쉬|불만/i.test(f[3]) ? "bad" : "ok" });
     else if (tag === "gauge" && f[2] && f[3]) out.push({ kind: "gauge", name, key: /fat|피로/i.test(f[2]) ? "fat" : "lust", delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });
     else if (tag === "past" && f[2] && f[3]) out.push({ kind: "past", name, partner: canonName(String(f[2]).trim(), known) || String(f[2]).trim(), count: Number(String(f[3]).replace(/[^\d]/g, "")) || 0, est: /estim|추정/i.test(f[4] ?? "") });
-    else if (tag === "zone" && f[2]) out.push({ kind: "zone", name, part: f[2], level: Number(f[3]) || 2, note: (f[4] ?? "").slice(0, 80), spot: (f[5] ?? "").slice(0, 40) });
+    else if (tag === "zone" && f[2]) out.push({ kind: "zone", name, part: f[2], level: /^\s*0\s*$|numb|불감/i.test(String(f[3] ?? "")) ? 0 : Number(f[3]) || 2, note: (f[4] ?? "").slice(0, 80), spot: (f[5] ?? "").slice(0, 40) });
     else if (tag === "trait" && f[2] && f[3] && EXT_TRAITS.has(f[2].toLowerCase())) out.push({ kind: "trait", name, field: f[2].toLowerCase(), text: f[3].slice(0, 100) });
     if (out.length >= 12) break;
   }

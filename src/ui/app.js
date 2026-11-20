@@ -395,6 +395,8 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     const glassOn = th0.skin === "glass" && th0.contrast !== "high";
     const { vars, scheme } = themeVars(glassOn ? glassThemeInput(th0, state.mode) : theme, state.mode);
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
+    // 창 투명도: 창 바탕(--rb-win)만 비치게. 글래스 화면의 바탕(--rb-gbg)도 이 값을 따른다
+    { const a = normalizeTheme(theme).winAlpha ?? 0; if (a > 0 && vars["--rb-win"]) root.style.setProperty("--rb-win", `color-mix(in srgb, ${vars["--rb-win"]} ${100 - a}%, transparent)`); if (a > 0 && vars["--rb-backdrop"]) root.style.setProperty("--rb-backdrop", `color-mix(in srgb, ${vars["--rb-backdrop"]} ${100 - a}%, transparent)`); win.classList.toggle("rb-see", a > 0); }
     for (const [k, v] of Object.entries(glassExtraVars(glassOn ? th0 : { gtheme: "mine" }, scheme))) { if (v) root.style.setProperty(k, v); else root.style.removeProperty(k); }
     doc.documentElement.style.colorScheme = state.risuScheme;
     win.style.colorScheme = scheme;

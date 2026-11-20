@@ -63,8 +63,8 @@ export function normZones(raw) {
   const seen = new Set(), out = [];
   for (const z of Array.isArray(raw) ? raw : []) {
     const p = partOf(z?.part ?? z?.label); if (!p || seen.has(p.id)) continue;
-    seen.add(p.id); const dev = Number.isFinite(Number(z?.dev)) ? Math.max(0, Math.min(100, Math.round(Number(z.dev)))) : undefined; const lv = z?.level === 0 && dev != null ? 0 : Math.max(1, Math.min(3, Math.round(Number(z?.level) || 2)));
-    out.push({ part: p.id, level: lv, note: text(z?.note, 80), ...(dev != null ? { dev } : {}), ...(z?.spot ? { spot: text(z.spot, 40) } : {}), ...(z?.src === "random" ? { src: "random" } : {}) });
+    seen.add(p.id); const dev = Number.isFinite(Number(z?.dev)) ? Math.max(0, Math.min(100, Math.round(Number(z.dev)))) : undefined; const numb = z?.numb === true; const lv = numb || (z?.level === 0 && dev != null) ? 0 : Math.max(1, Math.min(3, Math.round(Number(z?.level) || 2)));
+    out.push({ part: p.id, level: lv, note: text(z?.note, 80), ...(dev != null ? { dev } : {}), ...(z?.spot ? { spot: text(z.spot, 40) } : {}), ...(z?.src === "random" ? { src: "random" } : {}), ...(numb ? { numb: true } : {}) });
   }
   return out.slice(0, BODY_PARTS.length);
 }
@@ -82,7 +82,13 @@ export function applyHumanReports(nsfw, reports) {
       changed.push(`${label}: ${t}`);
     } else if (r.kind === "zone") {
       const p = partOf(r.part); if (!p) continue;
-      const level = Math.max(1, Math.min(3, Math.round(Number(r.level) || 2))), i = next.zones.findIndex((z) => z.part === p.id);
+      const i = next.zones.findIndex((z) => z.part === p.id);
+      if (Number(r.level) === 0) {   // 0.3.22 불감 부위
+        const o = next.zones[i]; if (o?.numb) continue;
+        const z = { part: p.id, level: 0, numb: true, note: text(r.note, 80) || o?.note || "" }; if (i >= 0) next.zones[i] = z; else next.zones.push(z);
+        changed.push(`불감 ${p.label}`); continue;
+      }
+      const level = Math.max(1, Math.min(3, Math.round(Number(r.level) || 2)));
       const o = i >= 0 ? next.zones[i] : null, note = text(r.note, 80), spot = level >= 3 ? text(r.spot, 40) : "";
       if (o && o.level >= level && !(note && !o.note) && !(spot && spot !== o.spot)) continue;
       const z = { ...(o ?? {}), part: p.id, level: Math.max(level, o?.level ?? 0), note: note || o?.note || "", ...(spot || o?.spot ? { spot: spot || o.spot } : {}) };
@@ -105,6 +111,7 @@ export function humanLine(name, n) {
 export function extLine(n) {
   const e = n?.ext ?? {}, z = n?.zones ?? [];
   const parts = EXT_FIELDS.filter(([k]) => e[k] && (!Array.isArray(e[k]) || e[k].length)).map(([k, l]) => `${l}: ${Array.isArray(e[k]) ? e[k].slice(0, 2).join(", ") : e[k]}`);
+  if (z.some((x) => x.numb)) parts.unshift(`불감(아무 느낌 없음): ${z.filter((x) => x.numb).map((x) => partOf(x.part)?.label).join(", ")}`);
   if (z.some((x) => x.level > 0)) parts.unshift(`성감대: ${[...z].filter((x) => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 5).map((x) => `${partOf(x.part)?.label}${x.level >= 3 ? `(약점${x.spot ? `: ${x.spot}` : ""}${x.note ? ` — ${x.note}` : ""})` : ""}`).join(", ")}`);
   return parts.join(" / ").slice(0, 200);
 }

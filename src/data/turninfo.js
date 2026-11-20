@@ -30,7 +30,9 @@ const textOf = (c) => typeof c === "string" ? c : Array.isArray(c) ? c.map((p) =
 
 export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSource = () => null, loreFor = () => null, loreLast = () => null, now = Date.now, chip = true, quietMs = 1500, watchReplacers = null, relastMs = 300, log = (...a) => console.log("[Dusk 호출표시]", ...a) } = {}) {
   let cacheAlert = true, prevMsgs = null, cacheLog = [], diceShow = false, callShow = false, recs = null, pending = null, saveTimer = null, hooked = false, quiet = null, names = { at: -Infinity, main: "", sub: "" };
-  const supported = () => !isBardHost(api);
+  // RisuBard: 주사위 결과 표시만 쓴다(요청 순서 바꾸기·캐시 알림·호출 표시는 안 씀). 출력 훅이 안 불리는 호스트면 화면에 처음 뜨는 새 응답에 마지막 주사위를 붙인다
+  const bard = () => isBardHost(api), supported = () => true;
+  let outputSeen = false; const claimed = new Set();
 
   const ensure = async () => {
     if (recs) return recs;
@@ -95,6 +97,7 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
     try {
       if (!supported() || (!diceShow && !callShow && !cacheAlert && !layout)) return messages;
       const aux = !!type && type !== "model";
+      if (bard()) { if (diceShow && !aux) pending = { at: now(), startAt: now(), aux: false, model: "", inTok: 0, firstAt: 0, lastAt: 0 }; return messages; }
       const prompt = (Array.isArray(messages) ? messages : []).map((m) => textOf(m?.content)).join("\n");
       const rec = { at: now(), startAt: now(), aux, model: await modelName(aux), inTok: estimateTokens(prompt), firstAt: 0, lastAt: 0 };
       // 2.2.6 리스 자체 Gemini 연결: 요청 본문은 못 바꾸지만 순서는 바꿀 수 있다 → 바뀌는 블록을 마지막 사용자 말 뒤로(자동 캐시 앞부분 지키기). 이 훅은 늘 맨 뒤라 다른 Dusk 블록이 다 들어온 뒤다.
@@ -129,6 +132,7 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
     try {
       if (!supported() || !pending || typeof text !== "string") return text;
       const head = headKey(text); if (head.length < 4) return text;
+      outputSeen = true;
       await ensure();
       const t = now(), rec = pending;
       if (!rec.firstAt) rec.firstAt = t;
@@ -149,18 +153,29 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
     try {
       if (!supported() || typeof text !== "string" || text.includes('x-dusk="turn"') || text.includes('x-dusk="dice"')) return text;
       if (!diceShow && !callShow) return text;
-      await ensure(); const rec = matchRecord(recs, text); if (!rec) return text;
+      await ensure(); let rec = matchRecord(recs, text);
+      if (!rec && diceShow && !outputSeen) rec = claimDice(text);
+      if (!rec) return text;
       let out = text;
       if (diceShow && rec.dice) out += diceHtml(rec, parseRollMarks(text));
-      if (callShow) out += callHtml(rec, await loreFor?.(text));
+      if (callShow && !bard()) out += callHtml(rec, await loreFor?.(text));
       return out;
     } catch { return text; }
   }
 
+  // 출력 훅이 안 불리는 호스트(RisuBard 등): 아직 어느 응답에도 안 붙은 최근 주사위(10분 안)를 처음 뜨는 새 응답에 붙인다
+  function claimDice(text) {
+    const d = diceSource?.(); if (!d || claimed.has(d.at) || now() - d.at > 600e3) return null;
+    const head = headKey(text); if (head.length < 4 || (recs ?? []).some((r) => r.dice && r.at >= d.at - 2000)) return null;
+    claimed.add(d.at);
+    const rec = pending && pending.at <= d.at + 2000 ? pending : { at: d.at, startAt: d.at, aux: false, model: "", inTok: 0, firstAt: 0, lastAt: 0 };
+    pending = null; commit(rec, head, text); rec.done = true; save();
+    return rec;
+  }
   // 보조 호출 장부(2.1.4): 이 메인 요청부터 다음 메인 요청 전까지 나간 보조 호출을 이 응답 기록에 작업별로 더한다
   let auxBuf = [], unAux = null;
   function noteSide(e) {
-    if (!callShow || !supported()) return;
+    if (!callShow || bard()) return;
     const rec = pending;
     if (!rec) { auxBuf.push(e); if (auxBuf.length > 200) auxBuf.shift(); return; }
     rec.side = mergeSide(rec.side, e);

@@ -78,6 +78,7 @@ export async function activate(api, ctx) {
   // 채팅 메뉴 바로가기는 리스와 여러 번 오가서 느리다 → 기다리지 않는다(켜기를 막지 않게, 뒤따르는 애드온도 안 늦게)
   const menuOff = [];
   if (app.chatMenu?.addLink) (async () => {
+    menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-dusk", key: "dusk", title: "Dusk 열기", open: () => openTab() }));   // 0.3.22 Dusk 창 바로 열기
     menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-memory", key: "memory", title: "장기 기억", open: () => openTab("memory") }));
     menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-regress", key: "regress", title: "회귀 / 채팅 옮기기", open: regress }));
     menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-diary", key: "diary", title: "인물 일기", open: () => openTab("memory").then(() => import("../../src/ui/screens/memory/extracards.js")).then((x) => x.openDiaryHere(app)).catch((e) => log(`일기 창 열기 실패: ${e?.message ?? e}`)) }));

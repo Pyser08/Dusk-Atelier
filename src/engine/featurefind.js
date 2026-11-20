@@ -57,6 +57,7 @@ export const FEATURES = [
   { t: "세계 (장소·물건·세력·목표·소문)", k: "세계 장소 물건 아이템 선물 세력 조직 가문 목표 진척 소문 전해 들은 말 누가 누구에게 정보 퍼짐", path: `${M} › 설정 › 기억 옵션 › 세계 탭 (켜면 기록 보기에 생겨요)`, tab: "memory", mem: MSET, find: "세계 탭 (장소·물건·세력·목표·소문)", addon: "memory" },
   { t: "상태이상 (취함·부상·감기·최음제)", k: "상태이상 상태 이상 취함 술 부상 다침 감기 아픔 최음제 수면 부족 저주 컨디션 디버프", path: `${M} › 설정 › 기억 옵션 › 상태이상`, tab: "memory", mem: MSET, find: "상태이상", addon: "memory" },
   { t: "본문 인물 이름 링크 (상태창)", k: "이름 링크 상태창 스탯창 이름 누르면 프로필 팝업 요약 스탯 nsfw 본문", path: `${M} › 설정 › 기억 옵션 › 본문 인물 이름 링크`, tab: "memory", mem: MSET, find: "본문 인물 이름 링크", addon: "memory" },
+  { t: "임신·피임 · 강제 피임 · 체내 정액량", k: "임신 피임 강제 피임 콘돔 피임약 체내 정액 정액량 포화도 체형 출산 유산 임신 확률 nsfw", path: `${M} › 기록 보기 › 인물 위키 › NSFW › 상태 › 임신·피임`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "인물 일기", k: "일기 diary 인물 시점 회고 독백 속마음 응답 아래", path: `${M} › 기록 보기 › 인물 위키 › 📔 일기 (채팅 메뉴 ≡ › 인물 일기)`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "다른 봇으로 인물 옮기기", k: "인물 옮기기 이식 복사 다른 봇 다른 캐릭터 가져가기", path: `${M} › 기록 보기 › 인물 위키 › ↗ 다른 봇으로`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "궁합 · 몸 흔적 · 성감대", k: "궁합 취향 겹침 엇갈림 몸 흔적 키스마크 멍 자국 성감대 약점 정확한 자리 무작위 nsfw", path: `${M} › 기록 보기 › 인물 위키 › NSFW › 몸·궁합`, tab: "memory", mem: { page: "home" }, addon: "memory" },
@@ -66,6 +67,7 @@ export const FEATURES = [
   // 설정·도구
   { t: "캐시 배치 (하이파 분리·이어붙이기)", k: "cache 캐시 하이파 hypa 연관 랜덤 이어붙이기 로어북 제미나이 gemini", path: "작업실 › 프로바이더 › 캐시 배치", tab: "provider" },
   { t: "기억·인물 위키 프롬프트", k: "기본 프롬프트 지침 수정", path: "설정 › 기억·인물 위키 프롬프트", tab: "settings", sub: "prompts" },
+  { t: "창 투명도", k: "투명도 투명 반투명 비침 창 바탕 opacity 뒤가 보이게", path: "설정 › 플러그인 꾸미기 › 모양 › 창 투명도", tab: "settings", sub: "theme", find: "창 투명도" },
   { t: "플러그인 꾸미기 (색·테마)", k: "색 테마 다크 라이트 모양 글꼴", path: "설정 › 플러그인 꾸미기", tab: "settings", sub: "theme" },
   { t: "업데이트 설정", k: "자동 업데이트 버전 알림", path: "설정 › 업데이트 설정", tab: "settings", sub: "updset" },
   { t: "다른 플러그인의 Dusk 기능 허용", k: "DA Interop 연동 허용 취소 막기 createDuskClient 플러그인 권한 위키 기억 접근", path: "플러그인 › 연동 설정 › Dusk 기능 허용", tab: "plugins", sub: "interop", find: "Dusk 기능 허용", addon: "manage" },

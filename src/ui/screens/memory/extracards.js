@@ -2,6 +2,8 @@
 import { h } from "../../dom.js";
 import { btn, modal, promptDialog, confirmDialog } from "../../kit.js";
 import { memStore } from "./memstore.js";
+import { cumNow, saturation, bodyOf, capacityOf, fertilityFactor, preventOf, chanceNow, BODY, CONTRA_LABEL, STANDING } from "../../../engine/fertility.js";
+import { lifeView } from "../../../engine/nsfwlife.js";
 import { mem, fail, loadBots, loadChats } from "./common.js";
 import { extraOf, activeMarks, markAge, compatOf, personPack, insertPack, nk, activeStatus, STATUS_LV } from "../../../engine/memextra.js";
 
@@ -55,6 +57,39 @@ export function statusCard(env, card, doc) {
         local ? h("button", { type: "button", class: "rb-bzb", title: "나음(지우기)", "aria-label": "나음(지우기)", onClick: () => save(env, (g) => { const e = extraOf(g); e.status = e.status.filter((y) => !(nk(y.name) === nk(x.name) && y.effect === x.effect && y.at === x.at)); g.extra = e; }) }, "✓") : null); }))
       : note("지금은 아무 상태이상도 없어요."),
     add ? h("div", { class: "rb-mem-rowact" }, add) : null,
+  ], null, "rb-life");
+}
+
+// 임신·피임: 체내 정액량·포화도·늘 쓰는 피임·강제 피임·출산/유산 이력 → 지금 임신 가능성
+export function fertilityCard(env, card, doc) {
+  if (!doc) return null;
+  const f = env.folder, n = f?.nsfw?.[doc.id], local = env.backend?.id === "local";
+  if (!n || !Object.keys(n.sexual ?? {}).length) return null;
+  const turn = turnOf(f), when = whenOf(f), L = f?.life?.p?.[doc.id] ?? {};
+  const body = bodyOf(n, f?.wiki?.people?.profiles?.[doc.id]?.summary), c = cumNow(L, turn, when), sat = saturation(c.ml, body);
+  let v = null; try { v = lifeView(f, doc, turn); } catch { v = null; }
+  const ff = fertilityFactor(L, n, turn, when), pv = preventOf(n), ch = v?.phase === "preg" ? null : chanceNow({ phase: v?.phase ?? null, factor: ff.factor, prevent: pv.p });
+  const setFert = (patch) => save(env, (g) => { g.nsfw ??= {}; const cur = g.nsfw[doc.id] ?? n; g.nsfw[doc.id] = { ...cur, fert: { ...(cur.fert ?? {}), ...patch } }; });
+  const forced = n.fert?.forced === true;
+  const hist = Array.isArray(L.hist) ? L.hist : [];
+  const addHist = (kind) => save(env, (g) => { g.life ??= {}; g.life.p ??= {}; const LL = (g.life.p[doc.id] ??= {}); LL.hist = [...(LL.hist ?? []), { kind, at: turnOf(g), when: whenOf(g), manual: true }].slice(-20); });
+  const sel = (label, value, opts, on) => h("label", { class: "rb-fert-sel" }, h("small", null, label), h("select", { class: "rb-input", disabled: !local || null, "aria-label": label, onChange: (e) => on(e.target.value) }, opts.map(([k, l]) => h("option", { value: k, selected: k === value || null }, l))));
+  return card("🌸 임신·피임", [
+    h("div", { class: ["rb-fert-force", forced && "on"] },
+      h("div", null, h("b", null, forced ? "강제 피임 켜짐" : "강제 피임"), h("small", null, forced ? "이 인물은 어떤 관계에서도 임신하지 않아요. 본문에도 늘 피임한 것으로 넣어요." : "켜면 피임 여부와 상관없이 임신하지 않아요(이 채팅만).")),
+      local ? h("button", { type: "button", class: "rb-fert-btn", "aria-pressed": forced ? "true" : "false", onClick: () => setFert({ forced: !forced }) }, forced ? "끄기" : "켜기") : null),
+    h("div", { class: "rb-fert-grid" },
+      h("div", { class: "rb-fert-tile" }, h("small", null, "체내 정액량"), h("b", null, c.ml >= 0.1 ? `${c.ml >= 10 ? Math.round(c.ml) : c.ml.toFixed(1)} ml` : "없음"), h("span", null, c.days == null ? "기록 없음" : `${c.days < 1 ? `${Math.round(c.days * 24)}시간` : `${c.days.toFixed(1)}일`} 전`)),
+      h("div", { class: "rb-fert-tile" }, h("small", null, `포화도 · ${BODY[body][0]}`), h("b", null, `${sat}%`), h("i", { class: "rb-fert-bar" }, h("i", { style: { width: `${sat}%` } })), h("span", null, `최대 약 ${capacityOf(body)}ml`)),
+      h("div", { class: ["rb-fert-tile", "chance"] }, h("small", null, "지금 임신 가능성"), h("b", null, ch == null ? "임신 중" : `${(ch * 100).toFixed(ch < 0.01 ? 2 : 1)}%`), h("span", null, `${pv.label}${v?.phase ? "" : " · 주기 모름"}`))),
+    ff.why.length ? h("div", { class: "rb-fert-why" }, ...ff.why.map((w) => h("span", null, w))) : null,
+    h("div", { class: "rb-fert-sels" },
+      sel("체형", body, Object.entries(BODY).map(([k, [l]]) => [k, l]), (val) => setFert({ body: val })),
+      sel("늘 쓰는 피임", n.fert?.contra ?? "none", STANDING.map((k) => [k, CONTRA_LABEL[k]]), (val) => setFert({ contra: val }))),
+    h("div", { class: "rb-fert-hist" }, h("small", null, "출산·유산 이력"),
+      hist.length ? h("div", null, hist.map((x) => h("span", { class: x.kind }, `${x.kind === "birth" ? "출산" : "유산"}${x.when ? ` · ${String(x.when).slice(0, 10)}` : ` · #${(x.at ?? 0) + 1}`}`))) : h("span", { class: "rb-muted" }, "없음"),
+      local ? h("span", { class: "acts" }, btn("+ 출산", { size: "sm", onClick: () => addHist("birth") }), btn("+ 유산", { size: "sm", onClick: () => addHist("loss") })) : null),
+    note("응답에서 사정(질 안)이 있으면 기록기가 양(ml)과 피임을 적어요. 양은 반나절마다 반으로 줄고, 정자는 며칠 살아 있어요. 관계마다 피임·양·이력으로 보호됐는지 정한 뒤, 보호 안 된 관계만 월경 주기(배란일) 확률로 임신을 굴려요."),
   ], null, "rb-life");
 }
 
@@ -138,7 +173,17 @@ export async function openMovePerson(env, doc) {
   ctx.toast(`${bot.character.name} › ${chat.name ?? "채팅"}에 ‘${res?.title ?? doc.title}’을(를) 옮겼어요.`, { seconds: 8 });
 }
 
-export const EXTRA_CSS = `.rb-marks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+export const EXTRA_CSS = `.rb-fert-force{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:var(--rb-surf2);border:1px solid var(--rb-line2)}
+.rb-fert-force>div{flex:1;display:flex;flex-direction:column;gap:2px}.rb-fert-force small{color:var(--rb-mute);font-size:11.5px}
+.rb-fert-force.on{background:linear-gradient(90deg,color-mix(in srgb,#5cb6a8 18%,var(--rb-surf2)),var(--rb-surf2));border-color:color-mix(in srgb,#5cb6a8 50%,transparent)}.rb-fert-force.on b{color:#3c9a8c}
+.rb-fert-btn{flex:none;border:0;border-radius:999px;padding:7px 16px;font:inherit;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#5cb6a8,#3c9a8c);color:#fff}.rb-fert-force.on .rb-fert-btn{background:var(--rb-surf);color:var(--rb-sub);border:1px solid var(--rb-line)}
+.rb-fert-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:10px}
+.rb-fert-tile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:var(--rb-surf2)}.rb-fert-tile small{font-size:11px;color:var(--rb-mute)}.rb-fert-tile b{font-size:18px}.rb-fert-tile span{font-size:11px;color:var(--rb-mute)}
+.rb-fert-tile.chance b{color:#ec4f86}.rb-fert-bar{display:block;height:5px;border-radius:3px;background:color-mix(in srgb,#ec4f86 14%,transparent);overflow:hidden;margin:3px 0}.rb-fert-bar>i{display:block;height:100%;background:linear-gradient(90deg,#f7a8c0,#ec4f86)}
+.rb-fert-why{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.rb-fert-why span{font-size:11.5px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,#9b7fe0 14%,var(--rb-surf2))}
+.rb-fert-sels{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.rb-fert-sel{display:flex;flex-direction:column;gap:4px}.rb-fert-sel small{font-size:11px;color:var(--rb-mute)}
+.rb-fert-hist{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 6px}.rb-fert-hist>small{font-size:11px;color:var(--rb-mute);margin-right:4px}.rb-fert-hist span.birth,.rb-fert-hist span.loss{font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--rb-surf2)}.rb-fert-hist span.loss{color:#5c8bd6}.rb-fert-hist .acts{margin-left:auto;display:inline-flex;gap:4px}
+.rb-marks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .rb-marks li{position:relative;display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:8px 12px;border-radius:12px;background:var(--rb-surf2);overflow:hidden;font-size:12.5px}
 .rb-marks li .fade{position:absolute;left:0;bottom:0;height:2px;background:linear-gradient(90deg,#c2185b,#f7a8c0)}
 .rb-compat-pick,.rb-move-list{display:flex;flex-wrap:wrap;gap:6px}

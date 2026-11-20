@@ -38,6 +38,8 @@ import { makeTools } from "./memorytools.js";
 import { potConfirm } from "../engine/memoryswitch.js";
 import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
 import { chatKeyOf } from "../engine/chatkey.js";
+import { gateReports } from "../engine/fertility.js";   // 0.3.22 피임·체내 정액량·이력
+const nkey = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 import { readGauge } from "./gaugemult.js";
 import { readSeedOpt } from "./adultseed.js";
 import { cleanJsonReply } from "../engine/jsonreply.js";
@@ -203,6 +205,19 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
           if (R.length) logEvent({ area: "월경·임신", title: parts.join(" · ") });
           else if (rec.stage1?.cycleDeclared) logEvent({ kind: "skip", area: "월경·임신", title: "기록기가 이번 응답 장면에 여성이 없다고 보고했어요(women|none)" });
           else logFailure({ area: "월경·임신", title: "기록기가 월경 줄을 빠뜨렸어요 — 문제", error: "문제: 월경 추적이 켜져 있는데 기록 모델 답에 women| 줄이 없어요", why: "기록 모델이 월경 지침을 따르지 않았어요(검열이 아니라 지침 누락).", todo: "계속되면 장기 기억 보조 모델을 지침을 더 잘 따르는 모델로 바꿔 보세요.", fallback: "이번 응답은 월경·임신을 기록하지 않았어요" }); }
+        // 0.3.22 피임·강제 피임·체내 정액량·출산/유산 이력으로 관계마다 보호 여부를 정한다(코어 월경 추적이 비보호만 배란일 확률로 굴림)
+        try {
+          const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(), ch = await api.getCharacterFromIndex(ci), chat0 = await api.getChatFromIndex(ci, ti);
+          const fo = ch && chat0 ? await store.getFolder(String(ch.chaId), chatKeyOf(chat0, ti)) : null;
+          const docOf = (n) => Object.values(fo?.wiki?.documents ?? {}).find((d) => d?.type === "Character" && [d.title, ...(d.aliases ?? [])].some((x) => nkey(x) === nkey(n)));
+          const cums = (rec.stage1?.extra ?? []).filter((x) => x.kind === "cum" && x.where === "inside");
+          const when0 = [...(fo?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
+          const g = gateReports(cs.reports, (n) => { const d = docOf(n); return d ? { nsfw: fo?.nsfw?.[d.id] ?? null, L: fo?.life?.p?.[d.id] ?? null } : {}; },
+            { turn: Number.isInteger(fo?.cursor?.at) ? fo.cursor.at : 0, now: when0, cumOf: (her, him) => cums.find((x) => nkey(x.name) === nkey(her) && (!him || nkey(x.partner) === nkey(him))) ?? null });
+          cs.reports = g.reports;
+          if (g.log.length) logEvent({ area: "임신·피임", title: g.log.join(" · ").slice(0, 160), detail: g.log });
+          for (const x of cs.reports) { if (x.birth) nsfwQueue.push({ kind: "hist", name: x.name, ev: "birth" }); if (x.loss) nsfwQueue.push({ kind: "hist", name: x.name, ev: "loss" }); }
+        } catch (e) { log("기록기: 피임 계산 건너뜀", e?.message ?? e); }
         env = applyCycleReportObject({ ...env, cycle_report: cs.reports }, wiki.snapshot(), cy).obj;
         // addon-rebuild: 생리 시작·유산은 주기 계산이 끝난 뒤(settle) 위키 구획에 맞춘다
         const ev = cs.reports.filter((x) => x.period || x.loss).map((x) => ({ name: x.name, period: !!x.period, loss: !!x.loss }));

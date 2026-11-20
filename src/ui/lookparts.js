@@ -101,6 +101,12 @@ export function lookParts({ get, set: rawSet }) {
   shapeMore.push(motion);
   // 2.2.0 글래스 화면: 어두운 모드에서 빛 번짐 배경 + 유리 카드. 가벼운 화면 = 블러·발광 끔(저사양 기기)
   shapeMore.push(toggleRow("글래스 화면", "어두운 모드에서 빛 번짐 배경과 유리 카드로 보여요.", get().skin !== "classic", (on) => set({ skin: on ? "glass" : "classic" })));
+  // 창 투명도(0~70%). fields.js를 쓰면 애드온 공유 모듈 목록이 바뀌어(옛 본체에서 애드온이 깨짐) 여기서 직접 만든다
+  { const v0 = get().winAlpha ?? 0;
+    const val = h("b", { class: "rb-alpha-v" }, `${v0}%`);
+    const range = h("input", { type: "range", class: "rb-range", min: 0, max: 70, step: 5, value: String(v0), id: "rb-look-alpha", "aria-label": "창 투명도", style: `--pct:${(v0 / 70) * 100}%`,
+      onInput: (e) => { val.textContent = `${e.target.value}%`; e.target.style.setProperty("--pct", `${(e.target.value / 70) * 100}%`); }, onChange: (e) => set({ winAlpha: Number(e.target.value) }) });
+    shapeMore.push(h("div", { class: "rb-fld", "data-fld": "rb-look-alpha" }, h("div", { class: "rb-fld-top" }, h("div", { class: "rb-fld-lab" }, h("b", null, "창 투명도"), h("small", null, "창 바탕이 비쳐서 뒤의 리스 화면이 보여요. 글자는 그대로 선명해요.")), h("div", { class: "rb-fld-val" }, val)), range, h("div", { class: "rb-fld-ends rb-muted" }, h("span", null, "불투명"), h("span", null, "70%")))); }
   shapeMore.push(toggleRow("가벼운 화면", "흐림·발광 효과를 꺼서 느린 기기에서 가볍게 보여요.", get().lite === true, (on) => set({ lite: on })));
   // 시작 안내처럼 간단히 보여 줄 땐 full:false (모서리·그림자·글꼴·바탕 무늬만)
   const shape = ({ full = true } = {}) => h("div", { class: "rb-shape" }, shapeBasic, full ? shapeMore : null);

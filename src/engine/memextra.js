@@ -3,6 +3,7 @@
 // 저장: folder.extra = { rumors:[{from,to,info,at,when}], goals:{key:{name,list:[{goal,prog,status,at,first}]}},
 //                       world:{place:{key:{name,desc,at,first,n}}, item:{…,owner}, faction:{…,members:[]}}, marks:[{name,part,desc,days,at,when}], diary:[…] }
 import { detach } from "./regress.js";
+import { contraOf, addCum } from "./fertility.js";
 import { createEmptyWikiScope } from "./pot/wiki-schema.js";
 const text = (v, n = 120) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 export const nk = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
@@ -17,11 +18,11 @@ export const EXTRA_STAGE1 = [
   "item|name|one Korean line|owner or none      notable object or gift",
   "faction|name|one Korean line|members      group or family",
 ].join("\n");
-export const MARK_STAGE1 = "\nmark|Name|body part|trace (hickey, bite, bruise…) in Korean|days 1-14      a visible trace newly left on a body";
+export const MARK_STAGE1 = "\nmark|Name|body part|trace (hickey, bite, bruise…) in Korean|days 1-14      a visible trace newly left on a body\ncum|Receiver|Giver|inside, anal, mouth or outside|ml (number; one normal climax 3-5)|none, condom, pill, iud, afterpill, pullout or broke      each ejaculation in newest";
 
 // 0.3.22 상태이상(취함·부상·감기·최음제·수면 부족·저주…): 설정 ‘상태이상’(기본 켜짐)
 export const STATUS_STAGE1 = "\nstatus|Name|condition in Korean (drunk, injured, cold, aphrodisiac, sleepless, cursed…)|1-3 severity|days 1-14 or 0 = until cured      a condition newly starts or worsens\ncure|Name|condition      a condition ends";
-export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure"]);
+export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure", "cum", "hist"]);
 // 기록기 답 → 보고 목록. canon(name) → 알려진 이름(없으면 "")
 export const WORLD_KINDS = new Set(["told", "goal", "place", "item", "faction"]);
 // world=false(설정 ‘세계 탭’ 꺼짐)면 소문·목표·세계 문서 줄은 버린다
@@ -35,6 +36,8 @@ export function extraFrom(raw, canon = (n) => n, { marks = false, world = true, 
       out.push(tag === "cure" ? { kind: "cure", name, effect: text(f[2], 20) } : { kind: "status", name, effect: text(f[2], 20), lv: clamp(f[3], 1, 3) ?? 1, days: clamp(f[4], 0, 14) ?? 1 }); if (out.length >= 12) break; continue; }
     if (tag === "told") { const from = who(f[1]), to = who(f[2]); if (from && to && from !== to && f[3]) out.push({ kind: "told", from, to, info: text(f[3], 100) }); }
     else if (tag === "goal") { const name = who(f[1]); if (name && name !== "{{user}}") out.push({ kind: "goal", name, goal: text(f[2], 60), prog: clamp(f[3], 0, 100), status: statusOf(f[4]) }); }
+    else if (tag === "cum") { if (!marks) continue; const name = who(f[1]); if (!name) continue; const where = /inside|질|안에|vagin/i.test(f[3] ?? "") ? "inside" : /anal|항문|뒤/i.test(f[3] ?? "") ? "anal" : /mouth|입/i.test(f[3] ?? "") ? "mouth" : "outside";
+      out.push({ kind: "cum", name, partner: who(f[2]) || text(f[2], 30), where, ml: Math.max(0.5, Math.min(300, Number(String(f[4] ?? "").replace(/[^\d.]/g, "")) || 4)), contra: contraOf(f[5]) }); }
     else if (tag === "mark") { if (!marks) continue; const name = who(f[1]); if (name && f[3]) out.push({ kind: "mark", name, part: text(f[2], 20), desc: text(f[3], 60), days: clamp(f[4], 1, 14) ?? 3 }); }
     else { const name = text(f[1], 30); if (name.length < 2) continue;
       const r = { kind: tag, name, desc: text(f[2], 100) };
@@ -77,6 +80,12 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
     } else if (r.kind === "cure") {
       const n0 = e.status.length; e.status = e.status.filter((x) => !(nk(x.name) === nk(r.name) && sameEffect(x.effect, r.effect)));
       if (e.status.length < n0) changed.push(`회복 ${r.name} ${r.effect}`);
+    } else if (r.kind === "cum" || r.kind === "hist") {
+      const d = Object.values(f?.wiki?.documents ?? {}).find((x) => x?.type === "Character" && [x.title, ...(x.aliases ?? [])].some((n) => nk(n) === nk(r.name)));
+      if (!d) continue;
+      f.life ??= {}; f.life.p ??= {}; const L = (f.life.p[d.id] ??= {});
+      if (r.kind === "cum") { if (r.where === "inside") { addCum(L, r, turn, when); changed.push(`체내 정액 ${d.title} +${r.ml}ml`); } }
+      else { L.hist = [...(L.hist ?? []), { kind: r.ev, at: turn, when: text(when, 40) }].slice(-20); changed.push(`${r.ev === "birth" ? "출산" : "유산"} ${d.title}`); }
     } else if (r.kind === "mark") {
       e.marks.push({ name: r.name, part: r.part, desc: r.desc, days: r.days, at: turn, when: text(when, 40) }); changed.push(`흔적 ${r.name} ${r.part}`);
     } else if (r.kind === "place" || r.kind === "item" || r.kind === "faction") {
