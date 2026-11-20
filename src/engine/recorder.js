@@ -154,7 +154,7 @@ export const CYCLE_STAGE1 = [
   "birth|Name      she gives birth in newest",
 ].join("\n");
 import { DRIVE_STAGE1, driveFrom } from "./scenedrive.js";
-import { EXTRA_STAGE1, MARK_STAGE1, STATUS_STAGE1, extraFrom } from "./memextra.js";   // 0.3.22 소문·목표·세계 문서·몸 흔적
+import { EXTRA_STAGE1, MARK_STAGE1, STATUS_STAGE1, OUTFIT_STAGE1, WEATHER_STAGE1, extraFrom } from "./memextra.js";   // 0.3.22 소문·목표·세계 문서·몸 흔적
 // addon-rebuild: 채팅별 성인 프로필(체위·장소·성적 수치) 변화 — 성인 항목이 켜졌을 때만 1단계에 줄 두 개를 더 받는다. 대부분의 턴엔 아무 줄도 없다.
 export const NSFW_STAGE1 = [
   "",
@@ -252,13 +252,13 @@ export const GROUP_MAX = 3;   // 2.1.4: 한 번에 묻는 인물 수
 const names = (chunk) => chunk.map((t) => t.name).join("·");
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
 // cast(name, aliases) → bool: 로어북에 있는 인물만 새로 만들기(설정 '로어북에 있는 인물만 새로 기록'). 없으면 막지 않는다. 이미 위키에 있는 인물은 묻지 않고 통과.
-export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, nsfw = false, world = false, status = false, onWarn = () => {} } = {}) {
+export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, nsfw = false, world = false, status = false, outfit = false, weather = false, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
   const key = nk(source).slice(0, 4000);
-  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "") + "|human" + (world ? "|world" : "") + (status ? "|status" : "");
-  const extra = (cycle ? CYCLE_STAGE1 : "") + (nsfw ? NSFW_STAGE1 + MARK_STAGE1 + DRIVE_STAGE1 : "") + HUMAN_STAGE1 + (world ? EXTRA_STAGE1 : "") + (status ? STATUS_STAGE1 : "");   // 0.3.22 소문·목표·세계 문서는 설정 ‘세계 탭’(기본 꺼짐)   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
+  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "") + "|human" + (world ? "|world" : "") + (status ? "|status" : "") + (outfit ? "|outfit" : "") + (weather ? "|weather" : "");
+  const extra = (cycle ? CYCLE_STAGE1 : "") + (nsfw ? NSFW_STAGE1 + MARK_STAGE1 + DRIVE_STAGE1 : "") + HUMAN_STAGE1 + (world ? EXTRA_STAGE1 : "") + (status ? STATUS_STAGE1 : "") + (outfit ? OUTFIT_STAGE1 : "") + (weather ? WEATHER_STAGE1 : "");   // 0.3.22 소문·목표·세계 문서는 설정 ‘세계 탭’(기본 꺼짐)   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
   let stage1 = cache?.get(ckey) ?? null;
   if (!stage1) {
     const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: cut(run.recent || (dusk?.recent ?? []).join("\n"), 4000), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
@@ -268,7 +268,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
       // addon-rebuild: women| 줄이 있었는지 — 없으면 '모델이 월경 줄을 빠뜨림', 있으면 '여성이 없다고 보고'로 구분한다
       if (cycle) { got.cycle = cycleFrom(raw, known); got.cycleDeclared = /(^|\n)\s*(?:[-*•>]+\s*)?women\s*[|｜¦]/i.test(String(raw ?? "")) || got.cycle.length > 0; }
       got.human = humanFrom(raw, known, HUMAN_TRAITS);
-      got.extra = extraFrom(raw, (n) => canonName(String(n ?? "").trim(), known) || String(n ?? "").trim(), { marks: nsfw, world, status });
+      got.extra = extraFrom(raw, (n) => canonName(String(n ?? "").trim(), known) || String(n ?? "").trim(), { marks: nsfw, world, status, outfit, weather });
       if (nsfw) { got.nsfw = nsfwFrom(raw, known); got.drive = driveFrom(raw, (n) => { const c = canonName(String(n ?? "").trim(), known); return c && c !== "{{user}}" ? c : (/\{\{user\}\}/i.test(String(n)) ? "{{user}}" : ""); }); }
       return got.scene || got.people.length ? got : null;
     }, { minimal: LINES_STAGE1_MIN + extra });   // 2.2.8: 짧은 지침 재시도에도 월경 줄(빠지면 그 턴만 월경 보고가 비었다)

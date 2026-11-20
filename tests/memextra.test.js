@@ -123,9 +123,17 @@ test("상태창: 요약·스탯·상태이상·몸 흔적·NSFW(약점 자리)",
     nsfw: { a: { sexual: { eroticInterest: 70 }, zones: [{ part: "ears", level: 3, spot: "왼쪽 귓불", note: "숨결에 움찔" }], positions: [], tags: { likes: ["밧줄"] } } } };
   applyExtra(f, [{ kind: "status", name: "세라", effect: "취함", lv: 2, days: 1 }, { kind: "mark", name: "세라", part: "목", desc: "키스마크", days: 3 }], { turn: 10 });
   const h = statusCardHtml(f, f.wiki.documents.a);
-  for (const s of ["검을 쓰는 기사 지망생", "성실함", "시로코에게 비밀을 말했다", "나에게 호감", "6/10", "신뢰", "취함", "목 키스마크", "약점", "왼쪽 귓불", "밧줄", ">지금 상태<", ">요약<", ">NSFW<"]) assert.ok(h.includes(s), s);
+  for (const s of ["검을 쓰는 기사 지망생", "성실함", "시로코에게 비밀을 말했다", "호감", "6/10", "신뢰", "4/10", "취함", "목 키스마크", "약점", "왼쪽 귓불", "밧줄", ">지금 상태<", ">요약<", ">NSFW<"]) assert.ok(h.includes(s), s);
   assert.doesNotMatch(h, /<details/, "접고 펴기 없이 한 판");
   assert.doesNotMatch(statusCardHtml(f, f.wiki.documents.a, { adult: false }), />NSFW</);
+  assert.match(h, /linear-gradient\(140deg/, "사진 없으면 글자 동그라미");
+  assert.match(statusCardHtml(f, f.wiki.documents.a, { img: "data:image/jpeg;base64,AAA" }), /<img src="data:image\/jpeg;base64,AAA"/);
+  applyExtra(f, extraFrom("wear|세라|상의|흰 블라우스|얇은 흰 면 블라우스, 단추 두 개 풀림\nwear|세라|목걸이|은 목걸이|가는 은사슬", (n) => n), { turn: 10 });
+  const h2 = statusCardHtml(f, f.wiki.documents.a);
+  assert.match(h2, />옷차림</); assert.match(h2, /흰 블라우스/); assert.match(h2, /삽화용 상세 ›/); assert.match(h2, /단추 두 개 풀림/);
+  assert.match(extraSection(f, { present: ["세라"], turn: 10 }), /세라 is wearing: 상의 흰 블라우스 · 액세서리 은 목걸이/);
+  applyExtra(f, extraFrom("strip|세라|상의", (n) => n), { turn: 11 });
+  assert.doesNotMatch(statusCardHtml(f, f.wiki.documents.a), /흰 블라우스/, "벗으면 빠짐");
 });
 
 import { partOf, BODY_PARTS } from "../src/engine/humanitems.js";
@@ -136,4 +144,26 @@ test("여성 부위: 질·자궁·클리토리스를 따로 알아보고, 남성
   assert.equal(partOf("사타구니")?.id, "groin"); assert.equal(partOf("성질")?.id ?? null, null, "‘성질’은 질이 아님");
   for (let i = 0; i < 40; i++) assert.ok(randomZones(`m${i}`, { female: false }).every((z) => !BODY_PARTS.find((p) => p.id === z.part)?.sex));
   assert.ok(Array.from({ length: 60 }, (_, i) => randomZones(`f${i}`, { female: true })).flat().some((z) => ["clit", "vagina", "womb"].includes(z.part)));
+});
+
+import { sceneOf, peopleIn, scenePanelHtml, dateLabel, WX } from "../src/engine/scenepanel.js";
+import { imagePathFor } from "../src/data/charimg.js";
+test("장면 상태창: 상태 줄에서 날짜·시간·장소, 본문에서 날씨, 나온 인물, 이름은 캐릭터 상태창 링크", () => {
+  const f = { wiki: { documents: { a: doc("a", "세라"), b: doc("b", "시로코") } }, extra: { weather: { w: "맑음" } }, scenes: [{ at: 3, when: "2026-03-01 10:00", place: "교실" }] };
+  const t = "[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 내렸다. 세라는 조용히 웃었다.";
+  const s = sceneOf(t, f); assert.deepEqual([s.date, s.time, s.place, s.weather, s.fromLine], ["2026-03-02", "22:40", "은빛 여관", "비", true]);
+  assert.equal(sceneOf("상태 줄 없음. 그냥 이야기.", f).weather, "맑음", "본문에 없으면 저장된 날씨");
+  assert.equal(sceneOf("상태 줄 없음", f).place, "교실", "없으면 마지막 장면");
+  assert.deepEqual(peopleIn(t, f, "봇").map((p) => p.name), ["세라"]);
+  const h = scenePanelHtml({ ...s, people: [{ name: "세라", card: "<b>카드</b>" }, { name: "봇" }] });
+  for (const x of ["x-dusk=\"scene\"", "2026년 3월 2일 (월)", "22:40", "은빛 여관", "🌧️", "dkRain", "등장", 'x-dusk="pc"', "봇"]) assert.ok(h.includes(x), x);
+  assert.equal(scenePanelHtml({}), "");
+  assert.ok(Object.keys(WX).length >= 10); assert.equal(dateLabel("2026-03-02"), "2026년 3월 2일 (월)");
+});
+test("캐릭터 사진: 봇 본인은 대표 이미지, 다른 인물은 이름이 든 에셋(기본 표정 먼저), 없으면 빈 값", () => {
+  const ch = { name: "세라", image: "img/main.png", emotionImages: [["시로코_화남", "e/1.png"], ["시로코_기본", "e/2.png"]], additionalAssets: [["유나 프로필", "a/1.png", "png"]] };
+  assert.equal(imagePathFor(ch, ["세라"]), "img/main.png");
+  assert.equal(imagePathFor(ch, ["시로코"]), "e/2.png");
+  assert.equal(imagePathFor(ch, ["유나"]), "a/1.png");
+  assert.equal(imagePathFor(ch, ["카엘"]), "");
 });

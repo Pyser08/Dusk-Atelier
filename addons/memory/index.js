@@ -18,6 +18,7 @@ import { STAGE_NAMES } from "../../src/ui/screens/memory/advanced.js";
 import { cardSettings } from "../../src/ui/screens/memory/settings.js";
 import { createDiaryDisplay } from "../../src/data/diary.js";
 import { createNameLinks } from "../../src/data/namelinks.js";
+import { quickRows } from "../../src/ui/screens/memory/quickrows.js";
 
 const log = (m) => console.log(`[Dusk Atelier] ${m}`);
 
@@ -47,11 +48,12 @@ export async function activate(api, ctx) {
   const diary = createDiaryDisplay(memory); memory.diary = diary;
   const gaugeShow = memory.gauge?.onDisplay;
   // 0.3.22 본문 인물 이름 → 상태창 링크: 본문(t)에만 달고, 게이지 박스·일기는 그 뒤에 그대로 붙인다(일기·게이지 매칭은 원래 글로)
-  const names = createNameLinks(memory); memory.nameLinks = names;
+  // 0.3.22 장면 상태창은 그 아래(로어북 버튼 바로 위)에 붙인다
+  const names = createNameLinks(memory, api); memory.nameLinks = names;
   if (memory.gauge && typeof gaugeShow === "function") memory.gauge.onDisplay = async (t) => {
     const g = await gaugeShow(t), d = await diary.onDisplay(g);
     if (typeof t !== "string" || typeof d !== "string" || !d.startsWith(t)) return d;
-    return (await names.link(t)) + d.slice(t.length);
+    return (await names.link(t)) + d.slice(t.length) + (await names.scene(t));
   };
   const affhud = createAffHud(api, { store: memory.store, link: memory.link });
   setUserPromptProvider(() => memory.userPrompts());
@@ -68,6 +70,7 @@ export async function activate(api, ctx) {
     ext.add("svc", "affhud", affhud),
     ext.add("svc", "memoryButton", memBtn),
     ext.add("svc", "memoryui", { tracked, STAGE_NAMES, cardSettings }),
+    ext.add("slot", "home.quick", (c) => quickRows(c, memory)),   // 0.3.22 홈 빠른 설정: 캐릭터 상태창·장면 상태창
     ext.add("tab", "memory", renderMemory),
     ext.add("tab", "relmap", renderRelMap),
     ext.add("tab", "branches", renderBranches),

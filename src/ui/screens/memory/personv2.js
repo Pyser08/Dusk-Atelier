@@ -8,7 +8,7 @@ import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
 import { nsfwCard, nsfwStatusCard, nsfwTempCard, nsfwTagsCard } from "./nsfwcard.js";
 import { adultCandCard } from "./adultcands.js";
-import { marksCard, compatCard, statusCard, fertilityCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
+import { marksCard, compatCard, statusCard, fertilityCard, outfitCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
 import { subTabs } from "./subtabs.js";
 import { lustCard, moodCard, bodyCard, humanCard, heatOf, heatFx, compareCard } from "./lifecards.js";
 import { eroLoad, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
@@ -320,7 +320,7 @@ export function personTabs(env, parts) {
   // 세부 탭(PC 왼쪽 레일 · 모바일 아래 반원 다이얼). 고른 세부 탭은 인물·탭마다 기억
   const subSel = (m.wkSub ??= {});
   const sub2 = (tab, items) => subTabs(ctx, subSel, `${pk}|${tab}`, items, { label: "세부 탭" });
-  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "진도·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }, doc && { id: "cond", label: "상태이상", icon: "🤒", hint: "취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) }]);
+  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "진도·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }, doc && { id: "cond", label: "상태이상", icon: "🤒", hint: "취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) }, doc && { id: "outfit", label: "옷차림", icon: "👗", hint: "부위별 옷·액세서리(삽화용 상세)", render: () => outfitCard(env, card, doc) }]);
   const relation0 = () => {
     if (lay === "A") return layoutA();
     if (fam === "B") return layoutB();

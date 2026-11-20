@@ -5,7 +5,7 @@ import { memStore } from "./memstore.js";
 import { cumNow, saturation, bodyOf, capacityOf, fertilityFactor, preventOf, chanceNow, BODY, CONTRA_LABEL, STANDING } from "../../../engine/fertility.js";
 import { lifeView } from "../../../engine/nsfwlife.js";
 import { mem, fail, loadBots, loadChats } from "./common.js";
-import { extraOf, activeMarks, markAge, compatOf, personPack, insertPack, nk, activeStatus, STATUS_LV } from "../../../engine/memextra.js";
+import { extraOf, activeMarks, markAge, compatOf, personPack, insertPack, nk, activeStatus, STATUS_LV, OUTFIT_PARTS } from "../../../engine/memextra.js";
 
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
 const turnOf = (f) => (Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0);
@@ -93,6 +93,35 @@ export function fertilityCard(env, card, doc) {
   ], null, "rb-life");
 }
 
+// 옷차림·액세서리: 부위별 간단(보이는 대로) + 상세(삽화용). 기록기가 채우고 직접 고칠 수 있다
+export function outfitCard(env, card, doc) {
+  if (!doc) return null;
+  const f = env.folder, local = env.backend?.id === "local", m = mem(env.ctx);
+  const o = Object.values(extraOf(f).outfit ?? {}).find((x) => namesOf(doc).has(nk(x.name)));
+  const detail = !!(m.outfitDetail ??= {})[doc.id];
+  const edit = (part) => async () => {
+    const cur = part === "acc" ? null : o?.parts?.[part];
+    const sv = await promptDialog(env.ctx.win, { title: `${OUTFIT_PARTS.find(([k]) => k === part)?.[1]} — 간단히`, label: "보이는 대로(예: 흰 블라우스). 비우면 지워요", value: cur?.s ?? "", ok: "다음" }); if (sv == null) return;
+    const dv = sv.trim() ? await promptDialog(env.ctx.win, { title: "삽화용 상세", label: "색·소재·모양·핏·무늬·지금 상태(젖음·풀림 등)", value: cur?.d ?? "", ok: "저장" }) : "";
+    if (dv == null) return;
+    save(env, (g) => { const e = extraOf(g), k = nk(doc.title), x = (e.outfit[k] ??= { name: doc.title, parts: {}, acc: [] });
+      if (part === "acc") { if (sv.trim()) x.acc = [...(x.acc ?? []), { s: sv.trim().slice(0, 40), d: (dv || sv).trim().slice(0, 200), at: turnOf(g) }].slice(-6); }
+      else if (!sv.trim()) delete x.parts[part]; else x.parts[part] = { s: sv.trim().slice(0, 40), d: (dv || sv).trim().slice(0, 200), at: turnOf(g) };
+      g.extra = e; });
+  };
+  const rows = OUTFIT_PARTS.filter(([k]) => k !== "acc").map(([k, l]) => { const p = o?.parts?.[k];
+    return h("li", { class: ["rb-of-row", !p && "empty"] }, h("small", null, l), h("div", null, h("b", null, p?.s ?? "—"), detail && p?.d && p.d !== p.s ? h("p", null, p.d) : null),
+      local ? h("button", { type: "button", class: "rb-bzb", title: `${l} 고치기`, "aria-label": `${l} 고치기`, onClick: edit(k) }, "✎") : null); });
+  const acc = (o?.acc ?? []);
+  return card("👗 옷차림·액세서리", [
+    h("div", { class: "rb-of-top" }, note("기록기가 응답에서 부위별로 적어요. 간단히는 사람들이 볼 모습, 상세는 삽화를 그릴 때 쓸 설명이에요."),
+      h("button", { type: "button", class: ["rb-of-tg", detail && "on"], "aria-pressed": detail ? "true" : "false", onClick: () => { m.outfitDetail[doc.id] = !detail; env.redraw?.(); } }, detail ? "간단히 ‹" : "삽화용 상세 ›")),
+    h("ul", { class: "rb-of" }, rows),
+    h("div", { class: "rb-of-acc" }, h("small", null, "액세서리"), acc.length ? acc.map((x, i) => h("span", { title: x.d }, x.s, detail && x.d !== x.s ? h("i", null, ` — ${x.d}`) : null, local ? h("button", { type: "button", class: "rb-bzb", "aria-label": "지우기", onClick: () => save(env, (g) => { const e = extraOf(g), xx = e.outfit[nk(doc.title)]; if (xx) xx.acc.splice(i, 1); g.extra = e; }) }, "✕") : null)) : h("span", { class: "rb-muted" }, "없음"),
+      local ? btn("+ 추가", { size: "sm", onClick: edit("acc") }) : null),
+  ], null, "rb-life");
+}
+
 // 궁합: 두 인물의 취향·금기·주도성·성감대로 계산(호출 없음)
 export function compatCard(env, card, doc) {
   if (!doc) return null;
@@ -173,7 +202,13 @@ export async function openMovePerson(env, doc) {
   ctx.toast(`${bot.character.name} › ${chat.name ?? "채팅"}에 ‘${res?.title ?? doc.title}’을(를) 옮겼어요.`, { seconds: 8 });
 }
 
-export const EXTRA_CSS = `.rb-fert-force{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:var(--rb-surf2);border:1px solid var(--rb-line2)}
+export const EXTRA_CSS = `.rb-of-top{display:flex;gap:10px;align-items:flex-start}.rb-of-top>p{flex:1}
+.rb-of-tg{flex:none;border:1px solid color-mix(in srgb,var(--rb-acc) 45%,transparent);background:transparent;color:var(--rb-acc);border-radius:999px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer}.rb-of-tg.on{background:color-mix(in srgb,var(--rb-acc) 14%,transparent)}
+.rb-of{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}
+.rb-of-row{display:grid;grid-template-columns:5em 1fr auto;gap:8px;align-items:start;padding:8px 10px;border-radius:12px;background:var(--rb-surf2)}.rb-of-row small{color:var(--rb-mute);font-size:11.5px;padding-top:2px}.rb-of-row.empty b{color:var(--rb-mute);font-weight:400}
+.rb-of-row p{margin:3px 0 0;font-size:12px;line-height:1.5;color:var(--rb-sub)}
+.rb-of-acc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}.rb-of-acc>small{color:var(--rb-mute);font-size:11.5px;margin-right:4px}.rb-of-acc>span{font-size:12px;padding:2px 6px 2px 10px;border-radius:999px;background:var(--rb-surf2)}.rb-of-acc>span i{font-style:normal;color:var(--rb-sub)}
+.rb-fert-force{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:var(--rb-surf2);border:1px solid var(--rb-line2)}
 .rb-fert-force>div{flex:1;display:flex;flex-direction:column;gap:2px}.rb-fert-force small{color:var(--rb-mute);font-size:11.5px}
 .rb-fert-force.on{background:linear-gradient(90deg,color-mix(in srgb,#5cb6a8 18%,var(--rb-surf2)),var(--rb-surf2));border-color:color-mix(in srgb,#5cb6a8 50%,transparent)}.rb-fert-force.on b{color:#3c9a8c}
 .rb-fert-btn{flex:none;border:0;border-radius:999px;padding:7px 16px;font:inherit;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#5cb6a8,#3c9a8c);color:#fff}.rb-fert-force.on .rb-fert-btn{background:var(--rb-surf);color:var(--rb-sub);border:1px solid var(--rb-line)}

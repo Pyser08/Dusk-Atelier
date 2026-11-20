@@ -22,16 +22,40 @@ export const MARK_STAGE1 = "\nmark|Name|body part|trace (hickey, bite, bruise…
 
 // 0.3.22 상태이상(취함·부상·감기·최음제·수면 부족·저주…): 설정 ‘상태이상’(기본 켜짐)
 export const STATUS_STAGE1 = "\nstatus|Name|condition in Korean (drunk, injured, cold, aphrodisiac, sleepless, cursed…)|1-3 severity|days 1-14 or 0 = until cured      a condition newly starts or worsens\ncure|Name|condition      a condition ends";
-export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure", "cum", "hist"]);
+// 0.3.22 옷차림·액세서리(부위별: 간단 = 사람이 볼 것, 상세 = 삽화용) · 날씨
+export const OUTFIT_PARTS = Object.freeze([["head", "머리"], ["face", "얼굴"], ["outer", "겉옷"], ["top", "상의"], ["bra", "속옷(위)"], ["bottom", "하의"], ["panties", "속옷(아래)"], ["legs", "다리"], ["feet", "신발"], ["acc", "액세서리"]]);
+export const OUTFIT_LABEL = Object.freeze(Object.fromEntries(OUTFIT_PARTS));
+export const OUTFIT_STAGE1 = "\nwear|Name|head, face, outer, top, bra, bottom, panties, legs, feet or acc|short Korean (what people see)|detailed Korean for an illustrator (colour, material, cut, fit, pattern, current state like wet, torn, unbuttoned)      clothing or accessory newly shown or changed\nstrip|Name|part      that piece is taken off";
+export const WEATHER_STAGE1 = "\nweather|맑음, 구름, 흐림, 비, 폭우, 눈, 안개, 천둥, 바람 or 실내      the weather in newest's scene when it is shown or changes";
+export const WEATHER_KINDS = Object.freeze(["맑음", "구름", "흐림", "비", "폭우", "눈", "안개", "천둥", "바람", "실내"]);
+export function weatherOf(s) {
+  const t = String(s ?? "");
+  if (/폭우|장대비|억수|storm(y)? rain|downpour/i.test(t)) return "폭우";
+  if (/천둥|번개|뇌우|thunder|lightning/i.test(t)) return "천둥";
+  if (/눈(이|발|보라)|함박눈|진눈깨비|snow/i.test(t)) return "눈";
+  if (/비(가|를|에| 오| 내)|빗(줄기|방울|소리)|소나기|이슬비|rain/i.test(t)) return "비";
+  if (/안개|fog|mist/i.test(t)) return "안개";
+  if (/바람(이 세|이 거|이 불)|강풍|wind/i.test(t)) return "바람";
+  if (/흐림|흐린|잿빛 하늘|먹구름|overcast|cloudy/i.test(t)) return "흐림";
+  if (/구름/.test(t)) return "구름";
+  if (/맑|햇살|햇빛|화창|sunny|clear sky/i.test(t)) return "맑음";
+  if (/실내|indoor/i.test(t)) return "실내";
+  return "";
+}
+export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure", "cum", "hist", "wear", "strip", "weather"]);
 // 기록기 답 → 보고 목록. canon(name) → 알려진 이름(없으면 "")
 export const WORLD_KINDS = new Set(["told", "goal", "place", "item", "faction"]);
 // world=false(설정 ‘세계 탭’ 꺼짐)면 소문·목표·세계 문서 줄은 버린다
-export function extraFrom(raw, canon = (n) => n, { marks = false, world = true, status = true } = {}) {
+export function extraFrom(raw, canon = (n) => n, { marks = false, world = true, status = true, outfit = true, weather = true } = {}) {
   const out = [];
   const who = (s) => (isUser(s) ? "{{user}}" : canon(String(s ?? "").trim()) || "");
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
     const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
+    if (tag === "weather" && f[1] && weather) { const w = weatherOf(f[1]) || (WEATHER_KINDS.includes(String(f[1]).trim()) ? String(f[1]).trim() : ""); if (w) out.push({ kind: "weather", w }); continue; }
     if (!EXTRA_KINDS.has(tag) || !f[1] || !f[2] || (!world && WORLD_KINDS.has(tag)) || (!status && (tag === "status" || tag === "cure"))) continue;
+    if (tag === "weather") { if (!weather) continue; const w = weatherOf(f[1]) || (WEATHER_KINDS.includes(String(f[1]).trim()) ? String(f[1]).trim() : ""); if (w) out.push({ kind: "weather", w }); continue; }
+    if (tag === "wear" || tag === "strip") { if (!outfit) continue; const name = who(f[1]), part = partKey(f[2]); if (!name || !part) continue;
+      out.push(tag === "strip" ? { kind: "strip", name, part } : { kind: "wear", name, part, s: text(f[3], 40), d: text(f[4] || f[3], 200) }); if (out.length >= 16) break; continue; }
     if (tag === "status" || tag === "cure") { const name = who(f[1]); if (!name) continue;
       out.push(tag === "cure" ? { kind: "cure", name, effect: text(f[2], 20) } : { kind: "status", name, effect: text(f[2], 20), lv: clamp(f[3], 1, 3) ?? 1, days: clamp(f[4], 0, 14) ?? 1 }); if (out.length >= 12) break; continue; }
     if (tag === "told") { const from = who(f[1]), to = who(f[2]); if (from && to && from !== to && f[3]) out.push({ kind: "told", from, to, info: text(f[3], 100) }); }
@@ -48,14 +72,21 @@ export function extraFrom(raw, canon = (n) => n, { marks = false, world = true, 
   }
   return out;
 }
+export function partKey(s) {
+  const t = String(s ?? "").trim().toLowerCase();
+  if (OUTFIT_LABEL[t]) return t;
+  const map = [["head", /머리|모자|헤어|hat|hair/], ["face", /얼굴|안경|마스크|화장|glasses|mask|make/], ["outer", /겉옷|코트|재킷|자켓|가디건|망토|coat|jacket|cardigan/], ["bra", /브라|속옷 ?\(?위|브래지어|bra/], ["panties", /팬티|속옷 ?\(?아래|속바지|panties|underwear/],
+    ["top", /상의|셔츠|블라우스|티셔츠|니트|스웨터|원피스|드레스|top|shirt|blouse|dress/], ["bottom", /하의|치마|스커트|바지|반바지|skirt|pants|shorts/], ["legs", /스타킹|양말|타이츠|레깅스|다리|stocking|sock|tights/], ["feet", /신발|구두|운동화|부츠|힐|샌들|shoe|boot|heel/], ["acc", /액세서리|목걸이|귀걸이|반지|팔찌|시계|리본|초커|accessor|necklace|ring|earring/]];
+  return map.find(([, re]) => re.test(t))?.[0] ?? "";
+}
 function clamp(v, lo, hi) { const n = Number(String(v ?? "").replace(/[^\d.-]/g, "")); return Number.isFinite(n) && String(v ?? "").trim() !== "" ? Math.max(lo, Math.min(hi, Math.round(n))) : null; }
 function statusOf(v) { const t = String(v ?? "").toLowerCase(); return /done|완료|이룸|성공/.test(t) ? "done" : /drop|포기|실패|abandon/.test(t) ? "dropped" : "active"; }
 
-export const emptyExtra = () => ({ rumors: [], goals: {}, world: { place: {}, item: {}, faction: {} }, marks: [], diary: [], status: [] });
+export const emptyExtra = () => ({ rumors: [], goals: {}, world: { place: {}, item: {}, faction: {} }, marks: [], diary: [], status: [], outfit: {}, weather: null });
 export function extraOf(f) {
   const e = f?.extra && typeof f.extra === "object" ? f.extra : {};
   return { rumors: Array.isArray(e.rumors) ? e.rumors : [], goals: e.goals && typeof e.goals === "object" ? e.goals : {},
-    world: { place: e.world?.place ?? {}, item: e.world?.item ?? {}, faction: e.world?.faction ?? {} }, marks: Array.isArray(e.marks) ? e.marks : [], diary: Array.isArray(e.diary) ? e.diary : [], status: Array.isArray(e.status) ? e.status : [] };
+    world: { place: e.world?.place ?? {}, item: e.world?.item ?? {}, faction: e.world?.faction ?? {} }, marks: Array.isArray(e.marks) ? e.marks : [], diary: Array.isArray(e.diary) ? e.diary : [], status: Array.isArray(e.status) ? e.status : [], outfit: e.outfit && typeof e.outfit === "object" ? e.outfit : {}, weather: e.weather ?? null };
 }
 export const RUMOR_MAX = 60, MARK_MAX = 30, GOAL_MAX = 4;
 
@@ -80,6 +111,14 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
     } else if (r.kind === "cure") {
       const n0 = e.status.length; e.status = e.status.filter((x) => !(nk(x.name) === nk(r.name) && sameEffect(x.effect, r.effect)));
       if (e.status.length < n0) changed.push(`회복 ${r.name} ${r.effect}`);
+    } else if (r.kind === "weather") {
+      if (e.weather?.w !== r.w) changed.push(`날씨 ${r.w}`); e.weather = { w: r.w, at: turn, when: text(when, 40) };
+    } else if (r.kind === "wear" || r.kind === "strip") {
+      const k = nk(r.name), o = (e.outfit[k] ??= { name: r.name, parts: {}, acc: [] });
+      if (r.part === "acc") { if (r.kind === "strip") o.acc = []; else { o.acc = [...o.acc.filter((x) => nk(x.s) !== nk(r.s)), { s: r.s, d: r.d, at: turn }].slice(-6); } }
+      else if (r.kind === "strip") delete o.parts[r.part];
+      else o.parts[r.part] = { s: r.s, d: r.d, at: turn };
+      changed.push(`${r.kind === "strip" ? "벗음" : "옷"} ${r.name} ${OUTFIT_LABEL[r.part]}`);
     } else if (r.kind === "cum" || r.kind === "hist") {
       const d = Object.values(f?.wiki?.documents ?? {}).find((x) => x?.type === "Character" && [x.title, ...(x.aliases ?? [])].some((n) => nk(n) === nk(r.name)));
       if (!d) continue;
@@ -133,7 +172,7 @@ export function mentionsOf(userText, docs = []) {
 export const AWAY_AT = 20;
 export const EXTRA_TITLE = "[Story threads — tracked by Dusk; use naturally, never list them]";
 // 주입 글. present: 장면 인물 이름, recent: 최근 글, turn: 기록된 마지막 메시지 번호, when: 지금 이야기 날짜, pinned: @인물
-export function extraSection(f, { present = [], recent = "", turn = 0, when = "", pinned = [], docs = null, lifeOf = null, world = true, status = true } = {}) {
+export function extraSection(f, { present = [], recent = "", turn = 0, when = "", pinned = [], docs = null, lifeOf = null, world = true, status = true, outfit = true } = {}) {
   const e = extraOf(f), lines = [], P = new Set([...present, ...pinned].map(nk)), low = nk(recent);
   const here = (n) => P.has(nk(n)) || (String(n).length >= 2 && low.includes(nk(n)));
   for (const n of pinned) lines.push(`- {{user}} pointed at ${n}: bring up what ${n} and the others remember about them.`);
@@ -157,6 +196,8 @@ export function extraSection(f, { present = [], recent = "", turn = 0, when = ""
   // 소문: 장면 인물이 들은 것(다른 이는 모를 수 있음)
   const heard = !world ? [] : e.rumors.filter((r) => here(r.to) || here(r.from)).slice(-4);
   if (heard.length) lines.push(`- Who heard what (others may not know): ${heard.map((r) => `${r.to} heard from ${r.from} that ${r.info}`).join("; ")}`);
+  // 옷차림(간단)
+  if (outfit) for (const o of Object.values(e.outfit)) { if (!here(o.name)) continue; const ps = OUTFIT_PARTS.filter(([k]) => k !== "acc" && o.parts?.[k]).map(([k, l]) => `${l} ${o.parts[k].s}`); if (o.acc?.length) ps.push(`액세서리 ${o.acc.map((x) => x.s).join(", ")}`); if (ps.length) lines.push(`- ${o.name} is wearing: ${ps.join(" · ")}`.slice(0, 240)); }
   // 상태이상
   const st = !status ? [] : activeStatus(e.status, turn, when).filter((x) => here(x.name)).slice(-5);
   if (st.length) lines.push(`- Conditions (let them affect behaviour): ${st.map((x) => `${x.name} — ${x.effect} (${["", "mild", "moderate", "severe"][x.lv ?? 1]}, day ${markAge(x, turn, when) + 1}${x.days ? `/${x.days}` : ", until cured"})`).join("; ")}`);

@@ -27,7 +27,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
         [id("세라")]: { sexual: { eroticInterest: 60 }, axes: { initiative: 30 }, positions: [{ label: "기승위", preference: "preferred" }], tags: { likes: ["밧줄"], limits: [] } },
       };
       f.life = { p: { [id("시로코")]: { lust: 40, fat: 10, cum: { ml: 30, sperm: 30, at: 30, when: "" }, hist: [{ kind: "loss", at: 1 }] } } };
-      f.extra = { rumors: [{ from: "시로코", to: "세라", info: "유나가 왕녀라는 것", at: 12 }], goals: { "세라": { name: "세라", list: [{ goal: "기사단장 되기", prog: 40, status: "active", at: 20, first: 5 }] } },
+      f.extra = { outfit: { 시로코: { name: "시로코", parts: { top: { s: "흰 셔츠", d: "헐렁한 흰 리넨 셔츠, 소매를 걷어 올림", at: 29 } }, acc: [{ s: "은 귀걸이", d: "작은 은 링 귀걸이", at: 29 }] } }, weather: { w: "눈", at: 29 }, rumors: [{ from: "시로코", to: "세라", info: "유나가 왕녀라는 것", at: 12 }], goals: { "세라": { name: "세라", list: [{ goal: "기사단장 되기", prog: 40, status: "active", at: 20, first: 5 }] } },
         world: { place: { "은빛여관": { name: "은빛 여관", desc: "항구 옆 2층 여관", at: 9, first: 2, n: 3 } }, item: {}, faction: {} },
         marks: [{ name: "시로코", part: "목", desc: "키스마크", days: 3, at: 29 }], diary: [], status: [{ name: "시로코", effect: "감기", lv: 2, days: 3, at: 29 }] };
     });
@@ -99,15 +99,33 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
   ok(`[${tag}] 상태이상 카드: 감기`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
   // 본문 이름 링크 → 상태창(실제 표시 경로: 로어북 로그가 부르는 memory.gauge.onDisplay)
-  const link = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const reply = "시로코가 세라에게 다가갔다. 세라는 웃었다."; const out = await M.gauge.onDisplay(reply); return { out, n: (out.match(/x-dusk="pc"/g) ?? []).length }; });
+  const link = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const reply = "시로코가 세라에게 다가갔다. 세라는 웃었다."; const out = await M.gauge.onDisplay(reply); return { out, n: (out.split('x-dusk="scene"')[0].match(/x-dusk="pc"/g) ?? []).length }; });
   ok(`[${tag}] 본문 이름마다 상태창 링크`, link.n === 3, link.out.slice(0, 200));
   const inl = await page.evaluate((html) => { const d = document.createElement("p"); d.style.cssText = "width:360px;font-size:15px"; d.innerHTML = html; document.body.append(d); const h = d.getBoundingClientRect().height; d.remove(); return Math.round(h); }, link.out);
   ok(`[${tag}] 이름 링크가 줄을 바꾸지 않음(한 줄)`, inl <= 30, String(inl));
   ok(`[${tag}] 상태창에 스탯·상태이상·NSFW`, /감기/.test(link.out) && />지금 상태</.test(link.out) && />NSFW</.test(link.out) && /왼쪽 귓불/.test(link.out));
   if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "pcdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px;line-height:1.7"; d.innerHTML = html; document.body.append(d); d.querySelector('details[x-dusk="pc"]').open = true; }, link.out);
     await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/extra-${tag}-namecard.png` }); await page.evaluate(() => document.getElementById("pcdemo")?.remove()); }
+  // 장면 상태창(응답 아래, 로어북 위)
+  const sc = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const out = await M.gauge.onDisplay("[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 쏟아졌다. 시로코가 세라를 바라봤다."); return out; });
+  ok(`[${tag}] 장면 상태창: 날짜·시간·장소·날씨·등장인물(이름은 캐릭터 상태창)`, /x-dusk="scene"/.test(sc) && /22:40/.test(sc) && /은빛 여관/.test(sc) && /🌧️/.test(sc) && (sc.split('x-dusk="scene"')[1].match(/x-dusk="pc"/g) ?? []).length === 2, sc.slice(-300));
+  ok(`[${tag}] 캐릭터 상태창에 옷차림·삽화용 상세`, /옷차림/.test(link.out) && /흰 셔츠/.test(link.out) && /삽화용 상세 ›/.test(link.out) && /소매를 걷어 올림/.test(link.out));
+  if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "scdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;font-size:15px;line-height:1.7;overflow:auto"; d.innerHTML = html; document.body.append(d); }, sc);
+    await page.waitForTimeout(700); await page.screenshot({ path: `${OUT}/extra-${tag}-scene.png` });
+    await page.evaluate(() => { const d = document.querySelector('#scdemo details[x-dusk="pc"]'); if (d) d.open = true; }); await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/extra-${tag}-card2.png` }); await page.evaluate(() => document.getElementById("scdemo")?.remove()); }
+  await page.evaluate(async () => { await __app.ctx.memory.store.updateIndex((i) => { i.settings.inject.scenePanel = false; }); __app.ctx.memory.nameLinks?.invalidate?.(); });
+  ok(`[${tag}] 장면 상태창 끄면 안 붙음`, !/x-dusk="scene"/.test(await page.evaluate(() => __app.ctx.memory.gauge.onDisplay("[2026-03-02 22:40 | 여관]\n시로코가 웃었다."))));
   await page.evaluate(async () => { await __app.ctx.memory.store.updateIndex((i) => { i.settings.inject.nameLinks = false; }); __app.ctx.memory.nameLinks?.invalidate?.(); });
   ok(`[${tag}] 설정에서 끄면 링크 없음`, !/x-dusk="pc"/.test(await page.evaluate(() => __app.ctx.memory.gauge.onDisplay("시로코가 웃었다."))));
+  // 홈 빠른 설정: 캐릭터 상태창·장면 상태창 줄
+  await page.evaluate(() => __app.ctx.go("home")); await page.waitForTimeout(1500);
+  ok(`[${tag}] 홈 빠른 설정에 캐릭터 상태창·장면 상태창 스위치`, (await page.locator('[data-quick="nameLinks"]').count()) === 1 && (await page.locator('[data-quick="scenePanel"]').count()) === 1);
+  // 인물 위키 옷차림 카드
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { page: "detail", tab: "people", personKey: "시로코" }); __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
+  { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
+  ok(`[${tag}] 옷차림 카드: 부위·액세서리, › 누르면 삽화용 상세`, (await page.locator(".rb-of-row", { hasText: "흰 셔츠" }).count()) === 1 && !(await page.getByText("소매를 걷어 올림").count()));
+  await page.locator(".rb-of-tg").first().click(); await page.waitForTimeout(700);
+  ok(`[${tag}] 삽화용 상세 보기`, (await page.locator(".rb-of-row p", { hasText: "소매를 걷어 올림" }).count()) === 1);
   // 설정: 지난 대화 분석 속도 줄(모바일은 위아래로)
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { page: "home", memTab: "opt" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
