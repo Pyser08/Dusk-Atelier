@@ -21,14 +21,14 @@ export const isExtField = (k) => FIELD_OF.get(k)?.[0] === "ext";
 // 인체 모형 부위: id, 이름, 앞/뒤, 모형 좌표(0~100 기준 viewBox 100×200), 찾을 말
 export const BODY_PARTS = Object.freeze([
   { id: "lips", label: "입술", side: "f", x: 50, y: 24, re: /입술|입|lip/ },
-  { id: "ears", label: "귀", side: "f", x: 39, y: 18, re: /귀|ear/ },
+  { id: "ears", label: "귀", side: "f", x: 40.6, y: 18, re: /귀|ear/ },
   { id: "neck", label: "목", side: "f", x: 50, y: 32, re: /^목$|목덜미|목선|neck/ },
   { id: "collar", label: "쇄골", side: "f", x: 57, y: 40, re: /쇄골|collar/ },
   { id: "chest", label: "가슴", side: "f", x: 43, y: 52, re: /가슴|유방|breast|chest/ },
   { id: "nipples", label: "유두", side: "f", x: 57, y: 54, re: /유두|젖꼭지|nipple/ },
-  { id: "armpit", label: "겨드랑이", side: "f", x: 31, y: 47, re: /겨드랑|armpit/ },
+  { id: "armpit", label: "겨드랑이", side: "f", x: 32.4, y: 50, re: /겨드랑|armpit/ },
   { id: "belly", label: "배·배꼽", side: "f", x: 50, y: 76, re: /배꼽|아랫배|배$|belly|navel/ },
-  { id: "waist", label: "허리·옆구리", side: "f", x: 34, y: 80, re: /허리|옆구리|waist/ },
+  { id: "waist", label: "허리·옆구리", side: "f", x: 38, y: 80, re: /허리|옆구리|waist/ },
   { id: "groin", label: "사타구니", side: "f", x: 50, y: 105, re: /사타구니|음부|성기|클리|클리토리스|질|groin|genital|clit/ },
   { id: "thighs", label: "허벅지 안쪽", side: "f", x: 44, y: 122, re: /허벅지|thigh/ },
   { id: "hands", label: "손·손가락", side: "f", x: 22, y: 94, re: /손|손가락|hand|finger/ },
@@ -59,7 +59,7 @@ export function normZones(raw) {
   for (const z of Array.isArray(raw) ? raw : []) {
     const p = partOf(z?.part ?? z?.label); if (!p || seen.has(p.id)) continue;
     seen.add(p.id); const dev = Number.isFinite(Number(z?.dev)) ? Math.max(0, Math.min(100, Math.round(Number(z.dev)))) : undefined; const lv = z?.level === 0 && dev != null ? 0 : Math.max(1, Math.min(3, Math.round(Number(z?.level) || 2)));
-    out.push({ part: p.id, level: lv, note: text(z?.note, 80), ...(dev != null ? { dev } : {}) });
+    out.push({ part: p.id, level: lv, note: text(z?.note, 80), ...(dev != null ? { dev } : {}), ...(z?.spot ? { spot: text(z.spot, 40) } : {}), ...(z?.src === "random" ? { src: "random" } : {}) });
   }
   return out.slice(0, BODY_PARTS.length);
 }
@@ -78,8 +78,10 @@ export function applyHumanReports(nsfw, reports) {
     } else if (r.kind === "zone") {
       const p = partOf(r.part); if (!p) continue;
       const level = Math.max(1, Math.min(3, Math.round(Number(r.level) || 2))), i = next.zones.findIndex((z) => z.part === p.id);
-      if (i >= 0 && next.zones[i].level >= level) continue;
-      const z = { part: p.id, level, note: text(r.note, 80) || next.zones[i]?.note || "" };
+      const o = i >= 0 ? next.zones[i] : null, note = text(r.note, 80), spot = level >= 3 ? text(r.spot, 40) : "";
+      if (o && o.level >= level && !(note && !o.note) && !(spot && spot !== o.spot)) continue;
+      const z = { ...(o ?? {}), part: p.id, level: Math.max(level, o?.level ?? 0), note: note || o?.note || "", ...(spot || o?.spot ? { spot: spot || o.spot } : {}) };
+      delete z.src;
       if (i >= 0) next.zones[i] = z; else next.zones.push(z);
       changed.push(`성감대 ${p.label}${"♥".repeat(level)}`);
     }
@@ -98,7 +100,7 @@ export function humanLine(name, n) {
 export function extLine(n) {
   const e = n?.ext ?? {}, z = n?.zones ?? [];
   const parts = EXT_FIELDS.filter(([k]) => e[k] && (!Array.isArray(e[k]) || e[k].length)).map(([k, l]) => `${l}: ${Array.isArray(e[k]) ? e[k].slice(0, 2).join(", ") : e[k]}`);
-  if (z.some((x) => x.level > 0)) parts.unshift(`성감대: ${[...z].filter((x) => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 5).map((x) => `${partOf(x.part)?.label}${x.level >= 3 ? "(약점)" : ""}`).join(", ")}`);
+  if (z.some((x) => x.level > 0)) parts.unshift(`성감대: ${[...z].filter((x) => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 5).map((x) => `${partOf(x.part)?.label}${x.level >= 3 ? `(약점${x.spot ? `: ${x.spot}` : ""}${x.note ? ` — ${x.note}` : ""})` : ""}`).join(", ")}`);
   return parts.join(" / ").slice(0, 200);
 }
 export const HUMAN_INJECT_TITLE = "[Personal details — show through behaviour; secrets stay hidden unless the story reveals them]";
@@ -107,6 +109,6 @@ export const HUMAN_INJECT_TITLE = "[Personal details — show through behaviour;
 export const HUMAN_SHAPE = Object.freeze({
   human: { speech: [], habit: [], trigger: [], dream: [], secret: [], love: "", anger: "", sad: "" },
   ext: { first: "", fantasy: [], voice: "", after: "", yes: [], no: [], contra: "" },
-  zones: [{ part: "한국어 부위", level: 2, note: "" }],
+  zones: [{ part: "한국어 부위", level: 2, note: "한 줄 특징(어떻게 반응하는지)", spot: "약점(3)일 때만 정확한 자리" }],
 });
 export const HUMAN_RULES = "human (everyday): speech=verbal tics, habit, trigger=sensitive topics, dream=goals, secret, love/anger/sad=how they show love, anger, sadness. ext (bed): first=first time, fantasy, voice=moans and bed talk, after=aftercare, yes/no=signs of liking/refusing, contra=contraception attitude. zones: 3-6 erogenous spots, level 1-3 (3=weak spot). Short Korean phrases, at most 3 per list; omit fields with nothing to say.";

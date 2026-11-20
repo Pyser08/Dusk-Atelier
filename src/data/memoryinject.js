@@ -9,6 +9,7 @@ import { driveSection, seeded } from "../engine/scenedrive.js";
 import { nsfwByName } from "./nsfwturn.js";
 import { lifeSection, humanSection, lustOfName, hotActors } from "../engine/nsfwlife.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
 import { stateText } from "../engine/storytime.js";
+import { extraSection, mentionsOf } from "../engine/memextra.js";   // 0.3.22 소문·목표·세계·흔적·근황·@인물
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
 import { folderIdOf } from "./memorystore.js";
@@ -65,7 +66,11 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     let sem = null;  // 임베딩이 켜져 있으면 의미 유사도로 기억 고르기를 돕는다(실패하면 기존 방식 그대로)
     try { if (embedder && idx.settings.inject.plus !== false) sem = await embedder.scores(folderIdOf(character.chaId, chatKeyOf(chat)), folder, semQuery(msgs, idx.settings.inject.semQueryMin ?? 40)); } catch { sem = null; }
     const inj = effectiveInject(idx.settings.inject);   // 2.2.4 토큰 절약이 켜져 있으면 칸별 예산을 줄인 값
-    const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: inj, messages: msgs, focus, storyNow: now, sem, semMin: embedder?.cfg().minSim });
+    // 0.3.22 @인물 고정 회상: 내 마지막 말의 @이름은 장면에 있는 인물처럼 기억을 넣는다
+    const chars = Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
+    const pinned = (() => { for (let i = msgs.length - 1; i >= 0; i--) if (isUserMessage(msgs[i])) return mentionsOf(extractMessageText(msgs[i]), chars); return []; })();
+    const focus2 = pinned.length ? [...(focus ?? []), ...pinned] : focus;
+    const built = buildBlock(folder, { messageCount: msgs.length, recentText: tail, settings: inj, messages: msgs, focus: focus2, storyNow: now, sem, semMin: embedder?.cfg().minSim });
     if (built.text) built.text = scaleBlock(built.text, { coveredAt: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : -1, messageCount: msgs.length });
     if (built.manifest && sem) built.manifest.sem = sem.size;
     // 2.2.2 원문 회상: 임베딩이 켜져 있으면 지난 대화 원문에서 지금 글과 관련 있는 조각을 날짜와 함께 덧붙인다(요약 기억이 놓친 사실을 받친다).
@@ -84,7 +89,9 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       { const low = recent.normalize("NFKC").toLowerCase();
         const here = [...present, ...Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && [d.title, ...(d.aliases ?? [])].some((n) => String(n ?? "").length >= 2 && low.includes(String(n).normalize("NFKC").toLowerCase()))).map((d) => d.title)];
         add(humanSection(folder, here));
-        if (Number.isInteger(folder?.cursor?.at)) add(lifeSection(folder, here, folder.cursor.at)); }
+        if (Number.isInteger(folder?.cursor?.at)) add(lifeSection(folder, here, folder.cursor.at));
+        const when = [...(folder?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
+        add(extraSection(folder, { present: here, recent, turn: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when, pinned, docs: chars })); }
       // 장면 판단 계획(Erosync 대신). 같은 턴을 다시 보내도 같은 계획이 나오게 턴 번호로 정한 난수
       const dv = driveSection(folder?.drive, recent, { spont: (n) => nsfwByName(folder, n)?.sexual?.sexualSpontaneity ?? null, limitsOf: (n) => nsfwByName(folder, n)?.tags?.limits ?? [], random: seeded(`${folder?.drive?.turn ?? 0}|${msgs.length}`), present, lustOf: (n) => lustOfName(folder, n), hot: hotActors(folder) });
       add(dv);

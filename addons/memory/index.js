@@ -16,6 +16,7 @@ import { renderBranches } from "../../src/ui/screens/branches.js";
 import { tracked } from "../../src/ui/screens/memory/settingstools.js";
 import { STAGE_NAMES } from "../../src/ui/screens/memory/advanced.js";
 import { cardSettings } from "../../src/ui/screens/memory/settings.js";
+import { createDiaryDisplay } from "../../src/data/diary.js";
 
 const log = (m) => console.log(`[Dusk Atelier] ${m}`);
 
@@ -41,6 +42,10 @@ export async function activate(api, ctx) {
     const er = app.erosync;
     await syncOrientNow(memory, er).catch(() => 0);
   };
+  // 0.3.22 인물 일기: 게이지 박스 자리(응답 맨 아래, 로어북·주사위 버튼 위)에 붙인다 — 코어 로어북 로그가 memory.gauge.onDisplay를 부른다
+  const diary = createDiaryDisplay(memory); memory.diary = diary;
+  const gaugeShow = memory.gauge?.onDisplay;
+  if (memory.gauge && typeof gaugeShow === "function") memory.gauge.onDisplay = async (t) => diary.onDisplay(await gaugeShow(t));
   const affhud = createAffHud(api, { store: memory.store, link: memory.link });
   setUserPromptProvider(() => memory.userPrompts());
   // Erosync가 있으면 지난 대화 분석 끝에 성향 분석을 한 번(이미 있으면 그대로)
@@ -68,6 +73,7 @@ export async function activate(api, ctx) {
   if (app.chatMenu?.addLink) (async () => {
     menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-memory", key: "memory", title: "장기 기억", open: () => openTab("memory") }));
     menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-regress", key: "regress", title: "회귀 / 채팅 옮기기", open: regress }));
+    menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-diary", key: "diary", title: "인물 일기", open: () => openTab("memory").then(() => import("../../src/ui/screens/memory/extracards.js")).then((x) => x.openDiaryHere(app)).catch((e) => log(`일기 창 열기 실패: ${e?.message ?? e}`)) }));
   })().catch((e) => log(`채팅 메뉴 바로가기 실패 ${e?.message ?? e}`));
   affhud.start().catch((e) => log(`호감도 HUD 시작 실패: ${e?.message ?? e}`));
   if (!app.memoryForTest) memory.start().catch((e) => log(`장기기억 시작 실패: ${e?.message ?? e}`));   // 시험에서 끼운 기억은 이미 준비된 것으로 본다
@@ -75,6 +81,7 @@ export async function activate(api, ctx) {
   return {
     async deactivate() {
       off.forEach((f) => f());
+      if (memory.gauge && gaugeShow) memory.gauge.onDisplay = gaugeShow;
       for (const f of menuOff) await f?.().catch?.(() => {});
       setUserPromptProvider(() => null);
       await memBtn.hide?.().catch?.(() => {});

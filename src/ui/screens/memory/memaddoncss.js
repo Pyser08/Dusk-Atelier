@@ -2,6 +2,8 @@
 // 코어 styles.js에 두면 애드온만 올려서는 반영되지 않으므로, 화면을 그릴 때 한 번 <style>로 붙인다.
 import { SUBTABS_CSS } from "./subtabs.js";
 import { LIFE_CSS } from "./lifecards.js";
+import { EXTRA_CSS } from "./extracards.js";
+import { WORLD_CSS } from "./worldtab.js";
 import { h } from "../../dom.js";
 
 export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.rb-ns-pos>.rb-wk2-ero-row{margin-top:0}
@@ -392,7 +394,7 @@ export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repe
 export function ensureMemAddonCss(ctx) {
   try {
     const docs = new Set([ctx?.win?.ownerDocument, typeof document !== "undefined" ? document : null].filter(Boolean));
-    for (const d of docs) if (!d.getElementById("rb-memaddon-css")) d.head.appendChild(h("style", { id: "rb-memaddon-css" }, MEM_ADDON_CSS + SUBTABS_CSS + LIFE_CSS));
+    for (const d of docs) if (!d.getElementById("rb-memaddon-css")) d.head.appendChild(h("style", { id: "rb-memaddon-css" }, MEM_ADDON_CSS + SUBTABS_CSS + LIFE_CSS + EXTRA_CSS + WORLD_CSS));
   } catch { /* 문서 없음 */ }
 }
 

@@ -324,7 +324,9 @@ function personPage(env, r, docs, commit) {
     if (ed && doc && odoc) await commit((w) => removePairWiki(w, doc.id, odoc.id).scope, "관계를 지웠어요.");
     else again();
   };
-  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, removeRelation, header: h("span", { class: "rb-mem-rowact" }, ed ? btn("이름·별칭 고치기", { size: "sm", id: "rb-wk-rename", title: "대표 이름을 풀네임으로 바꾸거나 별칭을 고쳐요", onClick: () => renameDialog().catch(fail(ctx)) }) : null, p && env.backend?.id === "local" ? btn("⏳ 회귀", { size: "sm", title: "이 인물만 기억을 안고 처음으로 돌아간 새 채팅을 만들어요", onClick: () => regressFrom(env, r.pk).catch(fail(ctx)) }) : null, actions), metrics, gauges: () => gaugeRows(env, doc, p),
+  return h("div", { class: "rb-wk-page" }, personTabs(env, { r, doc, p, removeRelation, header: h("span", { class: "rb-mem-rowact" }, ed ? btn("이름·별칭 고치기", { size: "sm", id: "rb-wk-rename", title: "대표 이름을 풀네임으로 바꾸거나 별칭을 고쳐요", onClick: () => renameDialog().catch(fail(ctx)) }) : null, p && env.backend?.id === "local" ? btn("⏳ 회귀", { size: "sm", title: "이 인물만 기억을 안고 처음으로 돌아간 새 채팅을 만들어요", onClick: () => regressFrom(env, r.pk).catch(fail(ctx)) }) : null,
+      doc && env.backend?.id === "local" ? btn("📔 일기", { size: "sm", title: "이 인물의 시점으로 최근 일을 한 단락 써서 마지막 응답 맨 아래에 붙여요(AI 1번)", onClick: () => import("./extracards.js").then((x) => x.diaryFromWiki(env, doc)).catch(fail(ctx)) }) : null,
+      doc && env.backend?.id === "local" ? btn("↗ 다른 봇으로", { size: "sm", title: "이 인물을 다른 봇의 채팅 기억으로 복사해요", onClick: () => import("./extracards.js").then((x) => x.openMovePerson(env, doc)).catch(fail(ctx)) }) : null, actions), metrics, gauges: () => gaugeRows(env, doc, p),
     info: (go) => infoTab(env, { doc, p, r, ed, profile, groups, commit, nameOf, aiNew, addMetricFlow, editProfileAll, go,
       K: { ORDER, MEMBERS, ALWAYS, LABEL, SUB, AXES: PROFILE_AXES, AXIS_LABEL, band, METER_SLOTS, TEXT_FIELDS },
       makeProfile: () => commit((w) => ensureProfile(w, doc.id), "만들었어요. 이제 직접 수정이나 AI 작성을 쓸 수 있어요."),

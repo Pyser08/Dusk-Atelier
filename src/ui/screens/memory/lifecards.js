@@ -7,6 +7,7 @@ import { mem } from "./common.js";
 import { lifeView, LUST_STEPS, DEV_LEVELS, MOOD_KEYS, MOOD_LABEL, emptyLife } from "../../../engine/nsfwlife.js";
 import { nowOf } from "../../../engine/memoryhuman.js";
 import { HUMAN_FIELDS, EXT_FIELDS, BODY_PARTS, normHuman, normExt, partOf } from "../../../engine/humanitems.js";
+import { randomZones, spotXY } from "../../../engine/zonegen.js";
 
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
 // 버튼을 눌러 값만 바뀔 땐 화면 전체를 다시 불러오지 않고 이 인물의 카드만 다시 그린다(스크롤·펼침 유지)
@@ -209,49 +210,95 @@ function moodCard0(env, card, doc) {
   ], null, "rb-life");
 }
 
-// ── 성감대 인체 모형 ──
-const HEAD = { cx: 50, cy: 17, rx: 9.5, ry: 11.5 };
-const SIL = "M45 28C45 32 44 34 41 35C33 37 27 40 25 47L20 77C19 83 19 89 21 95C22 98 25 98 26 95L29 79L32 60C33 70 34 78 32 88C30 96 31 104 33 112L36 150C36 165 37 178 38 189C38 193 44 193 45 189L48 140C49 128 49.5 118 50 112C50.5 118 51 128 52 140L55 189C56 193 62 193 62 189C63 178 64 165 64 150L67 112C69 104 70 96 68 88C66 78 67 70 68 60L71 79L74 95C75 98 78 98 79 95C81 89 81 83 80 77L75 47C73 40 67 37 59 35C56 34 55 32 55 28Z";
+// ── 성감대 인체 모형 (0.3.22 새 모양: 팔·다리가 떨어진 부드러운 실루엣, 여성·남성 체형, 앞·뒤 윤곽선) ──
+const HEAD = { cx: 50, cy: 16.5, rx: 8.6, ry: 10.6 };
+// 왼쪽 반신(목 → 어깨 → 팔 → 손 → 옆구리 → 다리 → 발 → 가랑이). [시작점, [c1, c2, 끝점]…]. 오른쪽은 거울로 만든다
+const HALF = {
+  f: [[46.2, 27], [[46, 31], [45.4, 33.4], [42.6, 34.8]], [[39, 36.4], [33.4, 37], [30.6, 39]], [[27.6, 41.2], [26.8, 45.4], [26.6, 50]],
+    [[26.2, 60], [24.8, 70], [23.6, 79]], [[22.8, 85], [21.8, 89], [21, 93]], [[20, 97], [20.6, 101.2], [23, 101.4]], [[25.4, 101.4], [26, 97.6], [26, 93.6]],
+    [[26.6, 86], [28, 78], [29, 70]], [[29.8, 63], [30.6, 56], [31.6, 51]], [[32.4, 60], [35.4, 71], [36.2, 79]],
+    [[36.8, 86.6], [32.2, 93.6], [32, 102]], [[31.8, 114], [34.8, 128], [36.8, 142]], [[37.8, 149], [38.6, 155], [37.8, 163]],
+    [[37.2, 171], [38.6, 180], [39.8, 186]], [[39.4, 189], [38, 191.4], [39.4, 193.2]], [[41.4, 194.8], [45.2, 194.6], [45.6, 191.6]],
+    [[46, 187], [45.6, 181], [46, 173]], [[46.6, 160], [47, 150], [47.4, 140]], [[48, 128], [48.6, 116], [50, 107.6]]],
+  m: [[45.6, 27], [[45.6, 31.4], [45, 33.6], [41.6, 35]], [[37.4, 36.4], [31, 36.6], [28.4, 38.8]], [[25.4, 41.2], [24.6, 45.6], [24.6, 50.6]],
+    [[24.2, 60.6], [23.2, 70.4], [22.6, 79]], [[22, 85], [21.2, 89], [20.6, 93]], [[19.6, 97.2], [20.2, 101.6], [22.8, 101.8]], [[25.4, 101.8], [26, 97.8], [26, 93.6]],
+    [[26.6, 86], [27.8, 78], [28.6, 70]], [[29.4, 63], [30.2, 56], [31.2, 51]], [[33.2, 62], [35.2, 72], [36, 82]],
+    [[36.6, 89], [34.4, 95], [34.4, 102]], [[34.2, 114], [35.6, 128], [37, 142]], [[37.8, 149], [38.6, 155], [37.8, 163]],
+    [[37.2, 171], [38.6, 180], [39.8, 186]], [[39.4, 189], [38, 191.4], [39.4, 193.2]], [[41.4, 194.8], [45.2, 194.6], [45.6, 191.6]],
+    [[46, 187], [45.6, 181], [46, 173]], [[46.6, 160], [47, 150], [47.4, 140]], [[48, 128], [48.6, 116], [50, 108.4]]],
+};
+export function silPath(kind = "f") {
+  const [p0, ...seg] = HALF[kind] ?? HALF.f, f = (p) => `${+p[0].toFixed(2)} ${+p[1].toFixed(2)}`, mir = (p) => [100 - p[0], p[1]];
+  const pts = [p0, ...seg.map((x) => x[2])];
+  let d = `M${f(p0)}` + seg.map(([c1, c2, e]) => `C${f(c1)} ${f(c2)} ${f(e)}`).join("");
+  for (let i = seg.length - 1; i >= 0; i--) d += `C${f(mir(seg[i][1]))} ${f(mir(seg[i][0]))} ${f(mir(pts[i]))}`;
+  return d + "Z";
+}
+// 몸의 결을 보여 주는 가는 선(앞: 쇄골·가슴·배꼽·무릎 / 뒤: 날개뼈·등줄기·엉덩이)
+const DETAIL = {
+  ff: ["M40 40.5Q45 42.5 49 41.2", "M51 41.2Q55 42.5 60 40.5", "M37 55Q42.5 62 48.4 57.4", "M51.6 57.4Q57.5 62 63 55", "M44 96Q50 99.5 56 96", "M40.6 150Q42.2 151.6 44 150.4", "M56 150.4Q57.8 151.6 59.4 150"],
+  fm: ["M40 40.5Q45 42.5 49 41.2", "M51 41.2Q55 42.5 60 40.5", "M38 54Q43.5 57 48.6 55", "M51.4 55Q56.5 57 62 54", "M50 60V88", "M41 150Q42.4 151.6 44 150.4", "M56 150.4Q57.6 151.6 59 150"],
+  b: ["M41 48Q38.6 55 42 60.6", "M59 48Q61.4 55 58 60.6", "M50 32C49.4 50 50.6 70 50 92", "M39 101Q44.6 109 50 104", "M50 104Q55.4 109 61 101", "M40.8 151Q42.6 149.6 44.4 151", "M55.6 151Q57.4 149.6 59.2 151"],
+};
+const NAVEL = { cx: 50, cy: 76.5, r: 0.9 };
+const EARS = [{ cx: 41.2, cy: 18, rx: 1.8, ry: 3 }, { cx: 58.8, cy: 18, rx: 1.8, ry: 3 }];
+const sexOfDoc = (env, doc) => { const g = env.folder?.orient?.[String(doc.title ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "")]?.g; return g === "m" ? "m" : "f"; };
 function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
   const n = env.folder?.nsfw?.[doc.id] ?? null, zones = n?.zones ?? [], m = mem(env.ctx), sides = (m.bodySide ??= {});
-  const side = side0 ?? sides[doc.id] ?? "f";
-  const lv = (id) => zones.find((z) => z.part === id)?.level ?? 0;
+  const side = side0 ?? sides[doc.id] ?? "f", sex = sexOfDoc(env, doc);
+  const zOf = (id) => zones.find((z) => z.part === id);
+  const lv = (id) => zOf(id)?.level ?? 0;
   const cycle = (id) => saveN(env, doc, (cur) => {
     const zs = [...(cur.zones ?? [])], i = zs.findIndex((z) => z.part === id), next = ((zs[i]?.level ?? 0) + 1) % 4;
     if (i >= 0) { if (next) zs[i] = { ...zs[i], level: next }; else zs.splice(i, 1); } else zs.push({ part: id, level: 1, note: "" });
     return { ...cur, zones: zs, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: `성감대 ${partOf(id)?.label} ${next ? "♥".repeat(next) : "지움"}` }].slice(-20) };
   });
+  const reroll = (keepManual = true) => saveN(env, doc, (cur) => {
+    const keep = keepManual ? (cur.zones ?? []).filter((z) => z.src !== "random") : [];
+    return { ...cur, zones: randomZones(`${doc.id}|${Date.now()}`, { keep, female: sex === "f" }), zonesSeeded: true, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: "성감대 무작위로 채움" }].slice(-20) };
+  });
   const parts = BODY_PARTS.filter((p) => p.side === side);
-  const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back"], viewBox: "-14 0 128 200", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
-    h("defs", { svg: true }, h("linearGradient", { svg: true, id: "rbSilG", x1: "0", y1: "0", x2: "1", y2: "1" }, h("stop", { svg: true, class: "s0", offset: "0" }), h("stop", { svg: true, class: "s1", offset: "1" })),
+  const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back", `sx-${sex}`], viewBox: "-14 0 128 200", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
+    h("defs", { svg: true }, h("linearGradient", { svg: true, id: "rbSilG", x1: "0", y1: "0", x2: "0", y2: "1" }, h("stop", { svg: true, class: "s0", offset: "0" }), h("stop", { svg: true, class: "s1", offset: "1" })),
       h("radialGradient", { svg: true, id: "rbZoneG" }, h("stop", { svg: true, class: "z0", offset: "0" }), h("stop", { svg: true, class: "z1", offset: "1" }))),
-    h("ellipse", { svg: true, class: "sil", ...HEAD }), h("path", { svg: true, class: "sil", d: SIL }),
-    side === "b" ? h("path", { svg: true, class: "spine", d: "M50 32 C49 50 51 70 50 92" }) : h("path", { svg: true, class: "spine", d: "M42 46 Q50 50 58 46" }),
-    ...parts.map((p) => { const l = lv(p.id), right = p.x >= 50;
-      return h("g", { svg: true, class: ["pt", `l${l}`], tabindex: "0", role: "button", "aria-label": `${p.label} ${l ? `${l}단계` : "없음"} — 눌러서 바꾸기`,
+    h("ellipse", { svg: true, class: "shadow", cx: 50, cy: 196, rx: 15, ry: 2.2 }),
+    h("path", { svg: true, class: "sil", d: silPath(sex) }), ...EARS.map((e) => h("ellipse", { svg: true, class: "sil", ...e })), h("ellipse", { svg: true, class: "sil", ...HEAD }),
+    ...(side === "b" ? DETAIL.b : sex === "m" ? DETAIL.fm : DETAIL.ff).map((d) => h("path", { svg: true, class: "dl", d })),
+    side === "f" ? h("circle", { svg: true, class: "navel", ...NAVEL }) : null,
+    ...parts.map((p) => { const z = zOf(p.id), l = lv(p.id), right = p.x >= 50, pin = l >= 3 && z?.spot ? spotXY(p.id, z.spot) : null;
+      return h("g", { svg: true, class: ["pt", `l${l}`], tabindex: "0", role: "button", "aria-label": `${p.label} ${l ? `${l}단계` : "없음"}${z?.note ? ` — ${z.note}` : ""} — 눌러서 바꾸기`,
         onClick: () => cycle(p.id), onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycle(p.id); } } },
         h("circle", { svg: true, class: "hit", cx: p.x, cy: p.y, r: 7 }),
         l ? h("circle", { svg: true, class: "aura", cx: p.x, cy: p.y, r: 4 + l * 3 }) : null,
-        l >= 3 ? h("circle", { svg: true, class: "pulse", cx: p.x, cy: p.y, r: 6 }) : null,
-        h("circle", { svg: true, class: "dot", cx: p.x, cy: p.y, r: l ? 1.8 + l * 0.9 : 1.5 }),
-        l ? h("line", { svg: true, class: "lead", x1: p.x + (right ? 3 : -3), y1: p.y, x2: right ? 94 : 6, y2: p.y }) : null,
-        l ? h("text", { svg: true, class: "lbl", x: right ? 96 : 4, y: p.y + 2, "text-anchor": right ? "start" : "end" }, p.label) : null,
-        h("title", { svg: true }, p.label)); }));
+        h("circle", { svg: true, class: "dot", cx: p.x, cy: p.y, r: l ? 1.6 + l * 0.8 : 1.4 }),
+        pin ? h("g", { svg: true, class: "pin" }, h("circle", { svg: true, class: "pulse", cx: pin.x, cy: pin.y, r: 3.4 }), h("circle", { svg: true, class: "ring", cx: pin.x, cy: pin.y, r: 2.2 }),
+          h("path", { svg: true, class: "cross", d: `M${pin.x - 3.6} ${pin.y}h2M${pin.x + 1.6} ${pin.y}h2M${pin.x} ${pin.y - 3.6}v2M${pin.x} ${pin.y + 1.6}v2` }), h("circle", { svg: true, class: "core", cx: pin.x, cy: pin.y, r: 0.9 })) : null,
+        l ? h("line", { svg: true, class: "lead", x1: (pin?.x ?? p.x) + (right ? 3 : -3), y1: pin?.y ?? p.y, x2: right ? 94 : 6, y2: pin?.y ?? p.y }) : null,
+        l ? h("text", { svg: true, class: "lbl", x: right ? 96 : 4, y: (pin?.y ?? p.y) + 2, "text-anchor": right ? "start" : "end" }, pin ? z.spot : p.label) : null,
+        h("title", { svg: true }, [p.label, z?.spot, z?.note].filter(Boolean).join(" · "))); }));
   const list = [...zones].sort((a, b) => b.level - a.level || (b.dev ?? 0) - (a.dev ?? 0));
+  const allRandom = list.length > 0 && list.every((z) => z.src === "random");
   const segBtn = (s, l) => h("button", { type: "button", class: s === side ? "on" : "", "aria-pressed": s === side ? "true" : "false", onClick: () => { sides[doc.id] = s; repaint(env, doc); } }, l);
+  const editZone = (z, key, title, label, max) => async () => { const v = await promptDialog(env.ctx.win, { title: `${partOf(z.part)?.label} ${title}`, label, value: z[key] ?? "", ok: "저장" }); if (v == null) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).map((x) => x.part === z.part ? { ...x, [key]: String(v).trim().slice(0, max), src: undefined } : x) })); };
   return card("💋 성감대", [
     h("div", { class: "rb-body-wrap" },
       h("div", { class: "rb-body-fig" },
         h("div", { class: ["rb-bseg", side === "b" && "b"], role: "group", "aria-label": "앞뒤" }, h("i", { class: "pill" }), segBtn("f", "앞"), segBtn("b", "뒤")),
         svg),
       h("div", { class: "rb-body-list" },
-        h("div", { class: "rb-blegend" }, h("span", { class: "l1" }, "약간"), h("span", { class: "l2" }, "민감"), h("span", { class: "l3" }, "약점"), infoBtn(LIFE_INFO.zone), h("span", { class: "dv" }, "개발도"), infoBtn(LIFE_INFO.dev)),
+        h("div", { class: "rb-blegend" }, h("span", { class: "l1" }, "약간"), h("span", { class: "l2" }, "민감"), h("span", { class: "l3" }, "약점"), infoBtn(LIFE_INFO.zone), h("span", { class: "dv" }, "개발도"), infoBtn(LIFE_INFO.dev),
+          h("span", { style: "flex:1" }), !list.length || allRandom ? btn(list.length ? "다시 뽑기" : "무작위로 채우기", { size: "sm", onClick: () => reroll(true) }) : null),
         list.length ? list.map((z) => h("div", { class: ["rb-bz", `l${z.level}`] }, h("div", { class: "hd" }, h("span", { class: "acts" },
-            h("button", { type: "button", class: "rb-bzb", title: "메모 고치기", "aria-label": "메모 고치기", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: `${partOf(z.part)?.label} 메모`, label: "메모", value: z.note ?? "", ok: "저장" }); if (v == null) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).map((x) => x.part === z.part ? { ...x, note: String(v).trim().slice(0, 80) } : x) })); } }, "✎"),
-            h("button", { type: "button", class: "rb-bzb", title: "지우기", "aria-label": "지우기", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 성감대를 지울까요?", body: partOf(z.part)?.label ?? "", ok: "지우기", danger: true }))) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).filter((x) => x.part !== z.part) })); } }, "✕")), h("b", null, partOf(z.part)?.label ?? z.part), z.level >= 3 ? h("span", { class: "weak" }, "약점") : z.level === 0 ? h("span", { class: "devn" }, "개발 중") : null, h("span", { style: "flex:1" }), h("span", { class: "meter", "aria-label": `${z.level}단계` }, ...[1, 2, 3].map((i) => h("i", { class: i <= z.level ? "on" : "" })))),
-          z.dev != null ? h("div", { class: "dev" }, h("small", null, "개발도"), h("i", { class: "db" }, h("i", { style: { width: `${z.dev}%` } }), ...DEV_LEVELS.map((at) => h("i", { class: "mk", style: { left: `${at}%` } }))), h("small", null, String(z.dev))) : null,
-          z.note ? h("small", null, z.note) : null))
-          : note("아직 없어요. 모형의 점을 누르면 1→2→3(약점)→없음으로 바뀌어요. 대화에서 드러나면 기록기가 채워요."))),
+            h("button", { type: "button", class: "rb-bzb", title: "특징 고치기", "aria-label": "특징 고치기", onClick: editZone(z, "note", "특징", "한 줄 특징(어떻게 반응하는지)", 80) }, "✎"),
+            z.level >= 3 ? h("button", { type: "button", class: "rb-bzb", title: "정확한 자리 고치기", "aria-label": "정확한 자리 고치기", onClick: editZone(z, "spot", "정확한 자리", "정확한 자리(예: 왼쪽 귓불)", 40) }, "◎") : null,
+            h("button", { type: "button", class: "rb-bzb", title: "지우기", "aria-label": "지우기", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 성감대를 지울까요?", body: partOf(z.part)?.label ?? "", ok: "지우기", danger: true }))) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).filter((x) => x.part !== z.part) })); } }, "✕")),
+            h("b", null, partOf(z.part)?.label ?? z.part), z.level >= 3 ? h("span", { class: "weak" }, "약점") : z.level === 0 ? h("span", { class: "devn" }, "개발 중") : null,
+            z.src === "random" ? h("span", { class: "rnd", title: "대화에서 드러나기 전에 무작위로 정한 값이에요. 대화에서 드러나면 기록기가 고쳐요." }, "무작위") : null,
+            h("span", { style: "flex:1" }), h("span", { class: "meter", "aria-label": `${z.level}단계` }, ...[1, 2, 3].map((i) => h("i", { class: i <= z.level ? "on" : "" })))),
+          z.level >= 3 && z.spot ? h("div", { class: "spot" }, h("span", { class: "tg" }, "◎ 정확한 자리"), h("b", null, z.spot)) : null,
+          z.note ? h("p", { class: "feat" }, z.note) : h("button", { type: "button", class: "rb-bz-add", onClick: editZone(z, "note", "특징", "한 줄 특징(어떻게 반응하는지)", 80) }, "+ 한 줄 특징"),
+          z.dev != null ? h("div", { class: "dev" }, h("small", null, "개발도"), h("i", { class: "db" }, h("i", { style: { width: `${z.dev}%` } }), ...DEV_LEVELS.map((at) => h("i", { class: "mk", style: { left: `${at}%` } }))), h("small", null, String(z.dev))) : null))
+          : note("아직 없어요. ‘무작위로 채우기’를 누르거나 모형의 점을 누르면 1→2→3(약점)→없음으로 바뀌어요. 대화에서 드러나면 기록기가 채워요."))),
   ], null, "rb-life");
 }
 
@@ -473,6 +520,17 @@ export const LIFE_CSS = `
 .rb-live{display:contents}
 .rb-ailegend .rb-ibub,.rb-aitag .rb-ibub{bottom:auto;top:calc(100% + 8px)}
 .rb-aitag .rb-ibub{left:auto;right:-8px;transform:translateY(-4px)}.rb-aitag .rb-ibtn.open+.rb-ibub{transform:none}@media (hover:hover){.rb-aitag .rb-ibtn:hover+.rb-ibub{transform:none}}
+/* 0.3.22 새 인체 모형·부위 특징·정확한 약점 */
+.rb-bodymap .s0{stop-color:color-mix(in srgb,#f6d5dd 40%,var(--rb-surf))}.rb-bodymap .s1{stop-color:color-mix(in srgb,#ec4f86 8%,var(--rb-surf2))}
+.rb-bodymap .sil{stroke-width:.7;stroke-linejoin:round}
+.rb-bodymap .shadow{fill:color-mix(in srgb,#ec4f86 14%,transparent)}
+.rb-bodymap .dl{fill:none;stroke:color-mix(in srgb,#ec4f86 26%,var(--rb-line));stroke-width:.5;stroke-linecap:round}
+.rb-bodymap .navel{fill:color-mix(in srgb,#ec4f86 30%,var(--rb-line))}
+.rb-bodymap .pin .ring{fill:none;stroke:#c2185b;stroke-width:.7}.rb-bodymap .pin .cross{stroke:#c2185b;stroke-width:.6;stroke-linecap:round}.rb-bodymap .pin .core{fill:#c2185b}
+.rb-bz .rnd{font-size:10px;padding:1px 6px;border-radius:999px;border:1px dashed var(--rb-line);color:var(--rb-mute)}
+.rb-bz .spot{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:12px}.rb-bz .spot .tg{font-size:10.5px;font-weight:700;color:#c2185b}
+.rb-bz .feat{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--rb-text)}
+.rb-bz-add{align-self:flex-start;margin-top:3px;border:1px dashed var(--rb-line);background:transparent;color:var(--rb-mute);border-radius:999px;font:inherit;font-size:11.5px;padding:2px 9px;cursor:pointer}
 `;
 
 export const lustCard = (env, card, doc, o) => !doc ? null : live(doc.id, () => lustCard0(env, card, doc, o));

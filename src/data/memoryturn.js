@@ -209,6 +209,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         if (ev.length) cycleSync.push(...ev); } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
       if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
       if (rec.stage1?.human?.length) { nsfwQueue.push(...rec.stage1.human); while (nsfwQueue.length > 40) nsfwQueue.shift(); }
+      if (rec.stage1?.extra?.length) { nsfwQueue.push(...rec.stage1.extra); while (nsfwQueue.length > 60) nsfwQueue.shift(); }   // 0.3.22 소문·목표·세계·흔적
       if (rec.stage1?.nsfw?.length) { nsfwQueue.push(...rec.stage1.nsfw); while (nsfwQueue.length > 40) nsfwQueue.shift(); }
       if (rec.stage1?.drive) { driveQueue.push(rec.stage1.drive); while (driveQueue.length > 6) driveQueue.shift(); }   // 장면 판단 관찰(턴 하나 = 한 묶음)   // addon-rebuild: 채팅별 성인 프로필 변화(애드온이 턴 뒤 폴더에 반영)
       lastRecord = { at: Date.now(), batch: run.batch, ...summarize(rec, env) };
