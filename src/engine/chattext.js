@@ -23,7 +23,16 @@ export function hashText(text, len = 200) {
 
 // 본문 전체를 훑는 64비트(두 개의 32비트 해시 결합) 해시.
 // 암호학적 용도가 아니라 대화 메시지를 구별하기 위한 값이다.
+// 2.2.22 성능: 같은 글이면 다시 계산하지 않는다(큰 채팅은 위키를 열 때마다 전체 해시에 1초 넘게 걸렸다). 최대 2만 개까지 기억
+const FTH = new Map(), FTH_MAX = 20000;
 export function fullTextHash(text) {
+  const raw = String(text ?? "");
+  const hit = FTH.get(raw); if (hit !== undefined) return hit;
+  const out = fullTextHash0(raw);
+  if (raw.length >= 64) { if (FTH.size >= FTH_MAX) FTH.delete(FTH.keys().next().value); FTH.set(raw, out); }
+  return out;
+}
+function fullTextHash0(text) {
   const s = String(text ?? "").replace(/\s+/g, " ").trim();
   let a = 0x811c9dc5, b = 0x9e3779b9;
   for (let i = 0; i < s.length; i++) {

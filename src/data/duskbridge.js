@@ -120,13 +120,22 @@ export function createDuskBridge(api, deps = {}) {
   async function tick() {
     const ids = (await keys(api)).filter((k) => typeof k === "string" && k.startsWith(CALL)).map((k) => k.slice(CALL.length)).filter((id) => ID_RE.test(id));
     await Promise.all(ids.map((id) => handle(id).catch((e) => console.warn("[Dusk] 플러그인 요청 처리 실패", id, e))));
+    return ids.length;
   }
   async function publish() { await writeJson(api, BRIDGE_KEY, { spec: 1, version: deps.version ?? "", methods: methodList(), at: Date.now() }); }
-  let timer = null;
+  // 2.2.22 성능: 요청이 없으면 확인 간격을 1초 → 최대 5초로 늘리고(화면이 숨겨지면 15초), 요청이 오면 다시 1초. 앞 확인이 끝나기 전엔 새로 보내지 않는다
+  let timer = null, on = false, gap = 1000;
+  const loop = async (base) => {
+    if (!on) return;
+    let n = 0; try { n = await tick(); } catch { /* 다음에 다시 */ }
+    gap = n > 0 ? base : Math.min(5000, Math.round(gap * 1.5));
+    const hidden = typeof document !== "undefined" && document.hidden;
+    if (on) timer = setTimeout(() => loop(base), hidden ? Math.max(gap, 15000) : gap);
+  };
   return {
     methods: methodList, tick, publish, handle,
-    async start(ms = 1000) { await publish(); await tick(); timer ??= setInterval(() => { tick().catch(() => {}); }, ms); },
-    stop() { if (timer) clearInterval(timer); timer = null; },
+    async start(ms = 1000) { await publish(); if (on) return; on = true; gap = ms; await loop(ms); },
+    stop() { on = false; if (timer) clearTimeout(timer); timer = null; },
     async perms() { return { ...(await loadPerms()) }; },
     async setPerm(id, allow) { const p = await loadPerms(); if (allow == null) delete p[id]; else p[id] = { allow: !!allow, at: Date.now() }; await writeJson(api, PERMS_KEY, p); }
   };

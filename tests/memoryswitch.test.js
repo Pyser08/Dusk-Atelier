@@ -144,13 +144,15 @@ test("홈 토글: 전체 채팅 기억 켜기/끄기 (봇별 설정은 그대로
 test("peekCurrent: 위치가 같으면 채팅 통째 복사를 기다리지 않고 직전 값을 주고, 뒤에서 달라진 걸 알린다 (홈 속도, 1.8.3)", async () => {
   let reads = 0, bot = { chaId: "A", name: "봇A", chats: [{ id: "t1", name: "채팅" }] };
   const api = { getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getCharacterFromIndex: async () => { reads++; await new Promise((r) => setTimeout(r, 20)); return bot; } };
-  const sw = createSwitches({ api, store: {} });
+  let clock = 1e6; const sw = createSwitches({ api, store: {}, now: () => clock });
   const first = await sw.peekCurrent();           // 직전 값 없음 → 평소처럼 읽음
   assert.equal(first.chaId, "A"); assert.equal(reads, 1);
   const t = Date.now(); let changed = null;
   const again = await sw.peekCurrent({ onChange: (v) => { changed = v; } });
   assert.equal(again.chaId, "A"); assert.ok(Date.now() - t < 15, "복사를 기다리지 않음");
+  assert.equal(reads, 1, "2.2.22: 10초 안엔 뒤에서도 다시 읽지 않음");
   bot = { chaId: "B", name: "봇B", chats: [{ id: "t9", name: "x" }] };   // 순서가 바뀌어 같은 위치에 다른 봇
+  clock += 11e3;   // 10초가 지나면 뒤에서 확인
   await sw.peekCurrent({ onChange: (v) => { changed = v; } });
   await new Promise((r) => setTimeout(r, 50));
   assert.equal(changed?.chaId, "B", "달라졌으면 알림");

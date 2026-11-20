@@ -107,13 +107,20 @@ test("상태이상: 기록 → 같은 상태는 합침 → 회복으로 지움 �
   assert.deepEqual(extraFrom("status|카엘|감기|2|3", canon, { status: false }), []);
 });
 
-test("이름 링크: 본문 이름마다 상태창, 태그·코드·이미 단 링크는 그대로, 영어 이름은 낱말 경계", () => {
+test("이름 링크: 인물마다 첫 등장에만 상태창, 태그·코드·남의 HTML 안은 그대로, 영어 이름은 낱말 경계", () => {
   const ppl = [{ names: ["세라", "Sera"], html: "<b>카드</b>" }, { names: ["시로코"], html: "C" }];
   const t = linkNames('세라는 웃었다. <img alt="세라"> 시로코와 세라가 걸었다. ```세라``` Serana met Sera.', ppl);
-  assert.equal((t.match(/x-dusk="pc"/g) ?? []).length, 4, t);
-  assert.match(t, /<img alt="세라">/); assert.match(t, /```세라```/); assert.match(t, /Serana met <details/);
+  assert.equal((t.match(/x-dusk="pc"/g) ?? []).length, 2, "세라·시로코 한 번씩");
+  assert.ok(t.indexOf("x-dusk") < t.indexOf("는 웃었다"), "세라는 첫 등장에");
+  assert.match(t, /<img alt="세라">/); assert.match(t, /```세라```/); assert.match(t, /Serana met Sera\./, "이미 단 인물(Sera=세라)은 다시 안 닮");
   assert.equal(linkNames(t, ppl), t, "두 번 달아도 같다");
-  assert.equal((linkNames("세라 ".repeat(30), ppl, { max: 5 }).match(/x-dusk="pc"/g) ?? []).length, 5);
+  assert.equal((linkNames("세라 ".repeat(30), ppl).match(/x-dusk="pc"/g) ?? []).length, 1, "같은 인물 여러 번이어도 한 벌");
+  // 2.2.22 버그리포트: 다른 플러그인 상태창 안 이름에 링크가 들어가 구조가 꼬였다
+  const other = '<div class="status"><span>세라</span> HP 10</div><button>시로코</button><table><tr><td>세라</td></tr></table>';
+  assert.equal(linkNames(other, ppl), other, "속성 있는 상자·버튼·표 안은 그대로");
+  const plain = linkNames("<p><b>세라</b>가 왔다</p>", ppl);
+  assert.equal((plain.match(/x-dusk="pc"/g) ?? []).length, 1, "꾸밈 태그(p·b) 안은 링크");
+  assert.equal((linkNames('<div style="x">세라</div> 그리고 세라', ppl).match(/x-dusk="pc"/g) ?? []).length, 1, "상자 밖 첫 등장에");
 });
 
 test("상태창: 요약·스탯·상태이상·몸 흔적·NSFW(약점 자리)", () => {
@@ -132,7 +139,7 @@ test("상태창: 요약·스탯·상태이상·몸 흔적·NSFW(약점 자리)",
   assert.equal(linkNames(linked, [{ names: ["세라"], html: h }]), linked, "이미 단 상태창 안은 다시 안 건드림");
   assert.doesNotMatch(statusCardHtml(f, f.wiki.documents.a, { adult: false }), />NSFW</);
   assert.match(h, /linear-gradient\(140deg/, "사진 없으면 글자 동그라미");
-  assert.match(statusCardHtml(f, f.wiki.documents.a, { img: "data:image/jpeg;base64,AAA" }), /<img src="data:image\/jpeg;base64,AAA"/);
+  assert.match(statusCardHtml(f, f.wiki.documents.a, { img: "data:image/jpeg;base64,AAA" }), /<img x-face src="data:image\/jpeg;base64,AAA"/);
   applyExtra(f, extraFrom("wear|세라|상의|흰 블라우스|얇은 흰 면 블라우스, 단추 두 개 풀림\nwear|세라|목걸이|은 목걸이|가는 은사슬", (n) => n), { turn: 10 });
   const h2 = statusCardHtml(f, f.wiki.documents.a);
   assert.match(h2, />옷차림</); assert.match(h2, /흰 블라우스/); assert.match(h2, /삽화용 상세 ›/); assert.match(h2, /단추 두 개 풀림/);

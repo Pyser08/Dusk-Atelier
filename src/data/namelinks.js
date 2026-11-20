@@ -5,31 +5,43 @@
 import { statusCardHtml, linkNames } from "../engine/namecard.js";
 import { scenePanelHtml, sceneOf, peopleIn } from "../engine/scenepanel.js";
 import { charThumb } from "./charimg.js";
+import { folderIdOf } from "./memorystore.js";
 
 export function createNameLinks(memory, api = null) {
   let cache = null, checked = 0, loading = null;
+  // 2.2.22 성능: 캐릭터 통째(채팅 전체 포함, 큰 채팅은 수십 MB)는 봇이 바뀔 때만 한 번 읽고, 이름·설명·이미지 목록만 남긴다
+  let charMemo = null;
+  const charOf = async (cur) => {
+    if (charMemo?.chaId === cur.chaId) return charMemo.v;
+    const c = cur.ci != null ? await api?.getCharacterFromIndex?.(cur.ci).catch?.(() => null) : null;
+    const v = c ? { name: c.name ?? "", desc: String(c.desc ?? "").slice(0, 1500), image: c.image, emotionImages: c.emotionImages ?? [], additionalAssets: c.additionalAssets ?? [] } : null;
+    charMemo = { chaId: cur.chaId, v }; return v;
+  };
   const load = async () => {
     if (cache && Date.now() - checked < 3000) return;
-    checked = Date.now();
     const idx = await memory?.store?.getIndex?.().catch?.(() => null);
     const inj = idx?.settings?.inject ?? {};
     const links = inj.nameLinks !== false, scene = inj.scenePanel !== false;
-    if ((!links && !scene) || idx?.settings?.backend === "off") { cache = { off: true }; return; }
-    const cur = await memory?.switches?.currentChat?.().catch?.(() => null); if (!cur) { cache = { off: true }; return; }
+    if ((!links && !scene) || idx?.settings?.backend === "off") { cache = { off: true }; checked = Date.now(); return; }
+    const cur = await memory?.switches?.currentChat?.().catch?.(() => null); if (!cur) { cache = { off: true }; checked = Date.now(); return; }
+    // 같은 채팅·같은 기억 폴더(저장 시각)·같은 설정이면 만든 것을 그대로 쓴다(시간이 지나도). 바뀌었을 때만 폴더를 다시 읽는다
+    const key = `${cur.chaId}|${cur.chatId}|${idx?.folders?.[folderIdOf(cur.chaId, cur.chatId)]?.updatedAt ?? 0}|${links}|${scene}|${inj.status !== false}`;
+    if (cache && !cache.off && cache.key === key) { checked = Date.now(); return; }
     const f = await memory.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
-    if (!f) { cache = { off: true }; return; }
-    const character = cur.ci != null ? await api?.getCharacterFromIndex?.(cur.ci).catch?.(() => null) : null;
+    if (!f) { cache = { off: true }; checked = Date.now(); return; }
+    const character = await charOf(cur);
     const when = [...(f.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
     const docs = Object.values(f.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && !/\{\{user\}\}/i.test(d.title ?? ""));
     const imgs = new Map();
     if (api && character) await Promise.all(docs.map(async (d) => { const u = await charThumb(api, character, [d.title, ...(d.aliases ?? [])]).catch(() => null); if (u) imgs.set(d.id, u); }));
     const htmls = new Map(), cardOf = (d) => { if (!htmls.has(d.id)) htmls.set(d.id, statusCardHtml(f, d, { when, status: inj.status !== false, img: imgs.get(d.id) ?? null })); return htmls.get(d.id); };
     const people = docs.map((d) => ({ names: [d.title, ...(d.aliases ?? [])].filter((n) => String(n ?? "").trim().length >= 2), get html() { return cardOf(d); } }));
-    cache = { links, scene, people, folder: f, cardOf, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, String(character?.desc ?? "").slice(0, 1500)].filter(Boolean).join(" ") };
+    cache = { key, links, scene, people, folder: f, cardOf, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, character?.desc].filter(Boolean).join(" ") };
+    checked = Date.now();   // 2.2.22: 다 읽은 뒤에 시각을 적는다(읽는 데 3초가 넘으면 다 읽자마자 만료돼 매번 처음부터 다시 읽었다)
   };
   const ready = async () => { loading ??= load().finally(() => { loading = null; }); await loading; return cache && !cache.off ? cache : null; };
   return {
-    invalidate() { cache = null; checked = 0; },
+    invalidate() { cache = null; checked = 0; charMemo = null; },
     // 본문 글에만 링크(뒤에 붙는 게이지·일기·로어북 상자는 호출하는 쪽이 따로 붙인다)
     async link(text) {
       try { if (typeof text !== "string" || !text) return text; const c = await ready(); return c?.links && c.people.length ? linkNames(text, c.people) : text; } catch { return text; }

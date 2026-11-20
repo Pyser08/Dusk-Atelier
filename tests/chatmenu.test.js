@@ -41,3 +41,21 @@ test("장기 기억 바로가기가 공정한 전개 바로 위에 나오고, �
   assert.equal(t.parts.get("dusk-qt-memory").name, "장기 기억");
   await menu.setOn(false); assert.equal(t.parts.size, 0, "빠른 설정을 숨기면 바로가기도 함께 숨긴다");
 });
+
+// 2.2.22 버그리포트: 시작(show)과 애드온 바로가기 여러 개(addLink)가 겹치면 '떼고 다시 붙이기'가 서로 엉켜 버튼이 사라졌다
+test("시작과 바로가기 추가가 겹쳐도 모든 버튼이 남고 순서도 맞음", async () => {
+  const reg = new Map(); const order = [];
+  const tick = () => new Promise((r) => setTimeout(r, Math.random() * 4));
+  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} },
+    registerButton: async (o) => { await tick(); reg.set(o.id, o.name); if (!order.includes(o.id)) order.push(o.id); },
+    unregisterUIPart: async (id) => { await tick(); reg.delete(id); const i = order.indexOf(id); if (i >= 0) order.splice(i, 1); } };   // 리스처럼: 새 id는 맨 뒤, 떼면 빠짐
+  const { createChatMenu } = await import("../src/data/chatmenu.js");
+  const m = createChatMenu(api, { fairPlay: { isOn: () => false, isDiceOn: () => false, set: async () => {}, setDice: async () => {} }, turnInfo: { isDiceShow: () => false, setDiceShow: async () => {} } });
+  const started = m.start();
+  await new Promise((r) => setTimeout(r, 6));   // 본체가 버튼을 등록하는 도중에 애드온이 끼어든다
+  const links = [];
+  for (const k of ["dusk", "memory", "regress", "diary"]) links.push(await m.addLink({ id: `dusk-qt-${k}`, key: k, title: k, open: () => {} }));
+  await started; await new Promise((r) => setTimeout(r, 50));
+  for (const k of ["dusk", "memory", "regress", "diary", "fair", "dice", "show"]) assert.ok(reg.has(`dusk-qt-${k}`), `${k} 버튼 남음`);
+  assert.deepEqual(order.slice(0, 4), ["dusk-qt-dusk", "dusk-qt-memory", "dusk-qt-regress", "dusk-qt-diary"], "바로가기가 맨 위, 추가한 순서");
+});

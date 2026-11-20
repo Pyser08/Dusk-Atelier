@@ -37,8 +37,8 @@ export function statusCardHtml(folder, doc, { turn = null, when = "", adult = tr
   // 머리: 사진(없으면 첫 글자) · 이름 · 오늘 · 한 줄 소개
   const initial = [...String(doc.title ?? "?")][0] ?? "?";
   const face = img
-    ? `<img src="${esc(img)}" alt="" style="flex:none;width:64px;height:64px;border-radius:20px;object-fit:cover;box-shadow:0 0 0 2px rgba(255,255,255,.22),0 0 0 4px rgba(139,111,224,.35),0 8px 22px rgba(0,0,0,.3)">`
-    : `<span style="flex:none;display:grid;place-items:center;width:64px;height:64px;border-radius:20px;background:linear-gradient(140deg,${C.vio},${C.rose});color:#fff;font-weight:800;font-size:25px;box-shadow:0 0 0 2px rgba(255,255,255,.18),0 8px 22px rgba(139,111,224,.4)">${esc(initial)}</span>`;
+    ? `<img x-face src="${esc(img)}" alt="" style="flex:none;width:64px;height:64px;border-radius:20px;object-fit:cover;box-shadow:0 0 0 2px rgba(255,255,255,.22),0 0 0 4px rgba(139,111,224,.35),0 8px 22px rgba(0,0,0,.3)">`
+    : `<span x-face style="flex:none;display:grid;place-items:center;width:64px;height:64px;border-radius:20px;background:linear-gradient(140deg,${C.vio},${C.rose});color:#fff;font-weight:800;font-size:25px;box-shadow:0 0 0 2px rgba(255,255,255,.18),0 8px 22px rgba(139,111,224,.4)">${esc(initial)}</span>`;
   const head = `<span style="display:block;margin:-14px -14px 0;padding:16px 14px 14px;border-radius:18px 18px 0 0;background:radial-gradient(120% 90% at 0% 0%,rgba(139,111,224,.32),transparent 60%),radial-gradient(90% 80% at 100% 0%,rgba(232,87,142,.2),transparent 60%);border-bottom:1px solid rgba(127,127,127,.12)">`
     + `<span style="display:flex;gap:12px;align-items:center">${face}<span style="display:block;min-width:0"><span style="display:block;font-size:10px;letter-spacing:.14em;${MUTE}">CHARACTER</span><b style="display:block;font-size:19px;letter-spacing:-.01em;line-height:1.2;margin-top:2px">${esc(doc.title)}</b>`
     + `${showRace ? `<span style="display:inline-block;margin:5px 4px 0 0;padding:2px 9px;border-radius:999px;background:linear-gradient(135deg,rgba(58,165,151,.28),rgba(92,139,214,.2));border:1px solid rgba(58,165,151,.45);font-size:11px;font-weight:700">🧬 ${esc(rv.custom || rv.label)}</span>` : ""}${v?.today ? `<span style="display:inline-block;margin-top:5px;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(139,111,224,.35);font-size:11px">${esc(v.today)}</span>` : ""}</span></span>`
@@ -94,35 +94,58 @@ export function statusCardHtml(folder, doc, { turn = null, when = "", adult = tr
   const g = `dkpc-${String(doc.id ?? "x").replace(/[^\w-]/g, "")}-${++tabSeq}`;
   const raceNs = showRace ? [rv.heat?.label ? chip(rv.heat.on ? `🔥 ${rv.heat.label}` : rv.heat.label, rv.heat.on ? "rgba(232,87,142,.18)" : "rgba(127,127,127,.12)", rv.heat.on ? C.rose : "inherit") : "", rv.nsfw ? `<span style="display:block;font-size:12px;line-height:1.6;opacity:.9">${esc(cut(rv.nsfw, 160))}</span>` : ""].join("") : "";
   const nsBody = sec(`종족 체질${showRace ? ` · ${esc(rv.custom || rv.label)}` : ""}`, raceNs, { color: C.teal }) + sec("몸 흔적", mkChips && `<span style="display:block">${mkChips}</span>`, { color: C.deep }) + sec("성적 상태", ns, { color: C.deep });
-  return head + `<span style="display:block;position:relative;height:min(50vh,400px);margin-top:12px">`
+  return head + `<span x-tabbox style="display:block;position:relative;height:min(50vh,400px);margin-top:12px">`
     + `<span style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:11.5px;${MUTE}">위 탭을 눌러 보세요</span>`
     + tab(g, "g", "일반", grid + general, true) + tab(g, "n", "NSFW", nsGrid + nsBody, false) + `</span>`;
 }
 let tabSeq = 0;
 const tab = (g, k, label, body, open) => `<details x-dusk="tab" x-tab="${k}" name="${g}"${open ? " open" : ""} style="display:inline-block;margin:0 4px 0 0"><summary style="list-style:none;cursor:pointer;display:inline-block;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;border:1px solid ${k === "n" ? "rgba(232,87,142,.4)" : "rgba(139,111,224,.4)"};color:${k === "n" ? C.rose : C.vio}">${label}</summary><span style="display:block;position:absolute;left:0;right:0;top:38px;bottom:0;overflow:auto;padding:0 2px 6px;background:var(--risu-theme-bgcolor,#1b1a24);animation:dkTabIn .22s cubic-bezier(.22,1,.36,1)">${body}</span></details>`;
-export const TAB_CSS = "details[x-dusk=tab]>summary::-webkit-details-marker{display:none}details[x-dusk=tab][open]>summary{color:#fff!important;border-color:transparent!important;background:linear-gradient(135deg,#8b6fe0,#a77bf0);box-shadow:0 4px 14px rgba(139,111,224,.35)}details[x-tab=n][open]>summary{background:linear-gradient(135deg,#e8578e,#f07aa4);box-shadow:0 4px 14px rgba(232,87,142,.35)}@keyframes dkTabIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}";
+export const TAB_CSS = "details[x-dusk=tab]>summary::-webkit-details-marker{display:none}details[x-dusk=tab][open]>summary{color:#fff!important;border-color:transparent!important;background:linear-gradient(135deg,#8b6fe0,#a77bf0);box-shadow:0 4px 14px rgba(139,111,224,.35)}details[x-tab=n][open]>summary{background:linear-gradient(135deg,#e8578e,#f07aa4);box-shadow:0 4px 14px rgba(232,87,142,.35)}@keyframes dkTabIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}"
+  // 2.2.22 휴대폰: 상태창이 화면을 다 덮던 문제 → 더 작게
+  + "@media (max-width:600px){details[x-dusk=pc]>span{max-height:60vh!important;padding:10px 10px 8px!important;font-size:12px!important;border-radius:16px!important}details[x-dusk=pc] [x-tabbox]{height:min(36vh,300px)!important}details[x-dusk=pc] [x-face]{width:48px!important;height:48px!important;font-size:19px!important}}";
 
 // 본문 글의 이름에 상태창 링크를 단다. people = [{names:[…], html}] (html = 상태창 안쪽). 태그 안·이미 단 링크·코드 안은 건드리지 않는다
 export const LINK_MAX = 16;
+// 2.2.22: 다른 플러그인·봇 정규식이 만든 HTML 안의 이름은 건드리지 않는다(구조가 꼬였다). 꾸밈 태그(b·i·em·p 등) 안은 괜찮다.
+// 속성이 붙은 div·span·section 같은 상자, 링크·버튼·표·폼·details 안은 '남의 영역'으로 본다.
+const FOREIGN = new Set(["a", "button", "select", "option", "textarea", "label", "summary", "details", "table", "thead", "tbody", "tr", "td", "th", "svg", "math", "iframe", "object", "video", "audio", "canvas", "form", "nav", "header", "footer", "aside", "figure", "ruby"]);
+const BOXES = new Set(["div", "span", "section", "article", "main", "ul", "ol", "li", "font", "center", "blockquote", "p"]);
+const VOID = new Set(["br", "hr", "img", "input", "meta", "link", "wbr", "source", "area", "col", "embed", "track", "param", "base"]);
+// 본문 글의 이름에 상태창 링크를 단다. people = [{names:[…], html}] (html = 상태창 안쪽).
+// 인물마다 첫 등장에만 단다(같은 상태창을 여러 벌 넣으면 메시지가 몇 배로 커지고 느려졌다)
 export function linkNames(text, people, { max = LINK_MAX } = {}) {
   if (typeof text !== "string" || !text || !people?.length) return text;
   const map = new Map(); for (const p of people) for (const n of p.names ?? []) { const k = String(n ?? "").trim(); if (k.length >= 2 && !map.has(k)) map.set(k, p); }
   if (!map.size) return text;
   const keys = [...map.keys()].sort((a, b) => b.length - a.length).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   const re = new RegExp(`(${keys.join("|")})`, "g");
-  // 건드리지 않을 구간: 태그, <details x-dusk…>…</details>, <style>/<script>/<code>/<pre>, ``` 코드, {{…}}
+  // 건드리지 않을 구간: 태그, Dusk 상태창, <style>/<script>/<code>/<pre>, ``` 코드, {{…}}
   const parts = text.split(/(<details[^>]*x-dusk="pc"[\s\S]*?Dusk 캐릭터 상태창<\/span><\/span><\/details>|<details[^>]*x-dusk[\s\S]*?<\/details>|<(style|script|code|pre)\b[\s\S]*?<\/\2>|```[\s\S]*?```|\{\{[\s\S]*?\}\}|<[^>]+>)/i);
-  let count = 0, out = "";
+  let count = 0, out = "", foreign = 0;
+  const stack = [], done = new Set();
+  for (const m of text.matchAll(/<details[^>]*x-dusk="pc"[^>]*><summary[^>]*>([^<]+)<\/summary>/g)) { const p = map.get(m[1].trim()); if (p) done.add(p); }   // 이미 단 상태창(두 번 처리해도 같게)
   for (let i = 0; i < parts.length; i++) {
     const seg = parts[i]; if (seg == null) continue;
     if (i % 3 === 2) continue;   // split의 두 번째 캡처(태그 이름)
-    if (i % 3 === 1) { out += seg; continue; }   // 보호 구간
+    if (i % 3 === 1) {   // 보호 구간. 여는/닫는 태그면 '남의 영역' 깊이를 센다
+      out += seg;
+      const m = /^<(\/)?([a-z][\w-]*)([^>]*)>$/i.exec(seg);
+      if (m && !VOID.has(m[2].toLowerCase()) && !/\/\s*>$/.test(seg)) {
+        const tag = m[2].toLowerCase();
+        if (m[1]) { let j = stack.length - 1; while (j >= 0 && stack[j] !== tag && stack[j] !== "!" + tag) j--; if (j >= 0) { for (const t of stack.splice(j)) if (t.startsWith("!")) foreign--; } }
+        else { const isF = FOREIGN.has(tag) || (BOXES.has(tag) && /\b(class|style|id|data-[\w-]+|x-[\w-]+)\s*=/i.test(m[3])) || (!BOXES.has(tag) && !/^(b|i|u|s|em|strong|small|big|sub|sup|mark|q|cite|h[1-6]|del|ins|abbr|dfn|kbd|var|time)$/.test(tag));
+          stack.push(isF ? "!" + tag : tag); if (isF) foreign++; if (stack.length > 200) stack.shift(); }
+      }
+      continue;
+    }
+    if (foreign > 0) { out += seg; continue; }
     out += seg.replace(re, (name, _m, off, whole) => {
       const prev = whole[off - 1] ?? "", next = whole[off + name.length] ?? "";
       if (/[A-Za-z0-9_]/.test(prev) || (/^[A-Za-z]/.test(name) && /[A-Za-z0-9_]/.test(next))) return name;   // 영어 이름은 낱말 경계
-      if (count >= max) return name;
-      count++;
-      return linkHtml(name, map.get(name).html);
+      const p = map.get(name);
+      if (count >= max || done.has(p)) return name;
+      count++; done.add(p);
+      return linkHtml(name, p.html);
     });
   }
   return count ? POP_CSS + out : out;
@@ -131,6 +154,6 @@ const POP_CSS = "<style>" + TAB_CSS + "@keyframes dkPcIn{from{opacity:0;transfor
 export function linkHtml(name, inner) {
   // 이름은 수수하게: 글자색·굵기는 그대로, 아주 옅은 밑줄만. 누르면 화면 가운데 상태창이 바로 뜬다(살짝 떠오르는 움직임)
   return `<details x-dusk="pc" style="display:inline-block;vertical-align:baseline;margin:0;padding:0"><summary style="display:inline;cursor:pointer;list-style:none;color:inherit;font:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.38);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</summary>`
-    + `<span style="display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);animation:dkPcIn .16s ease-out;z-index:60;width:min(340px,92vw);max-height:76vh;overflow:auto;padding:14px 14px 10px;border-radius:20px;background:var(--risu-theme-bgcolor,#1b1a24);color:var(--risu-theme-textcolor,#eee);border:1px solid rgba(139,111,224,.32);box-shadow:0 24px 60px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;line-height:1.5;text-align:left;font-style:normal;font-weight:400;white-space:normal;text-decoration:none">`
+    + `<span style="display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);animation:dkPcIn .16s ease-out;z-index:60;width:min(340px,calc(100vw - 28px));max-height:min(76vh,640px);overflow:auto;overscroll-behavior:contain;padding:14px 14px 10px;border-radius:20px;background:var(--risu-theme-bgcolor,#1b1a24);color:var(--risu-theme-textcolor,#eee);border:1px solid rgba(139,111,224,.32);box-shadow:0 24px 60px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;line-height:1.5;text-align:left;font-style:normal;font-weight:400;white-space:normal;text-decoration:none">`
     + `${inner}<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">이름을 다시 누르면 닫혀요 · Dusk 캐릭터 상태창</span></span></details>`;
 }

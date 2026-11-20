@@ -56,7 +56,8 @@ export function applyLifeTurn(f, { events = [], present = [], gauge = null, text
   const when = [...(f?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
   const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = f?.wiki?.people?.profiles?.[d.id];
     return { interest: n?.sexual?.eroticInterest ?? 50, mult: n?.lustMult ?? 1, spont: n?.sexual?.sexualSpontaneity, initiative: n?.axes?.initiative, when, boost: [n?.boost?.desire !== false && pr?.sexualDesire?.text, n?.boost?.para !== false && pr?.paraphilia?.text].filter(Boolean) }; };
-  const changed = tickLife(f, { turn, present: who, events, gauge, text }, profOf);
+  const date = String(when).match(/\d{1,5}-\d{1,2}-\d{1,2}/)?.[0] ?? "";   // 2.2.22 이야기 날짜(종족 발정기·첫 관계 날짜)
+  const changed = tickLife(f, { turn, present: who, events, gauge, text, date }, profOf);
   changed.push(...ensureHotGoals(f));   // 달아오름 90↑ → 장면 판단에 성관계 계획을 실제로 저장
   // 자주 쓴 체위·플레이 → 선호
   for (const [id, L] of Object.entries(f.life?.p ?? {})) {
