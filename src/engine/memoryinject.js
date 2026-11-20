@@ -246,13 +246,16 @@ function fillPlaceholder(list, text) {
   });
   return { out, found, filled };
 }
+export const USER_FIRST = "[Priority] The memory above is background only. {{user}}'s latest message (the last user turn before this note) is what happens NOW: every action, word and event in it has already happened. Continue directly from it — show its result and the characters' reactions to it first (including during sexual scenes). Never skip, undo or ignore it, and never let memory, plans or gauges override it.";
 export function insertBlock(messages, text, position = "end") {
   const list = (Array.isArray(messages) ? messages : []).filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(MARKER)));
   const ph = fillPlaceholder(list, text);
   if (ph.found) return ph.out;  // 자리표시자가 있으면 위치 설정보다 우선
-  const block = { role: "system", content: text };
+  let block = { role: "system", content: text };
   let at;
-  if (position === "end") { at = list.length; while (at > 0 && list[at - 1]?.role === "assistant") at--; if (at === 0) at = list.length; }
+  if (position === "end") { at = list.length; while (at > 0 && list[at - 1]?.role === "assistant") at--; if (at === 0) at = list.length;
+    // 기억 블록이 유저의 최신 입력 뒤에 오면 모델이 그 입력을 건너뛰고 기억·계획만 따라가는 일이 있다 → 입력이 먼저라고 못박는다
+    if (list.slice(0, at).some((m) => m?.role === "user")) block = { role: "system", content: `${text}\n\n${USER_FIRST}` }; }
   else if (position === "afterSystem") { at = 0; while (at < list.length && list[at]?.role === "system") at++; }
   else { at = -1; for (let i = list.length - 1; i >= 0; i--) if (list[i]?.role === "user") { at = i; break; } if (at < 0) at = list.length; }
   return [...list.slice(0, at), block, ...list.slice(at)];

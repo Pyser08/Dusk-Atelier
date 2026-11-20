@@ -3,6 +3,7 @@ import { maybePromptIntro } from '../promptstab.js';
 // 오른쪽(PC)·아래(모바일): (PC 고급) 기억 방식 바로 보임 → 설정 한 줄 목록 → 고급 묶음(한 줄씩 접음).
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
+import { bfAttach, bfKey, bfRun } from "./bfprogress.js";
 import { advFold, btn, confirmDialog, emptyState, modal, note, openMenu, pageHead, progressBar, statusCard, switchEl, setSwitch } from "../../kit.js";
 import { injectReasonText } from "../../../engine/memoryinject.js";
 import { USAGE_KINDS, injectLine, usageOf, recentOf } from "../../../engine/memoryusage.js";
@@ -197,7 +198,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   // 지난 대화 분석 (미처리만)
   const plan = caps.analyze && M.runner ? cachedPlan : null;
-  const prog = h("div");
+  const prog = h("div"); bfAttach(bfKey(cur.ci, cur.ti), prog);   // 분석 중에 화면을 다시 열어도 진행 표시를 잇는다
   const analyze = async () => {
     let activeChat = null, activeMsgs = [], activePlan = plan;
     if (!activePlan || !activePlan.todo) {
@@ -221,10 +222,9 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
       const ok = await confirmDialog(ctx.win, { title: "지난 대화 분석", body: `미분석 AI 응답 ${activePlan.todo}개만 분석해요. 호출 ${activePlan.calls}회 · 대략 ${activePlan.tokens.toLocaleString()} 토큰이 들어요.`, ok: "분석하기" });
       if (!ok) return;
     }
-    const ctrl = new AbortController(), cancel = btn("취소", { size: "sm", onClick: () => ctrl.abort() });
-    replace(prog, progressBar(0), cancel);
+    const ctrl = new AbortController();
     try {
-      const r = await M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, redo, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), cancel) });
+      const r = await bfRun(bfKey(cur.ci, cur.ti), ctrl, prog, (onProgress) => M.runner.backfill(cur.ci, cur.ti, { from: 0, to: Math.max(0, activeMsgs.length - 1) }, { signal: ctrl.signal, redo, onProgress }));
       ctx.toast(`지난 대화 분석이 끝났어요${r.server ? " (서버)" : ""} (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined);
     } catch (e) { fail(ctx)(e); }
     redraw();

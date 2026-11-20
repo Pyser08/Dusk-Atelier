@@ -163,7 +163,7 @@ export const NSFW_STAGE1 = [
   "sexval|Name|eroticInterest, sexualSpontaneity, sexualOpenness or sexualMomentum|+1..+10 or -1..-10|exact quote      a clear change in that sexual trait shown in newest",
   "act|Name|partner|sex, climax, kiss or touch|Korean positions/plays used, comma separated      one per character and partner",
   "sleep|Name",
-  "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      something clearly pushes arousal or tiredness beyond normal (teasing, aphrodisiac, cold shower, exhaustion)",
+  "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      arousal never rises on its own — YOU decide it: write lust when newest actually moves this character's arousal (flirting, sexual tension, touch, their own desire or kink being touched, aphrodisiac → up; awkwardness, upset, fear, interruption, cold shower → down). Size it to what happened (small hint +2..5, clear tease +6..12, strong +13..30). Nothing sexual happened → no lust line. fatigue: exhaustion or rest",
   "past|Name|partner|count|stated or estimated      they had sex before the story (newest, user message or lorebook); estimate the count when none is given",
   "zone|Name|Korean body part|1-3 (3 = weak spot)|short Korean note      a sexually sensitive spot shows",
   "trait|Name|first, fantasy, voice, after, yes, no or contra|short Korean phrase      first time, fantasy, bed voice, aftercare, signs of liking/refusing, contraception attitude",

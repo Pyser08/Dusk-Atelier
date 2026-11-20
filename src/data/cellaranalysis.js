@@ -11,6 +11,18 @@ export const slimMessages = (msgs) => (msgs ?? []).map((m) => { const o = {}; fo
 // 2.2.11 서버 분석 엔진 버전 확인: 엔진은 Atelier 소스로 만든 묶음이라 플러그인과 버전이 어긋나면 고친 버그(예: 사고 출력 <Thoughts> 처리)가 서버에선 그대로다.
 //   status.engine: Cellar health가 알려 주는 엔진 버전(옛 Cellar는 없음). 맞거나 알 수 없으면 null, 아니면 사용자에게 보일 문구.
 const PLUGIN_VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "";
+// 사용자가 멈춘 서버 작업(다음에 화면을 열어도 저절로 이어받지 않음). 저장소가 없으면 이 실행 동안만 기억.
+const STOPPED_KEY = "dusk.cellar.stoppedJobs", stoppedMem = new Set();
+const jobKey = (j) => String(j?.id ?? j?.jobId ?? (j?.chaId != null ? `${j.chaId}|${j.chatId}|${j.startedAt ?? j.started ?? j.total ?? ""}` : ""));
+const chatPrefix = (chaId, chatId) => `${chaId}|${chatId}|`;
+// 같은 채팅을 사용자가 새로 분석하면 그 채팅의 '멈춘 작업' 표시를 지운다
+export function clearStoppedChat(chaId, chatId) { const pre = chatPrefix(chaId, chatId);
+  for (const k of [...stoppedMem]) if (k.startsWith(pre)) stoppedMem.delete(k);
+  try { globalThis.localStorage?.setItem(STOPPED_KEY, JSON.stringify(readStopped().filter((k) => !k.startsWith(pre)))); } catch { /* 없음 */ } }
+function readStopped() { try { return JSON.parse(globalThis.localStorage?.getItem(STOPPED_KEY) ?? "[]"); } catch { return []; } }
+export function isStoppedJob(j) { const k = jobKey(j); return !!k && (stoppedMem.has(k) || readStopped().includes(k)); }
+export function markStoppedJob(j) { const k = jobKey(j); if (!k) return; stoppedMem.add(k);
+  try { globalThis.localStorage?.setItem(STOPPED_KEY, JSON.stringify([...readStopped().filter((x) => x !== k), k].slice(-20))); } catch { /* 이 실행 동안만 */ } }
 export function engineNotice(pluginVer, status) {
   if (!pluginVer || !status?.ok || !status.features?.includes("analysis")) return null;
   const eng = String(status.engine ?? "");
@@ -47,7 +59,9 @@ export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sl
     active++;
     try {
       for (;;) {
-        if (signal?.aborted && !cancelled) { cancelled = true; try { await req({ action: "cancel" }, 8000); } catch { /* 아래 상태 확인에서 */ } }
+        // 중지: Cellar에 cancel을 보내고 더 따라가지 않는다(중계 모델 호출을 더 하지 않게)
+        if (signal?.aborted && !cancelled) { cancelled = true; try { await req({ action: "cancel" }, 8000); } catch { /* 서버가 못 받아도 이 기기는 멈춘다 */ }
+          if (j.state === "running") j = { ...j, state: "cancelled" }; }
         if (j.state !== "running") break;
         let handled = 0;
         try {
@@ -72,6 +86,7 @@ export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sl
   // payload: Cellar start 입력(model 제외). 시작 전 실패(연결·미지원)는 null → 기기 방식. 시작한 뒤의 문제는 오류로 알린다.
   async function run(prep, payload, { signal, onProgress, relay = null } = {}) {
     if (prep.relay && !relay) return null;
+    if (payload?.chaId != null) clearStoppedChat(payload.chaId, payload.chatId);
     let started;
     try { started = await reqOf(prep.conn)({ action: "start", ...payload, model: prep.model }, 120e3); }
     catch (e) { if (e.network || e.status === 501) return null; throw e; }
@@ -79,12 +94,14 @@ export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sl
       if (started.status === 501) return null;
       throw new Error(started.json?.error ?? `서버 분석을 시작하지 못했어요 (응답 ${started.status})`);
     }
-    return follow(prep.conn, started.json.job, { signal, onProgress, relay, isRelay: Boolean(prep.relay) });
+    try { return await follow(prep.conn, started.json.job, { signal, onProgress, relay, isRelay: Boolean(prep.relay) }); }
+    finally { if (signal?.aborted) markStoppedJob(started.json.job); }
   }
-  // 리스 화면을 다시 열었을 때: 서버가 중계 모델 호출을 기다리는 작업이 있으면 이어서 한다. 없으면 null.
-  async function resume({ relay, onProgress, signal } = {}) {
+  // 리스 화면을 다시 열었을 때: 서버가 중계 모델 호출을 기다리는 작업이 있는지만 본다. 없으면 null.
+  //   사용자가 '생성 중지'로 멈춘 적 있는 작업은 저절로 이어받지 않는다.
+  async function pendingResume() {
     try {
-      if (active || !relay) return null;
+      if (active) return null;
       const st = remote?.state?.();
       if (st?.mode !== "remote" || !st.online) return null;
       const c = await cellar.status();
@@ -92,9 +109,18 @@ export function createServerAnalysis(api, { cellar, remote, pollMs = POLL_MS, sl
       const conn = { url: c.url, via: c.via };
       const r = await reqOf(conn)({ action: "status" }, 15000);
       const j = r.json?.job;
-      if (!j || j.state !== "running" || !j.relay) return null;
-      return await follow(conn, j, { signal, onProgress, relay, isRelay: true });
+      if (!j || j.state !== "running" || !j.relay || isStoppedJob(j)) return null;
+      return { conn, job: j };
     } catch { return null; }
   }
-  return { prepare, run, resume, slim: slimMessages };
+  // 이어받기. pending(pendingResume 결과)이 없으면 직접 찾는다. 중지되면 Cellar에 cancel을 보내고 그 작업을 '멈춘 작업'으로 기억한다.
+  async function resume({ relay, onProgress, signal, pending = null } = {}) {
+    if (!relay) return null;
+    const p = pending ?? await pendingResume();
+    if (!p || active) return null;
+    try { return await follow(p.conn, p.job, { signal, onProgress, relay, isRelay: true }); }
+    catch { return null; }
+    finally { if (signal?.aborted) markStoppedJob(p.job); }
+  }
+  return { prepare, run, resume, pendingResume, slim: slimMessages };
 }

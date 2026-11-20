@@ -60,6 +60,7 @@ export function feelOf(f, names, now) {
 }
 
 // 한 턴에 오르는 성욕(배수 적용 전). interest: 성적 관심 0~100
+export const LUST_BASE = 1.5;   // interest 50의 기본 속도 → 배수 1
 export function lustRate({ interest = 50, phase = null, att = 0, hos = 0, lover = false, sinceSex = null, refractory = false, fat = 0 }) {
   let r = 0.5 + interest / 50;                                   // 0.5 ~ 2.5
   r *= PHASE_MULT[phase] ?? 1;
@@ -144,12 +145,13 @@ export function tickLife(f, { turn, present = [], events = [], date = "", gauge 
     const mult = Math.max(0.5, Math.min(2, Number(pr.mult) || 1)) * traitAdj(pr);   // AI 배수 × 지금 성향(즉흥성·주도성) 보정
     const tr = (t) => { L.trace = [...(L.trace ?? []), { turn, text: t }].slice(-TRACE_MAX); };
     const day = dayFactor(pr.when, text);
+    let lustK = 1;
     if (dt > 0) {
       const sinceSex = L.sex.last == null ? null : turn - L.sex.last, phase = phaseOf(cycleOf(d));
       const satAdj = satFactor(L.sat);
-      const rate = mult * (g.lust ?? 1) * day.lust * satAdj * lustRate({ interest: pr.interest ?? 50, phase, att: fe.att, hos: fe.hos, lover, sinceSex, refractory: turn <= L.refr, fat: L.fat });
+      // 성욕은 저절로 오르지 않는다(AI가 장면을 보고 gauge 줄로 판단). 성향·주기·끌림은 AI가 올린 폭에만 곱한다
+      lustK = mult * (g.lust ?? 1) * day.lust * satAdj * lustRate({ interest: pr.interest ?? 50, phase, att: fe.att, hos: fe.hos, lover, sinceSex, refractory: turn <= L.refr, fat: L.fat }) / LUST_BASE;
       const before = L.lust;
-      L.lust = r1(clamp(L.lust + rate * dt * g.up));
       L.fat = r1(clamp(L.fat - 2 * dt * g.down + day.fat * dt));
       // 기분은 시간이 지나면 0으로 돌아간다(턴당 5)
       L.mood = Object.fromEntries(Object.entries(L.mood ?? {}).map(([k, v]) => [k, Math.max(0, r1(v - MOOD_DECAY * dt))]).filter(([, v]) => v > 0));
@@ -170,10 +172,10 @@ export function tickLife(f, { turn, present = [], events = [], date = "", gauge 
       L.temp[k] = cur;
     }
     // 성적 욕망·이상성향 스위치: 관련 상황이면 더 빨리 찬다
-    if (text && (pr.boost ?? []).some((b) => triggerHit(b, text))) { const before = L.lust; L.lust = r1(clamp(L.lust + 10 * mult * g.up)); if (L.lust !== before) { changed.push(`${d.title} 욕망에 닿음 ${Math.round(before)}→${Math.round(L.lust)}`); tr(`욕망·이상성향 상황 +${r1(L.lust - before)}`); } }
+    const hit = !!text && (pr.boost ?? []).some((b) => triggerHit(b, text));   // 욕망·이상성향 상황: AI가 올린 폭을 1.3배
     for (const e of evBy.get(d.id) ?? []) {
       if (e.kind === "gauge") { const k = e.key === "fat" ? "fat" : "lust", dd = Math.max(-30, Math.min(30, Math.round(Number(e.delta) || 0))); if (!dd) continue;
-        const before = L[k]; L[k] = r1(clamp(L[k] + dd * (dd > 0 ? g.up : g.down))); if (L[k] !== before) { changed.push(`${d.title} ${k === "fat" ? "피로" : "달아오름"} ${Math.round(before)}→${Math.round(L[k])}`); tr(`${k === "fat" ? "피로" : "대화"} ${dd > 0 ? "+" : ""}${r1(L[k] - before)}${e.quote ? ` “${String(e.quote).slice(0, 30)}”` : ""}`); } continue; }
+        const before = L[k]; L[k] = r1(clamp(L[k] + dd * (dd > 0 ? g.up * (k === "lust" ? clamp(lustK, 0.2, 2.5) * (hit ? 1.3 : 1) : 1) : g.down))); if (L[k] !== before) { changed.push(`${d.title} ${k === "fat" ? "피로" : "달아오름"} ${Math.round(before)}→${Math.round(L[k])}`); tr(`${k === "fat" ? "피로" : "대화"} ${dd > 0 ? "+" : ""}${r1(L[k] - before)}${e.quote ? ` “${String(e.quote).slice(0, 30)}”` : ""}`); } continue; }
       if (e.kind === "past") { const pk2 = nk(e.partner); if (!pk2) continue; const b = L.sex.by[pk2] ?? { name: e.partner, n: 0, first: null }; if (e.est && b.prior != null) continue; b.prior = Math.max(0, Math.min(999, Math.round(Number(e.count) || 0))); b.est = !!e.est; L.sex.by[pk2] = b; changed.push(`${d.title}·${e.partner} 이야기 전 경험 ${b.est ? "약 " : ""}${b.prior}번`); continue; }
       if (e.kind === "sleep") { if (L.fat) { changed.push(`${d.title} 잠 · 피로 풀림`); tr("잠 · 피로 0"); } L.fat = 0; continue; }
       if (e.kind === "mood") { const k = MOOD_KEYS.includes(e.mood) ? e.mood : null, dd = Math.max(-40, Math.min(40, Math.round(Number(e.delta) || 0))); if (!k || !dd) continue;

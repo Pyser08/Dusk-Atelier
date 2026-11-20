@@ -162,3 +162,18 @@ test("resume: 서버가 중계를 기다리는 작업이 있으면 이어서 하
   assert.equal(await createServerAnalysis(none, { cellar: cellarOk, remote: remoteOk }).resume({ relay: async () => "" }), null);
   assert.equal(await sa.resume({}), null, "중계 함수가 없으면 하지 않는다");
 });
+
+test("resume: 중지하면 Cellar에 cancel을 보내고, 그 작업은 다음에 저절로 이어받지 않는다", async () => {
+  const actions = []; const ac = new AbortController();
+  const job = { state: "running", relay: true, chaId: "s1", chatId: "s2", total: 5, done: 0, failed: 0 };
+  const api = { nativeFetch: async (u, init) => { const b = JSON.parse(init.body); actions.push(b.action);
+    if (b.action === "cancel") return reply(200, { ok: true });
+    if (b.claim === true) { ac.abort(); return reply(200, { ok: true, job: actions.includes("cancel") ? { ...job, state: "cancelled" } : job, calls: [] }); }
+    return reply(200, { ok: true, job: actions.includes("cancel") ? { ...job, state: "cancelled" } : job }); } };
+  const sa = createServerAnalysis(api, { cellar: { status: async () => ({ ok: true, url: "http://x", via: "native", features: ["mem", "analysis", "analysis-relay"] }) }, remote: remoteOk, pollMs: 0, sleep: sleep0 });
+  await sa.resume({ relay: async () => "답", signal: ac.signal });
+  assert.ok(actions.includes("cancel"), "중지 신호가 cancel로 간다");
+  const api2 = { nativeFetch: async () => reply(200, { ok: true, job }) };
+  const sa2 = createServerAnalysis(api2, { cellar: { status: async () => ({ ok: true, url: "http://x", via: "native", features: ["mem", "analysis", "analysis-relay"] }) }, remote: remoteOk, pollMs: 0, sleep: sleep0 });
+  assert.equal(await sa2.pendingResume(), null, "멈춘 작업은 이어받지 않는다");
+});
