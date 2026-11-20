@@ -3,6 +3,7 @@ import { openEmbedModal } from "./embedmodal.js";
 import { regexSection } from "./regexui.js";
 import { openHypaModal } from "./hypamodal.js";
 import { defHint } from "../../defhint.js";
+import { bfAttach, bfKey, bfRun } from "./bfprogress.js";
 import { btn, switchEl, setSwitch, confirmDialog, progressBar, loading } from "../../kit.js";
 import { AI_MODES } from "../../../engine/merge.js";
 import { getCfg as getModelCfg } from "../../../data/modelhub.js";
@@ -149,6 +150,7 @@ export function renderBotAnalysis(env) {
   const total = chatItem.chat?.message?.length ?? 0;
   const from = h("input", { class: "rb-input", type: "number", min: 1, max: total, value: 1, "aria-label": "시작 메시지 번호" }), to = h("input", { class: "rb-input", type: "number", min: 1, max: total, value: total, "aria-label": "끝 메시지 번호" });
   const est = h("div", { class: "rb-muted" }), prog = h("div"), msgs = chatItem.chat?.message ?? [];
+  bfAttach(bfKey(bot.index, chatItem.index), prog);   // 분석 중에 화면을 다시 열어도 진행 표시를 잇는다
   const range = () => ({ from: Math.max(0, +from.value - 1), to: Math.max(0, +to.value - 1) });
   const paintEst = () => {
     const p = M.runner.planBackfill(msgs, { ...range(), size: idx.settings?.backfillBatch }, env.folder);
@@ -161,9 +163,9 @@ export function renderBotAnalysis(env) {
     const redo = !pl.todo && pl.total > 0;   // 미분석이 없으면 전체를 다시 분석한다
     if (!pl.total) return ctx.toast("분석할 AI 응답이 없어요.");
     if (redo) ctx.toast("미분석 응답이 없어요. 전체를 다시 분석해요.");
-    ctrl = new AbortController(); const start = btn("취소", { onClick: () => ctrl.abort() }); replace(prog, progressBar(0), start);
+    ctrl = new AbortController();
     try {
-      const r = await M.runner.backfill(bot.index, chatItem.index, range(), { signal: ctrl.signal, redo, onProgress: (n, t, f) => replace(prog, progressBar(Math.round(n / t * 100)), h("span", { class: "rb-muted" }, `${n}/${t} · 실패 ${f}`), start) });
+      const r = await bfRun(bfKey(bot.index, chatItem.index), ctrl, prog, (onProgress) => M.runner.backfill(bot.index, chatItem.index, range(), { signal: ctrl.signal, redo, onProgress }));
       failed = r.failed; ctx.toast(`지난 대화 분석이 끝났어요${r.server ? " (서버)" : ""} (${r.total - r.failed.length}/${r.total}).${r.reasons?.length ? ` 실패 이유: ${r.reasons[0]}` : ""}`, r.failed.length ? { error: true } : undefined); env.redraw();
     } catch (e) { fail(ctx)(e); env.redraw(); }
   };

@@ -327,12 +327,16 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   // 서버 분석 중계: 서버가 요청한 모델 호출을 기존 방식(리스 보조 모델·내 API 모델·인증 포함)으로 한다
   const relayCall = (settings, signal) => async (msgs, pick) => run(msgs, { ...(await modelOf(settings)), noUserPrompts: true, ...(pick?.timeoutSec ? { timeoutSec: pick.timeoutSec } : {}) }, signal);
   // 리스 화면을 다시 열었을 때 서버에서 중계를 기다리던 분석을 이어서 한다
-  async function resumeServer({ signal } = {}) {
+  //   이어받을 작업이 있을 때만 aiTask("지난 대화 분석")로 묶어 '생성 중지'가 server.resume·중계 호출에 닿게 한다(중지 → Cellar cancel).
+  async function resumeServer({ signal, onProgress } = {}) {
     if (!server?.resume) return null;
     const idx = await store.getIndex();
     if (idx.settings?.serverAnalysis === false) return null;
-    const out = await server.resume({ relay: relayCall(idx.settings, signal), signal });
-    if (out?.job?.chaId) {
+    const pending = server.pendingResume ? await server.pendingResume() : undefined;
+    if (pending === null) return null;
+    const out = await aiTask("지난 대화 분석", (taskSignal) => { const sg = anySignal(signal, taskSignal);
+      return server.resume({ relay: relayCall(idx.settings, sg), signal: sg, onProgress, ...(pending ? { pending } : {}) }); });
+    if (out?.job?.chaId && out.job.state !== "cancelled") {
       store.dropCache?.();
       await store.updateFolder(String(out.job.chaId), String(out.job.chatId), () => {}).catch(() => {});
       notify(`서버에서 이어서 한 지난 대화 분석이 끝났어요 (${out.total - out.failed.length}/${out.total}).`);

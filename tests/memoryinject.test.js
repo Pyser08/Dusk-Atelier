@@ -205,3 +205,12 @@ test("요약된 옛 대화 빼기(process 훅): 켜면 분석된 옛 메시지�
   assert.equal(out.length, req.length + 1, "beforeRequest는 다시 빼지 않고 기억만 넣는다");
   assert.equal(inj.lastRequest().dropped, 16);
 });
+
+test("insertBlock end: 기억 블록이 유저의 최신 입력 뒤에 오면, 그 입력에 먼저 반응하라는 줄을 붙인다(입력 무시 방지)", () => {
+  const msgs = [{ role: "system", content: "sys" }, { role: "assistant", content: "a" }, { role: "user", content: "입 안에 싼다" }];
+  const out = insertBlock(msgs, "[Dusk Memory]\n기억", "end");
+  assert.equal(out.at(-1).role, "system");
+  assert.match(out.at(-1).content, /latest message/);
+  const before = insertBlock(msgs, "[Dusk Memory]\n기억", "beforeLastUser");
+  assert.doesNotMatch(before.find((m) => m.content.startsWith("[Dusk Memory")).content, /latest message/);
+});

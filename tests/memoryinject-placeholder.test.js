@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { insertBlock, PLACEHOLDER } from "../src/engine/memoryinject.js";
+import { insertBlock, USER_FIRST, PLACEHOLDER } from "../src/engine/memoryinject.js";
 
 const base = () => [{ role: "system", content: "규칙" }, { role: "user", content: "안녕" }];
 test("without placeholder behaves as before (before last user)", () => {
@@ -29,9 +29,10 @@ test("only the first message holding the placeholder gets the block", () => {
 
 test("end: 맨 뒤에 넣고, 끝의 어시스턴트 prefill은 그 뒤에 남긴다", () => {
   const m = [{ role: "system", content: "S" }, { role: "user", content: "U" }];
-  assert.equal(insertBlock(m, "BLOCK", "end").at(-1).content, "BLOCK");
+  const B = `BLOCK\n\n${USER_FIRST}`;   // 유저 입력 뒤라 '입력이 먼저' 줄이 붙는다
+  assert.equal(insertBlock(m, "BLOCK", "end").at(-1).content, B);
   const pre = [...m, { role: "assistant", content: "P" }];
   const out = insertBlock(pre, "BLOCK", "end");
-  assert.deepEqual(out.map((x) => x.content), ["S", "U", "BLOCK", "P"]);
-  assert.equal(insertBlock(m, "BLOCK").at(-1).content, "BLOCK");
+  assert.deepEqual(out.map((x) => x.content), ["S", "U", B, "P"]);
+  assert.equal(insertBlock(m, "BLOCK").at(-1).content, B);
 });

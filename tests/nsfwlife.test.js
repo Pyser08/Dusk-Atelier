@@ -12,18 +12,20 @@ const folder = () => ({
   emo: {}, nsfw: { a: { sexual: { eroticInterest: 80 }, axes: {}, positions: [], by: "ai", log: [] } },
 });
 
-test("성욕: 시간이 지나면 오르고 성관계로 해소·불응기", () => {
+test("성욕: 저절로 오르지 않고 AI 판단(gauge)으로만 오름, 성관계로 해소·불응기", () => {
   const f = folder();
   tickLife(f, { turn: 10, present: ["유나"] }, () => 80);
   const L = f.life.p.a; assert.equal(L.lust, 30);
   tickLife(f, { turn: 20, present: ["유나"] }, () => 80);
-  assert.ok(f.life.p.a.lust > 50, "10턴 뒤 올라야 함");
+  assert.equal(f.life.p.a.lust, 30, "아무 일 없으면 그대로");
+  tickLife(f, { turn: 21, present: ["유나"], events: [{ kind: "gauge", name: "유나", key: "lust", delta: 20 }] }, () => 80);
+  assert.ok(f.life.p.a.lust > 50, "AI가 올리면 오름(관심 높으면 더 크게)");
   const before = f.life.p.a.lust;
-  const ch = tickLife(f, { turn: 21, present: ["유나"], events: [{ kind: "act", name: "유나", partner: "민호", act: "sex", labels: ["정상위"] }] }, () => 80);
+  const ch = tickLife(f, { turn: 22, present: ["유나"], events: [{ kind: "act", name: "유나", partner: "민호", act: "sex", labels: ["정상위"] }] }, () => 80);
   assert.ok(f.life.p.a.lust < before - 40); assert.ok(ch[0].includes("해소"));
   assert.equal(f.life.p.a.sex.n, 1); assert.equal(f.life.p.a.sex.by["민호"].n, 1); assert.equal(f.life.p.a.uses["정상위"], 1);
   assert.ok(f.life.p.a.fat >= 25);
-  tickLife(f, { turn: 22, present: ["유나"], events: [{ kind: "sleep", name: "유나" }] }, () => 80);
+  tickLife(f, { turn: 23, present: ["유나"], events: [{ kind: "sleep", name: "유나" }] }, () => 80);
   assert.equal(f.life.p.a.fat, 0);
 });
 
@@ -122,13 +124,13 @@ test("게이지 조정·이야기 전 경험·배수·욕망 반응", () => {
   const v = lifeView(f, f.wiki.documents.a, 10);
   assert.equal(v.partners[0].prior, 4); assert.equal(v.partners[0].est, true); assert.equal(v.sexN, 4);
   const g = folder(), h2 = folder();
-  tickLife(g, { turn: 0, present: ["유나"] }, () => ({ interest: 50, mult: 2 })); tickLife(g, { turn: 10, present: ["유나"] }, () => ({ interest: 50, mult: 2 }));
-  tickLife(h2, { turn: 0, present: ["유나"] }, () => ({ interest: 50, mult: 0.5 })); tickLife(h2, { turn: 10, present: ["유나"] }, () => ({ interest: 50, mult: 0.5 }));
-  assert.ok(g.life.p.a.lust > h2.life.p.a.lust + 10);
+  tickLife(g, { turn: 0, present: ["유나"] }, () => ({ interest: 50, mult: 2 })); tickLife(g, { turn: 10, present: ["유나"], events: [{ kind: "gauge", name: "유나", key: "lust", delta: 10 }] }, () => ({ interest: 50, mult: 2 }));
+  tickLife(h2, { turn: 0, present: ["유나"] }, () => ({ interest: 50, mult: 0.5 })); tickLife(h2, { turn: 10, present: ["유나"], events: [{ kind: "gauge", name: "유나", key: "lust", delta: 10 }] }, () => ({ interest: 50, mult: 0.5 }));
+  assert.ok(g.life.p.a.lust > h2.life.p.a.lust + 8);
   assert.ok(triggerHit("묶이는 것에 흥분한다. 손목 구속", "그녀의 손목을 끈으로 묶었다"));
   assert.ok(!triggerHit("묶이는 것에 흥분한다", "같이 밥을 먹었다"));
-  const k = folder(); tickLife(k, { turn: 1, present: ["유나"], text: "손목을 묶었다" }, () => ({ interest: 50, boost: ["손목 구속에 흥분"] }));
-  assert.ok(k.life.p.a.lust > 30);
+  const k = folder(); tickLife(k, { turn: 1, present: ["유나"], text: "손목을 묶었다", events: [{ kind: "gauge", name: "유나", key: "lust", delta: 10 }] }, () => ({ interest: 50, boost: ["손목 구속에 흥분"] }));
+  assert.ok(k.life.p.a.lust > 42);
 });
 test("달아오름 90↑: 장면 계획 확정·없으면 새로 잡음", () => {
   const f = folder(); f.life = { turn: 10, p: { a: { lust: 95, refr: -1, fat: 0, sex: { n: 0, by: {} }, uses: {}, met: {}, lover: {}, temp: {} } } };
@@ -191,11 +193,11 @@ test("기록기 mood·bond·touch·sat → 엔진", () => {
 test("욕망·이상성향 반응은 기본 켜짐(끈 것만 꺼짐)", () => {
   const f = folder(); f.wiki.people = { profiles: { a: { sexualDesire: { text: "손목 구속에 흥분" } } } };
   f.cursor = { at: 1 }; applyLifeTurn(f, { present: ["유나"] });
-  f.cursor = { at: 2 }; applyLifeTurn(f, { present: ["유나"], text: "손목을 묶었다" });
+  f.cursor = { at: 2 }; applyLifeTurn(f, { present: ["유나"], text: "손목을 묶었다", events: [{ kind: "gauge", name: "유나", key: "lust", delta: 20 }] });
   const on = f.life.p.a.lust;
   const g = folder(); g.wiki.people = { profiles: { a: { sexualDesire: { text: "손목 구속에 흥분" } } } }; g.nsfw.a.boost = { desire: false };
   g.cursor = { at: 1 }; applyLifeTurn(g, { present: ["유나"] });
-  g.cursor = { at: 2 }; applyLifeTurn(g, { present: ["유나"], text: "손목을 묶었다" });
+  g.cursor = { at: 2 }; applyLifeTurn(g, { present: ["유나"], text: "손목을 묶었다", events: [{ kind: "gauge", name: "유나", key: "lust", delta: 20 }] });
   assert.ok(on > g.life.p.a.lust + 5);
 });
 
