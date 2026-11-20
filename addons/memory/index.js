@@ -67,7 +67,7 @@ export async function activate(api, ctx) {
   const menuOff = [];
   if (app.chatMenu?.addLink) (async () => {
     menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-memory", key: "memory", title: "장기 기억", open: () => openTab("memory") }));
-    menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-regress", key: "regress", title: "회귀", open: regress }));
+    menuOff.push(await app.chatMenu.addLink({ id: "dusk-qt-regress", key: "regress", title: "회귀 / 채팅 옮기기", open: regress }));
   })().catch((e) => log(`채팅 메뉴 바로가기 실패 ${e?.message ?? e}`));
   affhud.start().catch((e) => log(`호감도 HUD 시작 실패: ${e?.message ?? e}`));
   if (!app.memoryForTest) memory.start().catch((e) => log(`장기기억 시작 실패: ${e?.message ?? e}`));   // 시험에서 끼운 기억은 이미 준비된 것으로 본다
