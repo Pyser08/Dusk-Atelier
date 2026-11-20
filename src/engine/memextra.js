@@ -2,6 +2,8 @@
 //   소문(told) · 인물 목표(goal) · 세계 문서(place·item·faction) · 몸 흔적(mark) · 화면 밖 근황 · @인물 고정 회상 · 궁합
 // 저장: folder.extra = { rumors:[{from,to,info,at,when}], goals:{key:{name,list:[{goal,prog,status,at,first}]}},
 //                       world:{place:{key:{name,desc,at,first,n}}, item:{…,owner}, faction:{…,members:[]}}, marks:[{name,part,desc,days,at,when}], diary:[…] }
+import { detach } from "./regress.js";
+import { createEmptyWikiScope } from "./pot/wiki-schema.js";
 const text = (v, n = 120) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 export const nk = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 const isUser = (s) => /\{\{user\}\}|^user$|^유저$/i.test(String(s ?? "").trim());
@@ -17,16 +19,20 @@ export const EXTRA_STAGE1 = [
 ].join("\n");
 export const MARK_STAGE1 = "\nmark|Name|body part|trace (hickey, bite, bruise…) in Korean|days 1-14      a visible trace newly left on a body";
 
-export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark"]);
+// 0.3.22 상태이상(취함·부상·감기·최음제·수면 부족·저주…): 설정 ‘상태이상’(기본 켜짐)
+export const STATUS_STAGE1 = "\nstatus|Name|condition in Korean (drunk, injured, cold, aphrodisiac, sleepless, cursed…)|1-3 severity|days 1-14 or 0 = until cured      a condition newly starts or worsens\ncure|Name|condition      a condition ends";
+export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure"]);
 // 기록기 답 → 보고 목록. canon(name) → 알려진 이름(없으면 "")
 export const WORLD_KINDS = new Set(["told", "goal", "place", "item", "faction"]);
 // world=false(설정 ‘세계 탭’ 꺼짐)면 소문·목표·세계 문서 줄은 버린다
-export function extraFrom(raw, canon = (n) => n, { marks = false, world = true } = {}) {
+export function extraFrom(raw, canon = (n) => n, { marks = false, world = true, status = true } = {}) {
   const out = [];
   const who = (s) => (isUser(s) ? "{{user}}" : canon(String(s ?? "").trim()) || "");
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
     const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
-    if (!EXTRA_KINDS.has(tag) || !f[1] || !f[2] || (!world && WORLD_KINDS.has(tag))) continue;
+    if (!EXTRA_KINDS.has(tag) || !f[1] || !f[2] || (!world && WORLD_KINDS.has(tag)) || (!status && (tag === "status" || tag === "cure"))) continue;
+    if (tag === "status" || tag === "cure") { const name = who(f[1]); if (!name) continue;
+      out.push(tag === "cure" ? { kind: "cure", name, effect: text(f[2], 20) } : { kind: "status", name, effect: text(f[2], 20), lv: clamp(f[3], 1, 3) ?? 1, days: clamp(f[4], 0, 14) ?? 1 }); if (out.length >= 12) break; continue; }
     if (tag === "told") { const from = who(f[1]), to = who(f[2]); if (from && to && from !== to && f[3]) out.push({ kind: "told", from, to, info: text(f[3], 100) }); }
     else if (tag === "goal") { const name = who(f[1]); if (name && name !== "{{user}}") out.push({ kind: "goal", name, goal: text(f[2], 60), prog: clamp(f[3], 0, 100), status: statusOf(f[4]) }); }
     else if (tag === "mark") { if (!marks) continue; const name = who(f[1]); if (name && f[3]) out.push({ kind: "mark", name, part: text(f[2], 20), desc: text(f[3], 60), days: clamp(f[4], 1, 14) ?? 3 }); }
@@ -42,11 +48,11 @@ export function extraFrom(raw, canon = (n) => n, { marks = false, world = true }
 function clamp(v, lo, hi) { const n = Number(String(v ?? "").replace(/[^\d.-]/g, "")); return Number.isFinite(n) && String(v ?? "").trim() !== "" ? Math.max(lo, Math.min(hi, Math.round(n))) : null; }
 function statusOf(v) { const t = String(v ?? "").toLowerCase(); return /done|완료|이룸|성공/.test(t) ? "done" : /drop|포기|실패|abandon/.test(t) ? "dropped" : "active"; }
 
-export const emptyExtra = () => ({ rumors: [], goals: {}, world: { place: {}, item: {}, faction: {} }, marks: [], diary: [] });
+export const emptyExtra = () => ({ rumors: [], goals: {}, world: { place: {}, item: {}, faction: {} }, marks: [], diary: [], status: [] });
 export function extraOf(f) {
   const e = f?.extra && typeof f.extra === "object" ? f.extra : {};
   return { rumors: Array.isArray(e.rumors) ? e.rumors : [], goals: e.goals && typeof e.goals === "object" ? e.goals : {},
-    world: { place: e.world?.place ?? {}, item: e.world?.item ?? {}, faction: e.world?.faction ?? {} }, marks: Array.isArray(e.marks) ? e.marks : [], diary: Array.isArray(e.diary) ? e.diary : [] };
+    world: { place: e.world?.place ?? {}, item: e.world?.item ?? {}, faction: e.world?.faction ?? {} }, marks: Array.isArray(e.marks) ? e.marks : [], diary: Array.isArray(e.diary) ? e.diary : [], status: Array.isArray(e.status) ? e.status : [] };
 }
 export const RUMOR_MAX = 60, MARK_MAX = 30, GOAL_MAX = 4;
 
@@ -63,6 +69,14 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
       if (i >= 0) { const o = g.list[i]; g.list[i] = { ...o, prog: r.prog ?? o.prog, status: r.status, at: turn }; }
       else { g.list.push({ goal: r.goal, prog: r.prog ?? 0, status: r.status, at: turn, first: turn }); while (g.list.length > GOAL_MAX) { const j = g.list.findIndex((x) => x.status !== "active"); g.list.splice(j >= 0 ? j : 0, 1); } }
       changed.push(`목표 ${r.name}: ${r.goal}`);
+    } else if (r.kind === "status") {
+      const i = e.status.findIndex((x) => nk(x.name) === nk(r.name) && sameEffect(x.effect, r.effect));
+      if (i >= 0) e.status[i] = { ...e.status[i], lv: Math.max(e.status[i].lv ?? 1, r.lv), days: r.days, at: turn, when: text(when, 40) };
+      else e.status.push({ name: r.name, effect: r.effect, lv: r.lv, days: r.days, at: turn, when: text(when, 40) });
+      changed.push(`상태이상 ${r.name} ${r.effect}`);
+    } else if (r.kind === "cure") {
+      const n0 = e.status.length; e.status = e.status.filter((x) => !(nk(x.name) === nk(r.name) && sameEffect(x.effect, r.effect)));
+      if (e.status.length < n0) changed.push(`회복 ${r.name} ${r.effect}`);
     } else if (r.kind === "mark") {
       e.marks.push({ name: r.name, part: r.part, desc: r.desc, days: r.days, at: turn, when: text(when, 40) }); changed.push(`흔적 ${r.name} ${r.part}`);
     } else if (r.kind === "place" || r.kind === "item" || r.kind === "faction") {
@@ -74,6 +88,7 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
   }
   if (e.rumors.length > RUMOR_MAX) e.rumors = e.rumors.slice(-RUMOR_MAX);
   e.marks = activeMarks(e.marks, turn, when).slice(-MARK_MAX);
+  e.status = activeStatus(e.status, turn, when).slice(-STATUS_MAX);
   f.extra = e;
   return changed;
 }
@@ -89,6 +104,10 @@ export const TURNS_PER_DAY = 6;
 export function activeMarks(marks, turn, when = "") {
   return (marks ?? []).filter((m) => markAge(m, turn, when) <= (m.days ?? 3)).map((m) => ({ ...m }));
 }
+export const STATUS_MAX = 30, STATUS_LONG = 30;   // 0일(나을 때까지)도 30일이 지나면 정리
+const sameEffect = (a, b) => { const x = nk(a), y = nk(b); return x === y || (x.length >= 2 && y.includes(x)) || (y.length >= 2 && x.includes(y)); };
+export function activeStatus(list, turn, when = "") { return (list ?? []).filter((x) => markAge(x, turn, when) <= (x.days ? x.days : STATUS_LONG)); }
+export const STATUS_LV = Object.freeze(["", "가벼움", "보통", "심함"]);
 export function markAge(m, turn, when = "") { const g = dayGap(m.when, when); return g != null ? g : Math.floor((turn - (m.at ?? 0)) / TURNS_PER_DAY); }
 
 // 입력의 @이름 → 위키 인물 이름(대표 이름)
@@ -105,7 +124,7 @@ export function mentionsOf(userText, docs = []) {
 export const AWAY_AT = 20;
 export const EXTRA_TITLE = "[Story threads — tracked by Dusk; use naturally, never list them]";
 // 주입 글. present: 장면 인물 이름, recent: 최근 글, turn: 기록된 마지막 메시지 번호, when: 지금 이야기 날짜, pinned: @인물
-export function extraSection(f, { present = [], recent = "", turn = 0, when = "", pinned = [], docs = null, lifeOf = null, world = true } = {}) {
+export function extraSection(f, { present = [], recent = "", turn = 0, when = "", pinned = [], docs = null, lifeOf = null, world = true, status = true } = {}) {
   const e = extraOf(f), lines = [], P = new Set([...present, ...pinned].map(nk)), low = nk(recent);
   const here = (n) => P.has(nk(n)) || (String(n).length >= 2 && low.includes(nk(n)));
   for (const n of pinned) lines.push(`- {{user}} pointed at ${n}: bring up what ${n} and the others remember about them.`);
@@ -129,6 +148,9 @@ export function extraSection(f, { present = [], recent = "", turn = 0, when = ""
   // 소문: 장면 인물이 들은 것(다른 이는 모를 수 있음)
   const heard = !world ? [] : e.rumors.filter((r) => here(r.to) || here(r.from)).slice(-4);
   if (heard.length) lines.push(`- Who heard what (others may not know): ${heard.map((r) => `${r.to} heard from ${r.from} that ${r.info}`).join("; ")}`);
+  // 상태이상
+  const st = !status ? [] : activeStatus(e.status, turn, when).filter((x) => here(x.name)).slice(-5);
+  if (st.length) lines.push(`- Conditions (let them affect behaviour): ${st.map((x) => `${x.name} — ${x.effect} (${["", "mild", "moderate", "severe"][x.lv ?? 1]}, day ${markAge(x, turn, when) + 1}${x.days ? `/${x.days}` : ", until cured"})`).join("; ")}`);
   // 몸 흔적
   const mk = activeMarks(e.marks, turn, when).filter((m) => here(m.name)).slice(-4);
   if (mk.length) lines.push(`- Visible traces: ${mk.map((m) => `${m.name} — ${m.part} ${m.desc} (day ${markAge(m, turn, when) + 1})`).join("; ")}`);
@@ -154,16 +176,18 @@ export function personPack(f, docId) {
   }));
 }
 // 옮겨 넣기(대상 폴더, 원본 관계는 대상 봇에 없으니 가져가지 않는다). 같은 이름 인물이 있으면 덮지 않고 이름에 (옮김)
-export function insertPack(f, pack, { newId = `moved_${Date.now().toString(36)}` } = {}) {
+export function insertPack(f, pack, { newId = `moved_${Date.now().toString(36)}`, scope = null } = {}) {
   if (!pack?.doc) return null;
-  f.wiki ??= {}; f.wiki.documents ??= {};
+  if (!f.wiki?.documents) f.wiki = scope ? createEmptyWikiScope(scope) : { ...(f.wiki ?? {}), documents: {} };   // 빈 채팅이면 위키 범위부터 만든다
   const clash = Object.values(f.wiki.documents).some((d) => nk(d?.title) === nk(pack.name));
   const title = clash ? `${pack.name}(옮김)` : pack.name;
-  f.wiki.documents[newId] = { ...pack.doc, id: newId, title, relations: [], links: [] };
-  if (pack.profile) { f.wiki.people ??= {}; f.wiki.people.profiles ??= {}; f.wiki.people.profiles[newId] = pack.profile; }
+  f.wiki.documents[newId] = { ...detach(pack.doc), id: newId, title, relations: [], links: [] };
+  if (pack.profile) { f.wiki.people ??= {}; f.wiki.people.profiles ??= {}; f.wiki.people.profiles[newId] = detach(pack.profile); }
   if (pack.nsfw) { f.nsfw ??= {}; f.nsfw[newId] = pack.nsfw; }
   if (pack.life) { f.life ??= {}; f.life.p ??= {}; f.life.p[newId] = { ...pack.life, seen: null, seenPrev: null, temp: {}, lover: {}, met: {} }; }
-  if (pack.person) { f.people ??= {}; const { key, ...p } = pack.person; f.people[title] = { ...p, name: title, rels: undefined }; }
+  // 기억 기록: 원래 채팅의 메시지 위치(at·mid·출처)를 떼고 carried로 — 대상 채팅 대조에서 고아가 되지 않게(회귀와 같은 방식)
+  if (pack.person) { f.people ??= {}; const { key, rels, ...p } = pack.person;
+    f.people[title] = { ...detach(p), name: title, records: (p.records ?? []).filter((r) => !r.orphan).map((r) => ({ ...detach(r), at: null, mid: null, carried: true, orphan: false })) }; }
   if (pack.goals) { const e = extraOf(f); e.goals[nk(title)] = { ...pack.goals, name: title }; f.extra = e; }
   return { id: newId, title };
 }

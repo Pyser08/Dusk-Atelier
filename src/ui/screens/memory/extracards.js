@@ -3,7 +3,7 @@ import { h } from "../../dom.js";
 import { btn, modal, promptDialog, confirmDialog } from "../../kit.js";
 import { memStore } from "./memstore.js";
 import { mem, fail, loadBots, loadChats } from "./common.js";
-import { extraOf, activeMarks, markAge, compatOf, personPack, insertPack, nk } from "../../../engine/memextra.js";
+import { extraOf, activeMarks, markAge, compatOf, personPack, insertPack, nk, activeStatus, STATUS_LV } from "../../../engine/memextra.js";
 
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
 const turnOf = (f) => (Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0);
@@ -30,6 +30,30 @@ export function marksCard(env, card, doc) {
         h("i", { class: "fade", style: { width: `${Math.round((left / (m.days || 3)) * 100)}%` } }),
         local ? h("button", { type: "button", class: "rb-bzb", title: "지우기", "aria-label": "지우기", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 흔적을 지울까요?", ok: "지우기", danger: true }))) return; save(env, (g) => { const e = extraOf(g); e.marks = e.marks.filter((x) => !(nk(x.name) === nk(m.name) && x.at === m.at && x.part === m.part && x.desc === m.desc)); g.extra = e; }); } }, "✕") : null); }))
       : note("지금 남은 흔적이 없어요."),
+    add ? h("div", { class: "rb-mem-rowact" }, add) : null,
+  ], null, "rb-life");
+}
+
+// 상태이상: 취함·부상·감기·최음제 등. 정한 날만큼(0 = 나을 때까지) 행동에 반영
+export function statusCard(env, card, doc) {
+  if (!doc) return null;
+  const f = env.folder, names = namesOf(doc), turn = turnOf(f), when = whenOf(f), local = env.backend?.id === "local";
+  const off = env.idx?.settings?.inject?.status === false;
+  const live = activeStatus(extraOf(f).status, turn, when).filter((x) => names.has(nk(x.name)));
+  const add = local ? btn("상태이상 추가", { size: "sm", onClick: async () => {
+    const eff = await promptDialog(env.ctx.win, { title: "상태이상 추가", label: "상태(예: 감기, 취함, 다리 부상)", ok: "다음" }); if (!eff?.trim()) return;
+    const lv = await promptDialog(env.ctx.win, { title: eff.trim(), label: "정도 1 가벼움 · 2 보통 · 3 심함", value: "2", ok: "다음" }); if (lv == null) return;
+    const days = await promptDialog(env.ctx.win, { title: eff.trim(), label: "며칠(0 = 나을 때까지)", value: "3", ok: "추가" }); if (days == null) return;
+    save(env, (g) => { const e = extraOf(g); e.status.push({ name: doc.title, effect: eff.trim().slice(0, 20), lv: Math.max(1, Math.min(3, Math.round(Number(lv) || 2))), days: Math.max(0, Math.min(14, Math.round(Number(days) || 0))), at: turnOf(g), when: whenOf(g), manual: true }); g.extra = e; });
+  } }) : null;
+  const COL = ["", "#f0b429", "#e07a3f", "#d64545"];
+  return card("🤒 상태이상", [
+    off ? note("장기 기억 → 설정 → 기억 옵션의 ‘상태이상’이 꺼져 있어서 새로 기록하지 않고 장면에도 넣지 않아요.") : note("취함·부상·감기·최음제·수면 부족처럼 인물에게 생긴 상태예요. 기록기가 응답에서 찾아 넣고, 정한 날이 지나거나 나으면 사라져요. 남아 있는 동안 행동에 반영돼요."),
+    live.length ? h("ul", { class: "rb-marks" }, live.map((x) => { const age = markAge(x, turn, when), left = x.days ? Math.max(0, x.days - age) : null;
+      return h("li", null, h("b", { style: { color: COL[x.lv ?? 1] } }, x.effect), h("span", null, STATUS_LV[x.lv ?? 1]), h("small", { class: "rb-muted" }, `${age + 1}일째 · ${left == null ? "나을 때까지" : left ? `${left}일 더` : "곧 나음"}`),
+        h("i", { class: "fade", style: { width: left == null ? "100%" : `${Math.round((left / (x.days || 1)) * 100)}%`, background: COL[x.lv ?? 1] } }),
+        local ? h("button", { type: "button", class: "rb-bzb", title: "나음(지우기)", "aria-label": "나음(지우기)", onClick: () => save(env, (g) => { const e = extraOf(g); e.status = e.status.filter((y) => !(nk(y.name) === nk(x.name) && y.effect === x.effect && y.at === x.at)); g.extra = e; }) }, "✓") : null); }))
+      : note("지금은 아무 상태이상도 없어요."),
     add ? h("div", { class: "rb-mem-rowact" }, add) : null,
   ], null, "rb-life");
 }
@@ -109,7 +133,7 @@ export async function openMovePerson(env, doc) {
   const pack = personPack(env.folder, doc.id);
   if (!pack) throw new Error("이 인물의 위키 문서를 찾지 못했어요.");
   let res = null;
-  await memStore(ctx).updateFolder(bot.id, chat.id, (f) => { res = insertPack(f, pack); });
+  await memStore(ctx).updateFolder(bot.id, chat.id, (f) => { res = insertPack(f, pack, { scope: { characterId: String(bot.id), chatKey: String(chat.id), characterName: bot.character.name ?? "", chatName: chat.name ?? "" } }); });
   mem(ctx).bots = null;
   ctx.toast(`${bot.character.name} › ${chat.name ?? "채팅"}에 ‘${res?.title ?? doc.title}’을(를) 옮겼어요.`, { seconds: 8 });
 }

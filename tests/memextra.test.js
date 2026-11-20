@@ -93,3 +93,47 @@ test("턴 처리: 성감대가 빈 성인 인물만 무작위로 채움(한 번�
   assert.ok(f.nsfw.a.zones.length >= 3 && f.nsfw.a.zonesSeeded);
   assert.deepEqual(seedZones(f, ["미나"]), []);
 });
+
+import { statusCardHtml, linkNames } from "../src/engine/namecard.js";
+test("상태이상: 기록 → 같은 상태는 합침 → 회복으로 지움 → 날짜로 만료, 주입 줄", () => {
+  const f = { wiki: { documents: { a: doc("a", "카엘") } } };
+  applyExtra(f, extraFrom("status|카엘|감기|2|3\nstatus|카엘|다리 부상|3|0", canon), { turn: 1, when: "2024-03-01" });
+  applyExtra(f, extraFrom("status|카엘|감기|1|4", canon), { turn: 2, when: "2024-03-01" });
+  let e = extraOf(f); assert.equal(e.status.length, 2); assert.equal(e.status[0].lv, 2, "정도는 높은 쪽");
+  assert.match(extraSection(f, { present: ["카엘"], turn: 2, when: "2024-03-02" }), /Conditions.*카엘 — 감기 \(moderate, day 2\/4\).*다리 부상 \(severe, day 2, until cured\)/);
+  assert.doesNotMatch(extraSection(f, { present: ["카엘"], turn: 2, when: "2024-03-02", status: false }), /Conditions/);
+  applyExtra(f, extraFrom("cure|카엘|감기", canon), { turn: 3, when: "2024-03-02" });
+  e = extraOf(f); assert.deepEqual(e.status.map((x) => x.effect), ["다리 부상"]);
+  assert.deepEqual(extraFrom("status|카엘|감기|2|3", canon, { status: false }), []);
+});
+
+test("이름 링크: 본문 이름마다 상태창, 태그·코드·이미 단 링크는 그대로, 영어 이름은 낱말 경계", () => {
+  const ppl = [{ names: ["세라", "Sera"], html: "<b>카드</b>" }, { names: ["시로코"], html: "C" }];
+  const t = linkNames('세라는 웃었다. <img alt="세라"> 시로코와 세라가 걸었다. ```세라``` Serana met Sera.', ppl);
+  assert.equal((t.match(/x-dusk="pc"/g) ?? []).length, 4, t);
+  assert.match(t, /<img alt="세라">/); assert.match(t, /```세라```/); assert.match(t, /Serana met <details/);
+  assert.equal(linkNames(t, ppl), t, "두 번 달아도 같다");
+  assert.equal((linkNames("세라 ".repeat(30), ppl, { max: 5 }).match(/x-dusk="pc"/g) ?? []).length, 5);
+});
+
+test("상태창: 요약·스탯·상태이상·몸 흔적·NSFW(약점 자리)", () => {
+  const f = { cursor: { at: 10 }, wiki: { documents: { a: { ...doc("a", "세라"), sections: [] } }, people: { profiles: { a: { summary: "검을 쓰는 기사 지망생", coreTraits: ["성실함"] } } } },
+    people: { 세라: { name: "세라", records: [{ act: "시로코에게 비밀을 말했다", orphan: false }] } }, emo: { "세라>{{user}}": { from: "세라", to: "{{user}}", tags: { affection: 6, trust: 4 } } },
+    life: { p: { a: { lust: 64, fat: 20, mood: { joy: 40 }, sex: { by: {} }, uses: {} } } },
+    nsfw: { a: { sexual: { eroticInterest: 70 }, zones: [{ part: "ears", level: 3, spot: "왼쪽 귓불", note: "숨결에 움찔" }], positions: [], tags: { likes: ["밧줄"] } } } };
+  applyExtra(f, [{ kind: "status", name: "세라", effect: "취함", lv: 2, days: 1 }, { kind: "mark", name: "세라", part: "목", desc: "키스마크", days: 3 }], { turn: 10 });
+  const h = statusCardHtml(f, f.wiki.documents.a);
+  for (const s of ["검을 쓰는 기사 지망생", "성실함", "시로코에게 비밀을 말했다", "나에게 호감", "6/10", "신뢰", "취함", "목 키스마크", "약점", "왼쪽 귓불", "밧줄", ">지금 상태<", ">요약<", ">NSFW<"]) assert.ok(h.includes(s), s);
+  assert.doesNotMatch(h, /<details/, "접고 펴기 없이 한 판");
+  assert.doesNotMatch(statusCardHtml(f, f.wiki.documents.a, { adult: false }), />NSFW</);
+});
+
+import { partOf, BODY_PARTS } from "../src/engine/humanitems.js";
+test("여성 부위: 질·자궁·클리토리스를 따로 알아보고, 남성 무작위에선 뺀다", () => {
+  assert.equal(partOf("클리")?.id, "clit"); assert.equal(partOf("음핵")?.id, "clit");
+  assert.equal(partOf("질 입구")?.id, "vagina"); assert.equal(partOf("질")?.id, "vagina");
+  assert.equal(partOf("자궁")?.id, "womb"); assert.equal(partOf("포르치오")?.id, "womb");
+  assert.equal(partOf("사타구니")?.id, "groin"); assert.equal(partOf("성질")?.id ?? null, null, "‘성질’은 질이 아님");
+  for (let i = 0; i < 40; i++) assert.ok(randomZones(`m${i}`, { female: false }).every((z) => !BODY_PARTS.find((p) => p.id === z.part)?.sex));
+  assert.ok(Array.from({ length: 60 }, (_, i) => randomZones(`f${i}`, { female: true })).flat().some((z) => ["clit", "vagina", "womb"].includes(z.part)));
+});

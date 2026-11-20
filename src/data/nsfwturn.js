@@ -74,7 +74,8 @@ export function seedZones(f, present = []) {
     const n = f?.nsfw?.[d.id];
     if (!n || n.zonesSeeded || (n.zones ?? []).length || !Object.keys(n.sexual ?? {}).length) continue;
     if (here.size && ![d.title, ...(d.aliases ?? [])].some((x) => here.has(key(x)))) continue;
-    f.nsfw[d.id] = { ...n, zones: randomZones(d.id), zonesSeeded: true };
+    const male = f?.orient?.[key(d.title)]?.g === "m";
+    f.nsfw[d.id] = { ...n, zones: randomZones(d.id, { female: !male }), zonesSeeded: true };
     done.push(d.title);
   }
   return done;

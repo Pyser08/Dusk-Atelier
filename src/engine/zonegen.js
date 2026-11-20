@@ -13,6 +13,9 @@ export const ZONE_BANK = Object.freeze({
   armpit: { f: ["간지러움과 쾌감이 섞여 몸부림친다", "입김이 닿으면 팔을 오므린다"], s: [["겨드랑이 안쪽 오목한 곳", 0, 0.8]] },
   belly: { f: ["배꼽 주변을 맴돌면 배가 떨린다", "아랫배를 누르면 숨이 새어 나온다"], s: [["배꼽 바로 아래", 0, 4], ["아랫배 오른쪽", 3.4, 7]] },
   waist: { f: ["옆구리를 쥐면 허리가 들썩인다", "손바닥으로 감싸면 몸을 기댄다"], s: [["옆구리 갈비뼈 아래", 0, -4], ["골반뼈 위", 2, 6]] },
+  womb: { f: ["깊이 닿을 때마다 아랫배가 조여 온다", "안쪽 끝을 누르면 몸이 떨리며 힘이 풀린다"], s: [["자궁 입구(포르치오)", 0, 2], ["아랫배 안쪽 깊은 곳", 0, -2]] },
+  clit: { f: ["살짝만 스쳐도 허리가 튄다", "천천히 원을 그리면 금방 무너진다", "직접 닿으면 너무 예민해 몸을 비튼다"], s: [["클리토리스 끝", 0, 0], ["클리토리스 바로 위", 0, -1.4]] },
+  vagina: { f: ["입구를 쓸기만 해도 젖어 든다", "안쪽 앞벽을 누르면 소리를 참지 못한다", "조금씩 깊어질수록 매달린다"], s: [["질 입구", 0, 0.6], ["안쪽 앞벽(G스팟)", 0, -1.2]] },
   groin: { f: ["조금만 닿아도 허리가 떠오른다", "천천히 문지르면 금방 젖어 든다", "직접 닿기 전부터 몸이 먼저 반응한다"], s: [["안쪽 가장 예민한 곳", 0, 2], ["사타구니 접힌 곳", -4, -1.6]] },
   thighs: { f: ["안쪽을 쓸어 올리면 다리를 오므린다", "입맞춤이 올라갈수록 떨림이 커진다"], s: [["허벅지 안쪽 위", 1.6, -6], ["무릎 위 안쪽", 1.2, 8]] },
   hands: { f: ["손가락을 머금으면 시선이 흐려진다", "손바닥을 느리게 쓸면 숨을 고른다"], s: [["손목 안쪽", 1, -6], ["손가락 사이", 0, 4]] },
@@ -35,7 +38,7 @@ const pick = (arr, r) => arr[Math.floor(r() * arr.length) % arr.length];
 // 성감대 3~5곳(약점 정확히 1곳). keep: 이미 있는 zones(그대로 두고 빈 자리만)
 export function randomZones(seed, { keep = [], female = null } = {}) {
   const r = seededRand(seed), have = new Set(keep.map((z) => z.part));
-  const pool = BODY_PARTS.filter((p) => !have.has(p.id) && ZONE_BANK[p.id] && !(female === false && p.id === "nipples" && r() < 0.5));
+  const pool = BODY_PARTS.filter((p) => !have.has(p.id) && ZONE_BANK[p.id] && !(female === false && p.sex === "f") && !(female === false && p.id === "nipples" && r() < 0.5));
   const n = Math.max(0, Math.min(pool.length, 3 + Math.floor(r() * 3) - keep.length));
   const out = [];
   const bag = [...pool]; for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }

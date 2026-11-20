@@ -214,18 +214,22 @@ function moodCard0(env, card, doc) {
 const HEAD = { cx: 50, cy: 16.5, rx: 8.6, ry: 10.6 };
 // 왼쪽 반신(목 → 어깨 → 팔 → 손 → 옆구리 → 다리 → 발 → 가랑이). [시작점, [c1, c2, 끝점]…]. 오른쪽은 거울로 만든다
 const HALF = {
-  f: [[46.2, 27], [[46, 31], [45.4, 33.4], [42.6, 34.8]], [[39, 36.4], [33.4, 37], [30.6, 39]], [[27.6, 41.2], [26.8, 45.4], [26.6, 50]],
-    [[26.2, 60], [24.8, 70], [23.6, 79]], [[22.8, 85], [21.8, 89], [21, 93]], [[20, 97], [20.6, 101.2], [23, 101.4]], [[25.4, 101.4], [26, 97.6], [26, 93.6]],
-    [[26.6, 86], [28, 78], [29, 70]], [[29.8, 63], [30.6, 56], [31.6, 51]], [[32.4, 60], [35.4, 71], [36.2, 79]],
-    [[36.8, 86.6], [32.2, 93.6], [32, 102]], [[31.8, 114], [34.8, 128], [36.8, 142]], [[37.8, 149], [38.6, 155], [37.8, 163]],
-    [[37.2, 171], [38.6, 180], [39.8, 186]], [[39.4, 189], [38, 191.4], [39.4, 193.2]], [[41.4, 194.8], [45.2, 194.6], [45.6, 191.6]],
-    [[46, 187], [45.6, 181], [46, 173]], [[46.6, 160], [47, 150], [47.4, 140]], [[48, 128], [48.6, 116], [50, 107.6]]],
-  m: [[45.6, 27], [[45.6, 31.4], [45, 33.6], [41.6, 35]], [[37.4, 36.4], [31, 36.6], [28.4, 38.8]], [[25.4, 41.2], [24.6, 45.6], [24.6, 50.6]],
-    [[24.2, 60.6], [23.2, 70.4], [22.6, 79]], [[22, 85], [21.2, 89], [20.6, 93]], [[19.6, 97.2], [20.2, 101.6], [22.8, 101.8]], [[25.4, 101.8], [26, 97.8], [26, 93.6]],
-    [[26.6, 86], [27.8, 78], [28.6, 70]], [[29.4, 63], [30.2, 56], [31.2, 51]], [[33.2, 62], [35.2, 72], [36, 82]],
-    [[36.6, 89], [34.4, 95], [34.4, 102]], [[34.2, 114], [35.6, 128], [37, 142]], [[37.8, 149], [38.6, 155], [37.8, 163]],
-    [[37.2, 171], [38.6, 180], [39.8, 186]], [[39.4, 189], [38, 191.4], [39.4, 193.2]], [[41.4, 194.8], [45.2, 194.6], [45.6, 191.6]],
-    [[46, 187], [45.6, 181], [46, 173]], [[46.6, 160], [47, 150], [47.4, 140]], [[48, 128], [48.6, 116], [50, 108.4]]],
+  f: [[46.4, 26.5], [[46.2, 30], [45.8, 32.6], [44, 34]], [[41, 35.6], [35, 36.2], [31.6, 37.6]], [[28.2, 39], [26.6, 42.4], [26.4, 47]],
+    [[26.2, 53], [25.6, 61], [25, 68]], [[24.8, 71], [24.2, 74], [23.4, 79]], [[22.6, 84], [22, 87.6], [21.8, 90]],
+    [[21, 94], [20.4, 98.6], [22, 101.4]], [[23.2, 102.8], [25.4, 102], [25.6, 99.6]], [[25.8, 96], [25.2, 93], [25.6, 90.4]],
+    [[26.4, 84], [27.2, 76], [27.6, 70]], [[28.2, 62], [29.6, 55], [31.4, 50]], [[31.8, 58], [34.8, 70], [36.2, 79]],
+    [[37, 86], [32.4, 93], [32.2, 101]], [[32, 110], [33.8, 124], [36, 138]], [[36.8, 144], [37.8, 147], [37.6, 151]],
+    [[37.2, 156], [36.2, 162], [37.2, 170]], [[38, 176], [39.4, 181], [39.6, 185]], [[39.4, 188.6], [37.8, 191.6], [39.2, 193.4]],
+    [[41.2, 195], [45, 194.8], [45.4, 192]], [[45.8, 188], [45.4, 184], [45.6, 180]], [[46.2, 172], [45.6, 163], [46.4, 156]],
+    [[46.8, 152], [47, 148], [47, 144]], [[47.4, 130], [48.4, 116], [50, 108]]],
+  m: [[46, 26.5], [[45.8, 30.4], [45.4, 33], [43, 34.4]], [[39.4, 35.6], [32.4, 35.8], [29.2, 37.4]], [[25.6, 39], [24.4, 42.8], [24.4, 47.6]],
+    [[24.2, 54], [23.8, 61.4], [23.6, 68]], [[23.4, 71.2], [23, 74.4], [22.4, 79]], [[21.8, 84], [21.4, 87.6], [21.2, 90]],
+    [[20.4, 94.2], [19.8, 99], [21.6, 101.8]], [[23, 103.2], [25.4, 102.4], [25.6, 99.8]], [[25.8, 96], [25.2, 93], [25.6, 90.4]],
+    [[26.2, 84], [26.8, 76], [27.2, 70]], [[27.8, 62], [29.2, 55], [31, 50]], [[32.6, 60], [35.6, 71], [36.6, 81]],
+    [[37.2, 88], [34.8, 94], [34.6, 101]], [[34.4, 110], [35.2, 124], [36.6, 138]], [[37.2, 144], [38, 147], [37.8, 151]],
+    [[37.2, 156], [36, 162], [37, 170]], [[37.8, 176], [39.4, 181], [39.6, 185]], [[39.4, 188.6], [37.8, 191.6], [39.2, 193.4]],
+    [[41.2, 195], [45, 194.8], [45.4, 192]], [[45.8, 188], [45.4, 184], [45.6, 180]], [[46.2, 172], [45.6, 163], [46.4, 156]],
+    [[46.8, 152], [47, 148], [47, 144]], [[47.4, 130], [48.4, 117], [50, 109]]],
 };
 export function silPath(kind = "f") {
   const [p0, ...seg] = HALF[kind] ?? HALF.f, f = (p) => `${+p[0].toFixed(2)} ${+p[1].toFixed(2)}`, mir = (p) => [100 - p[0], p[1]];
@@ -236,9 +240,13 @@ export function silPath(kind = "f") {
 }
 // 몸의 결을 보여 주는 가는 선(앞: 쇄골·가슴·배꼽·무릎 / 뒤: 날개뼈·등줄기·엉덩이)
 const DETAIL = {
-  ff: ["M40 40.5Q45 42.5 49 41.2", "M51 41.2Q55 42.5 60 40.5", "M37 55Q42.5 62 48.4 57.4", "M51.6 57.4Q57.5 62 63 55", "M44 96Q50 99.5 56 96", "M40.6 150Q42.2 151.6 44 150.4", "M56 150.4Q57.8 151.6 59.4 150"],
-  fm: ["M40 40.5Q45 42.5 49 41.2", "M51 41.2Q55 42.5 60 40.5", "M38 54Q43.5 57 48.6 55", "M51.4 55Q56.5 57 62 54", "M50 60V88", "M41 150Q42.4 151.6 44 150.4", "M56 150.4Q57.6 151.6 59 150"],
-  b: ["M41 48Q38.6 55 42 60.6", "M59 48Q61.4 55 58 60.6", "M50 32C49.4 50 50.6 70 50 92", "M39 101Q44.6 109 50 104", "M50 104Q55.4 109 61 101", "M40.8 151Q42.6 149.6 44.4 151", "M55.6 151Q57.4 149.6 59.2 151"],
+  ff: ["M39.6 40Q44.6 41.6 48.8 40.6", "M51.2 40.6Q55.4 41.6 60.4 40", "M50 42.4V47", "M35.6 50.4C35.2 56.6 38.6 61.4 43.6 61.2C46.6 61 48.4 58.6 48.8 56.6", "M64.4 50.4C64.8 56.6 61.4 61.4 56.4 61.2C53.4 61 51.6 58.6 51.2 56.6",
+    "M40.6 66Q45 68.4 48 67.6", "M59.4 66Q55 68.4 52 67.6", "M40.4 93Q45.6 100.6 50 104.4", "M59.6 93Q54.4 100.6 50 104.4", "M39.8 146.6Q42.2 149.8 44.8 147", "M55.2 147Q57.8 149.8 60.2 146.6", "M40.6 166Q41.4 170 41 174", "M59.4 166Q58.6 170 59 174"],
+  fm: ["M38.6 40Q44 41.8 48.6 40.6", "M51.4 40.6Q56 41.8 61.4 40", "M50 42V88", "M37 51.4Q42.6 56.6 49 55.4", "M51 55.4Q57.4 56.6 63 51.4",
+    "M42.6 64.4H48M52 64.4H57.4", "M43 71.4H48M52 71.4H57", "M43.6 78.4H48M52 78.4H56.4", "M40.6 92Q45.6 100 50 104.6", "M59.4 92Q54.4 100 50 104.6", "M40 146.6Q42.4 149.8 45 147", "M55 147Q57.6 149.8 60 146.6"],
+  b: ["M38.4 46.6Q36.6 54 41.6 60.4Q45.4 58.4 45.6 50", "M61.6 46.6Q63.4 54 58.4 60.4Q54.6 58.4 54.4 50", "M50 32C49.4 50 50.6 70 50 94", "M45.6 89.4a1 1 0 1 0 .01 0", "M54.4 89.4a1 1 0 1 0 .01 0",
+    "M36.4 98C37 108 44 112.4 49.6 108.6", "M63.6 98C63 108 56 112.4 50.4 108.6", "M50 100V110", "M38.6 114Q43 116.4 47.4 115", "M61.4 114Q57 116.4 52.6 115",
+    "M40.4 151.4Q42.6 149.6 45 151.4", "M55 151.4Q57.4 149.6 59.6 151.4", "M42.4 178V186", "M57.6 178V186"],
 };
 const NAVEL = { cx: 50, cy: 76.5, r: 0.9 };
 const LAB_L = 12, LAB_R = 88;   // 이름표 x(왼쪽은 끝 맞춤, 오른쪽은 시작 맞춤)
@@ -269,19 +277,21 @@ function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
     const keep = keepManual ? (cur.zones ?? []).filter((z) => z.src !== "random") : [];
     return { ...cur, zones: randomZones(`${doc.id}|${Date.now()}`, { keep, female: sex === "f" }), zonesSeeded: true, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: "성감대 무작위로 채움" }].slice(-20) };
   });
-  const parts = BODY_PARTS.filter((p) => p.side === side);
+  const parts = BODY_PARTS.filter((p) => p.side === side && (!p.sex || p.sex === sex));   // 여성 부위(질·자궁·클리토리스)는 여성 모형에만
   const labY = labelRows(parts, (id) => (lv(id) >= 3 && zOf(id)?.spot ? 17.5 : 10.8));
   const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back", `sx-${sex}`], viewBox: "-44 0 188 202", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
     h("defs", { svg: true }, h("linearGradient", { svg: true, id: "rbSilG", x1: "0", y1: "0", x2: "0", y2: "1" }, h("stop", { svg: true, class: "s0", offset: "0" }), h("stop", { svg: true, class: "s1", offset: "1" })),
+      h("radialGradient", { svg: true, id: "rbShadeG", cx: "0.5", cy: "0.36", r: "0.62" }, h("stop", { svg: true, class: "h0", offset: "0" }), h("stop", { svg: true, class: "h1", offset: "0.55" }), h("stop", { svg: true, class: "h2", offset: "1" })),
+      h("linearGradient", { svg: true, id: "rbRimG", x1: "0", y1: "0", x2: "1", y2: "0" }, h("stop", { svg: true, class: "r0", offset: "0" }), h("stop", { svg: true, class: "r1", offset: "0.5" }), h("stop", { svg: true, class: "r2", offset: "1" })),
       h("radialGradient", { svg: true, id: "rbZoneG" }, h("stop", { svg: true, class: "z0", offset: "0" }), h("stop", { svg: true, class: "z1", offset: "1" }))),
     h("ellipse", { svg: true, class: "shadow", cx: 50, cy: 196, rx: 15, ry: 2.2 }),
-    h("path", { svg: true, class: "sil", d: silPath(sex) }), ...EARS.map((e) => h("ellipse", { svg: true, class: "sil", ...e })), h("ellipse", { svg: true, class: "sil", ...HEAD }),
+    h("path", { svg: true, class: "sil", d: silPath(sex) }), h("path", { svg: true, class: "shade", d: silPath(sex) }), h("path", { svg: true, class: "rim", d: silPath(sex) }), ...EARS.map((e) => h("ellipse", { svg: true, class: "sil", ...e })), h("ellipse", { svg: true, class: "sil", ...HEAD }),
     ...(side === "b" ? DETAIL.b : sex === "m" ? DETAIL.fm : DETAIL.ff).map((d) => h("path", { svg: true, class: "dl", d })),
     side === "f" ? h("circle", { svg: true, class: "navel", ...NAVEL }) : null,
     ...parts.map((p) => { const z = zOf(p.id), l = lv(p.id), right = p.x >= 50, pin = l >= 3 && z?.spot ? spotXY(p.id, z.spot) : null, ly = labY.get(p.id) ?? p.y, ax = pin?.x ?? p.x, ay = pin?.y ?? p.y;
       return h("g", { svg: true, class: ["pt", `l${l}`], tabindex: "0", role: "button", "aria-label": `${p.label} ${l ? `${l}단계` : "없음"}${z?.note ? ` — ${z.note}` : ""} — 눌러서 바꾸기`,
         onClick: () => cycle(p.id), onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycle(p.id); } } },
-        h("circle", { svg: true, class: "hit", cx: p.x, cy: p.y, r: 7 }),
+        h("circle", { svg: true, class: "hit", cx: p.x, cy: p.y, r: p.sex ? 3 : 7 }),
         l ? h("circle", { svg: true, class: "aura", cx: p.x, cy: p.y, r: 4 + l * 3 }) : null,
         h("circle", { svg: true, class: "dot", cx: p.x, cy: p.y, r: l ? 1.6 + l * 0.8 : 1.4 }),
         pin ? h("g", { svg: true, class: "pin" }, h("circle", { svg: true, class: "pulse", cx: pin.x, cy: pin.y, r: 3.4 }), h("circle", { svg: true, class: "ring", cx: pin.x, cy: pin.y, r: 2.2 }),
@@ -538,8 +548,10 @@ export const LIFE_CSS = `
 /* 0.3.22 새 인체 모형·부위 특징·정확한 약점 */
 .rb-bodymap .s0{stop-color:color-mix(in srgb,#f6d5dd 40%,var(--rb-surf))}.rb-bodymap .s1{stop-color:color-mix(in srgb,#ec4f86 8%,var(--rb-surf2))}
 .rb-bodymap .sil{stroke-width:.7;stroke-linejoin:round}
+.rb-bodymap .shade{fill:url(#rbShadeG);pointer-events:none}.rb-bodymap .h0{stop-color:#fff;stop-opacity:.55}.rb-bodymap .h1{stop-color:#fff;stop-opacity:0}.rb-bodymap .h2{stop-color:#b84a6c;stop-opacity:.16}
+.rb-bodymap .rim{fill:url(#rbRimG);pointer-events:none}.rb-bodymap .r0,.rb-bodymap .r2{stop-color:#9c3b5c;stop-opacity:.14}.rb-bodymap .r1{stop-color:#9c3b5c;stop-opacity:0}
 .rb-bodymap .shadow{fill:color-mix(in srgb,#ec4f86 14%,transparent)}
-.rb-bodymap .dl{fill:none;stroke:color-mix(in srgb,#ec4f86 26%,var(--rb-line));stroke-width:.5;stroke-linecap:round}
+.rb-bodymap .dl{fill:none;stroke:color-mix(in srgb,#b84a6c 34%,var(--rb-line));stroke-width:.42;stroke-linecap:round;opacity:.85}
 .rb-bodymap .navel{fill:color-mix(in srgb,#ec4f86 30%,var(--rb-line))}
 .rb-bodymap .lbl{font-size:7px;font-weight:600;fill:var(--rb-sub)}.rb-bodymap .pt.l1 .lbl,.rb-bodymap .pt.l2 .lbl{fill:var(--rb-text);font-weight:800}.rb-bodymap .pt.l3 .lbl{fill:#c2185b;font-weight:800}
 .rb-bodymap .lbl2{font-size:6.2px;font-weight:700;fill:#c2185b}

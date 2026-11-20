@@ -29,7 +29,11 @@ export const BODY_PARTS = Object.freeze([
   { id: "armpit", label: "겨드랑이", side: "f", x: 32.4, y: 50, re: /겨드랑|armpit/ },
   { id: "belly", label: "배·배꼽", side: "f", x: 50, y: 76, re: /배꼽|아랫배|배$|belly|navel/ },
   { id: "waist", label: "허리·옆구리", side: "f", x: 38, y: 80, re: /허리|옆구리|waist/ },
-  { id: "groin", label: "사타구니", side: "f", x: 50, y: 105, re: /사타구니|음부|성기|클리|클리토리스|질|groin|genital|clit/ },
+  // 0.3.22 여성 부위(sex:"f" — 여성 모형에만 찍힌다). 사타구니보다 먼저 찾게 앞에 둔다
+  { id: "womb", label: "자궁", side: "f", sex: "f", x: 50, y: 90, re: /자궁|포르치오|womb|uterus|cervix/i },
+  { id: "clit", label: "클리토리스", side: "f", sex: "f", x: 50, y: 102.4, re: /클리|음핵|clit/i },
+  { id: "vagina", label: "질", side: "f", sex: "f", x: 50, y: 106.4, re: /^질|질\s*(입구|안|속|벽|내)|vagina/i },
+  { id: "groin", label: "사타구니", side: "f", x: 44.6, y: 103, re: /사타구니|음부|성기|groin|genital/ },
   { id: "thighs", label: "허벅지 안쪽", side: "f", x: 44, y: 122, re: /허벅지|thigh/ },
   { id: "hands", label: "손·손가락", side: "f", x: 22, y: 94, re: /손|손가락|hand|finger/ },
   { id: "feet", label: "발", side: "f", x: 40, y: 188, re: /발|발가락|foot|feet|toe/ },
@@ -42,7 +46,8 @@ export const BODY_PARTS = Object.freeze([
 ]);
 export function partOf(s) {
   const t = String(s ?? "").trim(); if (!t) return null;
-  return BODY_PARTS.find((p) => p.id === t.toLowerCase()) ?? BODY_PARTS.find((p) => p.re.test(t)) ?? null;
+  // 여성 부위를 먼저 본다(‘질 입구’의 ‘입’이 입술로 잡히지 않게)
+  return BODY_PARTS.find((p) => p.id === t.toLowerCase()) ?? BODY_PARTS.find((p) => p.sex && p.re.test(t)) ?? BODY_PARTS.find((p) => p.re.test(t)) ?? null;
 }
 
 const listOf = (v) => [...new Set((Array.isArray(v) ? v : String(v ?? "").split(/[,，\n]/)).map((x) => text(typeof x === "string" ? x : x?.text ?? "", 100)).filter(Boolean))].slice(0, LIST_MAX);

@@ -28,7 +28,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
       };
       f.extra = { rumors: [{ from: "시로코", to: "세라", info: "유나가 왕녀라는 것", at: 12 }], goals: { "세라": { name: "세라", list: [{ goal: "기사단장 되기", prog: 40, status: "active", at: 20, first: 5 }] } },
         world: { place: { "은빛여관": { name: "은빛 여관", desc: "항구 옆 2층 여관", at: 9, first: 2, n: 3 } }, item: {}, faction: {} },
-        marks: [{ name: "시로코", part: "목", desc: "키스마크", days: 3, at: 29 }], diary: [] };
+        marks: [{ name: "시로코", part: "목", desc: "키스마크", days: 3, at: 29 }], diary: [], status: [{ name: "시로코", effect: "감기", lv: 2, days: 3, at: 29 }] };
     });
   });
   ok(`[${tag}] 세계 탭은 기본 꺼짐`, await page.evaluate(async () => (await __app.ctx.memory.store.getIndex()).settings?.inject?.world !== true));
@@ -52,11 +52,15 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 성감대 새 모형(팔·다리 실루엣 + 귀)`, await page.evaluate(() => { const s = document.querySelector(".rb-bodymap"); return !!s && s.querySelectorAll("path.sil").length === 1 && s.querySelectorAll("ellipse.sil").length === 3; }));
   ok(`[${tag}] 약점은 정확한 자리 핀 + 이름표`, await page.evaluate(() => { const s = document.querySelector(".rb-bodymap"); return !!s?.querySelector(".pin .ring") && [...s.querySelectorAll(".lbl2")].some((t) => t.textContent === "◎ 왼쪽 귓불"); }));
   const lab = await page.evaluate(() => [...document.querySelectorAll(".rb-bodymap .lbl")].map((x) => { const b = x.getBoundingClientRect(); return [x.textContent, Math.round(b.left), Math.round(b.top), Math.round(b.right), Math.round(b.bottom)]; }));
-  ok(`[${tag}] 모든 부위 이름이 보이고 겹치지 않음`, await page.evaluate(() => { const t = [...document.querySelectorAll(".rb-bodymap .lbl")]; if (t.length !== 13) return false; const bs = t.map((x) => x.getBoundingClientRect()); return bs.every((a, i) => bs.every((b, j) => i === j || a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5)); }), JSON.stringify(lab));
+  ok(`[${tag}] 모든 부위 이름이 보이고 겹치지 않음`, await page.evaluate(() => { const t = [...document.querySelectorAll(".rb-bodymap .lbl")]; if (t.length !== 16 || !["질", "자궁", "클리토리스"].every((n) => t.some((x) => x.textContent === n))) return false; const bs = t.map((x) => x.getBoundingClientRect()); return bs.every((a, i) => bs.every((b, j) => i === j || a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5)); }), JSON.stringify(lab));
   ok(`[${tag}] 부위 한 줄 특징 · 빈 특징은 + 버튼`, (await win.getByText("숨결만 닿아도 움찔한다").count()) > 0 && (await page.locator(".rb-bz-add").count()) === 1);
   ok(`[${tag}] 몸 흔적: 목 키스마크`, (await page.locator(".rb-marks li", { hasText: "키스마크" }).count()) === 1);
   ok(`[${tag}] 궁합: 점수 고리·겹치는 취향`, (await page.locator(".rb-compat .ring").count()) === 1 && (await page.locator(".rb-compat .row.ok .tags span").count()) === 2);
-  if (OUT) { const b = page.locator('.rb-sub-sec[data-sid="body"]').first(); if (await b.count()) await b.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${OUT}/extra-${tag}-body.png`, fullPage: true }); }
+  if (OUT) { const b = page.locator('.rb-sub-sec[data-sid="body"]').first(); if (await b.count()) await b.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${OUT}/extra-${tag}-body.png`, fullPage: true });
+    const fig = page.locator(".rb-body-fig").first(); await fig.screenshot({ path: `${OUT}/extra-${tag}-fig-f.png` });
+    await page.locator(".rb-bseg button", { hasText: "뒤" }).first().click(); await page.waitForTimeout(400);
+    await page.locator(".rb-body-fig").first().screenshot({ path: `${OUT}/extra-${tag}-fig-b.png` });
+    await page.locator(".rb-bseg button", { hasText: "앞" }).first().click(); await page.waitForTimeout(400); }
   // 세라는 성감대가 비어 있음 → 무작위로 채우기
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "세라" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
@@ -75,6 +79,30 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   });
   ok(`[${tag}] 일기 표시 훅이 붙음`, shown.has);
   ok(`[${tag}] 맞는 응답 아래에만 일기 상자`, /x-dusk="diary"/.test(shown.out) && /세라의 일기/.test(shown.out) && !/x-dusk="diary"/.test(shown.other), shown.out.slice(0, 200));
+  // 상태이상 카드(관계 탭의 하위 구역)
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "시로코" }); __app.ctx.go("memory"); });
+  await page.waitForTimeout(1200);
+  { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
+  ok(`[${tag}] 상태이상 카드: 감기`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
+  // 본문 이름 링크 → 상태창(실제 표시 경로: 로어북 로그가 부르는 memory.gauge.onDisplay)
+  const link = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const reply = "시로코가 세라에게 다가갔다. 세라는 웃었다."; const out = await M.gauge.onDisplay(reply); return { out, n: (out.match(/x-dusk="pc"/g) ?? []).length }; });
+  ok(`[${tag}] 본문 이름마다 상태창 링크`, link.n === 3, link.out.slice(0, 200));
+  const inl = await page.evaluate((html) => { const d = document.createElement("p"); d.style.cssText = "width:360px;font-size:15px"; d.innerHTML = html; document.body.append(d); const h = d.getBoundingClientRect().height; d.remove(); return Math.round(h); }, link.out);
+  ok(`[${tag}] 이름 링크가 줄을 바꾸지 않음(한 줄)`, inl <= 30, String(inl));
+  ok(`[${tag}] 상태창에 스탯·상태이상·NSFW`, /감기/.test(link.out) && />지금 상태</.test(link.out) && />NSFW</.test(link.out) && /왼쪽 귓불/.test(link.out));
+  if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "pcdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px;line-height:1.7"; d.innerHTML = html; document.body.append(d); d.querySelector('details[x-dusk="pc"]').open = true; }, link.out);
+    await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/extra-${tag}-namecard.png` }); await page.evaluate(() => document.getElementById("pcdemo")?.remove()); }
+  await page.evaluate(async () => { await __app.ctx.memory.store.updateIndex((i) => { i.settings.inject.nameLinks = false; }); __app.ctx.memory.nameLinks?.invalidate?.(); });
+  ok(`[${tag}] 설정에서 끄면 링크 없음`, !/x-dusk="pc"/.test(await page.evaluate(() => __app.ctx.memory.gauge.onDisplay("시로코가 웃었다."))));
+  // 설정: 지난 대화 분석 속도 줄(모바일은 위아래로)
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { page: "home", memTab: "opt" }); __app.ctx.go("memory"); });
+  await page.waitForTimeout(1200);
+  const bf = await page.evaluate(() => { const r = document.getElementById("rb-mem-bfspeed"); if (!r) return null; const t = r.querySelector(".t").getBoundingClientRect(), row = r.getBoundingClientRect(); return { dir: getComputedStyle(r).flexDirection, tw: Math.round(t.width), rw: Math.round(row.width) }; });
+  ok(`[${tag}] 지난 대화 분석 속도: 글이 줄 폭을 거의 다 씀`, !!bf && bf.tw >= bf.rw * (tag === "모바일" ? 0.95 : 0.4) && (tag !== "모바일" || bf.dir === "column"), JSON.stringify(bf));
+  const tk = await page.evaluate(() => { const r = document.getElementById("rb-mem-tokens"); if (!r) return null; return Math.round(r.querySelector(".t").getBoundingClientRect().width / r.getBoundingClientRect().width * 100); });
+  ok(`[${tag}] 기억 넣기 토큰 줄도 글이 좁아지지 않음`, tk != null && tk >= (tag === "모바일" ? 95 : 30), String(tk));
+  ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("본문 인물 이름 링크").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문)").count()) > 0);
+  if (OUT) { await page.locator("#rb-mem-bfspeed").scrollIntoViewIfNeeded().catch(() => {}); await page.screenshot({ path: `${OUT}/extra-${tag}-opt.png` }); }
   ok(`[${tag}] 전역 오류 없음`, !errs.length, errs.join(" | "));
 }
 await browser.close();

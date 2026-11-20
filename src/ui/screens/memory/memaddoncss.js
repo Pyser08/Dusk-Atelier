@@ -6,7 +6,9 @@ import { EXTRA_CSS } from "./extracards.js";
 import { WORLD_CSS } from "./worldtab.js";
 import { h } from "../../dom.js";
 
-export const MEM_ADDON_CSS = `.rb-ns-pos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.rb-ns-pos>.rb-wk2-ero-row{margin-top:0}
+export const MEM_ADDON_CSS = `.rb-bfsel{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:640px){#rb-mem-bfspeed,#rb-mem-tokens,#rb-mem-wbudget{flex-direction:column;align-items:stretch;gap:10px}#rb-mem-bfspeed .rb-bfsel,#rb-mem-tokens .rb-mem-tokpair{justify-content:stretch}#rb-mem-bfspeed .rb-bfsel>.rb-input{flex:1 1 0;width:auto!important;min-width:0}#rb-mem-tokens .rb-mem-tokpair>*{flex:1 1 0;min-width:0}}
+.rb-ns-pos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.rb-ns-pos>.rb-wk2-ero-row{margin-top:0}
 .rb-ng-wrap{display:flex;flex-direction:column;gap:12px}.rb-ng-h{display:block;font-weight:700;color:var(--rb-sub);margin-bottom:6px;letter-spacing:.02em}
 .rb-ng-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 14px}
 .rb-ng{display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:12px;background:var(--rb-surf2)}

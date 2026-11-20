@@ -186,7 +186,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (rec) retryHits++;
       else {
         const cast = await castNow(s0);
-        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, world: s0.inject?.world === true, cycle: cyc, nsfw: (() => { try { return settings.snapshot()?.sexualDesireEnabled === true; } catch { return false; } })(), onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, world: s0.inject?.world === true, status: s0.inject?.status !== false, cycle: cyc, nsfw: (() => { try { return settings.snapshot()?.sexualDesireEnabled === true; } catch { return false; } })(), onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
         if (!rec.people.some((p) => p.failed)) boundedSet(recDone, fullKey, rec, 4);
       }
       run.gauge = await readGauge(api);   // 2.2.6 게이지 배수(위키 호감도·성격 막대)
