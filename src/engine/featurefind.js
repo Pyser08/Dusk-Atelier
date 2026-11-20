@@ -54,7 +54,7 @@ export const FEATURES = [
   { t: "지난 대화 분석에 함께 기록", k: "백필 backfill 인물 위키 함께 기본 성격 성인 프로필", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "지난 대화 분석에", addon: "memory" },
   { t: "지난 대화 분석 속도 (묶음 크기·동시 처리)", k: "백필 backfill 묶음 크기 동시 처리 병렬 빠르게 429", path: `${M} › 설정 › 기억 옵션`, tab: "memory", mem: MSET, find: "지난 대화 분석 속도", addon: "memory" },
   { t: "인물 위키 (인물·상황·시간선)", k: "인물 위키 wiki 문서 인물 정보 상황 시간선 타임라인 장면 기록 보기 성격 기본 성격 6축 호감 관계 진도 감정", path: `${M} › 채팅 고르기 › 기록 보기`, tab: "memory", mem: { page: "home" }, addon: "memory" },
-  { t: "세계 (장소·물건·세력·목표·소문)", k: "세계 장소 물건 아이템 선물 세력 조직 가문 목표 진척 소문 전해 들은 말 누가 누구에게 정보 퍼짐", path: `${M} › 채팅 고르기 › 기록 보기 › 세계`, tab: "memory", mem: { page: "home" }, addon: "memory" },
+  { t: "세계 (장소·물건·세력·목표·소문)", k: "세계 장소 물건 아이템 선물 세력 조직 가문 목표 진척 소문 전해 들은 말 누가 누구에게 정보 퍼짐", path: `${M} › 설정 › 기억 옵션 › 세계 탭 (켜면 기록 보기에 생겨요)`, tab: "memory", mem: MSET, find: "세계 탭 (장소·물건·세력·목표·소문)", addon: "memory" },
   { t: "인물 일기", k: "일기 diary 인물 시점 회고 독백 속마음 응답 아래", path: `${M} › 기록 보기 › 인물 위키 › 📔 일기 (채팅 메뉴 ≡ › 인물 일기)`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "다른 봇으로 인물 옮기기", k: "인물 옮기기 이식 복사 다른 봇 다른 캐릭터 가져가기", path: `${M} › 기록 보기 › 인물 위키 › ↗ 다른 봇으로`, tab: "memory", mem: { page: "home" }, addon: "memory" },
   { t: "궁합 · 몸 흔적 · 성감대", k: "궁합 취향 겹침 엇갈림 몸 흔적 키스마크 멍 자국 성감대 약점 정확한 자리 무작위 nsfw", path: `${M} › 기록 보기 › 인물 위키 › NSFW › 몸·궁합`, tab: "memory", mem: { page: "home" }, addon: "memory" },

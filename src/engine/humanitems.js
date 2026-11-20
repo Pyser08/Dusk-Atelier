@@ -37,7 +37,7 @@ export const BODY_PARTS = Object.freeze([
   { id: "back", label: "등", side: "b", x: 50, y: 55, re: /^등|등줄기|척추|back|spine/ },
   { id: "lowback", label: "허리 뒤", side: "b", x: 50, y: 84, re: /허리 ?뒤|꼬리뼈|lower back/ },
   { id: "butt", label: "엉덩이", side: "b", x: 50, y: 100, re: /엉덩이|둔부|butt|ass/ },
-  { id: "anus", label: "뒤", side: "b", x: 50, y: 107, re: /항문|애널|anal|anus/ },
+  { id: "anus", label: "항문", side: "b", x: 50, y: 107, re: /항문|애널|anal|anus/ },
   { id: "knees", label: "무릎 뒤", side: "b", x: 43, y: 150, re: /무릎|오금|knee/ },
 ]);
 export function partOf(s) {

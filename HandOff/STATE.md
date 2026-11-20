@@ -8,6 +8,7 @@
 - **인물 일기**: data/diary.js(diaryPrompt·writeDiary = runAITask "인물 일기 · 이름"(생성 중지에 잡힘)·pickForStage writer, snipOf 매칭, createDiaryDisplay 3초 캐시). 애드온이 memory.gauge.onDisplay를 감싸 일기 상자를 붙임(코어 로어북 로그 above → 게이지 자리 = 로어북·주사위 버튼 위). 채팅 메뉴 링크 ‘인물 일기’.
 - 기능 찾기: 세계·인물 일기·다른 봇으로·궁합/몸 흔적/성감대 4항목(featurefind는 코어 — 코어 릴리스 때 보임).
 - 확인: npm test 1879 통과, build·check 동일함, build-addons 뒤 addonlib.gen.js 그대로. e2e run-memextra 30/30(새), run-featurefind 77 통과, run-smoke·run-wiki-strangers 통과. run-memed 28/32·run-wiki-recorder 타임아웃·run-regress 클릭 실패는 바꾸기 전 HEAD에서도 같음(별개).
+- 후속(같은 날): 세계 탭 기본 꺼짐 — 설정 idx.settings.inject.world(mhome 기억 옵션 ‘세계 탭’, aicost world=line). 꺼지면 mdetail 탭 숨김, recordTurn world 옵션으로 EXTRA_STAGE1 안 붙임(extraFrom world:false면 told·goal·place·item·faction 버림), extraSection world:false면 목표·소문·세계 문서 줄 뺌(근황·@인물·흔적은 그대로). featurefind 세계 항목은 설정 줄로(find). 모형: 모든 부위 이름표(labelRows로 같은 쪽 겹침 방지, LAB_L/LAB_R, viewBox -44 0 188 202), 성감대 아닌 곳은 흐리게, 약점은 이름 아래 ‘◎ 자리’. BODY_PARTS anus 이름 ‘뒤’→‘항문’. e2e run-memextra 34/34(기본 꺼짐·이름표 겹침 검사 추가).
 - 남은 일: [ ] 실제 RisuAI에서 기록기가 새 줄(told·goal·place·mark·zone 자리)을 잘 내는지 확인 [ ] 일기 상자가 실제 리스 응답 아래(로어북 버튼 위)에 뜨는지 확인 [ ] 배포(장기기억 0.3.22, 사용자 지시 시) [ ] run-regress·run-memed 기존 실패 정리
 
 ## addon-rebuild (2026-11-17, main 4144a3f에서 분기) — 애드온 재구성

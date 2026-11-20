@@ -241,6 +241,18 @@ const DETAIL = {
   b: ["M41 48Q38.6 55 42 60.6", "M59 48Q61.4 55 58 60.6", "M50 32C49.4 50 50.6 70 50 92", "M39 101Q44.6 109 50 104", "M50 104Q55.4 109 61 101", "M40.8 151Q42.6 149.6 44.4 151", "M55.6 151Q57.4 149.6 59.2 151"],
 };
 const NAVEL = { cx: 50, cy: 76.5, r: 0.9 };
+const LAB_L = 12, LAB_R = 88;   // 이름표 x(왼쪽은 끝 맞춤, 오른쪽은 시작 맞춤)
+// 같은 쪽 이름표가 겹치지 않게 세로 자리를 정한다. gap(id) = 그 이름표가 차지하는 높이
+export function labelRows(parts, gap = () => 7.6) {
+  const out = new Map();
+  for (const right of [false, true]) {
+    const list = parts.filter((p) => (p.x >= 50) === right).sort((a, b) => a.y - b.y);
+    let prev = -Infinity, prevGap = 0;
+    for (const p of list) { const y = Math.max(p.y, prev + prevGap); out.set(p.id, y); prev = y; prevGap = gap(p.id); }
+    const over = prev - 194; if (over > 0) for (const p of list) out.set(p.id, out.get(p.id) - over);   // 아래로 넘치면 전체를 올린다
+  }
+  return out;
+}
 const EARS = [{ cx: 41.2, cy: 18, rx: 1.8, ry: 3 }, { cx: 58.8, cy: 18, rx: 1.8, ry: 3 }];
 const sexOfDoc = (env, doc) => { const g = env.folder?.orient?.[String(doc.title ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "")]?.g; return g === "m" ? "m" : "f"; };
 function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
@@ -258,14 +270,15 @@ function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
     return { ...cur, zones: randomZones(`${doc.id}|${Date.now()}`, { keep, female: sex === "f" }), zonesSeeded: true, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: "성감대 무작위로 채움" }].slice(-20) };
   });
   const parts = BODY_PARTS.filter((p) => p.side === side);
-  const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back", `sx-${sex}`], viewBox: "-14 0 128 200", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
+  const labY = labelRows(parts, (id) => (lv(id) >= 3 && zOf(id)?.spot ? 17.5 : 10.8));
+  const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back", `sx-${sex}`], viewBox: "-44 0 188 202", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
     h("defs", { svg: true }, h("linearGradient", { svg: true, id: "rbSilG", x1: "0", y1: "0", x2: "0", y2: "1" }, h("stop", { svg: true, class: "s0", offset: "0" }), h("stop", { svg: true, class: "s1", offset: "1" })),
       h("radialGradient", { svg: true, id: "rbZoneG" }, h("stop", { svg: true, class: "z0", offset: "0" }), h("stop", { svg: true, class: "z1", offset: "1" }))),
     h("ellipse", { svg: true, class: "shadow", cx: 50, cy: 196, rx: 15, ry: 2.2 }),
     h("path", { svg: true, class: "sil", d: silPath(sex) }), ...EARS.map((e) => h("ellipse", { svg: true, class: "sil", ...e })), h("ellipse", { svg: true, class: "sil", ...HEAD }),
     ...(side === "b" ? DETAIL.b : sex === "m" ? DETAIL.fm : DETAIL.ff).map((d) => h("path", { svg: true, class: "dl", d })),
     side === "f" ? h("circle", { svg: true, class: "navel", ...NAVEL }) : null,
-    ...parts.map((p) => { const z = zOf(p.id), l = lv(p.id), right = p.x >= 50, pin = l >= 3 && z?.spot ? spotXY(p.id, z.spot) : null;
+    ...parts.map((p) => { const z = zOf(p.id), l = lv(p.id), right = p.x >= 50, pin = l >= 3 && z?.spot ? spotXY(p.id, z.spot) : null, ly = labY.get(p.id) ?? p.y, ax = pin?.x ?? p.x, ay = pin?.y ?? p.y;
       return h("g", { svg: true, class: ["pt", `l${l}`], tabindex: "0", role: "button", "aria-label": `${p.label} ${l ? `${l}단계` : "없음"}${z?.note ? ` — ${z.note}` : ""} — 눌러서 바꾸기`,
         onClick: () => cycle(p.id), onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycle(p.id); } } },
         h("circle", { svg: true, class: "hit", cx: p.x, cy: p.y, r: 7 }),
@@ -273,8 +286,10 @@ function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
         h("circle", { svg: true, class: "dot", cx: p.x, cy: p.y, r: l ? 1.6 + l * 0.8 : 1.4 }),
         pin ? h("g", { svg: true, class: "pin" }, h("circle", { svg: true, class: "pulse", cx: pin.x, cy: pin.y, r: 3.4 }), h("circle", { svg: true, class: "ring", cx: pin.x, cy: pin.y, r: 2.2 }),
           h("path", { svg: true, class: "cross", d: `M${pin.x - 3.6} ${pin.y}h2M${pin.x + 1.6} ${pin.y}h2M${pin.x} ${pin.y - 3.6}v2M${pin.x} ${pin.y + 1.6}v2` }), h("circle", { svg: true, class: "core", cx: pin.x, cy: pin.y, r: 0.9 })) : null,
-        l ? h("line", { svg: true, class: "lead", x1: (pin?.x ?? p.x) + (right ? 3 : -3), y1: pin?.y ?? p.y, x2: right ? 94 : 6, y2: pin?.y ?? p.y }) : null,
-        l ? h("text", { svg: true, class: "lbl", x: right ? 96 : 4, y: (pin?.y ?? p.y) + 2, "text-anchor": right ? "start" : "end" }, pin ? z.spot : p.label) : null,
+        // 0.3.22 모든 부위 이름을 양옆에 보여 준다(성감대가 아닌 곳은 흐리게). 이름이 겹치지 않게 세로 자리를 벌린다
+        h("path", { svg: true, class: "lead", d: `M${ax + (right ? 2.4 : -2.4)} ${ay}L${right ? LAB_R - 6 : LAB_L + 6} ${ly}H${right ? LAB_R - 1.5 : LAB_L + 1.5}` }),
+        h("text", { svg: true, class: "lbl", x: right ? LAB_R : LAB_L, y: ly + 2, "text-anchor": right ? "start" : "end" }, p.label),
+        pin ? h("text", { svg: true, class: "lbl2", x: right ? LAB_R : LAB_L, y: ly + 9.6, "text-anchor": right ? "start" : "end" }, `◎ ${z.spot}`) : null,
         h("title", { svg: true }, [p.label, z?.spot, z?.note].filter(Boolean).join(" · "))); }));
   const list = [...zones].sort((a, b) => b.level - a.level || (b.dev ?? 0) - (a.dev ?? 0));
   const allRandom = list.length > 0 && list.every((z) => z.src === "random");
@@ -385,10 +400,10 @@ export const LIFE_CSS = `
 .rb-mann li .dot{position:absolute;left:0;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:var(--rb-surf);border:2px solid var(--rb-acc)}
 .rb-mann li small{margin-left:auto;color:var(--rb-mute);font-size:11.5px}
 /* 성감대 */
-.rb-body-wrap{display:grid;grid-template-columns:minmax(170px,240px) minmax(0,1fr);gap:16px;align-items:start}
-@media (max-width:520px){.rb-body-wrap{grid-template-columns:1fr}.rb-body-fig{max-width:210px;margin:0 auto}}
+.rb-body-wrap{display:grid;grid-template-columns:minmax(220px,310px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:520px){.rb-body-wrap{grid-template-columns:1fr}.rb-body-fig{max-width:340px;margin:0 auto}}
 .rb-body-fig{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;border-radius:18px;background:radial-gradient(80% 60% at 50% 40%,color-mix(in srgb,#ec4f86 10%,var(--rb-surf2)),var(--rb-surf2))}
-.rb-bodymap{width:100%;height:auto;max-height:340px;overflow:visible}
+.rb-bodymap{width:100%;height:auto;max-height:420px;overflow:visible}
 .rb-bodymap .s0{stop-color:var(--rb-surf)}.rb-bodymap .s1{stop-color:var(--rb-surf2)}
 .rb-bodymap .sil{fill:url(#rbSilG);stroke:color-mix(in srgb,#ec4f86 25%,var(--rb-line));stroke-width:.8}
 .rb-bodymap .pt{cursor:pointer;outline:none}.rb-bodymap .hit{fill:transparent}
@@ -526,6 +541,10 @@ export const LIFE_CSS = `
 .rb-bodymap .shadow{fill:color-mix(in srgb,#ec4f86 14%,transparent)}
 .rb-bodymap .dl{fill:none;stroke:color-mix(in srgb,#ec4f86 26%,var(--rb-line));stroke-width:.5;stroke-linecap:round}
 .rb-bodymap .navel{fill:color-mix(in srgb,#ec4f86 30%,var(--rb-line))}
+.rb-bodymap .lbl{font-size:7px;font-weight:600;fill:var(--rb-sub)}.rb-bodymap .pt.l1 .lbl,.rb-bodymap .pt.l2 .lbl{fill:var(--rb-text);font-weight:800}.rb-bodymap .pt.l3 .lbl{fill:#c2185b;font-weight:800}
+.rb-bodymap .lbl2{font-size:6.2px;font-weight:700;fill:#c2185b}
+.rb-bodymap .lead{fill:none;stroke:color-mix(in srgb,var(--rb-mute) 35%,transparent);stroke-width:.35}.rb-bodymap .pt.l1 .lead,.rb-bodymap .pt.l2 .lead,.rb-bodymap .pt.l3 .lead{stroke:color-mix(in srgb,#ec4f86 60%,transparent);stroke-width:.45;stroke-dasharray:none}
+@media (hover:hover){.rb-bodymap .pt:hover .lbl{fill:var(--rb-acc);opacity:1}}
 .rb-bodymap .pin .ring{fill:none;stroke:#c2185b;stroke-width:.7}.rb-bodymap .pin .cross{stroke:#c2185b;stroke-width:.6;stroke-linecap:round}.rb-bodymap .pin .core{fill:#c2185b}
 .rb-bz .rnd{font-size:10px;padding:1px 6px;border-radius:999px;border:1px dashed var(--rb-line);color:var(--rb-mute)}
 .rb-bz .spot{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:12px}.rb-bz .spot .tg{font-size:10.5px;font-weight:700;color:#c2185b}

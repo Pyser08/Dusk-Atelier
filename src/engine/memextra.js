@@ -19,12 +19,14 @@ export const MARK_STAGE1 = "\nmark|Name|body part|trace (hickey, bite, bruise…
 
 export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark"]);
 // 기록기 답 → 보고 목록. canon(name) → 알려진 이름(없으면 "")
-export function extraFrom(raw, canon = (n) => n, { marks = false } = {}) {
+export const WORLD_KINDS = new Set(["told", "goal", "place", "item", "faction"]);
+// world=false(설정 ‘세계 탭’ 꺼짐)면 소문·목표·세계 문서 줄은 버린다
+export function extraFrom(raw, canon = (n) => n, { marks = false, world = true } = {}) {
   const out = [];
   const who = (s) => (isUser(s) ? "{{user}}" : canon(String(s ?? "").trim()) || "");
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
     const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
-    if (!EXTRA_KINDS.has(tag) || !f[1] || !f[2]) continue;
+    if (!EXTRA_KINDS.has(tag) || !f[1] || !f[2] || (!world && WORLD_KINDS.has(tag))) continue;
     if (tag === "told") { const from = who(f[1]), to = who(f[2]); if (from && to && from !== to && f[3]) out.push({ kind: "told", from, to, info: text(f[3], 100) }); }
     else if (tag === "goal") { const name = who(f[1]); if (name && name !== "{{user}}") out.push({ kind: "goal", name, goal: text(f[2], 60), prog: clamp(f[3], 0, 100), status: statusOf(f[4]) }); }
     else if (tag === "mark") { if (!marks) continue; const name = who(f[1]); if (name && f[3]) out.push({ kind: "mark", name, part: text(f[2], 20), desc: text(f[3], 60), days: clamp(f[4], 1, 14) ?? 3 }); }
@@ -103,7 +105,7 @@ export function mentionsOf(userText, docs = []) {
 export const AWAY_AT = 20;
 export const EXTRA_TITLE = "[Story threads — tracked by Dusk; use naturally, never list them]";
 // 주입 글. present: 장면 인물 이름, recent: 최근 글, turn: 기록된 마지막 메시지 번호, when: 지금 이야기 날짜, pinned: @인물
-export function extraSection(f, { present = [], recent = "", turn = 0, when = "", pinned = [], docs = null, lifeOf = null } = {}) {
+export function extraSection(f, { present = [], recent = "", turn = 0, when = "", pinned = [], docs = null, lifeOf = null, world = true } = {}) {
   const e = extraOf(f), lines = [], P = new Set([...present, ...pinned].map(nk)), low = nk(recent);
   const here = (n) => P.has(nk(n)) || (String(n).length >= 2 && low.includes(nk(n)));
   for (const n of pinned) lines.push(`- {{user}} pointed at ${n}: bring up what ${n} and the others remember about them.`);
@@ -114,25 +116,25 @@ export function extraSection(f, { present = [], recent = "", turn = 0, when = ""
     if (!inRecent(d)) continue;   // 기억 블록에만 든 인물은 '돌아온' 게 아니다 — 최근 글에 이름이 나온 인물만
     const L = lifeOf ? lifeOf(d) : f?.life?.p?.[d.id]; const seen = L?.seen;
     if (!Number.isInteger(seen) || turn - seen < AWAY_AT) continue;
-    const g = (e.goals[nk(d.title)]?.list ?? []).filter((x) => x.status === "active").map((x) => x.goal).join(", ");
+    const g = !world ? "" : (e.goals[nk(d.title)]?.list ?? []).filter((x) => x.status === "active").map((x) => x.goal).join(", ");
     lines.push(`- ${d.title} is back after ${turn - seen} messages away. Let them carry a brief, consistent sense of what they were doing meanwhile${g ? ` (their aims: ${g})` : ""}; don't contradict memory.`);
     if (lines.length > 3) break;
   }
-  // 목표
-  for (const g of Object.values(e.goals)) {
+  // 목표·소문·세계 문서는 설정 ‘세계 탭’이 켜졌을 때만
+  if (world) for (const g of Object.values(e.goals)) {
     if (!here(g.name)) continue;
     const act = g.list.filter((x) => x.status === "active").slice(-2);
     if (act.length) lines.push(`- ${g.name}'s aims: ${act.map((x) => `${x.goal} (${x.prog ?? 0}%)`).join("; ")}`);
   }
   // 소문: 장면 인물이 들은 것(다른 이는 모를 수 있음)
-  const heard = e.rumors.filter((r) => here(r.to) || here(r.from)).slice(-4);
+  const heard = !world ? [] : e.rumors.filter((r) => here(r.to) || here(r.from)).slice(-4);
   if (heard.length) lines.push(`- Who heard what (others may not know): ${heard.map((r) => `${r.to} heard from ${r.from} that ${r.info}`).join("; ")}`);
   // 몸 흔적
   const mk = activeMarks(e.marks, turn, when).filter((m) => here(m.name)).slice(-4);
   if (mk.length) lines.push(`- Visible traces: ${mk.map((m) => `${m.name} — ${m.part} ${m.desc} (day ${markAge(m, turn, when) + 1})`).join("; ")}`);
   // 세계 문서: 최근 글에 이름이 나온 것만
   const ws = [];
-  for (const kind of ["place", "item", "faction"]) for (const w of Object.values(e.world[kind])) if (w.desc && String(w.name).length >= 2 && low.includes(nk(w.name))) ws.push(`${w.name}(${WORLD_LABEL[kind]}): ${w.desc}${w.owner ? ` · owner ${w.owner}` : ""}${w.members?.length ? ` · members ${w.members.slice(0, 5).join(", ")}` : ""}`);
+  if (world) for (const kind of ["place", "item", "faction"]) for (const w of Object.values(e.world[kind])) if (w.desc && String(w.name).length >= 2 && low.includes(nk(w.name))) ws.push(`${w.name}(${WORLD_LABEL[kind]}): ${w.desc}${w.owner ? ` · owner ${w.owner}` : ""}${w.members?.length ? ` · members ${w.members.slice(0, 5).join(", ")}` : ""}`);
   if (ws.length) lines.push(`- World: ${ws.slice(0, 4).join("; ")}`);
   if (!lines.length) return "";
   const out = [EXTRA_TITLE, ...lines].join("\n");

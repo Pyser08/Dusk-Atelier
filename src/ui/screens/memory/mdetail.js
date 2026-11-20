@@ -48,7 +48,9 @@ export async function renderMemoryDetail(ctx, host, { redraw }) {
   };
   if (!DRAW[m.tab]) m.tab = "people";
   const body = h("div", { class: "rb-mem-secbody", role: "tabpanel" });
-  const tabBtns = DETAIL_TABS.map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip rb-mem-sectab", dataset: { sec: id }, "aria-selected": m.tab === id ? "true" : "false", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; if (id !== "people") m.personKey = ""; paintTabs(); drawSec(); } }, label, h("span", { class: "n" }, String(counts[id]))));
+  const worldOn = idx.settings?.inject?.world === true;   // 0.3.22 세계 탭은 설정에서 켤 때만(기본 꺼짐)
+  if (!worldOn && m.tab === "world") m.tab = "people";
+  const tabBtns = DETAIL_TABS.filter(([id]) => id !== "world" || worldOn).map(([id, label]) => h("button", { type: "button", role: "tab", class: "rb-chip rb-mem-sectab", dataset: { sec: id }, "aria-selected": m.tab === id ? "true" : "false", "aria-pressed": m.tab === id ? "true" : "false", onClick: () => { if (m.tab === id) return; m.tab = id; if (id !== "people") m.personKey = ""; paintTabs(); drawSec(); } }, label, h("span", { class: "n" }, String(counts[id]))));
   const paintTabs = () => tabBtns.forEach((b) => { const on = b.dataset.sec === m.tab; b.setAttribute("aria-pressed", on ? "true" : "false"); b.setAttribute("aria-selected", on ? "true" : "false"); });
   let drawTok = 0;
   const drawSec = async () => {

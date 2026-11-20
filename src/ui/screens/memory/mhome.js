@@ -62,6 +62,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }, "cool"),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }, "beliefs"));
   // 2.2.4 기억 토큰 절약: 칸별 예산을 줄여 기억 블록 약 4,100 → 2,900토큰(LoCoMo 정답률 약 1~2점 손해)
+  memOptions.append(orow("세계 탭 (장소·물건·세력·목표·소문)", "기록 보기에 ‘세계’ 탭이 생기고, 응답에 나온 장소·물건·세력, 인물 목표, 누가 누구에게 무엇을 들었는지 기록해 장면에 맞는 것만 넣어요.", inj.world === true, (o, v) => { o.world = v; }, "world"));
   memOptions.append(orow("기억 토큰 절약", "기억에 넣는 양을 약 30% 줄여요(약 4,100 → 2,900토큰). 정확도는 조금(1~2%) 떨어져요. 비싼 모델은 ‘Jev 재정렬’과 함께 켜면 더 아껴요.", inj.saver !== false, (o, v) => { o.saver = v; }, "saver"));
   memOptions.append(orow("분기한 채팅에 기억 이어받기", "채팅을 분기·복사하면 갈라지기 전까지의 기억을 원래 채팅에서 이어받아요(기억이 빈 채팅만). 갈라진 뒤의 기록은 들어오지 않아요.", inj.forkInherit !== false, (o, v) => { o.forkInherit = v; }, "fork"));
   // 요약된 옛 대화 빼고 보내기(2.0.1): 하이파처럼 전체 문맥을 줄인다. 기본 켜짐(끈 사람만 false)

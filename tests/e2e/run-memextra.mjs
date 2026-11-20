@@ -31,6 +31,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
         marks: [{ name: "시로코", part: "목", desc: "키스마크", days: 3, at: 29 }], diary: [] };
     });
   });
+  ok(`[${tag}] 세계 탭은 기본 꺼짐`, await page.evaluate(async () => (await __app.ctx.memory.store.getIndex()).settings?.inject?.world !== true));
+  await page.evaluate(async () => { await __app.ctx.memory.store.updateIndex((idx) => { idx.settings.inject ??= {}; idx.settings.inject.world = true; }); });
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem ??= {}, { botId: "c1", chatIndex: 0, personKey: "", tab: "world", page: "detail", worldSec: "docs" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1500);
   const win = page.locator(".rb-root").first();
@@ -48,7 +50,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   if (await nsfwTab.count()) { await nsfwTab.click(); await page.waitForTimeout(600); }
   ok(`[${tag}] 인물 머리에 📔 일기 · ↗ 다른 봇으로`, (await page.locator(".rb-btn", { hasText: "📔 일기" }).count()) > 0 && (await page.locator(".rb-btn", { hasText: "↗ 다른 봇으로" }).count()) > 0);
   ok(`[${tag}] 성감대 새 모형(팔·다리 실루엣 + 귀)`, await page.evaluate(() => { const s = document.querySelector(".rb-bodymap"); return !!s && s.querySelectorAll("path.sil").length === 1 && s.querySelectorAll("ellipse.sil").length === 3; }));
-  ok(`[${tag}] 약점은 정확한 자리 핀 + 이름표`, await page.evaluate(() => { const s = document.querySelector(".rb-bodymap"); return !!s?.querySelector(".pin .ring") && [...s.querySelectorAll(".lbl")].some((t) => t.textContent === "왼쪽 귓불"); }));
+  ok(`[${tag}] 약점은 정확한 자리 핀 + 이름표`, await page.evaluate(() => { const s = document.querySelector(".rb-bodymap"); return !!s?.querySelector(".pin .ring") && [...s.querySelectorAll(".lbl2")].some((t) => t.textContent === "◎ 왼쪽 귓불"); }));
+  const lab = await page.evaluate(() => [...document.querySelectorAll(".rb-bodymap .lbl")].map((x) => { const b = x.getBoundingClientRect(); return [x.textContent, Math.round(b.left), Math.round(b.top), Math.round(b.right), Math.round(b.bottom)]; }));
+  ok(`[${tag}] 모든 부위 이름이 보이고 겹치지 않음`, await page.evaluate(() => { const t = [...document.querySelectorAll(".rb-bodymap .lbl")]; if (t.length !== 13) return false; const bs = t.map((x) => x.getBoundingClientRect()); return bs.every((a, i) => bs.every((b, j) => i === j || a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5)); }), JSON.stringify(lab));
   ok(`[${tag}] 부위 한 줄 특징 · 빈 특징은 + 버튼`, (await win.getByText("숨결만 닿아도 움찔한다").count()) > 0 && (await page.locator(".rb-bz-add").count()) === 1);
   ok(`[${tag}] 몸 흔적: 목 키스마크`, (await page.locator(".rb-marks li", { hasText: "키스마크" }).count()) === 1);
   ok(`[${tag}] 궁합: 점수 고리·겹치는 취향`, (await page.locator(".rb-compat .ring").count()) === 1 && (await page.locator(".rb-compat .row.ok .tags span").count()) === 2);
