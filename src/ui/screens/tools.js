@@ -89,7 +89,8 @@ const THANKS = [
   { key: "yumi", emoji: "🔌", name: "유미 프로바이더", desc: "프로바이더에 도움이 됐어요" },
   { key: "personaforge", emoji: "🪶", name: "페르소나 공방", desc: "AI로 페르소나 만들기 화면·NAI 태그의 바탕" },
   { key: "soplite", emoji: "📋", name: "SOP Lite", desc: "페르소나 SOP 양식·초안·검토·최종 지침의 바탕" },
-  { key: "modmanager", emoji: "🧩", name: "모드 매니저", desc: "모듈 호환(겹치는 모듈 정리)의 착상" }
+  { key: "modmanager", emoji: "🧩", name: "모드 매니저", desc: "모듈 호환(겹치는 모듈 정리)의 착상" },
+  { key: "imerhelper", emoji: "🧭", name: "이머헬퍼", desc: "장기기억 이야기 캘린더(생일·기념일·공휴일)의 착상" }
 ];
 export async function fullBackup(ctx) {
   const db = await readDb(ctx.api, ["modules", "pluginCustomStorage", "enabledModules"]);

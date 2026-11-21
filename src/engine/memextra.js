@@ -2,10 +2,12 @@
 //   소문(told) · 인물 목표(goal) · 세계 문서(place·item·faction) · 몸 흔적(mark) · 화면 밖 근황 · @인물 고정 회상 · 궁합
 // 저장: folder.extra = { rumors:[{from,to,info,at,when}], goals:{key:{name,list:[{goal,prog,status,at,first}]}},
 //                       world:{place:{key:{name,desc,at,first,n}}, item:{…,owner}, faction:{…,members:[]}}, marks:[{name,part,desc,days,at,when}], diary:[…] }
+import { filterIgnored } from "./memedit.js";
 import { detach } from "./regress.js";
 import { contraOf, addCum } from "./fertility.js";
 import { createEmptyWikiScope } from "./pot/wiki-schema.js";
 import { climateFrom, CLIMATE_STAGE1 } from "./weather.js";
+import { CAL_STAGE1, calFrom, applyCal, CAL_KINDS } from "./storycal.js";
 import { raceReport } from "./races.js";
 import { tieReport, applyTie } from "./ties.js";
 const text = (v, n = 120) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -29,7 +31,7 @@ export const STATUS_STAGE1 = "\nstatus|Name|condition in Korean (drunk, injured,
 export const OUTFIT_PARTS = Object.freeze([["head", "머리"], ["face", "얼굴"], ["outer", "겉옷"], ["top", "상의"], ["bra", "속옷(위)"], ["bottom", "하의"], ["panties", "속옷(아래)"], ["legs", "다리"], ["feet", "신발"], ["acc", "액세서리"]]);
 export const OUTFIT_LABEL = Object.freeze(Object.fromEntries(OUTFIT_PARTS));
 export const OUTFIT_STAGE1 = "\nwear|Name|head, face, outer, top, bra, bottom, panties, legs, feet or acc|short Korean (what people see)|detailed Korean for an illustrator (colour, material, cut, fit, pattern, current state like wet, torn, unbuttoned)      clothing or accessory newly shown or changed\nstrip|Name|part      that piece is taken off";
-export const WEATHER_STAGE1 = "\nweather|맑음, 구름, 흐림, 비, 폭우, 눈, 안개, 천둥, 바람 or 실내      the weather in newest's scene when it is shown or changes (also when {{user}}'s input changes it)" + CLIMATE_STAGE1;
+export const WEATHER_STAGE1 = "\nweather|맑음, 구름, 흐림, 비, 폭우, 눈, 안개, 천둥, 바람 or 실내      the weather in newest's scene when it is shown or changes (also when {{user}}'s input changes it)" + CLIMATE_STAGE1 + CAL_STAGE1;   // 달력(생일·기념일·약속·공휴일)도 상태창과 함께
 export const WEATHER_KINDS = Object.freeze(["맑음", "구름", "흐림", "비", "폭우", "눈", "안개", "천둥", "바람", "실내"]);
 export function weatherOf(s) {
   const t = String(s ?? "");
@@ -45,7 +47,7 @@ export function weatherOf(s) {
   if (/실내|indoor/i.test(t)) return "실내";
   return "";
 }
-export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure", "cum", "hist", "wear", "strip", "weather", "climate", "cohabit", "race", "tie"]);
+export const EXTRA_KINDS = new Set(["told", "goal", "place", "item", "faction", "mark", "status", "cure", "cum", "hist", "wear", "strip", "weather", "climate", "cohabit", "race", "tie", "bday", "couple", "plan", "day", "country", "hol"]);
 // 동거(월경 주기 동기화용): 같은 집에 사는 두 사람
 export const COHABIT_STAGE1 = "\ncohabit|Name|Name      two characters shown or stated to live together (same home or room)";
 // 기록기 답 → 보고 목록. canon(name) → 알려진 이름(없으면 "")
@@ -56,6 +58,7 @@ export function extraFrom(raw, canon = (n) => n, { marks = false, world = true, 
   const who = (s) => (isUser(s) ? "{{user}}" : canon(String(s ?? "").trim()) || "");
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
     const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
+    if (CAL_KINDS.has(tag)) { if (weather) out.push(...calFrom(line0, (n) => who(n))); continue; }
     if (tag === "climate") { if (!weather) continue; const c = climateFrom(f); if (c) out.push({ kind: "climate", ...c }); continue; }
     if (tag === "race") { if (!race) continue; const r = raceReport(f, (n) => who(n)); if (r) out.push(r); continue; }
     if (tag === "tie") { if (!tie) continue; const r = tieReport(f, who); if (r) out.push(r); if (out.length >= 16) break; continue; }
@@ -96,14 +99,15 @@ export function extraOf(f) {
   const e = f?.extra && typeof f.extra === "object" ? f.extra : {};
   return { rumors: Array.isArray(e.rumors) ? e.rumors : [], goals: e.goals && typeof e.goals === "object" ? e.goals : {},
     world: { place: e.world?.place ?? {}, item: e.world?.item ?? {}, faction: e.world?.faction ?? {} }, marks: Array.isArray(e.marks) ? e.marks : [], diary: Array.isArray(e.diary) ? e.diary : [], status: Array.isArray(e.status) ? e.status : [], outfit: e.outfit && typeof e.outfit === "object" ? e.outfit : {}, weather: e.weather ?? null,
-    climate: e.climate?.zone ? e.climate : null, cohabit: Array.isArray(e.cohabit) ? e.cohabit : [], cycleSync: e.cycleSync && typeof e.cycleSync === "object" ? e.cycleSync : {}, race: e.race && typeof e.race === "object" ? e.race : {}, ties: e.ties && typeof e.ties === "object" ? e.ties : {}, filled: e.filled && typeof e.filled === "object" ? e.filled : {} };
+    climate: e.climate?.zone ? e.climate : null, cohabit: Array.isArray(e.cohabit) ? e.cohabit : [], cycleSync: e.cycleSync && typeof e.cycleSync === "object" ? e.cycleSync : {}, race: e.race && typeof e.race === "object" ? e.race : {}, ties: e.ties && typeof e.ties === "object" ? e.ties : {}, filled: e.filled && typeof e.filled === "object" ? e.filled : {}, cal: e.cal && typeof e.cal === "object" ? e.cal : null };
 }
 export const RUMOR_MAX = 60, MARK_MAX = 30, GOAL_MAX = 4;
 
 // 보고 반영. ctx: {turn, when}. 반환: 바뀐 글 목록
 export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
   const e = extraOf(f), changed = [];
-  for (const r of reports ?? []) {
+  reports = filterIgnored(f, reports, turn);   // 사용자가 지운 항목은 다시 만들지 않음(engine/memedit.js)
+  for (const r of reports) {
     if (r.kind === "told") {
       if (e.rumors.some((x) => nk(x.from) === nk(r.from) && nk(x.to) === nk(r.to) && nk(x.info) === nk(r.info))) continue;
       e.rumors.push({ from: r.from, to: r.to, info: r.info, at: turn, when: text(when, 40) }); changed.push(`소문 ${r.from}→${r.to}`);
@@ -131,6 +135,7 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
     } else if (r.kind === "cohabit") {
       const key = [nk(r.a), nk(r.b)].sort().join("|"); if (!e.cohabit.some((x) => x.key === key)) { e.cohabit.push({ key, a: r.a, b: r.b, at: turn }); changed.push(`동거 ${r.a}·${r.b}`); }
     } else if (r.kind === "weather") {
+      if (e.weather?.user) continue;   // 11-21: 유저가 정한 날씨(입력·직접 고침)는 기록기 보고가 덮지 않음(엔진 예보가 먼저라 기록 날씨는 참고용)
       if (e.weather?.w !== r.w) changed.push(`날씨 ${r.w}`); e.weather = { w: r.w, at: turn, when: text(when, 40) };
     } else if (r.kind === "wear" || r.kind === "strip") {
       const k = nk(r.name), o = (e.outfit[k] ??= { name: r.name, parts: {}, acc: [] });
@@ -156,6 +161,7 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
   if (e.rumors.length > RUMOR_MAX) e.rumors = e.rumors.slice(-RUMOR_MAX);
   e.marks = activeMarks(e.marks, turn, when).slice(-MARK_MAX);
   e.status = activeStatus(e.status, turn, when).slice(-STATUS_MAX);
+  const cr = (reports ?? []).filter((r) => CAL_KINDS.has(r.kind)); if (cr.length) changed.push(...applyCal(e, cr, { when }));   // 이야기 달력
   f.extra = e;
   return changed;
 }

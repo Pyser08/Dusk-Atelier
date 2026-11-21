@@ -66,3 +66,8 @@ test("장기기억 0.3.20 갈래 보기를 찾는다", () => {
   const f = findFeatures("분기").find((x) => x.t === "갈래 보기");
   assert.ok(f && f.tab === "branches" && f.addon === "memory");
 });
+
+test("인간다움: ‘묘사 지침’·‘캘린더’로 찾는다", () => {
+  assert.ok(findFeatures("묘사 지침").some((f) => /묘사 지침/.test(f.t)));
+  assert.ok(findFeatures("생일 약속").some((f) => /캘린더/.test(f.t)));
+});

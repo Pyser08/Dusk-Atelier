@@ -1,7 +1,10 @@
 // 장기기억 애드온(0.3.22): 인물 위키에 붙는 새 칸 — 몸 흔적 · 궁합 · 인물 일기 · 다른 봇으로 옮기기.
 import { h } from "../../dom.js";
+import { characterDocs } from "../../../engine/usernsfw.js";
 import { btn, modal, promptDialog, confirmDialog } from "../../kit.js";
 import { memStore } from "./memstore.js";
+import { editRows, editForm, EDITROWS_CSS } from "./editrows.js";
+import { GUIDES_CSS } from "./guidesui.js";
 import { cumNow, saturation, bodyOf, capacityOf, fertilityFactor, preventOf, chanceNow, BODY, CONTRA_LABEL, STANDING } from "../../../engine/fertility.js";
 import { lifeView } from "../../../engine/nsfwlife.js";
 import { mem, fail, loadBots, loadChats } from "./common.js";
@@ -19,47 +22,40 @@ const save = (env, fn) => Promise.resolve().then(() => memStore(env.ctx).updateF
 // 몸 흔적: 키스마크·멍·긁힌 자국 등. 이야기 날짜(모르면 턴)로 며칠 뒤 사라진다
 export function marksCard(env, card, doc) {
   if (!doc) return null;
-  const f = env.folder, names = namesOf(doc), turn = turnOf(f), when = whenOf(f), local = env.backend?.id === "local";
-  const all = extraOf(f).marks.map((m, i) => ({ ...m, i })).filter((m) => names.has(nk(m.name)));
-  const live = activeMarks(all, turn, when);
-  const add = local ? btn("흔적 추가", { size: "sm", onClick: async () => {
-    const part = await promptDialog(env.ctx.win, { title: "몸 흔적 추가", label: "부위(예: 목)", ok: "다음" }); if (!part?.trim()) return;
-    const desc = await promptDialog(env.ctx.win, { title: part.trim(), label: "어떤 흔적(예: 키스마크)", ok: "다음" }); if (!desc?.trim()) return;
-    const days = await promptDialog(env.ctx.win, { title: "며칠 동안 남을까요?", label: "1~14일", value: "3", ok: "추가" }); if (days == null) return;
-    save(env, (g) => { const e = extraOf(g); e.marks.push({ name: doc.title, part: part.trim().slice(0, 20), desc: desc.trim().slice(0, 60), days: Math.max(1, Math.min(14, Math.round(Number(days) || 3))), at: turnOf(g), when: whenOf(g), manual: true }); g.extra = e; });
-  } }) : null;
+  const f = env.folder, names = namesOf(doc), turn = turnOf(f), when = whenOf(f);
+  const all = extraOf(f).marks.map((x, i) => ({ x, i })).filter(({ x }) => names.has(nk(x.name)));
+  const { rows, foot } = editRows(env, { kind: "mark", id: `mark:${doc.id}`, title: "몸 흔적", ttl: 14, addLabel: "흔적 추가",
+    rows: all.filter(({ x }) => activeMarks([x], turn, when).length), get: (g) => extraOf(g).marks, set: (g, arr) => { const e = extraOf(g); e.marks = arr; g.extra = e; },
+    fields: [{ k: "part", label: "부위(예: 목)", len: 20 }, { k: "desc", label: "어떤 흔적(예: 키스마크)", len: 60 }, { k: "days", label: "남는 날(1~14)", type: "num", min: 1, max: 14, def: 3 }],
+    make: (v, g) => ({ name: doc.title, ...v, at: turnOf(g), when: whenOf(g), manual: true }),
+    row: (m) => { const age = markAge(m, turn, when), left = Math.max(0, (m.days ?? 3) - age);
+      return [h("b", null, m.part), h("span", null, m.desc), h("small", { class: "rb-muted" }, `${age + 1}일째 · ${left ? `${left}일 더` : "곧 사라짐"}`),
+        h("i", { class: "fade", style: { width: `${Math.round((left / (m.days || 3)) * 100)}%` } })]; } });
   return card("🩹 몸 흔적", [
     note("키스마크·멍·긁힌 자국처럼 몸에 남은 흔적이에요. 기록기가 응답에서 찾아 넣고, 이야기 날짜(없으면 턴)로 며칠 뒤 사라져요. 남아 있는 동안 장면에 넣어 줘요."),
-    live.length ? h("ul", { class: "rb-marks" }, live.map((m) => { const age = markAge(m, turn, when), left = Math.max(0, (m.days ?? 3) - age);
-      return h("li", null, h("b", null, m.part), h("span", null, m.desc), h("small", { class: "rb-muted" }, `${age + 1}일째 · ${left ? `${left}일 더` : "곧 사라짐"}`),
-        h("i", { class: "fade", style: { width: `${Math.round((left / (m.days || 3)) * 100)}%` } }),
-        local ? h("button", { type: "button", class: "rb-bzb", title: "지우기", "aria-label": "지우기", onClick: async () => { if (!(await confirmDialog(env.ctx.win, { title: "이 흔적을 지울까요?", ok: "지우기", danger: true }))) return; save(env, (g) => { const e = extraOf(g); e.marks = e.marks.filter((x) => !(nk(x.name) === nk(m.name) && x.at === m.at && x.part === m.part && x.desc === m.desc)); g.extra = e; }); } }, "✕") : null); }))
-      : note("지금 남은 흔적이 없어요."),
-    add ? h("div", { class: "rb-mem-rowact" }, add) : null,
+    rows.length ? h("ul", { class: "rb-marks" }, rows) : note("지금 남은 흔적이 없어요."),
+    foot,
   ], null, "rb-life");
 }
 
 // 상태이상: 취함·부상·감기·최음제 등. 정한 날만큼(0 = 나을 때까지) 행동에 반영
 export function statusCard(env, card, doc) {
   if (!doc) return null;
-  const f = env.folder, names = namesOf(doc), turn = turnOf(f), when = whenOf(f), local = env.backend?.id === "local";
+  const f = env.folder, names = namesOf(doc), turn = turnOf(f), when = whenOf(f);
   const off = env.idx?.settings?.inject?.status === false;
-  const live = activeStatus(extraOf(f).status, turn, when).filter((x) => names.has(nk(x.name)));
-  const add = local ? btn("상태이상 추가", { size: "sm", onClick: async () => {
-    const eff = await promptDialog(env.ctx.win, { title: "상태이상 추가", label: "상태(예: 감기, 취함, 다리 부상)", ok: "다음" }); if (!eff?.trim()) return;
-    const lv = await promptDialog(env.ctx.win, { title: eff.trim(), label: "정도 1 가벼움 · 2 보통 · 3 심함", value: "2", ok: "다음" }); if (lv == null) return;
-    const days = await promptDialog(env.ctx.win, { title: eff.trim(), label: "며칠(0 = 나을 때까지)", value: "3", ok: "추가" }); if (days == null) return;
-    save(env, (g) => { const e = extraOf(g); e.status.push({ name: doc.title, effect: eff.trim().slice(0, 20), lv: Math.max(1, Math.min(3, Math.round(Number(lv) || 2))), days: Math.max(0, Math.min(14, Math.round(Number(days) || 0))), at: turnOf(g), when: whenOf(g), manual: true }); g.extra = e; });
-  } }) : null;
+  const all = extraOf(f).status.map((x, i) => ({ x, i })).filter(({ x }) => names.has(nk(x.name)));
   const COL = ["", "#f0b429", "#e07a3f", "#d64545"];
+  const { rows, foot } = editRows(env, { kind: "status", id: `status:${doc.id}`, title: "상태이상", ttl: 10, addLabel: "상태이상 추가",
+    rows: all.filter(({ x }) => activeStatus([x], turn, when).length), get: (g) => extraOf(g).status, set: (g, arr) => { const e = extraOf(g); e.status = arr; g.extra = e; },
+    fields: [{ k: "effect", label: "상태(예: 감기, 취함, 다리 부상)", len: 20 }, { k: "lv", label: "정도", type: "select", def: "2", opts: [["1", STATUS_LV[1]], ["2", STATUS_LV[2]], ["3", STATUS_LV[3]]] }, { k: "days", label: "며칠(0 = 나을 때까지)", type: "num", min: 0, max: 14, def: 3 }],
+    make: (v, g) => ({ name: doc.title, ...v, lv: Number(v.lv), at: turnOf(g), when: whenOf(g), manual: true }),
+    row: (x) => { const age = markAge(x, turn, when), left = x.days ? Math.max(0, x.days - age) : null, lv = Number(x.lv) || 1;
+      return [h("b", { style: { color: COL[lv] } }, x.effect), h("span", null, STATUS_LV[lv]), h("small", { class: "rb-muted" }, `${age + 1}일째 · ${left == null ? "나을 때까지" : left ? `${left}일 더` : "곧 나음"}`),
+        h("i", { class: "fade", style: { width: left == null ? "100%" : `${Math.round((left / (x.days || 1)) * 100)}%`, background: COL[lv] } })]; } });
   return card("🤒 상태이상", [
     off ? note("장기 기억 → 설정 → 기억 옵션의 ‘상태이상’이 꺼져 있어서 새로 기록하지 않고 장면에도 넣지 않아요.") : note("취함·부상·감기·최음제·수면 부족처럼 인물에게 생긴 상태예요. 기록기가 응답에서 찾아 넣고, 정한 날이 지나거나 나으면 사라져요. 남아 있는 동안 행동에 반영돼요."),
-    live.length ? h("ul", { class: "rb-marks" }, live.map((x) => { const age = markAge(x, turn, when), left = x.days ? Math.max(0, x.days - age) : null;
-      return h("li", null, h("b", { style: { color: COL[x.lv ?? 1] } }, x.effect), h("span", null, STATUS_LV[x.lv ?? 1]), h("small", { class: "rb-muted" }, `${age + 1}일째 · ${left == null ? "나을 때까지" : left ? `${left}일 더` : "곧 나음"}`),
-        h("i", { class: "fade", style: { width: left == null ? "100%" : `${Math.round((left / (x.days || 1)) * 100)}%`, background: COL[x.lv ?? 1] } }),
-        local ? h("button", { type: "button", class: "rb-bzb", title: "나음(지우기)", "aria-label": "나음(지우기)", onClick: () => save(env, (g) => { const e = extraOf(g); e.status = e.status.filter((y) => !(nk(y.name) === nk(x.name) && y.effect === x.effect && y.at === x.at)); g.extra = e; }) }, "✓") : null); }))
-      : note("지금은 아무 상태이상도 없어요."),
-    add ? h("div", { class: "rb-mem-rowact" }, add) : null,
+    rows.length ? h("ul", { class: "rb-marks" }, rows) : note("지금은 아무 상태이상도 없어요."),
+    foot,
   ], null, "rb-life");
 }
 
@@ -90,7 +86,8 @@ export function fertilityCard(env, card, doc) {
       sel("체형", body, Object.entries(BODY).map(([k, [l]]) => [k, l]), (val) => setFert({ body: val })),
       sel("늘 쓰는 피임", n.fert?.contra ?? "none", STANDING.map((k) => [k, CONTRA_LABEL[k]]), (val) => setFert({ contra: val }))),
     h("div", { class: "rb-fert-hist" }, h("small", null, "출산·유산 이력"),
-      hist.length ? h("div", null, hist.map((x) => h("span", { class: x.kind }, `${x.kind === "birth" ? "출산" : "유산"}${x.when ? ` · ${String(x.when).slice(0, 10)}` : ` · #${(x.at ?? 0) + 1}`}`))) : h("span", { class: "rb-muted" }, "없음"),
+      hist.length ? h("div", null, hist.map((x, i) => h("span", { class: x.kind }, `${x.kind === "birth" ? "출산" : "유산"}${x.when ? ` · ${String(x.when).slice(0, 10)}` : ` · #${(x.at ?? 0) + 1}`}`,
+        local ? h("button", { type: "button", class: "rb-bzb", title: "이력 지우기", "aria-label": "이력 지우기", onClick: async () => { if (await confirmDialog(env.ctx.win, { title: "이 이력을 지울까요?", ok: "지우기", danger: true })) save(env, (g) => { const LL = g.life?.p?.[doc.id]; if (LL?.hist) LL.hist = LL.hist.filter((y, j) => !(j === i && y.kind === x.kind && y.at === x.at)); }); } }, "✕") : null))) : h("span", { class: "rb-muted" }, "없음"),
       local ? h("span", { class: "acts" }, btn("+ 출산", { size: "sm", onClick: () => addHist("birth") }), btn("+ 유산", { size: "sm", onClick: () => addHist("loss") })) : null),
     note("응답에서 사정(질 안)이 있으면 기록기가 양(ml)과 피임을 적어요. 양은 반나절마다 반으로 줄고, 정자는 며칠 살아 있어요. 관계마다 피임·양·이력으로 보호됐는지 정한 뒤, 보호 안 된 관계만 월경 주기(배란일) 확률로 임신을 굴려요."),
   ], null, "rb-life");
@@ -120,7 +117,8 @@ export function outfitCard(env, card, doc) {
     h("div", { class: "rb-of-top" }, note("기록기가 응답에서 부위별로 적어요. 간단히는 사람들이 볼 모습, 상세는 삽화를 그릴 때 쓸 설명이에요."),
       h("button", { type: "button", class: ["rb-of-tg", detail && "on"], "aria-pressed": detail ? "true" : "false", onClick: () => { m.outfitDetail[doc.id] = !detail; env.redraw?.(); } }, detail ? "간단히 ‹" : "삽화용 상세 ›")),
     h("ul", { class: "rb-of" }, rows),
-    h("div", { class: "rb-of-acc" }, h("small", null, "액세서리"), acc.length ? acc.map((x, i) => h("span", { title: x.d }, x.s, detail && x.d !== x.s ? h("i", null, ` — ${x.d}`) : null, local ? h("button", { type: "button", class: "rb-bzb", "aria-label": "지우기", onClick: () => save(env, (g) => { const e = extraOf(g), xx = e.outfit[nk(doc.title)]; if (xx) xx.acc.splice(i, 1); g.extra = e; }) }, "✕") : null)) : h("span", { class: "rb-muted" }, "없음"),
+    h("div", { class: "rb-of-acc" }, h("small", null, "액세서리"), acc.length ? acc.map((x, i) => h("span", { title: x.d }, x.s, detail && x.d !== x.s ? h("i", null, ` — ${x.d}`) : null, local ? h("button", { type: "button", class: "rb-bzb", "aria-label": "액세서리 고치기", title: "고치기", onClick: async () => { const v = await editForm(env.ctx.win, "액세서리 고치기", [{ k: "s", label: "간단히", len: 40 }, { k: "d", label: "삽화용 상세", len: 200, need: false }], x); if (v) save(env, (g) => { const e = extraOf(g), xx = e.outfit[nk(doc.title)]; if (xx?.acc?.[i]) xx.acc[i] = { ...xx.acc[i], s: v.s, d: v.d || v.s, user: true }; g.extra = e; }); } }, "✎") : null,
+      local ? h("button", { type: "button", class: "rb-bzb", "aria-label": "지우기", onClick: () => save(env, (g) => { const e = extraOf(g), xx = e.outfit[nk(doc.title)]; if (xx) xx.acc.splice(i, 1); g.extra = e; }) }, "✕") : null)) : h("span", { class: "rb-muted" }, "없음"),
       local ? btn("+ 추가", { size: "sm", onClick: edit("acc") }) : null),
   ], null, "rb-life");
 }
@@ -160,7 +158,7 @@ export function raceCard(env, card, doc) {
 export function compatCard(env, card, doc) {
   if (!doc) return null;
   const f = env.folder, m = mem(env.ctx), mine = f?.nsfw?.[doc.id];
-  const others = Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && d.id !== doc.id && f?.nsfw?.[d.id]);
+  const others = characterDocs(f).filter((d) => d.id !== doc.id && f?.nsfw?.[d.id]);   // 유저 칸과의 궁합도
   if (!mine || !others.length) return card("💞 궁합", [note(mine ? "궁합을 볼 상대가 없어요. 성인 프로필이 있는 다른 인물이 생기면 보여요." : "이 인물의 성인 프로필이 아직 없어요.")], null, "rb-life");
   m.compat ??= {};
   const pick = others.find((d) => d.id === m.compat[doc.id]) ?? others[0];
@@ -211,6 +209,17 @@ export async function openDiaryHere(ctx) {
   return openDiary(ctx, { chaId: cur.chaId, chatId: cur.chatId, ci: cur.ci, doc, folder }).catch((e) => { ctx.toast?.(e?.message ?? String(e), { error: true, seconds: 8 }); return null; });
 }
 
+// 인물 일기 목록(기록 탭): 쓴 일기를 보고 고치고 지운다
+export function diaryCard(env, card, doc) {
+  if (!doc) return null;
+  const all = extraOf(env.folder).diary.map((x, i) => ({ x, i })).filter(({ x }) => x.docId === doc.id || nk(x.name) === nk(doc.title));
+  const { rows, foot } = editRows(env, { kind: "diary", id: `diary:${doc.id}`, title: "일기", cls: "rb-diary-row",
+    rows: all.reverse(), get: (g) => extraOf(g).diary, set: (g, arr) => { const e = extraOf(g); e.diary = arr; g.extra = e; },
+    fields: [{ k: "text", label: "일기", type: "area", len: 1200 }],
+    row: (d) => h("div", { class: "txt" }, h("small", { class: "rb-muted" }, d.at != null ? `#${d.at + 1} 응답` : ""), h("p", { style: "margin:2px 0;white-space:pre-wrap" }, d.text)) });
+  return card("📔 일기", [rows.length ? h("ul", { class: "rb-mem-reclist" }, rows) : note("아직 쓴 일기가 없어요. 인물 머리의 ‘📔 일기’로 써요."), foot], null, "rb-life");
+}
+
 // 다른 봇으로 옮기기: 문서·기본 성격·성인 프로필·몸과 마음·기억 기록·목표를 복사(원본은 그대로, 관계는 옮기지 않음)
 export async function openMovePerson(env, doc) {
   const { ctx } = env, bots = (await loadBots(ctx)).filter((b) => b.character?.chats?.length);
@@ -236,7 +245,7 @@ export async function openMovePerson(env, doc) {
   ctx.toast(`${bot.character.name} › ${chat.name ?? "채팅"}에 ‘${res?.title ?? doc.title}’을(를) 옮겼어요.`, { seconds: 8 });
 }
 
-export const EXTRA_CSS = `.rb-btn.rb-mem-fill{background:linear-gradient(135deg,#f7d154,#eaa82a)!important;color:#2a1c00!important;border-color:transparent!important;box-shadow:0 6px 18px rgba(234,168,42,.35)!important;animation:rbFillPulse 2.4s ease-in-out infinite}.rb-btn.rb-mem-fill svg{color:#2a1c00}@keyframes rbFillPulse{0%,100%{box-shadow:0 6px 18px rgba(234,168,42,.3)}50%{box-shadow:0 6px 26px rgba(234,168,42,.6)}}
+export const EXTRA_CSS = `${EDITROWS_CSS}${GUIDES_CSS}.rb-btn.rb-mem-fill{background:linear-gradient(135deg,#f7d154,#eaa82a)!important;color:#2a1c00!important;border-color:transparent!important;box-shadow:0 6px 18px rgba(234,168,42,.35)!important;animation:rbFillPulse 2.4s ease-in-out infinite}.rb-btn.rb-mem-fill svg{color:#2a1c00}@keyframes rbFillPulse{0%,100%{box-shadow:0 6px 18px rgba(234,168,42,.3)}50%{box-shadow:0 6px 26px rgba(234,168,42,.6)}}
 .rb-race-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.rb-race-head>b{font-size:16px}.rb-race-head>small{opacity:.7}
 .rb-race-tag{font-size:11px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,#3aa597 14%,transparent);border:1px solid color-mix(in srgb,#3aa597 35%,transparent)}.rb-race-tag.mute{opacity:.65;background:transparent}
 .rb-race-tx{margin:8px 0 0;font-size:13px;line-height:1.6;white-space:normal}.rb-race-tx small{display:inline-block;margin-right:6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#3aa597}.rb-race-tx.nsfw small{color:#e8578e}

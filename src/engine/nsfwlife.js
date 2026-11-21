@@ -15,7 +15,8 @@ const r1 = (v) => Math.round(v * 10) / 10;
 export const TEMP_LEN = 10, REFRACTORY = 4, ABSTAIN_AT = 40, MISS_AT = 30;
 
 export const emptyLife = () => ({ lust: 30, refr: -1, fat: 0, mood: {}, habits: {}, trace: [], sat: [], seen: null, seenPrev: null, sex: { n: 0, last: null, first: null, by: {} }, uses: {}, lover: {}, met: {}, temp: {} });
-const docsOf = (f) => Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
+import { characterDocs, npcDocs } from "./usernsfw.js";
+const docsOf = characterDocs;   // 유저 칸(actor:user) 포함 — 몸 상태·성감대 기록용
 const namesOf = (d) => [d.title, ...(d.aliases ?? [])].filter(Boolean);
 export function docByName(f, name) {
   const k = nk(name); if (!k) return null;
@@ -323,7 +324,7 @@ export function lifeLine(name, v, adult = true) {
 export const isAdultProfile = (n) => !!n && Object.keys(n.sexual ?? {}).length > 0;
 export function lifeSection(f, present = [], turn, max = 4) {
   const here = new Set(present.map(nk)), lines = [];
-  for (const d of docsOf(f)) {
+  for (const d of npcDocs(f)) {   // 유저 상태는 요청에 넣지 않는다(유저를 대신 움직이지 않게)
     if (!namesOf(d).some((n) => here.has(nk(n)))) continue;
     const l = lifeLine(d.title, lifeView(f, d, turn), isAdultProfile(f?.nsfw?.[d.id])); if (l) lines.push(l);
     if (lines.length >= max) break;
@@ -335,7 +336,7 @@ export function lifeSection(f, present = [], turn, max = 4) {
 import { humanLine, HUMAN_INJECT_TITLE } from "./humanitems.js";
 export function humanSection(f, present = [], max = 4) {
   const here = new Set(present.map(nk)), lines = [];
-  for (const d of docsOf(f)) {
+  for (const d of npcDocs(f)) {
     if (!namesOf(d).some((n) => here.has(nk(n)))) continue;
     const l = humanLine(d.title, f?.nsfw?.[d.id]); if (l) lines.push(l);
     if (lines.length >= max) break;
@@ -348,7 +349,7 @@ export function lustOfName(f, name) { const d = docByName(f, name); const L = d 
 const isAdultProfileOf = (f, d) => Object.keys(f?.nsfw?.[d.id]?.sexual ?? {}).length > 0;
 export function hotActors(f, at = 90) {
   const out = [], turn = Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0;
-  for (const d of docsOf(f)) { const L = f?.life?.p?.[d.id]; if (!L || L.lust < at || turn <= L.refr || !isAdultProfileOf(f, d)) continue;
+  for (const d of npcDocs(f)) { const L = f?.life?.p?.[d.id]; if (!L || L.lust < at || turn <= L.refr || !isAdultProfileOf(f, d)) continue;
     const fe = feelOf(f, namesOf(d), turn); out.push({ actor: d.title, target: fe.top || "{{user}}" }); }   // 끌림 기록이 아직 없으면 {{user}}에게
   return out;
 }

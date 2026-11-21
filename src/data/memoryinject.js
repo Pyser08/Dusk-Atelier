@@ -7,12 +7,15 @@ import { scaleBlock, wikiAware } from "../engine/memoryscale.js";
 import { nsfwSection } from "../engine/nsfwprofile.js";
 import { driveSection, seeded } from "../engine/scenedrive.js";
 import { nsfwByName } from "./nsfwturn.js";
-import { lifeSection, humanSection, lustOfName, hotActors } from "../engine/nsfwlife.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
+import { lifeSection, humanSection, lustOfName, hotActors, lifeView, docByName } from "../engine/nsfwlife.js";
+import { guideInject } from "../engine/guides.js";   // 묘사 정확도 지침(심리학·해부학) — 필요할 때만
+import { GUIDES } from "./guidelib.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
 import { stateText } from "../engine/storytime.js";
 import { extraSection, mentionsOf } from "../engine/memextra.js";
 import { fertilitySection } from "../engine/fertility.js";
-import { sceneOf } from "../engine/scenepanel.js";
+import { sceneOf, inputWeather } from "../engine/scenepanel.js";
 import { weatherLine } from "../engine/weather.js";
+import { calSection } from "../engine/storycal.js";
 import { raceSection } from "../engine/races.js";   // 0.3.22 기후·예보(장면 상태창 켜졌을 때)   // 0.3.22 소문·목표·세계·흔적·근황·@인물
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
@@ -94,11 +97,20 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
         const here = [...present, ...Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && [d.title, ...(d.aliases ?? [])].some((n) => String(n ?? "").length >= 2 && low.includes(String(n).normalize("NFKC").toLowerCase()))).map((d) => d.title)];
         add(humanSection(folder, here));
         if (Number.isInteger(folder?.cursor?.at)) add(lifeSection(folder, here, folder.cursor.at));
+        { const t = Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, g = idx.settings.guides ?? {};
+          const people = [...new Set(here)].map((n) => { const d = docByName(folder, n); return d ? { name: d.title, v: lifeView(folder, d, t) } : null; }).filter(Boolean);
+          add(guideInject(GUIDES, { key: `${character?.chaId ?? ""}|${chatKeyOf(chat)}`, people, text: recent, turn: t, cfg: { on: idx.settings.inject?.guides !== false, off: g.off ?? [], custom: g.custom ?? [] } })); }
         const when = [...(folder?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
         add(fertilitySection(folder, here, Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when));
         add(extraSection(folder, { present: here, recent, turn: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when, pinned, docs: chars, world: idx.settings.inject?.world === true, status: idx.settings.inject?.status !== false, outfit: idx.settings.inject?.outfit !== false }));
+        // 11-21: 엔진 예보가 먼저, 유저가 입력으로 날씨를 바꾸면 그날은 그걸 따른다(저장해서 상태창·다음 요청도 같은 값)
+        { const lastUser = [...msgs].reverse().find((m) => isUserMessage(m));
+          const iw = lastUser ? inputWeather(extractMessageText(lastUser), when) : null;
+          if (iw && (folder.extra?.weather?.w !== iw.w || !folder.extra?.weather?.user)) { folder.extra = { ...(folder.extra ?? {}), weather: iw };
+            store.updateFolder(String(character.chaId), chatKeyOf(chat), (f) => { f.extra = { ...(f.extra ?? {}), weather: iw }; }).catch(() => {}); } }
         { let sc = null; try { sc = sceneOf("", folder, { seed: `${character.chaId}|${chatKeyOf(chat)}`, hint: [character.name, String(character.desc ?? "").slice(0, 1500)].join(" ") }); } catch { sc = null; }
           if (sc?.forecast && idx.settings.inject?.scenePanel !== false) add(weatherLine(sc.forecast, sc.climate));
+          if (sc?.date && idx.settings.inject?.scenePanel !== false) add(calSection(folder?.extra, sc.date, sc.climate));   // 이야기 달력: 7일 안의 생일·기념일·약속·공휴일
           // 0.3.22 종족 체질(몸·생물학만) + 지금 발정·날씨 반응
           if (idx.settings.inject?.race !== false) { try { const h0 = sc?.forecast?.days?.[0]?.half?.find((x) => x?.now); add(raceSection(folder, here, { adult: true, iso: sc?.date ?? "", cal: sc?.climate?.mdays ? sc.climate : null, hemi: sc?.climate?.hemi ?? "N", weather: sc?.weather ?? "", temp: h0?.t ?? null, night: /밤/.test(String(sc?.time ?? "")) || (Number(String(sc?.time ?? "").split(":")[0]) >= 18) })); } catch {} } } }
       // 장면 판단 계획(Erosync 대신). 같은 턴을 다시 보내도 같은 계획이 나오게 턴 번호로 정한 난수

@@ -54,7 +54,7 @@ export function climateFrom(f) {
 }
 
 // ── 달력: 현실(mdays 0, 12달)은 그레고리력, 아니면 한 해 = months × mdays일 ──
-const isReal = (cal) => !cal || (!cal.mdays && (cal.months ?? 12) === 12);
+export const isReal = (cal) => !cal || (!cal.mdays && (cal.months ?? 12) === 12);
 export function parseIso(s) {
   const m = String(s ?? "").match(/(\d{1,5})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})/); return m ? { y: +m[1], m: +m[2], d: +m[3] } : null;
 }

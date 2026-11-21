@@ -3,6 +3,7 @@
 //  · 장면 상태창: 응답 아래(로어북 버튼 위)에 날짜·시간·장소·날씨·등장인물(설정 inject.scenePanel, 기본 켜짐)
 // 메시지마다 불리므로 지금 채팅 폴더·설정은 3초 동안 재사용하고, 상태창 HTML은 인물별로 한 번만 만든다.
 import { readChar } from "./apiread.js";
+import { userTexts, isUserText } from "../engine/msgrole.js";
 import { statusCardHtml, linkNames, NAMECARD_CSS } from "../engine/namecard.js";
 import { scenePanelHtml, sceneOf, peopleIn, SCENE_CSS } from "../engine/scenepanel.js";
 import { charThumb } from "./charimg.js";
@@ -76,6 +77,18 @@ export function createNameLinks(memory, api = null) {
     cache = { key, links, scene, people, folder: f, cardOf, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, character?.desc].filter(Boolean).join(" ") };
     checked = Date.now();   // 2.2.22: 다 읽은 뒤에 시각을 적는다(읽는 데 3초가 넘으면 다 읽자마자 만료돼 매번 처음부터 다시 읽었다)
   };
+  // 11-21 제보: 표시 훅은 유저 입력에도 불린다 → 채팅의 유저 메시지 글을 모아 두고 같은 글이면 상태창을 붙이지 않는다.
+  // 모르는 글이면(방금 보낸 입력일 수 있음) 채팅을 다시 읽어 본다(1.5초에 한 번까지)
+  let users = null, usersAt = 0; const notUser = new Set();   // 한 번 읽고도 유저 글이 아니었던 글은 다시 읽지 않는다(응답마다 채팅을 읽지 않게)
+  const userish = async (text) => {
+    if (users && isUserText(users.set, text)) return true;
+    const head = String(text).replace(/\s+/g, "").slice(0, 60); if (notUser.has(head)) return false;
+    if (Date.now() - usersAt < 1500) return false;
+    usersAt = Date.now();
+    try { const cur = await memory?.switches?.currentChat?.({ fresh: true }); if (cur?.ci == null || !api?.getChatFromIndex) return false;
+      const chat = await api.getChatFromIndex(cur.ci, cur.ti); users = { set: userTexts(chat?.message ?? []) }; } catch { return false; }
+    const yes = isUserText(users.set, text); if (!yes) { notUser.add(head); if (notUser.size > 300) notUser.delete(notUser.values().next().value); } return yes;
+  };
   const ready = async () => { loading ??= load().finally(() => { loading = null; }); await loading; if (cache && !cache.off) { mount.ensureDoc().catch(() => {}); return cache; } return null; };
   return {
     invalidate() { cache = null; checked = 0; charMemo = null; },
@@ -102,6 +115,7 @@ export function createNameLinks(memory, api = null) {
         const s = sceneOf(text, c.folder, { seed: c.seed, hint: c.hint }), ppl = peopleIn(text, c.folder, c.botName);
         // 2.2.30: 상태 줄이 없으면 등장인물(위키 인물·봇 이름)이 글에 나온 긴 응답에만 — 리스바드는 응답 말고 다른 긴 글에도 이 처리를 거쳐 엉뚱한 곳(채팅 위쪽 전체 너비)에 붙었다
         if (!s.fromLine && !(ppl.length && text.length >= 300)) return "";
+        if (await userish(text)) return "";
         const ov = await decided(); if (ov && c.links && ppl.some((p) => p.doc)) { overlay.soon(); checkSpans(); }
         return scenePanelHtml({ ...s, force: true, people: ppl.map((p) => (p.doc && c.links ? (ov ? { name: p.name, pid: p.doc.id } : { name: p.name, card: c.cardOf(p.doc) }) : { name: p.name })) });
       } catch { return ""; }

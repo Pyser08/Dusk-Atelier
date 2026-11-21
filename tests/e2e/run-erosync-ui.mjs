@@ -92,10 +92,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   });
   ok(`[${tag}] 시험 인물에 이 채팅 성인 프로필을 넣음`, !!docId);
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "sirokko", tab: "people", page: "detail" }); __app.ctx.go("memory"); }); await page.waitForTimeout(800);
-  await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(400);
-  ok(`[${tag}] 상세 정보에는 성적 항목이 없다`, !/성적 관심/.test(await body()));
-  await page.locator(".rb-wk2-tab", { hasText: "NSFW" }).click(); await page.waitForTimeout(300);
-  ok(`[${tag}] NSFW 탭이 상세 정보와 기록 사이에 있다`, (await page.locator(".rb-wk2-tab").allTextContents()).join("|").replace(/\s+/g, "").includes("상세정보|NSFW|기록"));
+  await page.locator(".rb-wk2-tab", { hasText: "기본" }).click(); await page.waitForTimeout(400);
+  ok(`[${tag}] 기본 탭에는 성적 항목이 없다`, !/성적 관심/.test(await body()));
+  await page.locator(".rb-wk2-tab", { hasText: "성인" }).click(); await page.waitForTimeout(300);
+  ok(`[${tag}] 성인 탭이 따로 맨 끝에 있다`, (await page.locator(".rb-wk2-tab").allTextContents()).join("|").replace(/\s+/g, "").endsWith("기억|성인"));
   const gtxt = (await page.locator("#rb-nsfw-gauges").textContent().catch(() => "")) ?? "";
   ok(`[${tag}] 성인 프로필 게이지(성적 관심·주도성), 겹친 이름은 긴 쪽만`, /성적 관심/.test(gtxt) && /주도성/.test(gtxt) && /성적 개방성/.test(gtxt) && !/(^|[^적 ])개방성/.test(gtxt.replace(/성적 개방성/g, "")) && !/즉흥성/.test(gtxt.replace(/성적 즉흥성/g, "")), gtxt);
   ok(`[${tag}] 좋아하는·싫어하는 체위·장소 칩`, /기승위/.test(await body()) && /샤워실/.test(await body()) && /공공장소/.test(await body()));
@@ -126,7 +126,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 내보내기가 파일을 내려줌`, !!pdl);
   ok(`[${tag}] Erosync 카드(지금 상태·태그·내보내기)는 NSFW 탭에 없다`, (await page.locator("#rb-ero-summary, #rb-ero-tags-save, #rb-ero-export, #rb-ero-axes").count()) === 0);
   await page.screenshot({ path: `/tmp/ero-nsfw-${tag}.png`, fullPage: true });
-  await page.locator(".rb-wk2-tab", { hasText: "상세 정보" }).click(); await page.waitForTimeout(300);
+  await page.locator(".rb-wk2-tab", { hasText: "기본" }).click(); await page.waitForTimeout(300);
   await page.screenshot({ path: `/tmp/ero-wiki-info-${tag}.png` });
   ok(`[${tag}] 원본 창을 여는 링크는 없다(NSFW 탭에서 바로 고친다)`, (await page.locator(".rb-wk2-ero .rb-wk2-link", { hasText: "Erosync에서 고치기" }).count()) === 0);
   await page.locator(".rb-wk2-tab", { hasText: "관계" }).click(); await page.waitForTimeout(300);
@@ -201,7 +201,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // Erosync 꺼짐/매칭 안 됨이면 칸이 없다
   await page.evaluate(() => { __app.ctx.erosync = { isRunning: () => false, read: async () => ({ ok: false }) }; });
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "sirokko", tab: "people", page: "detail" }); __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
-  await page.locator(".rb-wk2-tab", { hasText: "NSFW" }).click(); await page.waitForTimeout(300);
+  await page.locator(".rb-wk2-tab", { hasText: "성인" }).click(); await page.waitForTimeout(300);
   ok(`[${tag}] Erosync 꺼져도 NSFW 탭에 기본 칸이 있다`, (await page.locator("#rb-wk2-nsfw").count()) === 1 && (await page.locator("#rb-wk2-nsfw .rb-nsfw-base").count()) > 0, `${await page.locator("#rb-wk2-nsfw").count()} ${await page.locator("#rb-wk2-nsfw").textContent().catch(() => "?")}`);
   await page.evaluate(() => __app.ctx.go("relmap")); await page.waitForTimeout(300);
   ok(`[${tag}] 페이지 오류 없음`, errs.length === 0, errs.join(" | "));

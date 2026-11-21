@@ -27,7 +27,7 @@ for (const [tag, vp] of [["pc", { width: 1280, height: +(process.env.H||860) }],
   });
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem ??= {}, { botId: "c1", chatIndex: 0, personKey: "시로코", tab: "people", page: "detail" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1500);
-  for (const t of ["sum", "rel", "info", "nsfw", "log"]) {
+  for (const t of ["sum", "base", "mind", "rel", "mem", "nsfw"]) {
     const b = page.locator(`.rb-wk2-tab[data-t=${t}]`).first();
     if (await b.count()) { await b.click(); await page.waitForTimeout(400); }
     await page.screenshot({ path: `${OUT}/wiki-${tag}-${t}.png`, fullPage: true });

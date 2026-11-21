@@ -8,6 +8,7 @@ import { isTombed } from "./memorydelete.js";
 import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
 import { isLover, strayRisk } from "./lover.js";
 import { attractionCap } from "./memoryhuman.js";
+import { filterHuman } from "./memedit.js";
 import { seedFromStart, seedFromTies, sourAttraction } from "./emoseed.js";
 import { applyRomance, orientCap } from "./romance.js";
 import { loverPairs, pairKey } from "./lover.js";
@@ -105,7 +106,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   out.romance = applyRomance(folder, result?.emo, loversBefore, anchor, now, { gauge }).events;   // 2.2.6 고백·사귐·이별·재회·질투·연적·연표   // 2.2.6 소유욕·독점욕은 애인만, 게이지 배수   // 2.2.4 게이지 조화(단계별 분석 켠 기본 경로)
   if (important) { out.pov = applyPov(latestScene(folder), result?.pov, now); out.exp = applyExp(folder, result?.exp, anchor, now); }
   { const o = applyOpen(folder, result?.open, anchor, now); out.open = o.added; out.closed = o.closed; }
-  out.human = applyHuman(folder, result?.human, anchor, { important, now });   // v1.8.3: 호칭·말투, 둘만의 추억(중요할 때만), 잘못된 믿음
+  out.human = applyHuman(folder, filterHuman(folder, result?.human, anchor?.at ?? 0), anchor, { important, now });   // 지운 추억·갈등·오해는 다시 안 만듦   // v1.8.3: 호칭·말투, 둘만의 추억(중요할 때만), 잘못된 믿음
   out.startSeed = seedFromStart(folder, anchor, now);   // addon-rebuild: 이미 아는 사이면 인간적 호감·신뢰를 바닥값까지(처음 만남처럼 2에서 시작하지 않게)
   folder.runs = (folder.runs ?? 0) + 1;
   if (!(keepAhead && folder.cursor && Number(folder.cursor.at) > Number(anchor?.at))) folder.cursor = { ...anchor };   // keepAhead: 지난 대화 동시 처리에서 늦게 끝난 앞 묶음이 커서를 되돌리지 않게(2.2.11)

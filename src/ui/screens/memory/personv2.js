@@ -3,12 +3,14 @@
 // 기존 위키 블록(기본 성격·수치·항목 묶음·위키 패널)은 '상세 정보', 문서 관리·이야기 기록은 '기록' 탭으로 옮긴다(기능은 그대로).
 import { h, replace } from "../../dom.js";
 import { userLabel } from "./username.js";
+import { userNsfwDoc, setUserNsfwNames } from "../../../engine/usernsfw.js";
+import { userKeySet } from "../../../engine/memoryuser.js";
 import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
 import { nsfwCard, nsfwStatusCard, nsfwTempCard, nsfwTagsCard } from "./nsfwcard.js";
 import { adultCandCard } from "./adultcands.js";
-import { marksCard, compatCard, statusCard, fertilityCard, outfitCard, raceCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
+import { marksCard, compatCard, statusCard, fertilityCard, outfitCard, raceCard, diaryCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
 import { subTabs } from "./subtabs.js";
 import { lustCard, moodCard, bodyCard, humanCard, heatOf, heatFx, compareCard } from "./lifecards.js";
 import { eroLoad, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
@@ -20,10 +22,14 @@ import { ensureMemAddonCss, wkLayoutOf } from "./memaddoncss.js";
 import { parseCycleBody } from "../../../engine/pot/cycle-tracking.js";
 import { TIE_KINDS, TIE_GROUPS, tiesBetween, setTies } from "../../../engine/ties.js";
 import { extraOf } from "../../../engine/memextra.js";
+import { editForm } from "./editrows.js";
+import { ignoreKeyOf, addIgnore, dropIgnore } from "../../../engine/memedit.js";
 import { keyOf, intimacyOf, setIntimacy, INTIM_MAX, INTIM_WORDS, setUserNames, nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const TONE = { formal: "존댓말", casual: "반말", mixed: "섞어 씀" };
-const TABS = [["sum", "요약"], ["rel", "관계"], ["info", "상세 정보"], ["nsfw", "NSFW"], ["log", "기록"]];
+// 인간다움 탭 재편(11-21 확정안): 요약 / 기본(성격·수치·상태이상·옷차림·종족) / 마음(감정·사람다움) / 관계(관계·마음 흐름) / 기억(기록 묶음·일기·이야기 기록) / 성인(따로)
+const TABS = [["sum", "요약"], ["base", "기본"], ["mind", "마음"], ["rel", "관계"], ["mem", "기억"], ["nsfw", "성인"]];
+const OLD_TAB = { info: "base", log: "mem" };   // 예전에 열어 둔 탭 이름
 const GRADE_TIP = { A: "가장 중요한 순간", B: "중요한 순간", C: "보통", D: "사소한 일" };
 const batchim = (w) => { const c = String(w ?? "").trim().slice(-1).charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 > 0; };
 const subj = (name) => name + (batchim(name) ? "이" : "가");   // 받침 따라 이/가
@@ -47,6 +53,33 @@ export function personTabs(env, parts) {
   const tabs = (m.wkTab2 ??= {}), withSel = (m.wkWith ??= {}), rev = (m.wkFeelRev ??= {});
   const run = (pr) => Promise.resolve(pr).catch(fail(ctx));
   const save = (fn, ok) => editFolder(env, fn).then(() => ok && ctx.toast(ok));
+  // 인간다움 2단계: 추억·갈등·오해 직접 추가·고치기, 지우면 무시 목록(기록기가 바로 다시 안 만듦). 고친 값은 잠그지 않음
+  const HF = {
+    bond: { box: "bonds", title: "둘만의 추억", fields: [{ k: "moment", label: "추억", len: 80 }, { k: "hook", label: "떠올릴 계기(예: 우산, 비)", len: 30, need: false }] },
+    rift: { box: "rifts", title: "갈등", fields: [{ k: "about", label: "무엇 때문에", len: 80 }, { k: "state", label: "상태", type: "select", def: "open", opts: [["open", "안 풀림"], ["apologized", "사과함"], ["resolved", "화해함"]] }, { k: "grudge", label: "앙금", type: "select", def: "none", opts: [["none", "없음"], ["some", "조금"], ["deep", "깊음"]] }] },
+    belief: { box: "beliefs", title: "오해", fields: [{ k: "thinks", label: "잘못 알고 있는 것", len: 80 }, { k: "truth", label: "실제로는", len: 80 }] },
+  };
+  // 관계 연표(전환점): 기록된 사건은 숨기기, 직접 적은 전환점은 고치기·지우기
+  const tlSig = (e) => `${e.kind}|${e.at ?? ""}|${e.when ?? ""}|${[e.a, e.b].map((x) => String(x ?? "")).sort().join("+")}`;
+  const samePair = (e, a, b) => [e.a, e.b].map((x) => String(x ?? "").replace(/\s+/g, "")).sort().join("|") === [a, b].map((x) => String(x ?? "").replace(/\s+/g, "")).sort().join("|");
+  const TLF = [{ k: "when", label: "언제(예: 2025-03-14, 비워도 돼요)", len: 20, need: false }, { k: "note", label: "무슨 일", len: 60 }];
+  const tlCard = (tl, other) => (tl.length || local) ? card("관계 연표", tl.length ? h("ol", { class: "rb-wk2-tl", id: "rb-rel-timeline" }, tl.map((e) => h("li", null,
+    h("small", { class: "rb-muted" }, e.when || (e.at != null ? `#${e.at + 1} 응답` : "")), h("span", null, e.kind === "note" ? e.note : eventText(e)),
+    local ? h("span", { class: "rb-er-acts" }, e.kind === "note" ? h("button", { type: "button", class: "rb-bzb", title: "고치기", "aria-label": "전환점 고치기", onClick: () => run(editForm(ctx.win, "전환점 고치기", TLF, e).then((v) => v && save((fo) => { const o = (fo.tlUser ?? []).find((y) => y.id === e.id); if (o) Object.assign(o, v); }, "고쳤어요."))) }, "✎") : null,
+      h("button", { type: "button", class: "rb-bzb", title: e.kind === "note" ? "지우기" : "연표에서 숨기기", "aria-label": "전환점 지우기", onClick: () => save((fo) => { if (e.kind === "note") fo.tlUser = (fo.tlUser ?? []).filter((y) => y.id !== e.id); else fo.tlHide = [...new Set([...(fo.tlHide ?? []), tlSig(e)])].slice(-200); }, "지웠어요.") }, "✕")) : null))) : h("p", { class: "rb-muted" }, "아직 전환점이 없어요."),
+    local ? btn("+ 전환점", { size: "sm", onClick: () => run(editForm(ctx.win, "전환점 추가", TLF).then((v) => v && save((fo) => { fo.tlUser = [...(fo.tlUser ?? []), { id: `utl${Date.now().toString(36)}`, kind: "note", a: me, b: other, ...v, at: turnNow(fo), user: true }].slice(-60); }, "추가했어요."))) }) : null, "rb-wk2-tlcard") : null;
+  const local = env.backend?.id === "local";
+  const editExp = (x) => run(editForm(ctx.win, "기대 차이 고치기", [{ k: "ae", label: `${shown(x.a)}의 기대`, len: 80 }, { k: "as", label: "말로 했나요", type: "select", opts: [["", "말하지 않음"], ["1", "말로 함"]] }, { k: "be", label: `${shown(x.b)}의 기대`, len: 80 }, { k: "bs", label: "말로 했나요", type: "select", opts: [["", "말하지 않음"], ["1", "말로 함"]] }], { ...x, as: x.as ? "1" : "", bs: x.bs ? "1" : "" })
+    .then((v) => v && save((fo) => { for (const o of Object.values(fo.exp ?? {})) if (o.a === x.a && o.b === x.b) Object.assign(o, { ae: v.ae, be: v.be, as: !!v.as, bs: !!v.bs, user: true }); }, "고쳤어요.")));
+  const turnNow = (fo) => (Number.isInteger(fo?.cursor?.at) ? fo.cursor.at : 0);
+  const addHuman = (kind, other) => run(editForm(ctx.win, `${HF[kind].title} 추가`, kind === "belief" ? [{ k: "who", label: "누가 잘못 알고 있나요", type: "select", def: other, opts: [[other, shown(other)], [me, shown(me)]] }, ...HF[kind].fields] : HF[kind].fields).then((v) => v && save((fo) => {
+    const item = { id: `u${kind}${Date.now().toString(36)}`, ...(kind === "belief" ? { open: true } : { a: me, b: other }), ...v, at: turnNow(fo), at_ms: Date.now(), user: true };
+    dropIgnore(fo, ignoreKeyOf({ ...item, kind })); (fo[HF[kind].box] ??= []).push(item);
+  }, "추가했어요.")));
+  const editHuman = (kind, x) => run(editForm(ctx.win, `${HF[kind].title} 고치기`, HF[kind].fields, x).then((v) => v && save((fo) => {
+    const o = (fo[HF[kind].box] ?? []).find((y) => y.id === x.id); if (o) Object.assign(o, v, { user: true });
+  }, "고쳤어요.")));
+  const ignoreHuman = (fo, kind, x) => addIgnore(fo, ignoreKeyOf({ ...x, kind }), { turn: turnNow(fo) });
   // Erosync(켜져 있을 때만): 읽어 오면 한 번 다시 그린다. 이름이 맞는 인물에게만 칸이 생긴다.
   let ero = null;
   const eroSelf = () => (ero ? eroPerson(ero, selfNames) : null);
@@ -54,8 +87,11 @@ export function personTabs(env, parts) {
 
   setUserNames(f, [userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])]);   // 페르소나 이름으로 따로 쌓인 기록도 {{user}} 한 사람으로
   const people = counterparts(f, selfNames, now);
+  // 유저({{user}})는 관계 한눈에·관계 목록에서 늘 맨 위
+  { const uk = userKeySet([userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])].filter(Boolean)), isU = (x) => uk.has(String(x?.name ?? "").toLowerCase().replace(/\s+/g, "")); people.sort((a, b) => isU(b) - isU(a)); }
   // 성별 색: folder.orient(Erosync에서 옮겨 온 성별) 또는 Erosync 인물의 gender. 여 = 분홍, 남 = 파랑
-  const genderOf = (name) => { const g = f.orient?.[nk(name)]?.g ?? (ero ? eroPersonByName(ero, name)?.gender : null); return g === "f" || g === "m" ? g : ""; };
+  const docGender = (name) => { const d = Object.values(f.wiki?.documents ?? {}).find((x) => x?.type === "Character" && [x.title, ...(x.aliases ?? [])].some((n) => nk(n) === nk(name))); return d ? f.gender?.[d.id]?.g : null; };
+  const genderOf = (name) => { const g = docGender(name) ?? f.orient?.[nk(name)]?.g ?? (ero ? eroPersonByName(ero, name)?.gender : null); return g === "f" || g === "m" ? g : ""; };
   const gcls = (name) => (lay && genderOf(name) ? `g-${genderOf(name)}` : null);
   const person = p ?? { name: me, records: [] };
   const gap = returnGap(person, f.scenes ?? [], now + 1);
@@ -97,7 +133,7 @@ export function personTabs(env, parts) {
     numCard.hidden = !metrics.length && !rows.length;
   };
   const numCard = card("수치 한눈에", [h("div", { class: "rb-wk2-nums" }, metrics.map((x) => metricRow(x, true))), gaugeBox],
-    h("button", { type: "button", class: "rb-wk2-link", onClick: () => { tabs[pk] = "info"; paint(); } }, "자세히"));
+    h("button", { type: "button", class: "rb-wk2-link", onClick: () => { tabs[pk] = "base"; paint(); } }, "자세히"));
   numCard.hidden = !metrics.length;
   if (parts.gauges) Promise.resolve().then(parts.gauges).then((g) => { gauges = g ?? []; fillGauges(); }).catch(() => {});
   const glanceCard = () => people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, (lay === "B4" ? people : people.slice(0, 6)).map((x) => h("button", { type: "button", class: ["rb-wk2-gl", selfNames.some((n) => isLover(f, n, x.name)) && "lover", gcls(x.name)], "aria-pressed": lay === "B4" && x.name === (withSel[pk] ?? people[0]?.name) ? "true" : null, onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), tieText(x.name) ? h("small", { class: "rb-wk2-tie" }, tieText(x.name)) : null))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null;
@@ -201,12 +237,12 @@ export function personTabs(env, parts) {
       return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(440px,94vw)" }, h("h3", null, "둘만의 추억 고치기"), h("label", { class: "rb-mem-field" }, h("span", null, "추억"), mo), h("label", { class: "rb-mem-field" }, h("span", null, "떠올릴 계기"), hk),
         h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done({ moment: mo.value, hook: hk.value }) })));
     }).then((v) => v && save((fo) => { editBond(fo, b.id, v); }, "고쳤어요."))) }),
-      btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 추억을 지울까요?", body: b.moment, ok: "지우기", danger: true })) save((fo) => { deleteBond(fo, b.id); }, "지웠어요."); } })));
+      btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 추억을 지울까요?", body: b.moment, ok: "지우기", danger: true })) save((fo) => { ignoreHuman(fo, "bond", b); deleteBond(fo, b.id); }, "지웠어요."); } })));
   const beliefItem = (b) => h("div", { class: ["rb-wk2-belief", !b.open && "done"] },
     h("small", null, b.open ? `${topic(shown(b.who))} 이렇게 알고 있어요` : `${subj(shown(b.who))} 잘못 알던 것 · 풀림`), h("b", null, `“${b.thinks}”`),
     h("small", null, "실제로는"), h("span", null, b.truth), b.by ? h("small", { class: "rb-muted" }, `${subj(shown(b.by))} 그렇게 말했어요`) : null,
-    h("div", { class: "rb-wk2-acts" }, b.open ? btn("진실을 알았어요", { size: "sm", onClick: () => save((fo) => { resolveBelief(fo, b.id); }, "풀린 것으로 표시했어요.") }) : null,
-      btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 오해 기록을 지울까요?", body: b.thinks, ok: "지우기", danger: true })) save((fo) => { deleteBelief(fo, b.id); }, "지웠어요."); } })));
+    h("div", { class: "rb-wk2-acts" }, btn("고치기", { size: "sm", onClick: () => editHuman("belief", b) }), b.open ? btn("진실을 알았어요", { size: "sm", onClick: () => save((fo) => { resolveBelief(fo, b.id); }, "풀린 것으로 표시했어요.") }) : null,
+      btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 오해 기록을 지울까요?", body: b.thinks, ok: "지우기", danger: true })) save((fo) => { ignoreHuman(fo, "belief", b); deleteBelief(fo, b.id); }, "지웠어요."); } })));
   // ⑦ 갈등·사과·앙금
   const RIFT_STATE = { open: "안 풀림", apologized: "사과함", resolved: "화해함" };
   const riftItem = (rf) => {
@@ -215,8 +251,8 @@ export function personTabs(env, parts) {
     return h("div", { class: ["rb-wk2-rift", closed && "done", `s-${rf.state}`] },
       h("div", { class: "rb-wk2-tline" }, h("small", { class: "rb-wk2-badge st" }, RIFT_STATE[rf.state] ?? rf.state), grudge ? h("small", { class: "rb-wk2-badge gr" }, grudge + (rf.who ? ` · ${shown(rf.who)}` : "")) : null),
       h("span", { class: "t" }, rf.about),
-      h("div", { class: "rb-wk2-acts" }, closed ? null : btn("풀렸어요", { size: "sm", onClick: () => save((fo) => { resolveRift(fo, rf.id); }, "화해한 것으로 표시했어요.") }),
-        btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 갈등 기록을 지울까요?", body: rf.about, ok: "지우기", danger: true })) save((fo) => { deleteRift(fo, rf.id); }, "지웠어요."); } })));
+      h("div", { class: "rb-wk2-acts" }, btn("고치기", { size: "sm", onClick: () => editHuman("rift", rf) }), closed ? null : btn("풀렸어요", { size: "sm", onClick: () => save((fo) => { resolveRift(fo, rf.id); }, "화해한 것으로 표시했어요.") }),
+        btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 갈등 기록을 지울까요?", body: rf.about, ok: "지우기", danger: true })) save((fo) => { ignoreHuman(fo, "rift", rf); deleteRift(fo, rf.id); }, "지웠어요."); } })));
   };
   // ⑧ 사람 앞에서 달라지는 태도
   const faceRow = (x, who, to) => {
@@ -249,24 +285,26 @@ export function personTabs(env, parts) {
   // 상대 한 명과의 카드 조각. 빈 칸은 null 대신 empty에 이름만 모은다(개편 A·B·C안에서 숨김).
   const pieces = (other) => {
     const v = pairView(f, selfNames, other, now), ties = tiesWith(other), empty = [];
-    const tl = selfNames.flatMap((n) => timeline(f, n, other)).filter((e, i, a) => a.indexOf(e) === i), u = unreqOf(other);
+    const hide = new Set(f.tlHide ?? []), mine = (f.tlUser ?? []).filter((e) => selfNames.some((n) => samePair(e, n, other)));
+    const tl = [...selfNames.flatMap((n) => timeline(f, n, other)).filter((e, i, a) => a.indexOf(e) === i && !hide.has(tlSig(e))), ...mine].sort((x, y) => (x.at ?? -1) - (y.at ?? -1)), u = unreqOf(other);
     const ms = metrics.filter((x) => x.targets.some((t) => nk(t) === nk(other)));
     const P = {
       v, ties,
       stage: card("관계", [relMeter(v, other), ties.length ? h("div", { class: "rb-wk2-chips" }, ties.map((t) => h("span", { class: "rb-wk2-chip rb-wk2-tie" }, t.label))) : h("p", { class: "rb-muted" }, "아직 드러난 관계가 없어요. 가족·동료·주종처럼 이야기에 나오면 채워져요."),
         h("p", { class: "rb-muted" }, `함께한 장면 ${v.stage.shared}번`)], btn("고치기", { size: "sm", onClick: () => editTies(other, ties) }), "rb-wk2-stagecard rb-rm-card"),
       lover: loverCard(other),
-      tl: tl.length ? card("관계 연표", h("ol", { class: "rb-wk2-tl", id: "rb-rel-timeline" }, tl.map((e) => h("li", null, h("small", { class: "rb-muted" }, e.when || (e.at != null ? `#${e.at + 1} 응답` : "")), h("span", null, eventText(e))))), null, "rb-wk2-tlcard") : null,
+      tl: tlCard(tl, other),
       unreq: u ? card("짝사랑", h("p", { class: "rb-wk2-p" }, `${subj(shown(u.from))} ${shown(u.to)}에게 끌리지만(끌림 ${u.v}) 상대는 아직 아니에요(끌림 ${u.back}).`), null, "rb-wk2-lovercard off") : null,
       nums: ms.length ? card("수치", [...ms.map((x) => metricRow(x, true)), h("small", { class: "rb-muted" }, "이 상대가 대상인 수치만 보여요.")]) : null,
       talk: card("호칭 · 말투", [talkRow(v.talk.ab, me, other), h("hr", { class: "rb-wk2-hr" }), talkRow(v.talk.ba, other, me)]),
-      rifts: v.rifts?.length ? card("갈등", v.rifts.map(riftItem)) : null,
-      bonds: v.bonds.length ? card("둘만의 추억", v.bonds.map(bondItem)) : null,
-      exp: v.exp ? card("기대 차이", h("div", { class: "rb-wk2-exp" }, [[v.exp.a, v.exp.ae, v.exp.as], [v.exp.b, v.exp.be, v.exp.bs]].map(([n, e, said]) => h("div", null, h("small", { class: "rb-muted" }, `${topic(shown(n))}`), h("span", null, e), h("small", { class: "rb-muted" }, said ? "말로 했어요" : "말하지 않았어요"))))) : null,
+      rifts: v.rifts?.length ? card("갈등", v.rifts.map(riftItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("rift", other) })) : null,
+      bonds: v.bonds.length ? card("둘만의 추억", v.bonds.map(bondItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("bond", other) })) : null,
+      exp: v.exp ? card("기대 차이", h("div", { class: "rb-wk2-exp" }, [[v.exp.a, v.exp.ae, v.exp.as], [v.exp.b, v.exp.be, v.exp.bs]].map(([n, e, said]) => h("div", null, h("small", { class: "rb-muted" }, `${topic(shown(n))}`), h("span", null, e), h("small", { class: "rb-muted" }, said ? "말로 했어요" : "말하지 않았어요")))),
+        local ? h("span", { class: "rb-er-acts" }, btn("고치기", { size: "sm", onClick: () => editExp(v.exp) }), btn("지우기", { size: "sm", onClick: () => save((fo) => { for (const [k, x] of Object.entries(fo.exp ?? {})) if (x.a === v.exp.a && x.b === v.exp.b) delete fo.exp[k]; }, "지웠어요.") })) : null) : null,
       face: card("사람 앞 태도", [faceRow(v.face?.ab, me, other), h("hr", { class: "rb-wk2-hr" }), faceRow(v.face?.ba, other, me)]),
-      beliefs: v.beliefs.length ? card("오해", v.beliefs.map(beliefItem), null, "warn") : null,
+      beliefs: v.beliefs.length ? card("오해", v.beliefs.map(beliefItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("belief", other) }), "warn") : null,
       ero: eroPairCard(ctx, card, ero, eroSelf(), ero ? eroPersonByName(ero, other) : null),
-      empty,
+      empty, other,
     };
     const talkEmpty = !v.talk.ab && !v.talk.ba, faceEmpty = !v.face?.ab && !v.face?.ba;
     if (!v.bonds.length) empty.push("둘만의 추억");
@@ -282,9 +320,13 @@ export function personTabs(env, parts) {
     if (!names.length) return null;
     const key = pk + "|empty", open = !!rev[key];
     return h("div", { class: "rb-wk2-empty" }, h("small", { class: "rb-muted" }, "아직 없는 칸 · " + names.join(" · ")),
+      ...[["둘만의 추억", "bond"], ["갈등", "rift"], ["오해", "belief"]].filter(([n]) => P.empty.includes(n)).map(([n, k]) => h("button", { type: "button", class: "rb-wk2-link", onClick: () => addHuman(k, P.other) }, `+ ${n}`)),
       (P.talkEmpty || P.faceEmpty) ? h("button", { type: "button", class: "rb-wk2-link", onClick: () => { rev[key] = !open; paint(); } }, open ? "접기" : "직접 적기") : null,
       open ? h("div", { class: "rb-wk2-emptybody" }, P.talkEmpty ? P.talk : null, P.faceEmpty ? P.face : null) : null);
   };
+  // 아직 없는 갈등·오해를 직접 적는 줄(기본 배치용)
+  const addRow = (P) => { const ks = [["갈등", "rift"], ["오해", "belief"]].filter(([n]) => P.empty.includes(n));
+    return ks.length ? h("div", { class: "rb-wk2-empty" }, h("small", { class: "rb-muted" }, "직접 적기"), ...ks.map(([n, k]) => h("button", { type: "button", class: "rb-wk2-link", onClick: () => addHuman(k, P.other) }, `+ ${n}`))) : null; };
   const filled = (P) => [P.nums, P.talkEmpty ? null : P.talk, P.rifts, P.bonds, P.exp, P.faceEmpty ? null : P.face, P.beliefs, P.ero].filter(Boolean);
   // addon-rebuild: 이 상대와의 관계 지우기(잘못 붙은 관계 — 예: 스친 엑스트라). 위키 화면이 넘겨준 removeRelation이 있을 때만.
   const relDel = (other) => typeof parts.removeRelation === "function" && other ? h("div", { class: "rb-mem-sact" }, btn(`${shown(other)}와의 관계 지우기`, { size: "sm", id: "rb-wk2-reldel", title: "두 사람 사이 감정·관계 기록과 위키의 서로에 대한 항목을 지워요", onClick: () => parts.removeRelation(other) })) : null;
@@ -352,7 +394,7 @@ export function personTabs(env, parts) {
   // 세부 탭(PC 왼쪽 레일 · 모바일 아래 반원 다이얼). 고른 세부 탭은 인물·탭마다 기억
   const subSel = (m.wkSub ??= {});
   const sub2 = (tab, items) => subTabs(ctx, subSel, `${pk}|${tab}`, items, { label: "세부 탭" });
-  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "관계·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }, doc && { id: "cond", label: "상태이상", icon: "🤒", hint: "취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) }, doc && { id: "outfit", label: "옷차림", icon: "👗", hint: "부위별 옷·액세서리(삽화용 상세)", render: () => outfitCard(env, card, doc) }, doc && { id: "race", label: "종족", icon: "🧬", hint: "종족 체질·발정기·몸 모형", render: () => raceCard(env, card, doc) }]);
+  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "관계·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }]);
   const relation0 = () => {
     if (lay === "A") return layoutA();
     if (fam === "B") return layoutB();
@@ -360,8 +402,8 @@ export function personTabs(env, parts) {
     const other = curOther(), P = pieces(other), v = P.v;
     return h("div", { class: "rb-wk2-pane" }, pickRow(other),
       h("div", { class: "rb-wk2-cards" }, P.stage, P.lover, P.tl, P.unreq, feelCard(v, other), P.nums, P.talk, P.rifts,
-        P.bonds ?? card("둘만의 추억", h("p", { class: "rb-muted" }, "아직 없어요. 둘에게 의미 있는 순간이 생기면 쌓여요.")), P.exp, P.faceEmpty ? null : P.face, P.beliefs, P.ero),
-      relDel(other), hint());
+        P.bonds ?? card("둘만의 추억", h("p", { class: "rb-muted" }, "아직 없어요. 둘에게 의미 있는 순간이 생기면 쌓여요."), btn("+ 추가", { size: "sm", onClick: () => addHuman("bond", other) })), P.exp, P.faceEmpty ? null : P.face, P.beliefs, P.ero),
+      addRow(P), relDel(other), hint());
   };
 
   // ── 상세 정보 · 기록 ──
@@ -382,8 +424,13 @@ export function personTabs(env, parts) {
     if (!grid) return which === "prof" ? el : null;
     return h("div", { class: "rb-wk2-pane" }, h("div", { class: "rb-wk3 rb-wk3-solo" }, h("div", { class: "rb-wk3-grid" }, parts[which])));
   };
-  const info = () => doc ? sub2("info", [{ id: "prof", label: "성격·수치", icon: "🧭", hint: "기본 성격과 수치", render: () => infoPart("prof") }, { id: "emo", label: "감정", icon: "💗", hint: "상대별 감정", render: () => infoPart("emo") },
-    { id: "human", label: "사람다움", icon: "🧩", hint: "말버릇·습관·꿈·비밀", render: () => h("div", { class: "rb-wk2-pane" }, humanCard(env, card, doc, "human")) }, { id: "rec", label: "기록", icon: "📒", hint: "기록 묶음·빈 항목", render: () => infoPart("rec") }]) : info0();   // addon-rebuild: Erosync 8가지 성향은 NSFW 탭의 Erosync 카드로 옮김(상세 정보의 성향과 헷갈려서)
+  const base = () => doc ? sub2("base", [{ id: "prof", label: "성격·수치", icon: "🧭", hint: "기본 성격과 수치", render: () => infoPart("prof") },
+    { id: "cond", label: "상태이상", icon: "🤒", hint: "컨디션·취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) },
+    { id: "outfit", label: "옷차림", icon: "👗", hint: "부위별 옷·액세서리(삽화용 상세)", render: () => outfitCard(env, card, doc) },
+    { id: "race", label: "종족", icon: "🧬", hint: "종족 체질·발정기·몸 모형", render: () => raceCard(env, card, doc) }]) : info0();
+  const mind = () => doc ? sub2("mind", [{ id: "emo", label: "감정", icon: "💗", hint: "상대별 감정", render: () => infoPart("emo") },
+    { id: "human", label: "사람다움", icon: "🧩", hint: "말버릇·습관·꿈·비밀", render: () => h("div", { class: "rb-wk2-pane" }, humanCard(env, card, doc, "human")) }]) : h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "인물 문서가 생기면 감정·사람다움이 여기에 보여요."));
+  const tabBody = (k) => (k === "base" ? base() : k === "mind" ? mind() : k === "nsfw" ? nsfw() : k === "mem" ? log() : relation());   // Erosync 8가지 성향은 성인 탭의 Erosync 카드
   // NSFW 탭: Dusk 성인 항목(월경·임신, 성적 욕망·이상성향 후보) + Erosync 성적 항목(켜져 있을 때만). 항상 보인다.
   // 월경·임신 한눈에: 주기 띠(생리·가임기·오늘) + 다음 월경·배란까지 남은 날 / 임신이면 주차·출산 예정까지
   const dayN = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5 : NaN; };
@@ -419,6 +466,17 @@ export function personTabs(env, parts) {
     const cycCard = card("월경·임신", [cv ?? cyc ?? note("아직 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.")], null, "rb-nsfw-base");
     // 세부 탭: 상태(성욕·몸) / 몸(성감대·월경) / 취향(프로필·잠자리·후보·태그) / 장면(장면 판단)
     const pane = (...k) => h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, k.filter(Boolean));
+    // 유저 줄: 위키 문서가 없으니 고정 키(actor:user) 칸으로 성인 프로필·몸 상태를 보여 주고 고친다(위키 글 칸인 후보는 뺌)
+    const uNames = [userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])].filter(Boolean);
+    if (!doc && selfNames.some((n) => userKeySet(uNames).has(String(n).toLowerCase().replace(/\s+/g, "")))) {
+      setUserNsfwNames(uNames);
+      const ud = userNsfwDoc();
+      return sub2("nsfw", [
+        { id: "state", label: "상태", icon: "🌡️", hint: "성욕 게이지·피로·경험·월경·임신", render: () => pane(lustCard(env, card, ud, { after: fertilityCard(env, card, ud), cycle: cv ?? cyc ?? null })) },
+        { id: "taste", label: "취향", icon: "🫦", hint: "프로필·잠자리·태그", render: () => pane(nsfwCard(env, card, ud), humanCard(env, card, ud, "ext"), nsfwTagsCard(env, card, ud)) },
+        { id: "body", label: "몸", icon: "💋", hint: "성감대·몸 흔적", n: (env.folder?.nsfw?.[ud.id]?.zones ?? []).length, render: () => pane(bodyCard(env, card, ud), marksCard(env, card, ud)) },
+        { id: "compat", label: "궁합", icon: "💞", hint: "상대와 취향이 얼마나 맞는지", render: () => pane(compatCard(env, card, ud)) }]);
+    }
     if (!doc) return pane(nsfwStatusCard(env, card, doc), cycCard, adultCandCard(env, card, doc), nsfwCard(env, card, doc), nsfwTempCard(env, card, doc), nsfwTagsCard(env, card, doc));
     const zn = (env.folder?.nsfw?.[doc.id]?.zones ?? []).length;
     const el = sub2("nsfw", [
@@ -436,13 +494,15 @@ export function personTabs(env, parts) {
     parts.onLog?.();   // 2.2.22: 기록 목록은 이때 처음 만든다
     const blocks = (parts.logBlocks ?? []).filter(Boolean), sum = lay === "B4" ? summary("log") : null;
     const items = [sum && { id: "sum", label: "달라진 점", icon: "✨", hint: "바뀐 것·남은 순간", render: () => h("div", { class: "rb-wk2-pane" }, summary("log")) },
+      doc && { id: "rec", label: "기록 묶음", icon: "📒", hint: "기록 묶음·빈 항목", render: () => infoPart("rec") },
+      doc && { id: "diary", label: "일기", icon: "📔", hint: "인물 일기 보기·고치기", render: () => h("div", { class: "rb-wk2-pane" }, diaryCard(env, card, doc)) },
       ...blocks.map((b, i) => ({ id: `b${i}`, label: b.querySelector?.("summary b, .rb-wk2-ch b, h4, summary")?.textContent?.trim()?.slice(0, 10) || (i ? "이야기 기록" : "문서 관리"), icon: i ? "📖" : "🗂️", render: () => h("div", { class: "rb-wk2-pane" }, b) }))].filter(Boolean);
     return items.length > 1 ? sub2("log", items) : h("div", { class: "rb-wk2-pane" }, sum, ...blocks);
   };
 
   // C안: 탭 없이 한 장. 위에 붙는 목차를 누르면 그 구역으로 스크롤.
   const onePage = () => {
-    const secs = [["sum", "요약", summary()], ["rel", `관계 ${people.length || ""}`.trim(), layoutCRel()], ["info", "상세 정보", info()], ["nsfw", "NSFW", nsfw()], ["log", "기록", log()]];
+    const secs = [["sum", "요약", summary()], ["base", "기본", base()], ["mind", "마음", mind()], ["rel", `관계 ${people.length || ""}`.trim(), layoutCRel()], ["mem", "기억", log()], ["nsfw", "성인", nsfw()]];
     const jump = (k) => root.querySelector(`[data-sec="${k}"]`)?.scrollIntoView?.({ block: "start", behavior: "smooth" });
     return [h("nav", { class: "rb-wk2-toc", "aria-label": "인물 정보 목차" }, secs.map(([k, l]) => h("button", { type: "button", class: "rb-chip", onClick: () => jump(k) }, l))),
       h("div", { class: "rb-wk2-one" }, secs.map(([k, l, el]) => h("div", { class: "rb-wk2-sec", "data-sec": k }, h("h4", null, l.replace(/ \d+$/, "")), el)))];
@@ -462,23 +522,23 @@ export function personTabs(env, parts) {
   // B3: 인물 탭 없이 요약·관계·상세·NSFW·기록을 모두 접는 묶음으로(열어 둔 것 기억)
   const allFold = () => {
     const open = (m.wkSecOpen ??= { rel: true });
-    const secs = [["sum", "요약", summary], ["rel", `관계 · ${people.length}명`, relation], ["info", "상세 정보", info], ["nsfw", "NSFW", nsfw], ["log", "기록", log]];
+    const secs = [["sum", "요약", summary], ["base", "기본", base], ["mind", "마음", mind], ["rel", `관계 · ${people.length}명`, relation], ["mem", "기억", log], ["nsfw", "성인", nsfw]];
     return h("div", { class: "rb-wk2-fold" }, secs.map(([k, l, fn]) => h("details", { class: "rb-wk2-acc big", open: !!open[k], "data-sec": k, onToggle: (e) => { if (open[k] === e.target.open) return; open[k] = e.target.open; paint(); } },
       h("summary", null, h("b", null, l), h("span", { style: "flex:1" }), h("i", { class: "arr", "aria-hidden": "true" })), open[k] ? h("div", { class: "rb-wk2-accb" }, fn()) : null)));
   };
   // B4: 왼쪽 프로필 열(머리 + 요약) 고정, 오른쪽에 탭(관계·상세·NSFW·기록)
   const infoBox = (tab) => {
-    const t = tab === "sum" || tab === "sum2" ? "rel" : tab;   // 2.2.6 요약 탭은 없앰(내용은 왼쪽 열·기록·NSFW로) — 처음 열면 관계
+    const t = tab === "sum" || tab === "sum2" ? "rel" : OLD_TAB[tab] ?? tab;   // 2.2.6 요약 탭은 없앰(내용은 왼쪽 열·기록·NSFW로) — 처음 열면 관계
     // 좁은 화면은 왼쪽 열이 위로 쌓이므로 머리만 두고 요약은 ‘요약’ 탭에 전부, 넓은 화면은 수치·관계 한눈에를 왼쪽 열에
     const narrow = !!ctx.win?.ownerDocument?.defaultView?.matchMedia?.("(max-width: 760px)")?.matches;
     return h("div", { class: "rb-wk2-ibox" },
       h("aside", { class: "rb-wk2-iside" }, hero(), narrow ? null : summary("side")),
       h("div", { class: "rb-wk2-imain" },
         h("div", { class: "rb-wk2-tabs", role: "tablist", "aria-label": "인물 정보" }, TABS.filter(([k]) => k !== "sum").map(([k, l]) => h("button", { type: "button", role: "tab", class: ["rb-wk2-tab", k === t && "pane-sel", false], "data-t": k, "aria-selected": k === t ? "true" : "false", onClick: () => { tabs[pk] = k; paint(); } }, l))),
-        t === "rel" ? relation() : t === "info" ? info() : t === "nsfw" ? nsfw() : log()));
+        tabBody(t)));
   };
   function paint() {
-    const tab = tabs[pk] ?? "sum", paneTab = tab === "sum" ? "rel" : tab;
+    const tab = OLD_TAB[tabs[pk]] ?? tabs[pk] ?? "sum", paneTab = tab === "sum" ? "rel" : tab;
     root.setAttribute("data-tab", lay === "C" || lay === "B3" || lay === "B4" ? "one" : tab);
     root.setAttribute("data-lay", lay || "now");
     replace(root,
@@ -486,7 +546,7 @@ export function personTabs(env, parts) {
       gap && !lay ? h("div", { class: "rb-wk2-gap", role: "note" }, `오랜만에 다시 나왔어요 · 응답 ${gap}개 만`) : null,
       lay === "C" ? onePage() : lay === "B3" ? allFold() : lay === "B4" ? infoBox(tab) : [
       h("div", { class: "rb-wk2-tabs", role: "tablist", "aria-label": "인물 정보" }, TABS.map(([k, l]) => h("button", { type: "button", role: "tab", class: ["rb-wk2-tab", k === paneTab && "pane-sel"], "data-t": k, "aria-selected": tab === k ? "true" : "false", onClick: () => { tabs[pk] = k; paint(); } }, l))),
-      h("div", { class: "rb-wk2-body" }, summary(), paneTab === "rel" ? relation() : paneTab === "info" ? info() : paneTab === "nsfw" ? nsfw() : log())]);
+      h("div", { class: "rb-wk2-body" }, summary(), tabBody(paneTab))]);
   }
   paint();
   return root;

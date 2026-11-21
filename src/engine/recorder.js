@@ -168,6 +168,8 @@ export const NSFW_LITE_STAGE1 = [
   "",
   "",
   "Sexual profile tracking is on — ALSO write these lines only when newest clearly shows it (most replies have none):",
+  "sex|Name|m or f|exact quote      ONLY when newest shows Name's body sex actually changing (transformation, magic, curse, gender swap); never for clothing, roleplay or a guess",
+  "Name may be {{user}} too when newest or the user message clearly shows it (record only what {{user}} already did or said; never invent it).",
   "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      arousal never rises on its own — write lust only when newest moves this character's arousal; fatigue for real exertion or rest",
   "sleep|Name",
 ].join("\n");
@@ -216,13 +218,14 @@ export function nsfwFrom(raw, known = []) {
   const out = [];
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
     const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
-    const name = canonName(String(f[1] ?? "").trim(), known); if (!name || name === "{{user}}") continue;
+    const name = canonName(String(f[1] ?? "").trim(), known); if (!name) continue;   // {{user}} 줄도 받는다 — 유저 칸(actor:user)에 저장
     if (tag === "taste" && f[3]) { const k = /^(position|place|play|체위|장소|플레이)$/i.test(f[3]) && f[4] ? f[3] : "", lab = k ? f[4] : f[3], q = k ? f[5] : f[4];   // 예전 줄(갈래 없음)도 읽는다
       out.push({ kind: "taste", posKind: k, name, preference: /dislike|싫/i.test(f[2] ?? "") ? "disliked" : "preferred", label: lab.slice(0, 60), quote: (q ?? "").slice(0, 160) }); }
     else if (tag === "sexval" && f[2] && f[3]) out.push({ kind: "sexval", name, key: f[2], delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });
     else if (tag === "act" && f[3]) { const a = String(f[3]).toLowerCase(), act = /sex|관계|섹스/.test(a) ? "sex" : /climax|절정|사정|오르가/.test(a) ? "climax" : /kiss|키스/.test(a) ? "kiss" : "touch";
       out.push({ kind: "act", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), act, labels: String(f[4] ?? "").split(/[,，、·]/).map((x) => x.trim()).filter((x) => x && !/^(none|없음|-)$/i.test(x)).slice(0, 4) }); }
     else if (tag === "sleep") out.push({ kind: "sleep", name });
+    else if (tag === "sex" && f[2] && /^(m|f|male|female|남|여|남자|여자|남성|여성)$/i.test(f[2])) out.push({ kind: "sex", name, g: /^(m|male|남)/i.test(f[2]) ? "m" : "f", quote: (f[3] ?? "").slice(0, 160) });   // 이야기에서 몸의 성별이 바뀜
     else if (tag === "touch" && f[2]) out.push({ kind: "touch", name, parts: String(f[2]).split(/[,，、·]/).map((x) => x.trim()).filter(Boolean).slice(0, 4) });
     else if (tag === "sat" && f[3]) out.push({ kind: "sat", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), level: /good|좋|만족/i.test(f[3]) ? "good" : /bad|아쉬|불만/i.test(f[3]) ? "bad" : "ok" });
     else if (tag === "gauge" && f[2] && f[3]) out.push({ kind: "gauge", name, key: /fat|피로/i.test(f[2]) ? "fat" : "lust", delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });

@@ -9,7 +9,8 @@ import { tempPath } from "../../../engine/erosyncview.js";
 import { TEMP_LINES } from "./erosynctempui.js";
 import { bar, eroDetailRows } from "./erosyncwiki.js";
 import { SEX_LABEL, AXIS_LABEL, SEX_KEYS, AXIS_KEYS, normalizeNsfw, normTags, cleanPosLabel, posKind, POS_KIND_LABEL, POS_GROUPS, posGroup } from "../../../engine/nsfwprofile.js";
-import { profileText } from "../../../data/profileseed.js";
+import { profileText, userNsfwNeed } from "../../../data/profileseed.js";
+import { isUserNsfwDoc } from "../../../engine/usernsfw.js";
 import { logEvent, logFailure } from "../../../data/memlog.js";
 import { infoBtn, smoothPath } from "./lifecards.js";
 // 성인 프로필 수치 설명(i 버튼)
@@ -31,9 +32,10 @@ export async function regenerate(env, doc, { keep = null, quiet = false } = {}) 
   // 방금 바뀐 성적 욕망·이상성향(다시 뽑기 등)이 들어 있는 저장본을 먼저 본다
   const stored = await memStore(ctx).getFolder(env.bot.id, env.chatItem.id).catch(() => null);
   const prof = stored?.wiki?.people?.profiles?.[doc.id] ?? rt.wiki.snapshot?.()?.people?.profiles?.[doc.id];
-  if (!prof) return ctx.toast("이 인물은 기본 성격이 아직 없어요. 다음 턴에 기본 성격과 함께 만들어져요.", { error: true });
+  const mine = isUserNsfwDoc(doc) ? await userNsfwNeed(ctx.api ?? env.api, {}).catch(() => null) : null;   // 유저 칸: 페르소나 설명으로
+  if (!prof && !mine) return ctx.toast("이 인물은 기본 성격이 아직 없어요. 다음 턴에 기본 성격과 함께 만들어져요.", { error: true });
   if (!quiet) ctx.toast("성인 프로필을 만드는 중이에요…");
-  const r = await imp.runNsfw([{ id: doc.id, name: doc.title || doc.id, profile: profileText(prof) }]).catch((e) => ({ byId: {}, failed: [{ id: doc.id, error: e?.message ?? String(e) }] }));
+  const r = await imp.runNsfw([{ id: doc.id, name: doc.title || doc.id, profile: mine ? mine.profile : profileText(prof) }]).catch((e) => ({ byId: {}, failed: [{ id: doc.id, error: e?.message ?? String(e) }] }));
   const n = normalizeNsfw(r.byId[doc.id]);
   if (!n) {
     const msg = r.failed[0]?.error || "문제: 답의 nsfw 값이 비었거나 형식이 맞지 않아요", cen = /^\s*검열[:：]/.test(msg);

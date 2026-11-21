@@ -33,6 +33,10 @@ export const BODY_PARTS = Object.freeze([
   { id: "womb", label: "자궁", side: "f", sex: "f", x: 50, y: 90, re: /자궁|포르치오|womb|uterus|cervix/i },
   { id: "clit", label: "클리토리스", side: "f", sex: "f", x: 50, y: 102.4, re: /클리|음핵|clit/i },
   { id: "vagina", label: "질", side: "f", sex: "f", x: 50, y: 106.4, re: /^질|질\s*(입구|안|속|벽|내)|vagina/i },
+  // 남성 부위(sex:"m" — 남성 모형에만)
+  { id: "glans", label: "귀두", side: "f", sex: "m", x: 50, y: 110.4, re: /귀두|glans/i },
+  { id: "penis", label: "음경", side: "f", sex: "m", x: 50, y: 104.6, re: /음경|자지|페니스|penis|cock|shaft/i },
+  { id: "testicles", label: "고환", side: "f", sex: "m", x: 56.4, y: 107.4, re: /고환|불알|음낭|testic|scrot|balls/i },
   { id: "groin", label: "사타구니", side: "f", x: 44.6, y: 103, re: /사타구니|음부|성기|groin|genital/ },
   { id: "thighs", label: "허벅지 안쪽", side: "f", x: 44, y: 122, re: /허벅지|thigh/ },
   { id: "hands", label: "손·손가락", side: "f", x: 22, y: 94, re: /손|손가락|hand|finger/ },
@@ -41,6 +45,7 @@ export const BODY_PARTS = Object.freeze([
   { id: "back", label: "등", side: "b", x: 50, y: 55, re: /^등|등줄기|척추|back|spine/ },
   { id: "lowback", label: "허리 뒤", side: "b", x: 50, y: 84, re: /허리 ?뒤|꼬리뼈|lower back/ },
   { id: "butt", label: "엉덩이", side: "b", x: 50, y: 100, re: /엉덩이|둔부|butt|ass/ },
+  { id: "prostate", label: "전립선", side: "b", sex: "m", x: 56, y: 104, re: /전립선|prostate/i },
   { id: "anus", label: "항문", side: "b", x: 50, y: 107, re: /항문|애널|anal|anus/ },
   { id: "knees", label: "무릎 뒤", side: "b", x: 43, y: 150, re: /무릎|오금|knee/ },
   // 0.3.22 종족 부위(race: 그 몸 특징이 있는 종족 모형에만 찍힌다). 허리 뒤(꼬리뼈)보다 뒤에 둬서 '꼬리뼈'는 허리 뒤로

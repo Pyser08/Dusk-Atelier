@@ -44,6 +44,33 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 세계 · 목표: 진척 막대`, (await page.locator(".rb-goal-bar").count()) === 1 && (await win.getByText("기사단장 되기").count()) > 0);
   await page.locator(".rb-seg button", { hasText: "소문" }).first().click(); await page.waitForTimeout(300);
   ok(`[${tag}] 세계 · 소문`, (await win.getByText("유나가 왕녀라는 것").count()) > 0);
+  // 인간다움 2단계 공통 편집 부품: ✎ 고치기 → ✕ 지우기 → ↶ 되돌리기 → + 추가
+  { const row = () => page.locator(".rb-er-row", { hasText: "왕녀" }).first();
+    await row().locator("button[aria-label=고치기]").click(); await page.waitForTimeout(200);
+    const inp = page.locator(".rb-er-form input"); ok(`[${tag}] 소문 고치기 창: 말한 사람·들은 사람·내용 3칸`, (await inp.count()) === 3);
+    await inp.nth(2).fill("유나가 숨은 왕녀라는 것"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 소문 고치기 저장`, (await win.getByText("유나가 숨은 왕녀라는 것").count()) > 0);
+    await row().locator("button[aria-label=지우기]").click(); await page.waitForTimeout(200);
+    await page.locator(".rb-modal .rb-btn", { hasText: "지우기" }).last().click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 소문 지우기`, (await win.getByText("유나가 숨은 왕녀라는 것").count()) === 0);
+    await page.locator(".rb-er-foot .rb-btn", { hasText: "되돌리기" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 되돌리기로 살아남`, (await win.getByText("유나가 숨은 왕녀라는 것").count()) > 0 && (await page.locator(".rb-er-foot .rb-btn", { hasText: "되돌리기" }).count()) === 0);
+    await page.locator(".rb-er-foot .rb-btn", { hasText: "+ 소문" }).click(); await page.waitForTimeout(200);
+    await inp.nth(0).fill("카엘"); await inp.nth(1).fill("미나"); await inp.nth(2).fill("성문 열쇠 위치"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 소문 직접 추가`, (await win.getByText("성문 열쇠 위치").count()) > 0); }
+  // 캘린더(세계 › 캘린더): 약속 직접 추가 → 고치기
+  { await page.locator(".rb-seg button", { hasText: "캘린더" }).first().click(); await page.waitForTimeout(300);
+    ok(`[${tag}] 세계 · 캘린더 5묶음(생일·연인·약속·특별한 날·날씨)`, (await page.locator(".rb-world .rb-mem-sec").count()) === 5);
+    await page.locator(".rb-er-foot .rb-btn", { hasText: "+ 약속" }).click(); await page.waitForTimeout(200);
+    const inp = page.locator(".rb-er-form input"); await inp.nth(0).fill("3월 14일"); await inp.nth(1).fill("영화 보기");
+    await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 약속 추가(날짜는 3/14로 맞춤)`, (await page.locator(".rb-er-row", { hasText: "영화 보기" }).count()) === 1 && (await page.locator(".rb-er-row", { hasText: "3/14" }).count()) === 1);
+    await page.locator(".rb-er-row", { hasText: "영화 보기" }).locator("button[aria-label=고치기]").click(); await page.waitForTimeout(200);
+    await inp.nth(1).fill("영화 보고 저녁"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 약속 고치기`, (await page.locator(".rb-er-row", { hasText: "영화 보고 저녁" }).count()) === 1); }
+  { await page.locator("button[aria-label='날씨 고치기']").click(); await page.waitForTimeout(200);
+    await page.locator(".rb-modal input").last().fill("눈"); await page.locator(".rb-modal .rb-btn", { hasText: "저장" }).last().click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 날씨 직접 고치기`, (await page.locator(".rb-er-row", { hasText: "날씨" }).filter({ hasText: "눈" }).count()) === 1); }
   // 인물 → NSFW
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { tab: "people", personKey: "시로코" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
@@ -51,6 +78,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   if (await nsfwTab.count()) { await nsfwTab.click(); await page.waitForTimeout(600); }
   ok(`[${tag}] 인물 머리에 📔 일기 · ↗ 다른 봇으로`, (await page.locator(".rb-btn", { hasText: "📔 일기" }).count()) > 0 && (await page.locator(".rb-btn", { hasText: "↗ 다른 봇으로" }).count()) > 0);
   ok(`[${tag}] 성감대 새 모형(팔·다리 실루엣 + 귀)`, await page.evaluate(() => { const s = document.querySelector(".rb-bodymap"); return !!s && s.querySelectorAll("path.sil").length === 1 && s.querySelectorAll("ellipse.sil").length === 3; }));
+  ok(`[${tag}] 성감대 성별 고르기(여·남·자동)`, await page.evaluate(() => document.querySelectorAll(".rb-bsex button").length === 3 && [...document.querySelectorAll(".rb-bsex button")].some((b) => b.classList.contains("on"))));
   ok(`[${tag}] 약점은 정확한 자리 핀 + 이름표`, await page.evaluate(() => { const s = document.querySelector(".rb-bodymap"); return !!s?.querySelector(".pin .ring") && [...s.querySelectorAll(".lbl2")].some((t) => t.textContent === "◎ 왼쪽 귓불"); }));
   const lab = await page.evaluate(() => [...document.querySelectorAll(".rb-bodymap .lbl")].map((x) => { const b = x.getBoundingClientRect(); return [x.textContent, Math.round(b.left), Math.round(b.top), Math.round(b.right), Math.round(b.bottom)]; }));
   ok(`[${tag}] 모든 부위 이름이 보이고 겹치지 않음`, await page.evaluate(() => { const t = [...document.querySelectorAll(".rb-bodymap .lbl")]; if (t.length !== 16 || !["질", "자궁", "클리토리스"].every((n) => t.some((x) => x.textContent === n))) return false; const bs = t.map((x) => x.getBoundingClientRect()); return bs.every((a, i) => bs.every((b, j) => i === j || a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5)); }), JSON.stringify(lab));
@@ -115,8 +143,25 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // 상태이상 카드(관계 탭의 하위 구역)
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "시로코" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
+  { const rt = page.locator(".rb-wk2-tab[data-t=base]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
+  ok(`[${tag}] 탭 재편: 요약 뒤 기본·마음·관계·기억·성인`, (await page.locator(".rb-wk2-tab").allTextContents()).map((x) => x.trim()).join("|").endsWith("기본|마음|관계|기억|성인"));
+  ok(`[${tag}] 상태이상 카드: 감기(기본 탭)`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
+  // 관계 탭: 빈 칸에서 + 둘만의 추억 → 카드가 생기고 고치기·지우기
+  await page.evaluate(async () => { await __app.ctx.memory.store.updateFolder("c1", "t1", (f) => { f.talk = { ...(f.talk ?? {}), "시로코>카엘": { from: "시로코", to: "카엘", call: "카엘", tone: "casual", at: 0 } }; }); __app.ctx.go("memory"); });
+  await page.waitForTimeout(1200);
   { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
-  ok(`[${tag}] 상태이상 카드: 감기`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
+  { const relSub = page.locator(".rb-wk2-sub button, .rb-wk2-subtab", { hasText: "관계" }).first(); if (await relSub.count()) { await relSub.click(); await page.waitForTimeout(400); }
+    const addLink = page.locator(".rb-wk2-card:has-text('둘만의 추억') .rb-btn:has-text('+ 추가'), .rb-wk2-link:has-text('+ 둘만의 추억')").first();
+    if (await addLink.count()) {
+      await addLink.click(); await page.waitForTimeout(200);
+      await page.locator(".rb-er-form input").nth(0).fill("비 오는 날 우산을 같이 씀"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(600);
+      ok(`[${tag}] 관계 · 추억 직접 추가`, (await page.locator(".rb-wk2-bond", { hasText: "우산을 같이" }).count()) === 1);
+    } else ok(`[${tag}] 관계 · 추억 + 추가 버튼`, false); }
+  { const add = page.locator(".rb-wk2-tlcard .rb-btn", { hasText: "+ 전환점" }).first();
+    if (await add.count()) { await add.click(); await page.waitForTimeout(200); const inp = page.locator(".rb-er-form input"); await inp.nth(1).fill("처음으로 손을 잡음");
+      await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(600); }
+    ok(`[${tag}] 관계 연표 · 전환점 직접 추가`, (await page.locator("#rb-rel-timeline li", { hasText: "처음으로 손을 잡음" }).count()) === 1); }
+  ok(`[${tag}] 관계 · 갈등·오해 직접 적기 줄`, (await page.locator(".rb-wk2-link", { hasText: "+ 갈등" }).count()) > 0 || (await page.locator(".rb-wk2-card", { hasText: "갈등" }).count()) > 0);
   // 본문 이름 링크 → 상태창(실제 표시 경로: 로어북 로그가 부르는 memory.gauge.onDisplay)
   // 2.2.24: 상태창 CSS는 리스 화면에 한 번 넣는다(실제로는 namelinks가 mainDom 권한으로) — 시험에선 같은 CSS를 직접 넣는다
   await page.evaluate(() => { if (!document.getElementById("dusk-status-css-test")) { const st = document.createElement("style"); st.id = "dusk-status-css-test"; st.textContent = __app.ctx.memory.nameLinks?.css?.() ?? ""; document.head.append(st); } });
@@ -168,6 +213,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // 장면 상태창(응답 아래, 로어북 위)
   const sc = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const out = await M.gauge.onDisplay("[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 쏟아졌다. 시로코가 세라를 바라봤다."); return out; });
   ok(`[${tag}] 장면 상태창: 날짜·시간·장소·날씨·등장인물(이름은 캐릭터 상태창)`, /x-dusk="scene"/.test(sc) && /22:40/.test(sc) && /은빛 여관/.test(sc) && /🌧️/.test(sc) && (sc.split('x-dusk="scene"')[1].match(/x-dusk="pc"|data-dusk="nm"/g) ?? []).length === 2, sc.slice(-300));
+  // 11-21 제보: 유저 입력에는 장면 상태창을 붙이지 않는다(채팅의 유저 메시지와 같은 글)
+  const scUser = await page.evaluate(async () => { const M = __app.ctx.memory, A = __app.ctx.api, orig = A.getChatFromIndex, ut = "[2026-03-02 22:41 | 은빛 여관]\n나는 시로코와 세라에게 다가가 우산을 건넨다.";
+    A.getChatFromIndex = async (...a) => { const c = (await orig(...a)) ?? { message: [] }; c.message = [...(c.message ?? []), { role: "user", data: ut }]; return c; };
+    try { await new Promise((r) => setTimeout(r, 1600)); M.nameLinks?.invalidate?.(); return await M.gauge.onDisplay(ut); } finally { A.getChatFromIndex = orig; } });
+  ok(`[${tag}] 유저 입력엔 장면 상태창 없음`, !/x-dusk="scene"/.test(scUser), scUser.slice(-200));
   // 2.2.22: 등장인물 띠의 이름을 누르면 상태창이 띠 안이 아니라 화면 가운데에 크게 뜬다
   const chipPop = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "chipdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;overflow:auto"; d.innerHTML = html; document.body.append(d);
     const det = d.querySelector('div[x-dusk="scene"] details[x-dusk="pc"]');
@@ -191,7 +241,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 홈 빠른 설정에 캐릭터 상태창·장면 상태창 스위치`, (await page.locator('[data-quick="nameLinks"]').count()) === 1 && (await page.locator('[data-quick="scenePanel"]').count()) === 1);
   // 인물 위키 옷차림 카드
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { page: "detail", tab: "people", personKey: "시로코" }); __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
-  { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
+  { const rt = page.locator(".rb-wk2-tab[data-t=base]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
   ok(`[${tag}] 옷차림 카드: 부위·액세서리, › 누르면 삽화용 상세`, (await page.locator(".rb-of-row", { hasText: "흰 셔츠" }).count()) === 1 && !(await page.getByText("소매를 걷어 올림").count()));
   await page.locator(".rb-of-tg").first().click(); await page.waitForTimeout(700);
   ok(`[${tag}] 삽화용 상세 보기`, (await page.locator(".rb-of-row p", { hasText: "소매를 걷어 올림" }).count()) === 1);
@@ -203,6 +253,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const tk = await page.evaluate(() => { const r = document.getElementById("rb-mem-tokens"); if (!r) return null; return Math.round(r.querySelector(".t").getBoundingClientRect().width / r.getBoundingClientRect().width * 100); });
   ok(`[${tag}] 기억 넣기 토큰 줄도 글이 좁아지지 않음`, tk != null && tk >= (tag === "모바일" ? 95 : 30), String(tk));
   ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("캐릭터 상태창 (본문 이름 링크)").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문)").count()) > 0);
+  { const open = page.locator("#rb-guides-open"); ok(`[${tag}] 설정에 묘사 지침 줄`, (await open.count()) === 1);
+    if (await open.count()) { await open.click(); await page.waitForTimeout(600);
+      ok(`[${tag}] 묘사 지침 창: 기본 조각 141개`, (await page.locator("#rb-guides .rb-gd-row").count()) === 141);
+      await page.locator("#rb-guides .rb-gd-row input[type=checkbox]").first().uncheck(); await page.locator("#rb-guides-save").click(); await page.waitForTimeout(600);
+      ok(`[${tag}] 조각 끄기 저장`, await page.evaluate(async () => ((await __app.ctx.memory.store.getIndex?.())?.settings?.guides?.off ?? __app.ctx.memory?.idx?.settings?.guides?.off ?? []).length === 1 || document.querySelector(".rb-mem-options")?.innerText.includes("끈 조각 1개"))); } }
   // 2.2.26: 게이지 배수 — 인간적 호감·그 밖의 감정 / 이성적 호감 / 성욕 묶음, 이성적 호감 배수는 따로 저장
   const gm = await page.evaluate(async () => { const card = document.querySelector("#rb-gauge-mult"); if (!card) return null; const heads = [...card.querySelectorAll(".rb-gauge-gh")].map((x) => x.textContent);
     const r = card.querySelector("#rb-gauge-romUp"); if (!r) return { heads }; r.value = "0.5"; r.dispatchEvent(new Event("change", { bubbles: true })); await new Promise((res) => setTimeout(res, 400));

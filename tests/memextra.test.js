@@ -164,7 +164,10 @@ test("여성 부위: 질·자궁·클리토리스를 따로 알아보고, 남성
   assert.equal(partOf("질 입구")?.id, "vagina"); assert.equal(partOf("질")?.id, "vagina");
   assert.equal(partOf("자궁")?.id, "womb"); assert.equal(partOf("포르치오")?.id, "womb");
   assert.equal(partOf("사타구니")?.id, "groin"); assert.equal(partOf("성질")?.id ?? null, null, "‘성질’은 질이 아님");
-  for (let i = 0; i < 40; i++) assert.ok(randomZones(`m${i}`, { female: false }).every((z) => !BODY_PARTS.find((p) => p.id === z.part)?.sex));
+  for (let i = 0; i < 40; i++) assert.ok(randomZones(`m${i}`, { female: false }).every((z) => BODY_PARTS.find((p) => p.id === z.part)?.sex !== "f"));
+  for (let i = 0; i < 40; i++) assert.ok(randomZones(`f${i}`, { female: true }).every((z) => BODY_PARTS.find((p) => p.id === z.part)?.sex !== "m"));
+  for (let i = 0; i < 40; i++) assert.ok(randomZones(`u${i}`, { sex: null }).every((z) => !BODY_PARTS.find((p) => p.id === z.part)?.sex), "성별 모름이면 성별 부위 없음");
+  assert.equal(partOf("귀두")?.id, "glans"); assert.equal(partOf("고환")?.id, "testicles"); assert.equal(partOf("전립선")?.id, "prostate");
   assert.ok(Array.from({ length: 60 }, (_, i) => randomZones(`f${i}`, { female: true })).flat().some((z) => ["clit", "vagina", "womb"].includes(z.part)));
 });
 
@@ -173,12 +176,14 @@ import { imagePathFor } from "../src/data/charimg.js";
 test("장면 상태창: 상태 줄에서 날짜·시간·장소, 본문에서 날씨, 나온 인물, 이름은 캐릭터 상태창 링크", () => {
   const f = { wiki: { documents: { a: doc("a", "세라"), b: doc("b", "시로코") } }, extra: { weather: { w: "맑음" } }, scenes: [{ at: 3, when: "2026-03-01 10:00", place: "교실" }] };
   const t = "[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 내렸다. 세라는 조용히 웃었다.";
-  const s = sceneOf(t, f); assert.deepEqual([s.date, s.time, s.place, s.weather, s.fromLine], ["2026-03-02", "22:40", "은빛 여관", "비", true]);
-  assert.equal(sceneOf("상태 줄 없음. 그냥 이야기.", f).weather, "맑음", "본문에 없으면 저장된 날씨");
+  const s = sceneOf(t, f); assert.deepEqual([s.date, s.time, s.place, s.fromLine], ["2026-03-02", "22:40", "은빛 여관", true]);
+  assert.equal(s.weather, s.forecast.now.w, "11-21: 엔진 예보가 먼저(AI 글의 비는 예보를 못 바꿈)");
+  assert.equal(sceneOf("상태 줄 없음. 그냥 이야기.", { ...f, scenes: [] }).weather, "맑음", "날짜를 몰라 예보가 없으면 저장된 날씨");
   assert.equal(sceneOf("상태 줄 없음", f).place, "교실", "없으면 마지막 장면");
   assert.deepEqual(peopleIn(t, f, "봇").map((p) => p.name), ["세라"]);
   const h = scenePanelHtml({ ...s, people: [{ name: "세라", card: "<b>카드</b>" }, { name: "봇" }] });
-  for (const x of ["x-dusk=\"scene\"", "2026년 3월 2일 (월)", "22:40", "은빛 여관", "🌧️", "dkRain", "등장", 'x-dusk="pc"', "봇"]) assert.ok(h.includes(x), x);
+  const h2 = scenePanelHtml({ ...s, weather: "비", people: [] }); assert.ok(h2.includes("🌧️") && h2.includes("dkRain"), "비 그림");
+  for (const x of ["x-dusk=\"scene\"", "2026년 3월 2일 (월)", "22:40", "은빛 여관", "등장", 'x-dusk="pc"', "봇"]) assert.ok(h.includes(x), x);
   assert.equal(scenePanelHtml({}), "");
   assert.ok(Object.keys(WX).length >= 10); assert.equal(dateLabel("2026-03-02"), "2026년 3월 2일 (월)");
 });
