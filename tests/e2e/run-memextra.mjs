@@ -44,6 +44,20 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 세계 · 목표: 진척 막대`, (await page.locator(".rb-goal-bar").count()) === 1 && (await win.getByText("기사단장 되기").count()) > 0);
   await page.locator(".rb-seg button", { hasText: "소문" }).first().click(); await page.waitForTimeout(300);
   ok(`[${tag}] 세계 · 소문`, (await win.getByText("유나가 왕녀라는 것").count()) > 0);
+  // 인간다움 2단계 공통 편집 부품: ✎ 고치기 → ✕ 지우기 → ↶ 되돌리기 → + 추가
+  { const row = () => page.locator(".rb-er-row", { hasText: "왕녀" }).first();
+    await row().locator("button[aria-label=고치기]").click(); await page.waitForTimeout(200);
+    const inp = page.locator(".rb-er-form input"); ok(`[${tag}] 소문 고치기 창: 말한 사람·들은 사람·내용 3칸`, (await inp.count()) === 3);
+    await inp.nth(2).fill("유나가 숨은 왕녀라는 것"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 소문 고치기 저장`, (await win.getByText("유나가 숨은 왕녀라는 것").count()) > 0);
+    await row().locator("button[aria-label=지우기]").click(); await page.waitForTimeout(200);
+    await page.locator(".rb-modal .rb-btn", { hasText: "지우기" }).last().click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 소문 지우기`, (await win.getByText("유나가 숨은 왕녀라는 것").count()) === 0);
+    await page.locator(".rb-er-foot .rb-btn", { hasText: "되돌리기" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 되돌리기로 살아남`, (await win.getByText("유나가 숨은 왕녀라는 것").count()) > 0 && (await page.locator(".rb-er-foot .rb-btn", { hasText: "되돌리기" }).count()) === 0);
+    await page.locator(".rb-er-foot .rb-btn", { hasText: "+ 소문" }).click(); await page.waitForTimeout(200);
+    await inp.nth(0).fill("카엘"); await inp.nth(1).fill("미나"); await inp.nth(2).fill("성문 열쇠 위치"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 소문 직접 추가`, (await win.getByText("성문 열쇠 위치").count()) > 0); }
   // 인물 → NSFW
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { tab: "people", personKey: "시로코" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);

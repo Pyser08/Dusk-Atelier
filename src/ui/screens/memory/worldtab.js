@@ -5,6 +5,7 @@ import { icon } from "../../icons.js";
 import { btn, badge, iconBtn, note, openMenu, promptDialog, confirmDialog, segmented } from "../../kit.js";
 import { mem, at, shownName, fail } from "./common.js";
 import { memStore } from "./memstore.js";
+import { editRows } from "./editrows.js";
 import { extraOf, nk, WORLD_LABEL } from "../../../engine/memextra.js";
 
 const empty = (ic, text) => h("p", { class: "rb-mem-empty1" }, icon(ic, 16), text);
@@ -50,20 +51,28 @@ export async function renderWorld(env, host) {
     const list = Object.entries(e.goals).filter(([, g]) => g.list.length);
     if (!list.length) return empty("pin", "아직 기록된 목표가 없어요. 인물이 이루려는 일이 응답에 드러나면 기록기가 채워요.");
     const ST = { active: ["진행 중", "acc"], done: ["이룸", "acc2"], dropped: ["접음", "mute"] };
-    return h("div", { class: "rb-world" }, list.map(([key, g]) => h("section", { class: "rb-card rb-mem-sec" }, h("div", { class: "rb-mem-shead" }, h("b", null, shownName(g.name))),
-      h("ul", { class: "rb-mem-reclist" }, g.list.map((x, i) => h("li", { class: "rb-mem-rec rb-goal" }, badge(ST[x.status]?.[0] ?? "진행 중", ST[x.status]?.[1] ?? "acc"),
-        h("div", { class: "txt" }, h("div", null, x.goal), h("i", { class: "rb-goal-bar", "aria-label": `진척 ${x.prog ?? 0}%` }, h("i", { style: { width: `${x.prog ?? 0}%` } })), h("div", { class: "rb-muted" }, `${x.prog ?? 0}% · ${at(x.first)} 처음 · ${at(x.at)} 갱신`)),
-        local ? iconBtn("more", "더 보기", { onClick: (ev) => openMenu(env.ctx.win, ev.currentTarget, [
-          { label: "진척 고치기", icon: "edit", onClick: async () => { const v = await promptDialog(env.ctx.win, { title: x.goal, label: "진척(0~100)", value: String(x.prog ?? 0), ok: "저장" }); if (v == null) return; const n = Math.max(0, Math.min(100, Math.round(Number(v) || 0))); editFolder(env, (f) => { f.extra = extraOf(f); const o = f.extra.goals[key]?.list?.[i]; if (o) { o.prog = n; if (n >= 100) o.status = "done"; } }); } },
-          { label: x.status === "active" ? "접음으로" : "다시 진행", onClick: () => editFolder(env, (f) => { f.extra = extraOf(f); const o = f.extra.goals[key]?.list?.[i]; if (o) o.status = o.status === "active" ? "dropped" : "active"; }) },
-          { label: "지우기", icon: "trash", danger: true, onClick: del("이 목표를 지울까요?", (y) => { y.goals[key]?.list?.splice(i, 1); }) }]) }) : null))))));
+    return h("div", { class: "rb-world" }, list.map(([key, g]) => {
+      const { rows, foot } = editRows(env, { kind: "goal", id: `goal:${key}`, title: `${shownName(g.name)} 목표`, base: { name: g.name }, cls: "rb-mem-rec rb-goal", addLabel: "+ 목표",
+        rows: g.list.map((x, i) => ({ x, i })),
+        get: (f) => extraOf(f).goals[key]?.list ?? [],
+        set: (f, arr) => { f.extra = extraOf(f); const gg = (f.extra.goals[key] ??= { name: g.name, list: [] }); gg.list = arr.map((x) => (x.prog >= 100 && x.status === "active" ? { ...x, status: "done" } : x)); },
+        fields: [{ k: "goal", label: "목표", len: 60 }, { k: "prog", label: "진척(0~100)", type: "num", min: 0, max: 100, def: 0 }, { k: "status", label: "상태", type: "select", def: "active", opts: Object.entries(ST).map(([k, [l]]) => [k, l]) }],
+        make: (v, f) => ({ ...v, at: f?.cursor?.at ?? 0, first: f?.cursor?.at ?? 0 }),
+        row: (x) => [badge(ST[x.status]?.[0] ?? "진행 중", ST[x.status]?.[1] ?? "acc"),
+          h("div", { class: "txt" }, h("div", null, x.goal), h("i", { class: "rb-goal-bar", "aria-label": `진척 ${x.prog ?? 0}%` }, h("i", { style: { width: `${x.prog ?? 0}%` } })))] });
+      return h("section", { class: "rb-card rb-mem-sec" }, h("div", { class: "rb-mem-shead" }, h("b", null, shownName(g.name))), h("ul", { class: "rb-mem-reclist" }, rows), foot);
+    }));
   }
   function rumors() {
-    if (!e.rumors.length) return empty("message", "아직 오간 말이 없어요. 누군가 다른 사람에게 정보를 전하면 기록기가 채워요.");
-    return h("div", { class: "rb-world" }, note("info", "들은 사람만 그 사실을 알아요. 장면에 그 사람이 나오면 ‘누가 무엇을 들었는지’를 요청에 넣어, 모르는 인물이 아는 척하지 않게 해요."),
-      h("ul", { class: "rb-mem-reclist" }, e.rumors.map((r, i) => [r, i]).reverse().map(([r, i]) => h("li", { class: "rb-mem-rec" }, badge("소문", "acc2"),
-        h("div", { class: "txt" }, h("div", null, h("b", null, `${shownName(r.from)} → ${shownName(r.to)}`), ` ${r.info}`), h("div", { class: "rb-muted" }, [at(r.at), r.when].filter(Boolean).join(" · "))),
-        local ? iconBtn("trash", "지우기", { onClick: del("이 소문을 지울까요?", (x) => { x.rumors.splice(i, 1); }) }) : null))));
+    const { rows, foot } = editRows(env, { kind: "told", id: "rumors", title: "소문", cls: "rb-mem-rec", addLabel: "+ 소문",
+      rows: e.rumors.map((x, i) => ({ x, i })).reverse(),
+      get: (f) => extraOf(f).rumors, set: (f, arr) => { f.extra = extraOf(f); f.extra.rumors = arr; },
+      fields: [{ k: "from", label: "말한 사람", len: 30 }, { k: "to", label: "들은 사람", len: 30 }, { k: "info", label: "들은 내용", len: 80 }],
+      make: (v, f) => ({ ...v, at: f?.cursor?.at ?? 0, when: "" }),
+      row: (r) => [badge("소문", "acc2"), h("div", { class: "txt" }, h("div", null, h("b", null, `${shownName(r.from)} → ${shownName(r.to)}`), ` ${r.info}`), h("div", { class: "rb-muted" }, [at(r.at), r.when].filter(Boolean).join(" · ")))] });
+    return h("div", { class: "rb-world" },
+      e.rumors.length ? note("info", "들은 사람만 그 사실을 알아요. 장면에 그 사람이 나오면 ‘누가 무엇을 들었는지’를 요청에 넣어, 모르는 인물이 아는 척하지 않게 해요.") : empty("message", "아직 오간 말이 없어요. 누군가 다른 사람에게 정보를 전하면 기록기가 채워요."),
+      rows.length ? h("ul", { class: "rb-mem-reclist" }, rows) : null, foot);
   }
   draw();
 }
