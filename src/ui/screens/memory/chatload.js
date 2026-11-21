@@ -1,5 +1,6 @@
 // 봇의 채팅 목록. 이름·개수는 이미 읽은 캐릭터 정보에서 바로 만들고, 본문은 '지금 볼 채팅 하나'만 읽는다(v1.8.1 속도).
 // 예전에는 채팅 전부를 getChatFromIndex로 다시 읽어 채팅이 많은 봇에서 탭 진입이 느렸다.
+import { readChat } from "../../../data/apiread.js";
 import { chatKeyOf, legacyChatKeyOf } from "../../../engine/chatkey.js";
 const metaItem = (bot, index) => {
   const meta = bot.character.chats?.[index];
@@ -14,7 +15,7 @@ export async function loadChats(ctx, bot, force = false, want = null) {
   if (force || !hit || Date.now() - hit.t >= 20000 || hit.n !== n) hit = cache[bot.id] = { t: Date.now(), n, v: Array.from({ length: n }, (_, i) => metaItem(bot, i)) };
   const it = hit.v[w];
   if (it && !it.loaded) {
-    let chat = null; try { chat = await ctx.api.getChatFromIndex(bot.index, w); } catch { /* 목록 정보로 대신 */ }
+    let chat = null; try { chat = await readChat(ctx.api, bot.index, w); } catch { /* 목록 정보로 대신 */ }
     it.chat = chat; it.loaded = true;
     if (chat) {
       it.id = chatKeyOf(chat, it.index); it.name = String(chat.name ?? it.name); it.count = (chat.message ?? []).length;

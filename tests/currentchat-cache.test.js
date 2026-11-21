@@ -1,4 +1,5 @@
 import test from "node:test";
+import { dropReads } from "../src/data/apiread.js";
 import assert from "node:assert/strict";
 import { createSwitches } from "../src/data/memoryswitches.js";
 import { bumpCacheGen } from "../src/data/dbcache.js";
@@ -10,6 +11,7 @@ test("탭을 오가도 같은 봇·채팅이면 캐릭터 통째 복사를 다�
   assert.equal((await sw.currentChat()).chaId, "c0"); t += 5000; await sw.currentChat(); t += 5000; await sw.currentChat();
   assert.equal(s.copies, 1);
   s.ti = 1; t += 100; assert.equal((await sw.currentChat()).chatId, "t1"); assert.equal(s.copies, 2);   // 채팅이 바뀌면 다시 읽음
+  dropReads();   // 2.2.23: 다른 곳과 같이 쓰는 3초 읽기 캐시(실제 시계)는 비우고 본다
   t += 31e3; await sw.currentChat(); assert.equal(s.copies, 3);                                          // 30초 지나면 다시 읽음
   s.name = "B"; bumpCacheGen(); assert.equal((await sw.currentChat()).botName, "B"); assert.equal(s.copies, 4);  // 쓰기·창 열기 때 비움
 });

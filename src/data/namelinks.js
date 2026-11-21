@@ -2,6 +2,7 @@
 //  · 캐릭터 상태창: 본문 인물 이름에 링크(설정 inject.nameLinks, 기본 켜짐) — 얼굴 사진은 봇 이미지·에셋에서
 //  · 장면 상태창: 응답 아래(로어북 버튼 위)에 날짜·시간·장소·날씨·등장인물(설정 inject.scenePanel, 기본 켜짐)
 // 메시지마다 불리므로 지금 채팅 폴더·설정은 3초 동안 재사용하고, 상태창 HTML은 인물별로 한 번만 만든다.
+import { readChar } from "./apiread.js";
 import { statusCardHtml, linkNames } from "../engine/namecard.js";
 import { scenePanelHtml, sceneOf, peopleIn } from "../engine/scenepanel.js";
 import { charThumb } from "./charimg.js";
@@ -13,7 +14,7 @@ export function createNameLinks(memory, api = null) {
   let charMemo = null;
   const charOf = async (cur) => {
     if (charMemo?.chaId === cur.chaId) return charMemo.v;
-    const c = cur.ci != null ? await api?.getCharacterFromIndex?.(cur.ci).catch?.(() => null) : null;
+    const c = cur.ci != null && api?.getCharacterFromIndex ? await readChar(api, cur.ci, cur.ti).catch(() => null) : null;
     const v = c ? { name: c.name ?? "", desc: String(c.desc ?? "").slice(0, 1500), image: c.image, emotionImages: c.emotionImages ?? [], additionalAssets: c.additionalAssets ?? [] } : null;
     charMemo = { chaId: cur.chaId, v }; return v;
   };
