@@ -7,7 +7,9 @@ import { scaleBlock, wikiAware } from "../engine/memoryscale.js";
 import { nsfwSection } from "../engine/nsfwprofile.js";
 import { driveSection, seeded } from "../engine/scenedrive.js";
 import { nsfwByName } from "./nsfwturn.js";
-import { lifeSection, humanSection, lustOfName, hotActors } from "../engine/nsfwlife.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
+import { lifeSection, humanSection, lustOfName, hotActors, lifeView, docByName } from "../engine/nsfwlife.js";
+import { guideInject } from "../engine/guides.js";   // 묘사 정확도 지침(심리학·해부학) — 필요할 때만
+import { GUIDES } from "./guidelib.js";   // addon-rebuild: 척도 표기·기록 시점·정리 노트 기준(애드온 전용)
 import { stateText } from "../engine/storytime.js";
 import { extraSection, mentionsOf } from "../engine/memextra.js";
 import { fertilitySection } from "../engine/fertility.js";
@@ -95,6 +97,9 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
         const here = [...present, ...Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && [d.title, ...(d.aliases ?? [])].some((n) => String(n ?? "").length >= 2 && low.includes(String(n).normalize("NFKC").toLowerCase()))).map((d) => d.title)];
         add(humanSection(folder, here));
         if (Number.isInteger(folder?.cursor?.at)) add(lifeSection(folder, here, folder.cursor.at));
+        { const t = Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, g = idx.settings.guides ?? {};
+          const people = [...new Set(here)].map((n) => { const d = docByName(folder, n); return d ? { name: d.title, v: lifeView(folder, d, t) } : null; }).filter(Boolean);
+          add(guideInject(GUIDES, { key: `${character?.chaId ?? ""}|${chatKeyOf(chat)}`, people, text: recent, turn: t, cfg: { on: idx.settings.inject?.guides !== false, off: g.off ?? [], custom: g.custom ?? [] } })); }
         const when = [...(folder?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
         add(fertilitySection(folder, here, Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when));
         add(extraSection(folder, { present: here, recent, turn: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when, pinned, docs: chars, world: idx.settings.inject?.world === true, status: idx.settings.inject?.status !== false, outfit: idx.settings.inject?.outfit !== false }));

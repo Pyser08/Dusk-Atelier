@@ -48,6 +48,10 @@
   - **남은 일**: [ ] 실제 리스에서 기록기가 climate·cohabit 줄을 내는지 [ ] 실제 리스에서 details name(탭 하나만 열림)·backdrop-filter 확인 [ ] 사진: 실제 리스에서 readImage·OffscreenCanvas 되는지·이름 링크 HTML 크기(썸네일 약 3KB) 확인 [ ] RisuBard·PocketRisu 실기기 확인 [ ] 배포는 사용자 지시 시(본체 v2.2.21 + 장기기억 0.3.22, minCore 2.2.21 — 코어 변경: 창 투명도·RisuBard 주사위·featurefind·quickset 슬롯)
 - 남은 일: [ ] 실제 RisuAI에서 기록기가 새 줄(told·goal·place·mark·zone 자리)을 잘 내는지 확인 [ ] 일기 상자가 실제 리스 응답 아래(로어북 버튼 위)에 뜨는지 확인 [ ] 배포(장기기억 0.3.22, 사용자 지시 시) [ ] run-regress·run-memed 기존 실패 정리
 
+### 11-21 인간다움 계획 (설계만, 코드 없음)
+- 목표: 최대한 인간을 모방. 계획 H1~H13 + 원칙·시험·탭 재편·모든 항목 사용자 편집 = addons/memory/FEATURES.md 맨 아래. 다음: 편집 불가 칸 목록 + 탭 재편 설계부터.
+- 묘사 정확도 지침 1차 구현(미배포·미커밋): data/guidelib.js(조각) + engine/guides.js(고르기) → data/memoryinject.js 주입. 남은 일: 지침 화면(보기·끄기·추가), 실제 RisuAI 주입 확인, 묘사 실험.
+
 ### 11-21 유저 NSFW 칸 (미릴리스)
 - `src/engine/usernsfw.js`: 위키에 유저 문서가 없으면 가짜 문서 `actor:user`를 `characterDocs()`로 더함. nsfwlife(docsOf)·nsfwturn이 사용, 주입·hotActors는 `npcDocs()`(유저 제외).
 - recorder `nsfwFrom`이 {{user}} 줄을 받음 + NSFW_STAGE1에 유저 허용 한 줄. profileseed `userNsfwNeed`(페르소나 설명으로 runNsfw). personv2: 문서 없는 유저 줄에 NSFW 세부 탭, 관계 목록 유저 맨 위. 테스트 tests/usernsfw.test.js.
