@@ -185,7 +185,10 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     const nextPlan = caps.analyze && M.runner ? M.runner.planBackfill(loadedMsgs, { from: 0, to: Math.max(0, loadedMsgs.length - 1), size: idx.settings?.backfillBatch }, folder) : null;
     m.homeChatPlan = { key: cacheKey, plan: nextPlan, t: Date.now() };
     if (m.homeChatPromise?.key === cacheKey) m.homeChatPromise = null;
-    if (ctx.state.tab === "memory" && mem(ctx) === m) redraw();
+    if (!(ctx.state.tab === "memory" && mem(ctx) === m)) return;
+    // 2.2.23 성능: 개수가 나오면 그 숫자·버튼 글자만 바꾼다(예전엔 화면 전체를 한 번 더 그렸다). 자리를 못 찾으면 예전처럼 다시 그린다
+    const nb = ctx.win?.querySelector?.('[data-num="todo"] b'), ab = ctx.win?.querySelector?.("#rb-mem-analyze > span");
+    if (nb && ab && nextPlan) { nb.textContent = String(nextPlan.todo); ab.textContent = `지난 대화 분석 · 미처리 ${nextPlan.todo}개`; } else redraw();
   }).catch(() => {});
   const botCfg = idx.bots[cur.chaId] ?? {}, last = M.injector?.lastRequest?.() ?? null;
   const on = sw.memory.on;
@@ -242,12 +245,12 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   // ── 상태 카드: 상태·스위치·숫자 3·막대·범례 (머리 스위치와 합침) ──
   const onSw = switchEl(on, { label: "이 채팅에서 사용", onChange: (v, el) => { setSwitch(el, v); setOn(v); } });
-  const num = (n, lab) => h("div", { class: "rb-hnum" }, h("b", null, String(n)), h("small", null, lab));
+  const num = (n, lab, key) => h("div", { class: "rb-hnum", "data-num": key }, h("b", null, String(n)), h("small", null, lab));
   const bar = u.total ? h("div", { class: "rb-mbar", role: "img", "aria-label": USAGE_KINDS.map(([k, l]) => `${l} ${u[k]}건`).join(", ") }, USAGE_KINDS.filter(([k]) => u[k]).map(([k]) => h("i", { class: `u-${k}`, style: `flex:${u[k]}` }))) : null;
   const legend = u.total ? h("ul", { class: "rb-mbar-legend" }, USAGE_KINDS.map(([k, l]) => h("li", null, h("i", { class: `u-${k}` }), `${l} ${u[k]}`))) : null;
   const statusBox = h("section", { class: "rb-card bordered rb-mem-statuscard" },
     h("div", { class: "rb-mem-statushead" }, status, onSw),
-    h("div", { class: "rb-hnums rb-mem-nums" }, num(u.total, "저장된 기록"), num(last?.injected ? u.used : 0, "이번에 넣음"), num(plan ? plan.todo : "–", "미처리")),
+    h("div", { class: "rb-hnums rb-mem-nums" }, num(u.total, "저장된 기록"), num(last?.injected ? u.used : 0, "이번에 넣음"), num(plan ? plan.todo : "–", "미처리", "todo")),
     bar, legend);
 
   // ── 큰 버튼 하나 + 바로가기 4칸 ──
