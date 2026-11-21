@@ -52,7 +52,7 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
     const lover = !!isLover?.(e.from, e.to);
     for (let [tag, d] of Object.entries(e.t)) {
       if (LOVER_TAGS.includes(tag) && !lover) continue;
-      if (gauge) { d = scaleDelta(d, gauge, { max: STEP_MAX }); if (!d) continue; }
+      if (gauge) { d = scaleDelta(d, gauge, { max: STEP_MAX, tag }); if (!d) continue; }
       const guarded = userGuard && tag === "attraction" && d > 0 && key(e.to) === "{{user}}";
       if (guarded) d = Math.max(1, Math.floor(d / 2));
       if (pair.lock?.[tag]) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; }   // 2.2.4: 사용자가 고친 값은 출발점 — 이후엔 대화에 따라 AI가 이어서 바꾼다(예전 잠금도 풀어 준다)

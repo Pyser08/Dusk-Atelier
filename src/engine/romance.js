@@ -20,7 +20,7 @@ function addEvent(folder, ev) {
 const hasEvent = (folder, kind, a, b) => (folder?.romance?.events ?? []).some((e) => e.kind === kind && pairKey(e.a, e.b) === pairKey(a, b));
 function bump(folder, from, to, tag, d, why, at, now, gauge) {
   const k = key(from) + ">" + key(to), p = (folder.emo ??= {})[k] ??= { from, to, tags: {}, log: [] };
-  const step = scaleDelta(d, gauge); if (!step) return 0;
+  const step = scaleDelta(d, gauge, { tag }); if (!step) return 0;
   const before = p.tags[tag], v = Math.max(0, Math.min(10, (before ?? 0) + step));
   if (v === before) return 0;
   p.tags[tag] = v; p.log.push({ t: { [tag]: v }, from: { [tag]: before ?? null }, why, at, at_ms: now });
