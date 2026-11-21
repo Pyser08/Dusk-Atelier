@@ -95,8 +95,8 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   if (M.flow) (async () => {
     const st = tracked(ctx, await M.flow.settings());
     if (st.status().blocked) return;
-    const inp = h("input", { class: "rb-input", type: "number", min: 1000, max: 1000000, step: 1000, value: st.rawSnapshot().writerInputBudgetTokens ?? 96000, "aria-label": "자동 기록 입력 예산(토큰)", style: "width:120px",
-      onChange: (e) => { const n = Math.min(1000000, Math.max(1000, Math.round(Number(e.target.value) || 96000))); e.target.value = n; try { st.update((x) => { x.writerInputBudgetTokens = n; }); } catch (er) { fail(ctx)(er); } } });
+    const inp = h("input", { class: "rb-input", type: "number", min: 1000, max: 1000000, step: 1000, value: st.rawSnapshot().writerInputBudgetTokens ?? 48000, "aria-label": "자동 기록 입력 예산(토큰)", style: "width:120px",
+      onChange: (e) => { const n = Math.min(1000000, Math.max(1000, Math.round(Number(e.target.value) || 48000))); e.target.value = n; try { st.update((x) => { x.writerInputBudgetTokens = n; }); } catch (er) { fail(ctx)(er); } } });
     replace(budgetRow, h("span", { class: "t" }, "자동 기록 입력 예산", defHint(96000, "토큰"), h("small", null, "인물 위키 자동 기록이 한 번에 읽는 글의 양(토큰)이에요. 기본값이면 충분해요.")), inp);
     budgetRow.hidden = false;
   })().catch(() => {});

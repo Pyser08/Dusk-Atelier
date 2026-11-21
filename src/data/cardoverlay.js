@@ -39,7 +39,7 @@ export async function mountNodes(d, target, html, Parser = globalThis.DOMParser)
 
 // cardOf(pid) → 상태창 안쪽 HTML(없으면 ""). ensureDoc() → 리스 화면 문서(권한 없으면 null)
 export function createCardOverlay({ ensureDoc, cardOf, log = () => {} }) {
-  let open = null, hooking = false, timers = [];
+  let open = null, hooking = false, timers = [], keyHooked = false, loop = null;
   const close = async () => { const w = open; open = null; if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } } };
   async function show(pid) {
     const d = await ensureDoc(); if (!d) return false;
@@ -52,8 +52,13 @@ export function createCardOverlay({ ensureDoc, cardOf, log = () => {} }) {
     await bg.addEventListener("click", () => { close().catch(() => {}); });
     const box = await d.createElement("div"); await box.setAttribute("data-dusk", "pcbox"); await box.setStyleAttribute(BOX);
     await mountNodes(d, box, html + '<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">바깥을 누르면 닫혀요 · Dusk 캐릭터 상태창</span>');
+    // 2.2.28: 닫기(×) — 바깥 누르기가 안 먹는 환경 대비
+    const x = await d.createElement("div"); await x.setAttribute("role", "button"); await x.setAttribute("aria-label", "닫기");
+    await x.setStyleAttribute("position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;background:rgba(127,127,127,.18);color:inherit;z-index:2;");
+    await x.setInnerText("×"); await x.addEventListener("click", () => { close().catch(() => {}); }); await box.appendChild(x);
     await wrap.appendChild(bg); await wrap.appendChild(box); await body.appendChild(wrap);
     open = wrap;
+    if (!keyHooked) { keyHooked = true; try { await d.addEventListener("keydown", (ev) => { if (open && (ev?.key === "Escape" || ev?.key === "Esc")) close().catch(() => {}); }); } catch { /* 키를 못 받아도 닫기 버튼 */ } }
     return true;
   }
   // 응답 안 이름(data-dusk="nm")에 클릭을 단다. 이미 단 것은 data-hk로 건너뛴다
@@ -74,6 +79,10 @@ export function createCardOverlay({ ensureDoc, cardOf, log = () => {} }) {
     return n;
   }
   // 응답이 그려진 뒤 찾는다(리스가 그리는 시점을 모르니 몇 번 나눠서)
-  function soon() { for (const t of timers) clearTimeout(t); timers = [300, 1200, 3500].map((ms) => setTimeout(() => { hook().catch(() => {}); }, ms)); }
-  return { show, close, hook, soon };
+  // 2.2.28: 리스가 메시지를 다시 그리면 클릭이 사라진다 → 몇 초마다 새 이름을 찾는다(응답 표시 직후엔 빨리)
+  function soon() {
+    for (const t of timers) clearTimeout(t); timers = [300, 1200, 3500].map((ms) => setTimeout(() => { hook().catch(() => {}); }, ms));
+    loop ??= setInterval(() => { hook().catch(() => {}); }, 2500);
+  }
+  return { show, close, hook, soon, stop: () => { if (loop) clearInterval(loop); loop = null; } };
 }
