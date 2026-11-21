@@ -239,7 +239,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 지난 대화 분석 속도: 글이 줄 폭을 거의 다 씀`, !!bf && bf.tw >= bf.rw * (tag === "모바일" ? 0.95 : 0.4) && (tag !== "모바일" || bf.dir === "column"), JSON.stringify(bf));
   const tk = await page.evaluate(() => { const r = document.getElementById("rb-mem-tokens"); if (!r) return null; return Math.round(r.querySelector(".t").getBoundingClientRect().width / r.getBoundingClientRect().width * 100); });
   ok(`[${tag}] 기억 넣기 토큰 줄도 글이 좁아지지 않음`, tk != null && tk >= (tag === "모바일" ? 95 : 30), String(tk));
-  ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("캐릭터 상태창 (본문 이름 링크)").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문·캘린더)").count()) > 0);
+  ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("캐릭터 상태창 (본문 이름 링크)").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문)").count()) > 0);
   // 2.2.26: 게이지 배수 — 인간적 호감·그 밖의 감정 / 이성적 호감 / 성욕 묶음, 이성적 호감 배수는 따로 저장
   const gm = await page.evaluate(async () => { const card = document.querySelector("#rb-gauge-mult"); if (!card) return null; const heads = [...card.querySelectorAll(".rb-gauge-gh")].map((x) => x.textContent);
     const r = card.querySelector("#rb-gauge-romUp"); if (!r) return { heads }; r.value = "0.5"; r.dispatchEvent(new Event("change", { bubbles: true })); await new Promise((res) => setTimeout(res, 400));

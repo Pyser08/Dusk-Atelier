@@ -65,7 +65,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }, "cool"),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }, "beliefs"));
   // 2.2.4 기억 토큰 절약: 칸별 예산을 줄여 기억 블록 약 4,100 → 2,900토큰(LoCoMo 정답률 약 1~2점 손해)
-  memOptions.append(orow("세계 탭 (장소·물건·세력·목표·소문·캘린더)", "기록 보기에 ‘세계’ 탭이 생기고, 응답에 나온 장소·물건·세력, 인물 목표, 누가 누구에게 무엇을 들었는지 기록해 장면에 맞는 것만 넣어요.", inj.world === true, (o, v) => { o.world = v; }, "world", true));
+  memOptions.append(orow("세계 탭 (장소·물건·세력·목표·소문)", "기록 보기에 ‘세계’ 탭이 생기고, 응답에 나온 장소·물건·세력, 인물 목표, 누가 누구에게 무엇을 들었는지 기록해 장면에 맞는 것만 넣어요.", inj.world === true, (o, v) => { o.world = v; }, "world", true));
   memOptions.append(orow("상태이상", "취함·부상·감기·최음제·수면 부족처럼 인물에게 생긴 상태를 기록하고, 나을 때까지(또는 정한 날만큼) 행동에 반영해요. 인물 위키와 이름 상태창에 보여요.", inj.status !== false, (o, v) => { o.status = v; }, "status"));
   memOptions.append(orow("옷차림·액세서리", "인물이 부위별로 입은 옷과 액세서리를 기록해요(간단히 + 삽화용 상세). 장면에 넣고 캐릭터 상태창·인물 위키에서 봐요.", inj.outfit !== false, (o, v) => { o.outfit = v; }, "outfit"));
   memOptions.append(orow("종족", "인물의 종족(엘프·수인·서큐버스 등)을 기록해 체질·발정기·임신·성감대·몸 모형에 반영해요. 성격·말투는 바꾸지 않아요. 인물 위키 › 관계 › 종족에서 고칠 수 있어요.", inj.race !== false, (o, v) => { o.race = v; }, "race"));
