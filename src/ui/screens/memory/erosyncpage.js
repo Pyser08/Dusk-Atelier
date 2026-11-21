@@ -1,5 +1,5 @@
 // 장기 기억 → NSFW 설정(Erosync) 화면: 위에 상태·켜기, 아래에 탭 3개(2.2.0: 개요 · 장면·수위 · 분석·관리).
-// 인물 값은 인물 위키의 NSFW 탭에서 보고 고친다.
+// 인물 값은 인물 위키의 성인 탭에서 보고 고친다.
 import { pickLoreEntries } from "./erosyncpick.js";
 import { chatPeopleList, seedAllChatPeople } from "../../../data/erosyncseedall.js";
 import { h, replace } from "../../dom.js";
@@ -62,7 +62,7 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
     const pick = btn("인물 골라서 만들기", { id: "rb-erosync-analyze-pick", disabled: !live, onClick: async () => { const ids = await pickLoreEntries(ctx); if (ids?.length) line.start("lore", ids); } });
     line.watch();
     return h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-analysis" }, h("h3", null, "출발값 만들기"),
-      p("대화에 처음 나온 인물은 ‘매 턴 계산’이 그 인물만 출발값을 만들어요(‘출발값 자동으로 만들기’). 빠진 인물은 ‘대화 속 인물로 만들기’로 한 번에 만들 수 있고, 로어북·캐릭터 카드로 직접 만들 수도 있어요. ‘전체’는 자료 전체를 훑어 AI 호출이 많이 들어가니(시작 전에 규모를 보여 줘요), 필요한 인물만 골라서 만드는 걸 권해요. 한 명만 다시 하려면 인물 위키의 NSFW 탭을 쓰세요."),
+      p("대화에 처음 나온 인물은 ‘매 턴 계산’이 그 인물만 출발값을 만들어요(‘출발값 자동으로 만들기’). 빠진 인물은 ‘대화 속 인물로 만들기’로 한 번에 만들 수 있고, 로어북·캐릭터 카드로 직접 만들 수도 있어요. ‘전체’는 자료 전체를 훑어 AI 호출이 많이 들어가니(시작 전에 규모를 보여 줘요), 필요한 인물만 골라서 만드는 걸 권해요. 한 명만 다시 하려면 인물 위키의 성인 탭을 쓰세요."),
       live ? h("div", { class: "rb-mem-sact" }, chat, run, pick) : p("Erosync를 켜면 분석할 수 있어요."), live ? chatStatus : null, line.el);
   };
   const dataCard = () => {
@@ -73,7 +73,7 @@ export async function renderMemoryErosync(ctx, host, { redraw }) {
   };
   const homeExtra = () => h("section", { class: "rb-card rb-mem-sec", id: "rb-erosync-guide" }, h("h3", null, "어디서 봐요?"),
     h("ul", { class: "rb-muted", style: "white-space:normal;padding-left:18px;margin:0" },
-      h("li", null, "인물 위키 → NSFW 탭: 성적 항목·직접 고치기·다시 분석"),
+      h("li", null, "인물 위키 → 성인 탭: 성적 항목·직접 고치기·다시 분석"),
       h("li", null, "인물 위키 → 요약·관계·상세 정보: 노리는 목표, 경쟁, 8가지 성향"),
       h("li", null, "인물 관계도 → ‘Erosync 목표·경쟁만 보기’: 목표 화살표와 경쟁선")));
   const panes = {

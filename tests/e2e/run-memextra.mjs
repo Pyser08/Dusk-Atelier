@@ -143,8 +143,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // 상태이상 카드(관계 탭의 하위 구역)
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "시로코" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
-  { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
-  ok(`[${tag}] 상태이상 카드: 감기`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
+  { const rt = page.locator(".rb-wk2-tab[data-t=base]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
+  ok(`[${tag}] 탭 재편: 요약 뒤 기본·마음·관계·기억·성인`, (await page.locator(".rb-wk2-tab").allTextContents()).map((x) => x.trim()).join("|").endsWith("기본|마음|관계|기억|성인"));
+  ok(`[${tag}] 상태이상 카드: 감기(기본 탭)`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
   // 관계 탭: 빈 칸에서 + 둘만의 추억 → 카드가 생기고 고치기·지우기
   await page.evaluate(async () => { await __app.ctx.memory.store.updateFolder("c1", "t1", (f) => { f.talk = { ...(f.talk ?? {}), "시로코>카엘": { from: "시로코", to: "카엘", call: "카엘", tone: "casual", at: 0 } }; }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
@@ -240,7 +241,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 홈 빠른 설정에 캐릭터 상태창·장면 상태창 스위치`, (await page.locator('[data-quick="nameLinks"]').count()) === 1 && (await page.locator('[data-quick="scenePanel"]').count()) === 1);
   // 인물 위키 옷차림 카드
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { page: "detail", tab: "people", personKey: "시로코" }); __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
-  { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
+  { const rt = page.locator(".rb-wk2-tab[data-t=base]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
   ok(`[${tag}] 옷차림 카드: 부위·액세서리, › 누르면 삽화용 상세`, (await page.locator(".rb-of-row", { hasText: "흰 셔츠" }).count()) === 1 && !(await page.getByText("소매를 걷어 올림").count()));
   await page.locator(".rb-of-tg").first().click(); await page.waitForTimeout(700);
   ok(`[${tag}] 삽화용 상세 보기`, (await page.locator(".rb-of-row p", { hasText: "소매를 걷어 올림" }).count()) === 1);

@@ -27,7 +27,9 @@ import { ignoreKeyOf, addIgnore, dropIgnore } from "../../../engine/memedit.js";
 import { keyOf, intimacyOf, setIntimacy, INTIM_MAX, INTIM_WORDS, setUserNames, nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const TONE = { formal: "존댓말", casual: "반말", mixed: "섞어 씀" };
-const TABS = [["sum", "요약"], ["rel", "관계"], ["info", "상세 정보"], ["nsfw", "NSFW"], ["log", "기록"]];
+// 인간다움 탭 재편(11-21 확정안): 요약 / 기본(성격·수치·상태이상·옷차림·종족) / 마음(감정·사람다움) / 관계(관계·마음 흐름) / 기억(기록 묶음·일기·이야기 기록) / 성인(따로)
+const TABS = [["sum", "요약"], ["base", "기본"], ["mind", "마음"], ["rel", "관계"], ["mem", "기억"], ["nsfw", "성인"]];
+const OLD_TAB = { info: "base", log: "mem" };   // 예전에 열어 둔 탭 이름
 const GRADE_TIP = { A: "가장 중요한 순간", B: "중요한 순간", C: "보통", D: "사소한 일" };
 const batchim = (w) => { const c = String(w ?? "").trim().slice(-1).charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 > 0; };
 const subj = (name) => name + (batchim(name) ? "이" : "가");   // 받침 따라 이/가
@@ -131,7 +133,7 @@ export function personTabs(env, parts) {
     numCard.hidden = !metrics.length && !rows.length;
   };
   const numCard = card("수치 한눈에", [h("div", { class: "rb-wk2-nums" }, metrics.map((x) => metricRow(x, true))), gaugeBox],
-    h("button", { type: "button", class: "rb-wk2-link", onClick: () => { tabs[pk] = "info"; paint(); } }, "자세히"));
+    h("button", { type: "button", class: "rb-wk2-link", onClick: () => { tabs[pk] = "base"; paint(); } }, "자세히"));
   numCard.hidden = !metrics.length;
   if (parts.gauges) Promise.resolve().then(parts.gauges).then((g) => { gauges = g ?? []; fillGauges(); }).catch(() => {});
   const glanceCard = () => people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, (lay === "B4" ? people : people.slice(0, 6)).map((x) => h("button", { type: "button", class: ["rb-wk2-gl", selfNames.some((n) => isLover(f, n, x.name)) && "lover", gcls(x.name)], "aria-pressed": lay === "B4" && x.name === (withSel[pk] ?? people[0]?.name) ? "true" : null, onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), tieText(x.name) ? h("small", { class: "rb-wk2-tie" }, tieText(x.name)) : null))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null;
@@ -392,7 +394,7 @@ export function personTabs(env, parts) {
   // 세부 탭(PC 왼쪽 레일 · 모바일 아래 반원 다이얼). 고른 세부 탭은 인물·탭마다 기억
   const subSel = (m.wkSub ??= {});
   const sub2 = (tab, items) => subTabs(ctx, subSel, `${pk}|${tab}`, items, { label: "세부 탭" });
-  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "관계·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }, doc && { id: "cond", label: "상태이상", icon: "🤒", hint: "취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) }, doc && { id: "outfit", label: "옷차림", icon: "👗", hint: "부위별 옷·액세서리(삽화용 상세)", render: () => outfitCard(env, card, doc) }, doc && { id: "race", label: "종족", icon: "🧬", hint: "종족 체질·발정기·몸 모형", render: () => raceCard(env, card, doc) }]);
+  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "관계·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }]);
   const relation0 = () => {
     if (lay === "A") return layoutA();
     if (fam === "B") return layoutB();
@@ -422,8 +424,13 @@ export function personTabs(env, parts) {
     if (!grid) return which === "prof" ? el : null;
     return h("div", { class: "rb-wk2-pane" }, h("div", { class: "rb-wk3 rb-wk3-solo" }, h("div", { class: "rb-wk3-grid" }, parts[which])));
   };
-  const info = () => doc ? sub2("info", [{ id: "prof", label: "성격·수치", icon: "🧭", hint: "기본 성격과 수치", render: () => infoPart("prof") }, { id: "emo", label: "감정", icon: "💗", hint: "상대별 감정", render: () => infoPart("emo") },
-    { id: "human", label: "사람다움", icon: "🧩", hint: "말버릇·습관·꿈·비밀", render: () => h("div", { class: "rb-wk2-pane" }, humanCard(env, card, doc, "human")) }, { id: "rec", label: "기록", icon: "📒", hint: "기록 묶음·빈 항목", render: () => infoPart("rec") }]) : info0();   // addon-rebuild: Erosync 8가지 성향은 NSFW 탭의 Erosync 카드로 옮김(상세 정보의 성향과 헷갈려서)
+  const base = () => doc ? sub2("base", [{ id: "prof", label: "성격·수치", icon: "🧭", hint: "기본 성격과 수치", render: () => infoPart("prof") },
+    { id: "cond", label: "상태이상", icon: "🤒", hint: "컨디션·취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) },
+    { id: "outfit", label: "옷차림", icon: "👗", hint: "부위별 옷·액세서리(삽화용 상세)", render: () => outfitCard(env, card, doc) },
+    { id: "race", label: "종족", icon: "🧬", hint: "종족 체질·발정기·몸 모형", render: () => raceCard(env, card, doc) }]) : info0();
+  const mind = () => doc ? sub2("mind", [{ id: "emo", label: "감정", icon: "💗", hint: "상대별 감정", render: () => infoPart("emo") },
+    { id: "human", label: "사람다움", icon: "🧩", hint: "말버릇·습관·꿈·비밀", render: () => h("div", { class: "rb-wk2-pane" }, humanCard(env, card, doc, "human")) }]) : h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "인물 문서가 생기면 감정·사람다움이 여기에 보여요."));
+  const tabBody = (k) => (k === "base" ? base() : k === "mind" ? mind() : k === "nsfw" ? nsfw() : k === "mem" ? log() : relation());   // Erosync 8가지 성향은 성인 탭의 Erosync 카드
   // NSFW 탭: Dusk 성인 항목(월경·임신, 성적 욕망·이상성향 후보) + Erosync 성적 항목(켜져 있을 때만). 항상 보인다.
   // 월경·임신 한눈에: 주기 띠(생리·가임기·오늘) + 다음 월경·배란까지 남은 날 / 임신이면 주차·출산 예정까지
   const dayN = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5 : NaN; };
@@ -487,6 +494,7 @@ export function personTabs(env, parts) {
     parts.onLog?.();   // 2.2.22: 기록 목록은 이때 처음 만든다
     const blocks = (parts.logBlocks ?? []).filter(Boolean), sum = lay === "B4" ? summary("log") : null;
     const items = [sum && { id: "sum", label: "달라진 점", icon: "✨", hint: "바뀐 것·남은 순간", render: () => h("div", { class: "rb-wk2-pane" }, summary("log")) },
+      doc && { id: "rec", label: "기록 묶음", icon: "📒", hint: "기록 묶음·빈 항목", render: () => infoPart("rec") },
       doc && { id: "diary", label: "일기", icon: "📔", hint: "인물 일기 보기·고치기", render: () => h("div", { class: "rb-wk2-pane" }, diaryCard(env, card, doc)) },
       ...blocks.map((b, i) => ({ id: `b${i}`, label: b.querySelector?.("summary b, .rb-wk2-ch b, h4, summary")?.textContent?.trim()?.slice(0, 10) || (i ? "이야기 기록" : "문서 관리"), icon: i ? "📖" : "🗂️", render: () => h("div", { class: "rb-wk2-pane" }, b) }))].filter(Boolean);
     return items.length > 1 ? sub2("log", items) : h("div", { class: "rb-wk2-pane" }, sum, ...blocks);
@@ -494,7 +502,7 @@ export function personTabs(env, parts) {
 
   // C안: 탭 없이 한 장. 위에 붙는 목차를 누르면 그 구역으로 스크롤.
   const onePage = () => {
-    const secs = [["sum", "요약", summary()], ["rel", `관계 ${people.length || ""}`.trim(), layoutCRel()], ["info", "상세 정보", info()], ["nsfw", "NSFW", nsfw()], ["log", "기록", log()]];
+    const secs = [["sum", "요약", summary()], ["base", "기본", base()], ["mind", "마음", mind()], ["rel", `관계 ${people.length || ""}`.trim(), layoutCRel()], ["mem", "기억", log()], ["nsfw", "성인", nsfw()]];
     const jump = (k) => root.querySelector(`[data-sec="${k}"]`)?.scrollIntoView?.({ block: "start", behavior: "smooth" });
     return [h("nav", { class: "rb-wk2-toc", "aria-label": "인물 정보 목차" }, secs.map(([k, l]) => h("button", { type: "button", class: "rb-chip", onClick: () => jump(k) }, l))),
       h("div", { class: "rb-wk2-one" }, secs.map(([k, l, el]) => h("div", { class: "rb-wk2-sec", "data-sec": k }, h("h4", null, l.replace(/ \d+$/, "")), el)))];
@@ -514,23 +522,23 @@ export function personTabs(env, parts) {
   // B3: 인물 탭 없이 요약·관계·상세·NSFW·기록을 모두 접는 묶음으로(열어 둔 것 기억)
   const allFold = () => {
     const open = (m.wkSecOpen ??= { rel: true });
-    const secs = [["sum", "요약", summary], ["rel", `관계 · ${people.length}명`, relation], ["info", "상세 정보", info], ["nsfw", "NSFW", nsfw], ["log", "기록", log]];
+    const secs = [["sum", "요약", summary], ["base", "기본", base], ["mind", "마음", mind], ["rel", `관계 · ${people.length}명`, relation], ["mem", "기억", log], ["nsfw", "성인", nsfw]];
     return h("div", { class: "rb-wk2-fold" }, secs.map(([k, l, fn]) => h("details", { class: "rb-wk2-acc big", open: !!open[k], "data-sec": k, onToggle: (e) => { if (open[k] === e.target.open) return; open[k] = e.target.open; paint(); } },
       h("summary", null, h("b", null, l), h("span", { style: "flex:1" }), h("i", { class: "arr", "aria-hidden": "true" })), open[k] ? h("div", { class: "rb-wk2-accb" }, fn()) : null)));
   };
   // B4: 왼쪽 프로필 열(머리 + 요약) 고정, 오른쪽에 탭(관계·상세·NSFW·기록)
   const infoBox = (tab) => {
-    const t = tab === "sum" || tab === "sum2" ? "rel" : tab;   // 2.2.6 요약 탭은 없앰(내용은 왼쪽 열·기록·NSFW로) — 처음 열면 관계
+    const t = tab === "sum" || tab === "sum2" ? "rel" : OLD_TAB[tab] ?? tab;   // 2.2.6 요약 탭은 없앰(내용은 왼쪽 열·기록·NSFW로) — 처음 열면 관계
     // 좁은 화면은 왼쪽 열이 위로 쌓이므로 머리만 두고 요약은 ‘요약’ 탭에 전부, 넓은 화면은 수치·관계 한눈에를 왼쪽 열에
     const narrow = !!ctx.win?.ownerDocument?.defaultView?.matchMedia?.("(max-width: 760px)")?.matches;
     return h("div", { class: "rb-wk2-ibox" },
       h("aside", { class: "rb-wk2-iside" }, hero(), narrow ? null : summary("side")),
       h("div", { class: "rb-wk2-imain" },
         h("div", { class: "rb-wk2-tabs", role: "tablist", "aria-label": "인물 정보" }, TABS.filter(([k]) => k !== "sum").map(([k, l]) => h("button", { type: "button", role: "tab", class: ["rb-wk2-tab", k === t && "pane-sel", false], "data-t": k, "aria-selected": k === t ? "true" : "false", onClick: () => { tabs[pk] = k; paint(); } }, l))),
-        t === "rel" ? relation() : t === "info" ? info() : t === "nsfw" ? nsfw() : log()));
+        tabBody(t)));
   };
   function paint() {
-    const tab = tabs[pk] ?? "sum", paneTab = tab === "sum" ? "rel" : tab;
+    const tab = OLD_TAB[tabs[pk]] ?? tabs[pk] ?? "sum", paneTab = tab === "sum" ? "rel" : tab;
     root.setAttribute("data-tab", lay === "C" || lay === "B3" || lay === "B4" ? "one" : tab);
     root.setAttribute("data-lay", lay || "now");
     replace(root,
@@ -538,7 +546,7 @@ export function personTabs(env, parts) {
       gap && !lay ? h("div", { class: "rb-wk2-gap", role: "note" }, `오랜만에 다시 나왔어요 · 응답 ${gap}개 만`) : null,
       lay === "C" ? onePage() : lay === "B3" ? allFold() : lay === "B4" ? infoBox(tab) : [
       h("div", { class: "rb-wk2-tabs", role: "tablist", "aria-label": "인물 정보" }, TABS.map(([k, l]) => h("button", { type: "button", role: "tab", class: ["rb-wk2-tab", k === paneTab && "pane-sel"], "data-t": k, "aria-selected": tab === k ? "true" : "false", onClick: () => { tabs[pk] = k; paint(); } }, l))),
-      h("div", { class: "rb-wk2-body" }, summary(), paneTab === "rel" ? relation() : paneTab === "info" ? info() : paneTab === "nsfw" ? nsfw() : log())]);
+      h("div", { class: "rb-wk2-body" }, summary(), tabBody(paneTab))]);
   }
   paint();
   return root;

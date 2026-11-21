@@ -31,7 +31,7 @@ export function erosyncSection(ctx, onChange = () => {}) {
     void checkOverlap();
     const on = er.on(), running = er.isRunning();
     const kind = !on ? "off" : running ? "on" : er.lastError() ? "err" : "prep";
-    const line = !on ? "꺼져 있어요. 켜면 인물 성향과 장면을 읽어 응답에 반영해요." : running ? "켜져 있어요. 인물 위키의 NSFW 탭과 인물 관계도에서 값을 볼 수 있어요." : er.lastError() || "시작하는 중이에요…";
+    const line = !on ? "꺼져 있어요. 켜면 인물 성향과 장면을 읽어 응답에 반영해요." : running ? "켜져 있어요. 인물 위키의 성인 탭과 인물 관계도에서 값을 볼 수 있어요." : er.lastError() || "시작하는 중이에요…";
     stateBox.replaceChildren(statusCard(kind, line));
     note.textContent = "";
     onChange();

@@ -36,13 +36,13 @@ for (const [tag, vp, uiMode] of [["PC", { width: 1280, height: 860 }, "advanced"
   ok(`[${tag}] 수아 위키가 열림`, (await page.locator(".rb-wk2").count()) >= 1, String(await page.locator(".rb-wk2").count()));
   const tabs = (await page.locator(".rb-wk2-tab").allTextContents()).map((x) => x.trim());
   // 2.2.6: 요약 탭은 없앴다(내용은 왼쪽 프로필 열·기록 탭·NSFW로)
-  ok(`[${tag}] 탭 줄(관계·상세 정보·NSFW·기록)`, ["관계", "상세 정보", "NSFW", "기록"].every((t) => tabs.some((x) => x.includes(t))) && !tabs.some((x) => x.includes("요약")), tabs.join("|"));
+  ok(`[${tag}] 탭 줄(기본·마음·관계·기억·성인)`, ["기본", "마음", "관계", "기억", "성인"].every((t) => tabs.some((x) => x.includes(t))) && !tabs.some((x) => x.includes("요약")), tabs.join("|"));
   // 탭을 모두 돌며 보이는 글을 모은다(위키 칸은 상세 정보의 '기록' 묶음 등 여러 곳에 나뉘어 보인다)
   const visitAll = async () => {
     let all = await body();
-    for (const t of ["관계", "상세 정보", "NSFW", "기록"]) {
+    for (const t of ["기본", "마음", "관계", "기억", "성인"]) {
       ok(`[${tag}] '${t}' 탭 열림`, await tab(t));
-      if (t === "상세 정보") for (const chip of ["수치", "감정", "기록"]) { const c = page.locator(".rb-wk2 button", { hasText: chip }).first(); if (await c.count()) { await c.click(); await page.waitForTimeout(300); all += await body(); } }
+      if (["기본", "마음", "기억"].includes(t)) for (const chip of ["수치", "감정", "기록"]) { const c = page.locator(".rb-wk2 button", { hasText: chip }).first(); if (await c.count()) { await c.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(300); all += await body(); } }
       all += await body();
       ok(`[${tag}] '${t}' 탭 가로 안 넘침`, !(await wide()));
       await page.screenshot({ path: `/tmp/wiki-rec-${t.replace(/\s/g, "")}-${tag}.png`, fullPage: true });
@@ -54,7 +54,7 @@ for (const [tag, vp, uiMode] of [["PC", { width: 1280, height: 860 }, "advanced"
   const miss = Object.entries(want).filter(([, rx]) => !rx.test(all)).map(([k]) => k);
   ok(`[${tag}] 기록기가 남긴 칸이 위키 화면에 모두 보임`, !miss.length, "안 보임: " + miss.join(", "));
   await open("도윤");
-  let dy = await body(); for (const t of ["상세 정보"]) { await tab(t); const c = page.locator(".rb-wk2 button", { hasText: "기록" }).first(); if (await c.count()) { await c.click(); await page.waitForTimeout(300); } dy += await body(); }
+  let dy = await body(); for (const t of ["기억"]) { await tab(t); const c = page.locator(".rb-wk2 button", { hasText: "기록" }).first(); if (await c.count()) { await c.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(300); } dy += await body(); }
   ok(`[${tag}] 도윤: 현재 상태 사망이 보임`, /사망/.test(dy), dy.slice(0, 300));
   // 다음 요청에 들어가는 기억 블록: 사망이 맨 앞 'Current facts'
   const sent = await page.evaluate(async () => (await __host.request([{ role: "system", content: "s" }, { role: "user", content: "수아와 도윤 이야기" }])).map((m) => String(m.content)).join("\n"));
