@@ -7,12 +7,13 @@ import { mem, at, shownName, fail } from "./common.js";
 import { memStore } from "./memstore.js";
 import { editRows } from "./editrows.js";
 import { extraOf, nk, WORLD_LABEL } from "../../../engine/memextra.js";
+import { calOf } from "../../../engine/storycal.js";
 
 const empty = (ic, text) => h("p", { class: "rb-mem-empty1" }, icon(ic, 16), text);
 const WORLD_ICON = { place: "globe", item: "sparkle", faction: "users" };
 // 저장(로컬). people.js의 editFolder와 같지만, 그 모듈이 무거워 CSS 묶음에서 따로 둔다
 const editFolder = (env, fn) => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, fn)).then(() => env.redraw()).catch(fail(env.ctx));
-export const WORLD_SECS = [["docs", "문서"], ["goals", "목표"], ["rumors", "소문"]];
+export const WORLD_SECS = [["docs", "문서"], ["goals", "목표"], ["rumors", "소문"], ["cal", "캘린더"]];
 
 export function worldCount(folder) {
   const e = extraOf(folder);
@@ -25,7 +26,7 @@ export async function renderWorld(env, host) {
   const draw = () => replace(host,
     h("p", { class: "rb-muted" }, "응답에 나온 장소·물건·세력, 인물이 이루려는 목표, 누가 누구에게 무엇을 들었는지 모아요. 지금 장면에 나온 것만 요청에 넣어요(AI 호출은 늘지 않아요)."),
     segmented(WORLD_SECS, m.worldSec, (v) => { m.worldSec = v; draw(); }, "세계 구역"),
-    m.worldSec === "goals" ? goals() : m.worldSec === "rumors" ? rumors() : docs());
+    m.worldSec === "goals" ? goals() : m.worldSec === "rumors" ? rumors() : m.worldSec === "cal" ? cal() : docs());
 
   const del = (title, fn) => async () => { if (!(await confirmDialog(env.ctx.win, { title, ok: "지우기", danger: true }))) return; editFolder(env, (f) => { f.extra = extraOf(f); fn(f.extra); }); };
   function docs() {
@@ -62,6 +63,34 @@ export async function renderWorld(env, host) {
           h("div", { class: "txt" }, h("div", null, x.goal), h("i", { class: "rb-goal-bar", "aria-label": `진척 ${x.prog ?? 0}%` }, h("i", { style: { width: `${x.prog ?? 0}%` } })))] });
       return h("section", { class: "rb-card rb-mem-sec" }, h("div", { class: "rb-mem-shead" }, h("b", null, shownName(g.name))), h("ul", { class: "rb-mem-reclist" }, rows), foot);
     }));
+  }
+  // 이야기 캘린더(기록기가 채우는 생일·연인·약속·특별한 날). 장면 상태창의 ‘다가오는 날’이 이 값을 써요
+  function cal() {
+    const c = calOf(e), MD = { len: 5, label: "날짜(월/일, 예: 3/14)" };
+    const setCal = (f, key, v) => { f.extra = extraOf(f); f.extra.cal = { ...calOf(f.extra), [key]: v }; };
+    const asMap = (arr) => Object.fromEntries(arr.map((x) => [nk(x.name), x]));
+    const okMd = (v) => ({ ...v, md: (String(v.md).match(/^(\d{1,2})\s*[/.월-]\s*(\d{1,2})/) ?? []).slice(1, 3).map(Number).join("/") || "" });
+    const block = (title, rows, foot, hint) => h("section", { class: "rb-card rb-mem-sec" }, h("div", { class: "rb-mem-shead" }, h("b", null, title)),
+      rows.length ? h("ul", { class: "rb-mem-reclist" }, rows) : h("p", { class: "rb-muted" }, hint), foot);
+    const bd = editRows(env, { kind: "bday", id: "cal:bday", title: "생일", cls: "rb-mem-rec", addLabel: "+ 생일",
+      rows: Object.values(c.bday).map((x, i) => ({ x, i })), get: (f) => Object.values(calOf(extraOf(f)).bday), set: (f, arr) => setCal(f, "bday", asMap(arr)),
+      fields: [{ k: "name", label: "인물", len: 30 }, { ...MD, k: "md", need: false }], make: (v) => okMd(v),
+      row: (x) => [badge("생일", "acc"), h("div", { class: "txt" }, h("b", null, shownName(x.name)), ` ${x.md || "날짜 모름"}`)] });
+    const cp = editRows(env, { kind: "couple", id: "cal:couple", title: "연인", cls: "rb-mem-rec", addLabel: "+ 연인",
+      rows: Object.values(c.couple).map((x, i) => ({ x, i })), get: (f) => Object.values(calOf(extraOf(f)).couple), set: (f, arr) => setCal(f, "couple", asMap(arr)),
+      fields: [{ k: "name", label: "두 사람(예: 카엘·미나)", len: 40 }, { k: "since", label: "사귄 날(YYYY-MM-DD, 모르면 비움)", len: 10, need: false }], make: (v) => v,
+      row: (x) => [badge("연인", "acc2"), h("div", { class: "txt" }, h("b", null, x.name), ` ${x.since ? `${x.since}부터` : "시작일 모름"}`)] });
+    const pl = editRows(env, { kind: "plan", id: "cal:plans", title: "약속", cls: "rb-mem-rec", addLabel: "+ 약속",
+      rows: c.plans.map((x, i) => ({ x, i })), get: (f) => calOf(extraOf(f)).plans, set: (f, arr) => setCal(f, "plans", arr),
+      fields: [{ ...MD, k: "md" }, { k: "what", label: "무슨 약속", len: 40 }], make: (v) => okMd(v),
+      row: (x) => [badge(x.md || "?", "acc"), h("div", { class: "txt" }, x.what)] });
+    const dy = editRows(env, { kind: "day", id: "cal:days", title: "특별한 날", cls: "rb-mem-rec", addLabel: "+ 특별한 날",
+      rows: c.days.map((x, i) => ({ x, i })), get: (f) => calOf(extraOf(f)).days, set: (f, arr) => setCal(f, "days", arr),
+      fields: [{ ...MD, k: "md" }, { k: "name", label: "이름", len: 30 }, { k: "note", label: "설명", len: 60, need: false }], make: (v) => okMd(v),
+      row: (x) => [badge(x.md || "?", "acc2"), h("div", { class: "txt" }, h("b", null, x.name), x.note ? h("div", { class: "rb-muted" }, x.note) : null)] });
+    return h("div", { class: "rb-world" }, note("info", "장면 상태창의 ‘다가오는 날’과 요청에 들어가는 날이에요. 기록기가 채우고, 여기서 고치거나 직접 적을 수 있어요."),
+      block("🎂 생일", bd.rows, bd.foot, "아직 아는 생일이 없어요."), block("💗 연인", cp.rows, cp.foot, "기념일을 셀 연인이 없어요."),
+      block("📅 약속", pl.rows, pl.foot, "잡힌 약속이 없어요."), block("✨ 특별한 날", dy.rows, dy.foot, "적어 둔 특별한 날이 없어요."));
   }
   function rumors() {
     const { rows, foot } = editRows(env, { kind: "told", id: "rumors", title: "소문", cls: "rb-mem-rec", addLabel: "+ 소문",

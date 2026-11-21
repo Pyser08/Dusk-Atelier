@@ -22,6 +22,8 @@ import { ensureMemAddonCss, wkLayoutOf } from "./memaddoncss.js";
 import { parseCycleBody } from "../../../engine/pot/cycle-tracking.js";
 import { TIE_KINDS, TIE_GROUPS, tiesBetween, setTies } from "../../../engine/ties.js";
 import { extraOf } from "../../../engine/memextra.js";
+import { editForm } from "./editrows.js";
+import { ignoreKeyOf, addIgnore, dropIgnore } from "../../../engine/memedit.js";
 import { keyOf, intimacyOf, setIntimacy, INTIM_MAX, INTIM_WORDS, setUserNames, nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
 const TONE = { formal: "존댓말", casual: "반말", mixed: "섞어 씀" };
@@ -49,6 +51,21 @@ export function personTabs(env, parts) {
   const tabs = (m.wkTab2 ??= {}), withSel = (m.wkWith ??= {}), rev = (m.wkFeelRev ??= {});
   const run = (pr) => Promise.resolve(pr).catch(fail(ctx));
   const save = (fn, ok) => editFolder(env, fn).then(() => ok && ctx.toast(ok));
+  // 인간다움 2단계: 추억·갈등·오해 직접 추가·고치기, 지우면 무시 목록(기록기가 바로 다시 안 만듦). 고친 값은 잠그지 않음
+  const HF = {
+    bond: { box: "bonds", title: "둘만의 추억", fields: [{ k: "moment", label: "추억", len: 80 }, { k: "hook", label: "떠올릴 계기(예: 우산, 비)", len: 30, need: false }] },
+    rift: { box: "rifts", title: "갈등", fields: [{ k: "about", label: "무엇 때문에", len: 80 }, { k: "state", label: "상태", type: "select", def: "open", opts: [["open", "안 풀림"], ["apologized", "사과함"], ["resolved", "화해함"]] }, { k: "grudge", label: "앙금", type: "select", def: "none", opts: [["none", "없음"], ["some", "조금"], ["deep", "깊음"]] }] },
+    belief: { box: "beliefs", title: "오해", fields: [{ k: "thinks", label: "잘못 알고 있는 것", len: 80 }, { k: "truth", label: "실제로는", len: 80 }] },
+  };
+  const turnNow = (fo) => (Number.isInteger(fo?.cursor?.at) ? fo.cursor.at : 0);
+  const addHuman = (kind, other) => run(editForm(ctx.win, `${HF[kind].title} 추가`, kind === "belief" ? [{ k: "who", label: "누가 잘못 알고 있나요", type: "select", def: other, opts: [[other, shown(other)], [me, shown(me)]] }, ...HF[kind].fields] : HF[kind].fields).then((v) => v && save((fo) => {
+    const item = { id: `u${kind}${Date.now().toString(36)}`, ...(kind === "belief" ? { open: true } : { a: me, b: other }), ...v, at: turnNow(fo), at_ms: Date.now(), user: true };
+    dropIgnore(fo, ignoreKeyOf({ ...item, kind })); (fo[HF[kind].box] ??= []).push(item);
+  }, "추가했어요.")));
+  const editHuman = (kind, x) => run(editForm(ctx.win, `${HF[kind].title} 고치기`, HF[kind].fields, x).then((v) => v && save((fo) => {
+    const o = (fo[HF[kind].box] ?? []).find((y) => y.id === x.id); if (o) Object.assign(o, v, { user: true });
+  }, "고쳤어요.")));
+  const ignoreHuman = (fo, kind, x) => addIgnore(fo, ignoreKeyOf({ ...x, kind }), { turn: turnNow(fo) });
   // Erosync(켜져 있을 때만): 읽어 오면 한 번 다시 그린다. 이름이 맞는 인물에게만 칸이 생긴다.
   let ero = null;
   const eroSelf = () => (ero ? eroPerson(ero, selfNames) : null);
@@ -206,12 +223,12 @@ export function personTabs(env, parts) {
       return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(440px,94vw)" }, h("h3", null, "둘만의 추억 고치기"), h("label", { class: "rb-mem-field" }, h("span", null, "추억"), mo), h("label", { class: "rb-mem-field" }, h("span", null, "떠올릴 계기"), hk),
         h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done({ moment: mo.value, hook: hk.value }) })));
     }).then((v) => v && save((fo) => { editBond(fo, b.id, v); }, "고쳤어요."))) }),
-      btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 추억을 지울까요?", body: b.moment, ok: "지우기", danger: true })) save((fo) => { deleteBond(fo, b.id); }, "지웠어요."); } })));
+      btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 추억을 지울까요?", body: b.moment, ok: "지우기", danger: true })) save((fo) => { ignoreHuman(fo, "bond", b); deleteBond(fo, b.id); }, "지웠어요."); } })));
   const beliefItem = (b) => h("div", { class: ["rb-wk2-belief", !b.open && "done"] },
     h("small", null, b.open ? `${topic(shown(b.who))} 이렇게 알고 있어요` : `${subj(shown(b.who))} 잘못 알던 것 · 풀림`), h("b", null, `“${b.thinks}”`),
     h("small", null, "실제로는"), h("span", null, b.truth), b.by ? h("small", { class: "rb-muted" }, `${subj(shown(b.by))} 그렇게 말했어요`) : null,
-    h("div", { class: "rb-wk2-acts" }, b.open ? btn("진실을 알았어요", { size: "sm", onClick: () => save((fo) => { resolveBelief(fo, b.id); }, "풀린 것으로 표시했어요.") }) : null,
-      btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 오해 기록을 지울까요?", body: b.thinks, ok: "지우기", danger: true })) save((fo) => { deleteBelief(fo, b.id); }, "지웠어요."); } })));
+    h("div", { class: "rb-wk2-acts" }, btn("고치기", { size: "sm", onClick: () => editHuman("belief", b) }), b.open ? btn("진실을 알았어요", { size: "sm", onClick: () => save((fo) => { resolveBelief(fo, b.id); }, "풀린 것으로 표시했어요.") }) : null,
+      btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 오해 기록을 지울까요?", body: b.thinks, ok: "지우기", danger: true })) save((fo) => { ignoreHuman(fo, "belief", b); deleteBelief(fo, b.id); }, "지웠어요."); } })));
   // ⑦ 갈등·사과·앙금
   const RIFT_STATE = { open: "안 풀림", apologized: "사과함", resolved: "화해함" };
   const riftItem = (rf) => {
@@ -220,8 +237,8 @@ export function personTabs(env, parts) {
     return h("div", { class: ["rb-wk2-rift", closed && "done", `s-${rf.state}`] },
       h("div", { class: "rb-wk2-tline" }, h("small", { class: "rb-wk2-badge st" }, RIFT_STATE[rf.state] ?? rf.state), grudge ? h("small", { class: "rb-wk2-badge gr" }, grudge + (rf.who ? ` · ${shown(rf.who)}` : "")) : null),
       h("span", { class: "t" }, rf.about),
-      h("div", { class: "rb-wk2-acts" }, closed ? null : btn("풀렸어요", { size: "sm", onClick: () => save((fo) => { resolveRift(fo, rf.id); }, "화해한 것으로 표시했어요.") }),
-        btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 갈등 기록을 지울까요?", body: rf.about, ok: "지우기", danger: true })) save((fo) => { deleteRift(fo, rf.id); }, "지웠어요."); } })));
+      h("div", { class: "rb-wk2-acts" }, btn("고치기", { size: "sm", onClick: () => editHuman("rift", rf) }), closed ? null : btn("풀렸어요", { size: "sm", onClick: () => save((fo) => { resolveRift(fo, rf.id); }, "화해한 것으로 표시했어요.") }),
+        btn("지우기", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: "이 갈등 기록을 지울까요?", body: rf.about, ok: "지우기", danger: true })) save((fo) => { ignoreHuman(fo, "rift", rf); deleteRift(fo, rf.id); }, "지웠어요."); } })));
   };
   // ⑧ 사람 앞에서 달라지는 태도
   const faceRow = (x, who, to) => {
@@ -265,13 +282,13 @@ export function personTabs(env, parts) {
       unreq: u ? card("짝사랑", h("p", { class: "rb-wk2-p" }, `${subj(shown(u.from))} ${shown(u.to)}에게 끌리지만(끌림 ${u.v}) 상대는 아직 아니에요(끌림 ${u.back}).`), null, "rb-wk2-lovercard off") : null,
       nums: ms.length ? card("수치", [...ms.map((x) => metricRow(x, true)), h("small", { class: "rb-muted" }, "이 상대가 대상인 수치만 보여요.")]) : null,
       talk: card("호칭 · 말투", [talkRow(v.talk.ab, me, other), h("hr", { class: "rb-wk2-hr" }), talkRow(v.talk.ba, other, me)]),
-      rifts: v.rifts?.length ? card("갈등", v.rifts.map(riftItem)) : null,
-      bonds: v.bonds.length ? card("둘만의 추억", v.bonds.map(bondItem)) : null,
+      rifts: v.rifts?.length ? card("갈등", v.rifts.map(riftItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("rift", other) })) : null,
+      bonds: v.bonds.length ? card("둘만의 추억", v.bonds.map(bondItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("bond", other) })) : null,
       exp: v.exp ? card("기대 차이", h("div", { class: "rb-wk2-exp" }, [[v.exp.a, v.exp.ae, v.exp.as], [v.exp.b, v.exp.be, v.exp.bs]].map(([n, e, said]) => h("div", null, h("small", { class: "rb-muted" }, `${topic(shown(n))}`), h("span", null, e), h("small", { class: "rb-muted" }, said ? "말로 했어요" : "말하지 않았어요"))))) : null,
       face: card("사람 앞 태도", [faceRow(v.face?.ab, me, other), h("hr", { class: "rb-wk2-hr" }), faceRow(v.face?.ba, other, me)]),
-      beliefs: v.beliefs.length ? card("오해", v.beliefs.map(beliefItem), null, "warn") : null,
+      beliefs: v.beliefs.length ? card("오해", v.beliefs.map(beliefItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("belief", other) }), "warn") : null,
       ero: eroPairCard(ctx, card, ero, eroSelf(), ero ? eroPersonByName(ero, other) : null),
-      empty,
+      empty, other,
     };
     const talkEmpty = !v.talk.ab && !v.talk.ba, faceEmpty = !v.face?.ab && !v.face?.ba;
     if (!v.bonds.length) empty.push("둘만의 추억");
@@ -287,9 +304,13 @@ export function personTabs(env, parts) {
     if (!names.length) return null;
     const key = pk + "|empty", open = !!rev[key];
     return h("div", { class: "rb-wk2-empty" }, h("small", { class: "rb-muted" }, "아직 없는 칸 · " + names.join(" · ")),
+      ...[["둘만의 추억", "bond"], ["갈등", "rift"], ["오해", "belief"]].filter(([n]) => P.empty.includes(n)).map(([n, k]) => h("button", { type: "button", class: "rb-wk2-link", onClick: () => addHuman(k, P.other) }, `+ ${n}`)),
       (P.talkEmpty || P.faceEmpty) ? h("button", { type: "button", class: "rb-wk2-link", onClick: () => { rev[key] = !open; paint(); } }, open ? "접기" : "직접 적기") : null,
       open ? h("div", { class: "rb-wk2-emptybody" }, P.talkEmpty ? P.talk : null, P.faceEmpty ? P.face : null) : null);
   };
+  // 아직 없는 갈등·오해를 직접 적는 줄(기본 배치용)
+  const addRow = (P) => { const ks = [["갈등", "rift"], ["오해", "belief"]].filter(([n]) => P.empty.includes(n));
+    return ks.length ? h("div", { class: "rb-wk2-empty" }, h("small", { class: "rb-muted" }, "직접 적기"), ...ks.map(([n, k]) => h("button", { type: "button", class: "rb-wk2-link", onClick: () => addHuman(k, P.other) }, `+ ${n}`))) : null; };
   const filled = (P) => [P.nums, P.talkEmpty ? null : P.talk, P.rifts, P.bonds, P.exp, P.faceEmpty ? null : P.face, P.beliefs, P.ero].filter(Boolean);
   // addon-rebuild: 이 상대와의 관계 지우기(잘못 붙은 관계 — 예: 스친 엑스트라). 위키 화면이 넘겨준 removeRelation이 있을 때만.
   const relDel = (other) => typeof parts.removeRelation === "function" && other ? h("div", { class: "rb-mem-sact" }, btn(`${shown(other)}와의 관계 지우기`, { size: "sm", id: "rb-wk2-reldel", title: "두 사람 사이 감정·관계 기록과 위키의 서로에 대한 항목을 지워요", onClick: () => parts.removeRelation(other) })) : null;
@@ -365,8 +386,8 @@ export function personTabs(env, parts) {
     const other = curOther(), P = pieces(other), v = P.v;
     return h("div", { class: "rb-wk2-pane" }, pickRow(other),
       h("div", { class: "rb-wk2-cards" }, P.stage, P.lover, P.tl, P.unreq, feelCard(v, other), P.nums, P.talk, P.rifts,
-        P.bonds ?? card("둘만의 추억", h("p", { class: "rb-muted" }, "아직 없어요. 둘에게 의미 있는 순간이 생기면 쌓여요.")), P.exp, P.faceEmpty ? null : P.face, P.beliefs, P.ero),
-      relDel(other), hint());
+        P.bonds ?? card("둘만의 추억", h("p", { class: "rb-muted" }, "아직 없어요. 둘에게 의미 있는 순간이 생기면 쌓여요."), btn("+ 추가", { size: "sm", onClick: () => addHuman("bond", other) })), P.exp, P.faceEmpty ? null : P.face, P.beliefs, P.ero),
+      addRow(P), relDel(other), hint());
   };
 
   // ── 상세 정보 · 기록 ──

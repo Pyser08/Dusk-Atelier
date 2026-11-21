@@ -10,7 +10,10 @@ const KEYS = {
   status: (r) => [r.name, r.effect],
   mark: (r) => [r.name, r.part, r.desc],
   place: (r) => [r.name], item: (r) => [r.name], faction: (r) => [r.name],
+  bond: (r) => [pair(r.a, r.b), r.moment], rift: (r) => [pair(r.a, r.b), r.about], belief: (r) => [r.who, r.thinks],
+  bday: (r) => [r.name], couple: (r) => [r.name], plan: (r) => [r.md, r.what], day: (r) => [r.md, r.name], hol: (r) => [r.from, r.name],
 };
+const pair = (a, b) => [k1(a), k1(b)].sort().join("+");
 export function ignoreKeyOf(r) {
   const f = KEYS[r?.kind];
   return f ? [r.kind, ...f(r).map(k1)].join("|") : null;
@@ -31,6 +34,13 @@ export function isIgnored(f, key, turn = 0) {
 export function filterIgnored(f, reports, turn = 0) {
   if (!Array.isArray(f?.ignore) || !f.ignore.length) return reports ?? [];
   return (reports ?? []).filter((r) => !isIgnored(f, ignoreKeyOf(r), turn));
+}
+
+// 분석 결과의 human(호칭·추억·갈등·오해)에서 지운 추억·갈등·오해를 뺀다(memoryhuman은 코어 공유라 반영 전에 거른다)
+export function filterHuman(f, hm, turn = 0) {
+  if (!hm || !Array.isArray(f?.ignore) || !f.ignore.length) return hm;
+  const keep = (kind) => (arr) => (Array.isArray(arr) ? arr.filter((x) => !isIgnored(f, ignoreKeyOf({ ...x, kind }), turn)) : arr);
+  return { ...hm, bond: keep("bond")(hm.bond), rift: keep("rift")(hm.rift), belief: keep("belief")(hm.belief) };
 }
 
 // 목록 편집(원본은 바꾸지 않고 새 배열)

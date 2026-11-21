@@ -58,6 +58,16 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     await page.locator(".rb-er-foot .rb-btn", { hasText: "+ 소문" }).click(); await page.waitForTimeout(200);
     await inp.nth(0).fill("카엘"); await inp.nth(1).fill("미나"); await inp.nth(2).fill("성문 열쇠 위치"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
     ok(`[${tag}] 소문 직접 추가`, (await win.getByText("성문 열쇠 위치").count()) > 0); }
+  // 캘린더(세계 › 캘린더): 약속 직접 추가 → 고치기
+  { await page.locator(".rb-seg button", { hasText: "캘린더" }).first().click(); await page.waitForTimeout(300);
+    ok(`[${tag}] 세계 · 캘린더 4묶음(생일·연인·약속·특별한 날)`, (await page.locator(".rb-world .rb-mem-sec").count()) === 4);
+    await page.locator(".rb-er-foot .rb-btn", { hasText: "+ 약속" }).click(); await page.waitForTimeout(200);
+    const inp = page.locator(".rb-er-form input"); await inp.nth(0).fill("3월 14일"); await inp.nth(1).fill("영화 보기");
+    await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 약속 추가(날짜는 3/14로 맞춤)`, (await page.locator(".rb-er-row", { hasText: "영화 보기" }).count()) === 1 && (await page.locator(".rb-er-row", { hasText: "3/14" }).count()) === 1);
+    await page.locator(".rb-er-row", { hasText: "영화 보기" }).locator("button[aria-label=고치기]").click(); await page.waitForTimeout(200);
+    await inp.nth(1).fill("영화 보고 저녁"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 약속 고치기`, (await page.locator(".rb-er-row", { hasText: "영화 보고 저녁" }).count()) === 1); }
   // 인물 → NSFW
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { tab: "people", personKey: "시로코" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
@@ -132,6 +142,18 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   await page.waitForTimeout(1200);
   { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
   ok(`[${tag}] 상태이상 카드: 감기`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
+  // 관계 탭: 빈 칸에서 + 둘만의 추억 → 카드가 생기고 고치기·지우기
+  await page.evaluate(async () => { await __app.ctx.memory.store.updateFolder("c1", "t1", (f) => { f.talk = { ...(f.talk ?? {}), "시로코>카엘": { from: "시로코", to: "카엘", call: "카엘", tone: "casual", at: 0 } }; }); __app.ctx.go("memory"); });
+  await page.waitForTimeout(1200);
+  { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
+  { const relSub = page.locator(".rb-wk2-sub button, .rb-wk2-subtab", { hasText: "관계" }).first(); if (await relSub.count()) { await relSub.click(); await page.waitForTimeout(400); }
+    const addLink = page.locator(".rb-wk2-card:has-text('둘만의 추억') .rb-btn:has-text('+ 추가'), .rb-wk2-link:has-text('+ 둘만의 추억')").first();
+    if (await addLink.count()) {
+      await addLink.click(); await page.waitForTimeout(200);
+      await page.locator(".rb-er-form input").nth(0).fill("비 오는 날 우산을 같이 씀"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(600);
+      ok(`[${tag}] 관계 · 추억 직접 추가`, (await page.locator(".rb-wk2-bond", { hasText: "우산을 같이" }).count()) === 1);
+    } else ok(`[${tag}] 관계 · 추억 + 추가 버튼`, false); }
+  ok(`[${tag}] 관계 · 갈등·오해 직접 적기 줄`, (await page.locator(".rb-wk2-link", { hasText: "+ 갈등" }).count()) > 0 || (await page.locator(".rb-wk2-card", { hasText: "갈등" }).count()) > 0);
   // 본문 이름 링크 → 상태창(실제 표시 경로: 로어북 로그가 부르는 memory.gauge.onDisplay)
   // 2.2.24: 상태창 CSS는 리스 화면에 한 번 넣는다(실제로는 namelinks가 mainDom 권한으로) — 시험에선 같은 CSS를 직접 넣는다
   await page.evaluate(() => { if (!document.getElementById("dusk-status-css-test")) { const st = document.createElement("style"); st.id = "dusk-status-css-test"; st.textContent = __app.ctx.memory.nameLinks?.css?.() ?? ""; document.head.append(st); } });
@@ -217,7 +239,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 지난 대화 분석 속도: 글이 줄 폭을 거의 다 씀`, !!bf && bf.tw >= bf.rw * (tag === "모바일" ? 0.95 : 0.4) && (tag !== "모바일" || bf.dir === "column"), JSON.stringify(bf));
   const tk = await page.evaluate(() => { const r = document.getElementById("rb-mem-tokens"); if (!r) return null; return Math.round(r.querySelector(".t").getBoundingClientRect().width / r.getBoundingClientRect().width * 100); });
   ok(`[${tag}] 기억 넣기 토큰 줄도 글이 좁아지지 않음`, tk != null && tk >= (tag === "모바일" ? 95 : 30), String(tk));
-  ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("캐릭터 상태창 (본문 이름 링크)").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문)").count()) > 0);
+  ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("캐릭터 상태창 (본문 이름 링크)").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문·캘린더)").count()) > 0);
   // 2.2.26: 게이지 배수 — 인간적 호감·그 밖의 감정 / 이성적 호감 / 성욕 묶음, 이성적 호감 배수는 따로 저장
   const gm = await page.evaluate(async () => { const card = document.querySelector("#rb-gauge-mult"); if (!card) return null; const heads = [...card.querySelectorAll(".rb-gauge-gh")].map((x) => x.textContent);
     const r = card.querySelector("#rb-gauge-romUp"); if (!r) return { heads }; r.value = "0.5"; r.dispatchEvent(new Event("change", { bubbles: true })); await new Promise((res) => setTimeout(res, 400));

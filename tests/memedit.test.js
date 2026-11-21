@@ -47,3 +47,24 @@ test("목록 편집: 고치기는 user 표시, 추가·지우기, 원래 항목 
   assert.equal(findSame([{ x: 0 }, ...a], a[1], 1), 2);   // 앞에 항목이 끼어도 같은 걸 찾음
   assert.equal(findSame(a, { part: "없음" }, 0), -1);
 });
+
+test("무시 키 확장: 추억·갈등·오해(쌍 순서 무관)·달력", async () => {
+  const { filterHuman } = await import("../src/engine/memedit.js");
+  assert.equal(ignoreKeyOf({ kind: "bond", a: "미나", b: "카엘", moment: "비 오는 날 우산" }), ignoreKeyOf({ kind: "bond", a: "카엘", b: "미나", moment: "비 오는 날  우산" }));
+  assert.equal(ignoreKeyOf({ kind: "rift", a: "카엘", b: "미나", about: "약속 어김" }), "rift|미나+카엘|약속어김");
+  assert.equal(ignoreKeyOf({ kind: "belief", who: "미나", thinks: "카엘이 배신함" }), "belief|미나|카엘이배신함");
+  assert.equal(ignoreKeyOf({ kind: "plan", md: "3/2", what: "영화" }), "plan|3/2|영화");
+  assert.equal(ignoreKeyOf({ kind: "bday", name: "미나" }), "bday|미나");
+  const f = {}; addIgnore(f, ignoreKeyOf({ kind: "bond", a: "미나", b: "카엘", moment: "우산" }), { turn: 0 }); addIgnore(f, "belief|미나|카엘이배신함", { turn: 0 });
+  const h0 = { talk: [{ from: "a", to: "b", call: "x" }], bond: [{ a: "카엘", b: "미나", moment: "우산" }, { a: "카엘", b: "미나", moment: "별" }], belief: [{ who: "미나", thinks: "카엘이 배신함", truth: "아님" }], rift: [] };
+  const out = filterHuman(f, h0, 1);
+  assert.deepEqual(out.bond.map((b) => b.moment), ["별"]); assert.equal(out.belief.length, 0); assert.equal(out.talk.length, 1);
+  assert.equal(filterHuman({}, h0, 1), h0);   // 무시 목록이 없으면 그대로
+});
+
+test("applyExtra가 지운 약속·생일을 다시 만들지 않음", () => {
+  const f = {}; addIgnore(f, "plan|3/2|영화", { turn: 0 }); addIgnore(f, "bday|미나", { turn: 0 });
+  applyExtra(f, [{ kind: "plan", md: "3/2", what: "영화" }, { kind: "plan", md: "3/5", what: "소풍" }, { kind: "bday", name: "미나", md: "5/1" }], { turn: 2 });
+  const c = extraOf(f).cal;
+  assert.deepEqual(c.plans.map((p) => p.what), ["소풍"]); assert.equal(Object.keys(c.bday).length, 0);
+});

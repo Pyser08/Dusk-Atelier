@@ -106,7 +106,8 @@ export const RUMOR_MAX = 60, MARK_MAX = 30, GOAL_MAX = 4;
 // 보고 반영. ctx: {turn, when}. 반환: 바뀐 글 목록
 export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
   const e = extraOf(f), changed = [];
-  for (const r of filterIgnored(f, reports, turn)) {   // 사용자가 지운 항목은 다시 만들지 않음(engine/memedit.js)
+  reports = filterIgnored(f, reports, turn);   // 사용자가 지운 항목은 다시 만들지 않음(engine/memedit.js)
+  for (const r of reports) {
     if (r.kind === "told") {
       if (e.rumors.some((x) => nk(x.from) === nk(r.from) && nk(x.to) === nk(r.to) && nk(x.info) === nk(r.info))) continue;
       e.rumors.push({ from: r.from, to: r.to, info: r.info, at: turn, when: text(when, 40) }); changed.push(`소문 ${r.from}→${r.to}`);

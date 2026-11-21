@@ -85,7 +85,8 @@ export function fertilityCard(env, card, doc) {
       sel("체형", body, Object.entries(BODY).map(([k, [l]]) => [k, l]), (val) => setFert({ body: val })),
       sel("늘 쓰는 피임", n.fert?.contra ?? "none", STANDING.map((k) => [k, CONTRA_LABEL[k]]), (val) => setFert({ contra: val }))),
     h("div", { class: "rb-fert-hist" }, h("small", null, "출산·유산 이력"),
-      hist.length ? h("div", null, hist.map((x) => h("span", { class: x.kind }, `${x.kind === "birth" ? "출산" : "유산"}${x.when ? ` · ${String(x.when).slice(0, 10)}` : ` · #${(x.at ?? 0) + 1}`}`))) : h("span", { class: "rb-muted" }, "없음"),
+      hist.length ? h("div", null, hist.map((x, i) => h("span", { class: x.kind }, `${x.kind === "birth" ? "출산" : "유산"}${x.when ? ` · ${String(x.when).slice(0, 10)}` : ` · #${(x.at ?? 0) + 1}`}`,
+        local ? h("button", { type: "button", class: "rb-bzb", title: "이력 지우기", "aria-label": "이력 지우기", onClick: async () => { if (await confirmDialog(env.ctx.win, { title: "이 이력을 지울까요?", ok: "지우기", danger: true })) save(env, (g) => { const LL = g.life?.p?.[doc.id]; if (LL?.hist) LL.hist = LL.hist.filter((y, j) => !(j === i && y.kind === x.kind && y.at === x.at)); }); } }, "✕") : null))) : h("span", { class: "rb-muted" }, "없음"),
       local ? h("span", { class: "acts" }, btn("+ 출산", { size: "sm", onClick: () => addHist("birth") }), btn("+ 유산", { size: "sm", onClick: () => addHist("loss") })) : null),
     note("응답에서 사정(질 안)이 있으면 기록기가 양(ml)과 피임을 적어요. 양은 반나절마다 반으로 줄고, 정자는 며칠 살아 있어요. 관계마다 피임·양·이력으로 보호됐는지 정한 뒤, 보호 안 된 관계만 월경 주기(배란일) 확률로 임신을 굴려요."),
   ], null, "rb-life");
