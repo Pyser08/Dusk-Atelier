@@ -193,7 +193,7 @@ export async function renderPeopleTab(env, host) {
   const meOf = (r) => isUser(r.name) || (r.doc?.aliases ?? []).some(isUser) || String(r.name).trim() === String(userLabel()).trim();
   if (lay) shown.sort((a, b) => meOf(b) - meOf(a));
   const list = h("div", { class: "rb-wk-list" }, ...shown.map((r) => {
-    const gk = env.folder.orient?.[String(r.name).toLowerCase().replace(/\s+/g, "")]?.g;   // 성별 색(Erosync에서 옮겨 온 값)
+    const gk = (r.doc && env.folder.gender?.[r.doc.id]?.g) || env.folder.orient?.[String(r.name).toLowerCase().replace(/\s+/g, "")]?.g;   // 이 채팅에서 바뀐 성별 먼저   // 성별 색(Erosync에서 옮겨 온 값)
     const el = h("button", { type: "button", class: ["rb-wk-row", lay && meOf(r) && "me", lay && (gk === "f" || gk === "m") && `g-${gk}`], "aria-pressed": r.id === sel.id ? "true" : "false", onClick: () => selectRow(r) },
       avatar(r.name, ""), h("span", { class: "txt" }, h("span", { class: "name" }, r.name), h("small", { class: "rb-muted" }, r.doc ? "인물정보 등록됨" : "이야기 기록만")));
     rowButtons.set(r.id, el);

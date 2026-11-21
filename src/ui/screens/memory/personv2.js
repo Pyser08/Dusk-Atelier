@@ -59,7 +59,8 @@ export function personTabs(env, parts) {
   // 유저({{user}})는 관계 한눈에·관계 목록에서 늘 맨 위
   { const uk = userKeySet([userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])].filter(Boolean)), isU = (x) => uk.has(String(x?.name ?? "").toLowerCase().replace(/\s+/g, "")); people.sort((a, b) => isU(b) - isU(a)); }
   // 성별 색: folder.orient(Erosync에서 옮겨 온 성별) 또는 Erosync 인물의 gender. 여 = 분홍, 남 = 파랑
-  const genderOf = (name) => { const g = f.orient?.[nk(name)]?.g ?? (ero ? eroPersonByName(ero, name)?.gender : null); return g === "f" || g === "m" ? g : ""; };
+  const docGender = (name) => { const d = Object.values(f.wiki?.documents ?? {}).find((x) => x?.type === "Character" && [x.title, ...(x.aliases ?? [])].some((n) => nk(n) === nk(name))); return d ? f.gender?.[d.id]?.g : null; };
+  const genderOf = (name) => { const g = docGender(name) ?? f.orient?.[nk(name)]?.g ?? (ero ? eroPersonByName(ero, name)?.gender : null); return g === "f" || g === "m" ? g : ""; };
   const gcls = (name) => (lay && genderOf(name) ? `g-${genderOf(name)}` : null);
   const person = p ?? { name: me, records: [] };
   const gap = returnGap(person, f.scenes ?? [], now + 1);

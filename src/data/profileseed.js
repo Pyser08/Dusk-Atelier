@@ -10,14 +10,18 @@ import { USER_NSFW_ID, userNsfwDoc, setUserNsfwNames } from "../engine/usernsfw.
 import { dbRead } from "./dbcache.js";
 import { userNameList, primaryUserName } from "./usernames.js";
 
-// 유저 칸: 위키 문서·기본 성격이 없으니 페르소나 설명으로 성인 프로필을 만든다(3번 실패하면 이번 세션엔 그만)
-export async function userNsfwNeed(api, have) {
-  if (have?.[USER_NSFW_ID] || (nsfwTries.get(USER_NSFW_ID) ?? 0) >= 3) return null;
+// 지금 페르소나 이름·설명(유저 칸 성인 프로필·성별 짐작에 씀)
+export async function personaInfo(api) {
   let db = null; try { db = api ? await dbRead(api, ["username", "personas", "selectedPersona"]) : null; } catch { db = null; }
   if (db) setUserNsfwNames(userNameList(db));
   const p = (Array.isArray(db?.personas) ? db.personas : [])[db?.selectedPersona ?? 0];
-  const desc = String(p?.personaPrompt ?? "").trim().slice(0, 2500);
-  return { id: USER_NSFW_ID, name: primaryUserName(db) || userNsfwDoc().title, profile: ["플레이어 캐릭터({{user}})", desc && `페르소나 설명: ${desc}`].filter(Boolean).join("\n") };
+  return { name: primaryUserName(db), desc: String(p?.personaPrompt ?? "").trim().slice(0, 2500) };
+}
+// 유저 칸: 위키 문서·기본 성격이 없으니 페르소나 설명으로 성인 프로필을 만든다(3번 실패하면 이번 세션엔 그만)
+export async function userNsfwNeed(api, have) {
+  if (have?.[USER_NSFW_ID] || (nsfwTries.get(USER_NSFW_ID) ?? 0) >= 3) return null;
+  const { name, desc } = await personaInfo(api);
+  return { id: USER_NSFW_ID, name: name || userNsfwDoc().title, profile: ["플레이어 캐릭터({{user}})", desc && `페르소나 설명: ${desc}`].filter(Boolean).join("\n") };
 }
 
 const tries = new Map(), nsfwTries = new Map();   // docId → 실패 횟수(세션)

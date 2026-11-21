@@ -16,6 +16,10 @@ export const ZONE_BANK = Object.freeze({
   womb: { f: ["깊이 닿을 때마다 아랫배가 조여 온다", "안쪽 끝을 누르면 몸이 떨리며 힘이 풀린다"], s: [["자궁 입구(포르치오)", 0, 2], ["아랫배 안쪽 깊은 곳", 0, -2]] },
   clit: { f: ["살짝만 스쳐도 허리가 튄다", "천천히 원을 그리면 금방 무너진다", "직접 닿으면 너무 예민해 몸을 비튼다"], s: [["클리토리스 끝", 0, 0], ["클리토리스 바로 위", 0, -1.4]] },
   vagina: { f: ["입구를 쓸기만 해도 젖어 든다", "안쪽 앞벽을 누르면 소리를 참지 못한다", "조금씩 깊어질수록 매달린다"], s: [["질 입구", 0, 0.6], ["안쪽 앞벽(G스팟)", 0, -1.2]] },
+  penis: { f: ["손이 감기기만 해도 숨이 거칠어진다", "천천히 쓸어 올리면 허리가 저절로 움직인다", "뿌리 쪽을 쥐면 참던 소리가 샌다"], s: [["뿌리 쪽", 0, 3], ["아랫면 가운데", 0, 0]] },
+  glans: { f: ["혀끝만 스쳐도 몸이 튄다", "끝을 문지르면 금방 무너진다"], s: [["귀두 아래 잘록한 곳(소대)", 0, 1.2], ["끝", 0, -1]] },
+  testicles: { f: ["살짝 감싸 쥐면 숨을 삼킨다", "부드럽게 굴리면 다리에 힘이 들어간다"], s: [["아래쪽", 0, 1.6], ["뿌리와 사이(회음 쪽)", -1, 3]] },
+  prostate: { f: ["안쪽을 누르면 소리를 참지 못한다", "깊게 닿을수록 몸이 떨린다"], s: [["안쪽 앞벽", 0, 0]] },
   groin: { f: ["조금만 닿아도 허리가 떠오른다", "천천히 문지르면 금방 젖어 든다", "직접 닿기 전부터 몸이 먼저 반응한다"], s: [["안쪽 가장 예민한 곳", 0, 2], ["사타구니 접힌 곳", -4, -1.6]] },
   thighs: { f: ["안쪽을 쓸어 올리면 다리를 오므린다", "입맞춤이 올라갈수록 떨림이 커진다"], s: [["허벅지 안쪽 위", 1.6, -6], ["무릎 위 안쪽", 1.2, 8]] },
   hands: { f: ["손가락을 머금으면 시선이 흐려진다", "손바닥을 느리게 쓸면 숨을 고른다"], s: [["손목 안쪽", 1, -6], ["손가락 사이", 0, 4]] },
@@ -36,9 +40,10 @@ export function seededRand(seed) {
 const pick = (arr, r) => arr[Math.floor(r() * arr.length) % arr.length];
 
 // 성감대 3~5곳(약점 정확히 1곳). keep: 이미 있는 zones(그대로 두고 빈 자리만)
-export function randomZones(seed, { keep = [], female = null } = {}) {
-  const r = seededRand(seed), have = new Set(keep.map((z) => z.part));
-  const pool = BODY_PARTS.filter((p) => !have.has(p.id) && ZONE_BANK[p.id] && !(female === false && p.sex === "f") && !(female === false && p.id === "nipples" && r() < 0.5));
+// sex: "f" | "m" | null(모름 — 성별 부위는 빼고). 예전 female 값도 받는다(없으면 여성)
+export function randomZones(seed, { keep = [], female = null, sex } = {}) {
+  const r = seededRand(seed), have = new Set(keep.map((z) => z.part)), sx = sex !== undefined ? sex : female === false ? "m" : "f";
+  const pool = BODY_PARTS.filter((p) => !have.has(p.id) && ZONE_BANK[p.id] && (!p.sex || p.sex === sx) && !(sx === "m" && p.id === "nipples" && r() < 0.5));
   const n = Math.max(0, Math.min(pool.length, 3 + Math.floor(r() * 3) - keep.length));
   const out = [];
   const bag = [...pool]; for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
@@ -60,4 +65,12 @@ export function spotXY(part, spot) {
   const p = BODY_PARTS.find((x) => x.id === part); if (!p) return null;
   const s = (ZONE_BANK[part]?.s ?? []).find((x) => x[0] === spot);
   return { x: p.x + (s?.[1] ?? 0), y: p.y + (s?.[2] ?? 0) };
+}
+
+// 성별이 바뀌었을 때: 새 성별 부위(sex 값이 같은 부위)에서만 1~2곳(약점 없이)
+export function sexZones(seed, sex, keep = []) {
+  const r = seededRand(`${seed}|sex`), have = new Set(keep.map((z) => z.part));
+  const bag = BODY_PARTS.filter((p) => p.sex === sex && ZONE_BANK[p.id] && !have.has(p.id));
+  for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+  return bag.slice(0, Math.min(bag.length, 1 + Math.floor(r() * 2))).map((p) => ({ part: p.id, level: r() < 0.5 ? 2 : 1, note: pick(ZONE_BANK[p.id].f, r), src: "random" }));
 }

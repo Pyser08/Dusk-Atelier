@@ -9,6 +9,7 @@ import { nowOf } from "../../../engine/memoryhuman.js";
 import { HUMAN_FIELDS, EXT_FIELDS, BODY_PARTS, normHuman, normExt, partOf } from "../../../engine/humanitems.js";
 import { randomZones, spotXY } from "../../../engine/zonegen.js";
 import { raceFor } from "../../../engine/races.js";
+import { genderOf, setGender } from "../../../engine/gender.js";
 import { raceShapes, RACE_BODY_CSS } from "./racebody.js";   // 0.3.22 종족별 모형(귀·뿔·꼬리·날개·하반신)
 
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
@@ -258,10 +259,12 @@ export function labelRows(parts, gap = () => 7.6) {
   return out;
 }
 const EARS = [{ cx: 41.2, cy: 18, rx: 1.8, ry: 3 }, { cx: 58.8, cy: 18, rx: 1.8, ry: 3 }];
-const sexOfDoc = (env, doc) => { const g = env.folder?.orient?.[String(doc.title ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "")]?.g; return g === "m" ? "m" : "f"; };
+// 성별: 이 채팅 값(직접·이야기에서 바뀜) → Erosync → 모르면 예전처럼 여성(쌓인 성감대가 숨지 않게)
+const sexOfDoc = (env, doc) => genderOf(env.folder, doc) ?? "f";
+const sexOfPart = (id) => BODY_PARTS.find((p) => p.id === id)?.sex;
 function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
   const n = env.folder?.nsfw?.[doc.id] ?? null, zones = n?.zones ?? [], m = mem(env.ctx), sides = (m.bodySide ??= {});
-  const side = side0 ?? sides[doc.id] ?? "f", sex = sexOfDoc(env, doc);
+  const side = side0 ?? sides[doc.id] ?? "f", gx = sexOfDoc(env, doc), sex = gx ?? "f", gLock = env.folder?.gender?.[doc.id]?.by === "user";
   const zOf = (id) => zones.find((z) => z.part === id);
   const lv = (id) => zOf(id)?.level ?? 0;
   const cycle = (id) => saveN(env, doc, (cur) => {
@@ -273,10 +276,10 @@ function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
   });
   const reroll = (keepManual = true) => saveN(env, doc, (cur) => {
     const keep = keepManual ? (cur.zones ?? []).filter((z) => z.src !== "random") : [];
-    return { ...cur, zones: randomZones(`${doc.id}|${Date.now()}`, { keep, female: sex === "f" }), zonesSeeded: true, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: "성감대 무작위로 채움" }].slice(-20) };
+    return { ...cur, zones: randomZones(`${doc.id}|${Date.now()}`, { keep, sex: gx }), zonesSeeded: true, log: [...(cur.log ?? []), { at: new Date().toISOString(), text: "성감대 무작위로 채움" }].slice(-20) };
   });
   const race = raceFor(env.folder, [doc.title, ...(doc.aliases ?? [])]), rs = raceShapes(race.body ?? {});
-  const parts = BODY_PARTS.filter((p) => p.side === side && (!p.sex || p.sex === sex) && (!p.race || rs.has[p.race]) && !(p.id === "feet" && rs.clipLegs) && !(p.id === "knees" && rs.clipLegs))
+  const parts = BODY_PARTS.filter((p) => p.side === side && (!p.sex || p.sex === gx) && (!p.race || rs.has[p.race]) && !(p.id === "feet" && rs.clipLegs) && !(p.id === "knees" && rs.clipLegs))
     .map((p) => (p.id === "ears" && rs.earAt ? { ...p, ...rs.earAt } : p));   // 여성 부위(질·자궁·클리토리스)는 여성 모형에만
   const labY = labelRows(parts, (id) => (lv(id) >= 3 && zOf(id)?.spot ? 17.5 : 10.8));
   const svg = h("svg", { class: ["rb-bodymap", side === "b" && "back", `sx-${sex}`], viewBox: "-44 -14 188 216", role: "group", "aria-label": `${side === "f" ? "앞" : "뒤"}모습 성감대` },
@@ -309,7 +312,7 @@ function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
         h("text", { svg: true, class: "lbl", x: right ? LAB_R : LAB_L, y: ly + 2, "text-anchor": right ? "start" : "end" }, numb ? `${p.label} · 불감` : p.label),
         pin ? h("text", { svg: true, class: "lbl2", x: right ? LAB_R : LAB_L, y: ly + 9.6, "text-anchor": right ? "start" : "end" }, `◎ ${z.spot}`) : null,
         h("title", { svg: true }, [p.label, z?.spot, z?.note].filter(Boolean).join(" · "))); }));
-  const list = [...zones].sort((a, b) => (a.numb ? 1 : 0) - (b.numb ? 1 : 0) || b.level - a.level || (b.dev ?? 0) - (a.dev ?? 0));
+  const list = [...zones].filter((z) => !sexOfPart(z.part) || sexOfPart(z.part) === gx).sort((a, b) => (a.numb ? 1 : 0) - (b.numb ? 1 : 0) || b.level - a.level || (b.dev ?? 0) - (a.dev ?? 0));
   const allRandom = list.length > 0 && list.every((z) => z.src === "random");
   const segBtn = (s, l) => h("button", { type: "button", class: s === side ? "on" : "", "aria-pressed": s === side ? "true" : "false", onClick: () => { sides[doc.id] = s; repaint(env, doc); } }, l);
   const editZone = (z, key, title, label, max) => async () => { const v = await promptDialog(env.ctx.win, { title: `${partOf(z.part)?.label} ${title}`, label, value: z[key] ?? "", ok: "저장" }); if (v == null) return; saveN(env, doc, (cur) => ({ ...cur, zones: (cur.zones ?? []).map((x) => x.part === z.part ? { ...x, [key]: String(v).trim().slice(0, max), src: undefined } : x) })); };
@@ -317,6 +320,9 @@ function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
     h("div", { class: "rb-body-wrap" },
       h("div", { class: "rb-body-fig" },
         h("div", { class: ["rb-bseg", side === "b" && "b"], role: "group", "aria-label": "앞뒤" }, h("i", { class: "pill" }), segBtn("f", "앞"), segBtn("b", "뒤")),
+        // 성별 고르기: 직접 고르면 잠겨서 이야기 보고로 바뀌지 않음. '자동'은 잠금을 풀고 이야기·Erosync 값을 따른다
+        h("div", { class: "rb-bseg rb-bsex", role: "group", "aria-label": "성별", style: "margin-top:6px" }, ...[["f", "여"], ["m", "남"], [null, "자동"]].map(([g, l]) => h("button", { type: "button", class: (g === null ? !gLock : gLock && gx === g) ? "on" : "", "aria-pressed": (g === null ? !gLock : gLock && gx === g) ? "true" : "false", title: g === null ? `자동${gx ? ` (지금 ${gx === "m" ? "남성" : "여성"})` : " (모름)"} — 이야기에서 몸이 바뀌면 따라가요` : "직접 정하기 — 이야기 보고로 바뀌지 않아요",
+          onClick: () => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { setGender(f, doc.id, g, { by: g === null ? "story" : "user" }); })).then(() => repaint(env, doc)).catch((e) => env.ctx.toast?.(e?.message ?? String(e), { error: true })) }, l))),
         svg),
       h("div", { class: "rb-body-list" },
         h("div", { class: "rb-blegend" }, h("span", { class: "l1" }, "약간"), h("span", { class: "l2" }, "민감"), h("span", { class: "l3" }, "약점"), h("span", { class: "l0n" }, "불감"), infoBtn(LIFE_INFO.zone), h("span", { class: "dv" }, "개발도"), infoBtn(LIFE_INFO.dev),
@@ -508,7 +514,7 @@ ${RACE_BODY_CSS}
 .rb-bseg{position:relative;display:grid;grid-template-columns:1fr 1fr;width:120px;padding:3px;border-radius:999px;background:var(--rb-surf);border:1px solid var(--rb-line2)}
 .rb-bseg .pill{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;background:linear-gradient(135deg,#f39ab8,#ec4f86);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
 .rb-bseg.b .pill{transform:translateX(100%)}
-.rb-bseg button{position:relative;z-index:1;border:0;background:transparent;font:inherit;font-size:12.5px;padding:4px 0;color:var(--rb-sub);cursor:pointer}.rb-bseg button.on{color:#fff;font-weight:700}
+.rb-bseg button{position:relative;z-index:1;border:0;background:transparent;font:inherit;font-size:12.5px;padding:4px 0;color:var(--rb-sub);cursor:pointer}.rb-bseg button.on{color:#fff;font-weight:700}.rb-bsex{grid-template-columns:1fr 1fr 1fr;width:150px}.rb-bsex button.on{border-radius:999px;background:linear-gradient(135deg,#f39ab8,#ec4f86)}
 .rb-bodymap .spine{fill:none;stroke:color-mix(in srgb,#ec4f86 22%,var(--rb-line));stroke-width:.6;stroke-dasharray:1.5 1.5}
 .rb-bodymap .z0{stop-color:#ec4f86;stop-opacity:.45}.rb-bodymap .z1{stop-color:#ec4f86;stop-opacity:0}
 .rb-bodymap .aura{fill:url(#rbZoneG)}

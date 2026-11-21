@@ -9,8 +9,11 @@ import { tickLife, usesToPrefs, ensureHotGoals } from "../engine/nsfwlife.js";
 import { readGauge } from "./gaugemult.js";
 import { pruneWiki } from "../engine/wikiprune.js";
 import { applyExtra, EXTRA_KINDS } from "../engine/memextra.js";
-import { randomZones } from "../engine/zonegen.js";
-import { characterDocs, setUserNsfwNames } from "../engine/usernsfw.js";
+import { randomZones, sexZones } from "../engine/zonegen.js";
+import { characterDocs, setUserNsfwNames, USER_NSFW_ID } from "../engine/usernsfw.js";
+import { genderOf, setGender, guessGender } from "../engine/gender.js";
+import { BODY_PARTS } from "../engine/humanitems.js";
+import { personaInfo } from "./profileseed.js";
 
 const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 const empty = () => ({ sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] });
@@ -28,6 +31,17 @@ export function applyNsfwQueue(f, reports) {
   const out = [];
   for (const { doc, list } of byDoc.values()) {
     f.nsfw ??= {};
+    // 성별이 이야기에서 바뀌면 그 턴에 바로 바꾸고, 새 성별 부위 성감대가 하나도 없으면 1~2곳 채운다(예전 부위는 지우지 않고 숨김)
+    const sx = list.filter((r) => r.kind === "sex").at(-1);
+    if (sx && setGender(f, doc.id, sx.g, { by: "story", quote: sx.quote })) {
+      const changed = [`성별 → ${sx.g === "m" ? "남성" : "여성"}`];
+      const n0 = f.nsfw[doc.id];
+      if (n0 && Object.keys(n0.sexual ?? {}).length && !(n0.zones ?? []).some((z) => BODY_PARTS.find((p) => p.id === z.part)?.sex === sx.g)) {
+        const add = sexZones(doc.id, sx.g, n0.zones ?? []);
+        if (add.length) { f.nsfw[doc.id] = { ...n0, zones: [...(n0.zones ?? []), ...add] }; changed.push(`성감대 ${add.length}곳 채움`); }
+      }
+      out.push({ name: doc.title, changed });
+    }
     const a = applyNsfwReports(f.nsfw[doc.id] ?? empty(), list.filter((r) => r.kind === "taste" || r.kind === "sexval"));
     const b = applyHumanReports(a.nsfw, list.filter((r) => r.kind === "trait" || r.kind === "zone"));
     const changed = [...a.changed, ...b.changed];
@@ -77,8 +91,7 @@ export function seedZones(f, present = []) {
     const n = f?.nsfw?.[d.id];
     if (!n || n.zonesSeeded || (n.zones ?? []).length || !Object.keys(n.sexual ?? {}).length) continue;
     if (here.size && ![d.title, ...(d.aliases ?? [])].some((x) => here.has(key(x)))) continue;
-    const male = f?.orient?.[key(d.title)]?.g === "m";
-    f.nsfw[d.id] = { ...n, zones: randomZones(d.id, { female: !male }), zonesSeeded: true };
+    f.nsfw[d.id] = { ...n, zones: randomZones(d.id, { sex: genderOf(f, d) ?? "f" }), zonesSeeded: true };   // 모르면 예전처럼 여성
     done.push(d.title);
   }
   // 0.3.22 종족 성감대 기본값(종족이 정해지거나 바뀌면 한 번) — 직접 고친 부위는 건드리지 않음
@@ -101,9 +114,10 @@ export async function applyNsfwTurn(memory, log = () => {}, info = null, api = n
   const cur = await memory.switches?.currentChat?.().catch?.(() => null);
   if (!cur) return 0;
   try { const ui = memory.flow?.runtime?.()?.wiki?.userIdentity; if (ui?.title) setUserNsfwNames([ui.title, ...(ui.aliases ?? [])]); } catch { /* 이름 모름 → {{user}}만 */ }
+  let personaG = null; try { personaG = api ? guessGender((await personaInfo(api))?.desc) : null; } catch { personaG = null; }
   const gauge = await readGauge(api).catch(() => null);
   let out = [], drive = [], life = [], pruned = [], extra = [], zoned = [];
-  await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (q.length) out = applyNsfwQueue(f, q);
+  await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (personaG) setGender(f, USER_NSFW_ID, personaG, { by: "persona" }); if (q.length) out = applyNsfwQueue(f, q);
     if (ex.length) extra = applyExtra(f, ex, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0, when: latestWhen(f) });
     zoned = seedZones(f, present); if (dq.length) drive = applyDriveQueue(f, dq); life = applyLifeTurn(f, { events, present, gauge, text: String(info?.rp ?? ""), evKey: String(info?.key ?? "").slice(0, 600) });
     if (f.wiki?.documents) { const pr = pruneWiki(f.wiki); if (pr.removed.length) { f.wiki = pr.wiki; pruned = pr.removed; } } });

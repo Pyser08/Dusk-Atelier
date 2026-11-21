@@ -44,3 +44,31 @@ test("유저 성인 프로필은 페르소나 설명으로 만든다", async () 
   assert.match(me.profile, /수줍음/);
   assert.equal(await userNsfwNeed(api, { [USER_NSFW_ID]: {} }), null, "이미 있으면 안 만든다");
 });
+
+import { genderOf, setGender, guessGender } from "../src/engine/gender.js";
+import { nsfwFrom } from "../src/engine/recorder.js";
+
+test("성별: 저장값 → Erosync → 모름, 직접 고친 값은 잠김, 자동은 지움", () => {
+  const f = { orient: { 하나: { g: "f" } } }, d = { id: "a", title: "하나" };
+  assert.equal(genderOf(f, d), "f");
+  assert.ok(setGender(f, "a", "m")); assert.equal(genderOf(f, d), "m");
+  assert.ok(setGender(f, "a", "f", { by: "user" }));
+  assert.equal(setGender(f, "a", "m"), false, "잠김");
+  assert.ok(setGender(f, "a", null)); assert.equal(genderOf(f, d), "f");
+  assert.equal(genderOf({}, d), null);
+  assert.ok(setGender(f, "u", "m", { by: "persona" })); assert.equal(setGender(f, "u", "f", { by: "persona" }), false, "페르소나 값은 처음만");
+  assert.equal(guessGender("20살 남자 대학생. 그는 조용하다"), "m");
+  assert.equal(guessGender("평범한 사람"), null);
+});
+
+test("이야기에서 성별이 바뀌면 그 턴에 바로 바뀌고 새 성별 성감대가 채워진다", () => {
+  const r = nsfwFrom("sex|하나|m|\"몸이 남자가 됐어\"", [{ name: "하나" }]);
+  assert.deepEqual(r.map((x) => [x.kind, x.g]), [["sex", "m"]]);
+  const f = folder(); f.orient = { 하나: { g: "f" } };
+  f.nsfw.a = { sexual: { eroticInterest: 60 }, zones: [{ part: "clit", level: 3 }] };
+  const out = applyNsfwQueue(f, r);
+  assert.equal(genderOf(f, f.wiki.documents.a), "m");
+  assert.ok(f.nsfw.a.zones.some((z) => ["penis", "glans", "testicles", "prostate"].includes(z.part)), "남성 부위 채움");
+  assert.ok(f.nsfw.a.zones.some((z) => z.part === "clit"), "예전 부위는 남김");
+  assert.ok(out[0].changed[0].includes("남성"));
+});
