@@ -117,17 +117,17 @@ const BOXES = new Set(["div", "span", "section", "article", "main", "ul", "ol", 
 const VOID = new Set(["br", "hr", "img", "input", "meta", "link", "wbr", "source", "area", "col", "embed", "track", "param", "base"]);
 // 본문 글의 이름에 상태창 링크를 단다. people = [{names:[…], html}] (html = 상태창 안쪽).
 // 인물마다 첫 등장에만 단다(같은 상태창을 여러 벌 넣으면 메시지가 몇 배로 커지고 느려졌다)
-export function linkNames(text, people, { max = LINK_MAX } = {}) {
+export function linkNames(text, people, { max = LINK_MAX, overlay = false } = {}) {
   if (typeof text !== "string" || !text || !people?.length) return text;
   const map = new Map(); for (const p of people) for (const n of p.names ?? []) { const k = String(n ?? "").trim(); if (k.length >= 2 && !map.has(k)) map.set(k, p); }
   if (!map.size) return text;
   const keys = [...map.keys()].sort((a, b) => b.length - a.length).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   const re = new RegExp(`(${keys.join("|")})`, "g");
   // 건드리지 않을 구간: 태그, Dusk 상태창, <style>/<script>/<code>/<pre>, ``` 코드, {{…}}
-  const parts = text.split(/(<details[^>]*x-dusk="pc"[\s\S]*?Dusk 캐릭터 상태창<\/span><\/span><\/details>|<details[^>]*x-dusk[\s\S]*?<\/details>|<(style|script|code|pre)\b[\s\S]*?<\/\2>|```[\s\S]*?```|\{\{[\s\S]*?\}\}|<[^>]+>)/i);
+  const parts = text.split(/(<span data-dusk="nm"[^>]*>[^<]*<\/span>|<details[^>]*x-dusk="pc"[\s\S]*?Dusk 캐릭터 상태창<\/span><\/span><\/details>|<details[^>]*x-dusk[\s\S]*?<\/details>|<(style|script|code|pre)\b[\s\S]*?<\/\2>|```[\s\S]*?```|\{\{[\s\S]*?\}\}|<[^>]+>)/i);
   let count = 0, out = "", foreign = 0;
   const stack = [], done = new Set();
-  for (const m of text.matchAll(/<details[^>]*x-dusk="pc"[^>]*><summary[^>]*>([^<]+)<\/summary>/g)) { const p = map.get(m[1].trim()); if (p) done.add(p); }   // 이미 단 상태창(두 번 처리해도 같게)
+  for (const m of text.matchAll(/<details[^>]*x-dusk="pc"[^>]*><summary[^>]*>([^<]+)<\/summary>|<span data-dusk="nm"[^>]*>([^<]+)<\/span>/g)) { const p = map.get((m[1] ?? m[2]).trim()); if (p) done.add(p); }   // 이미 단 상태창(두 번 처리해도 같게)
   for (let i = 0; i < parts.length; i++) {
     const seg = parts[i]; if (seg == null) continue;
     if (i % 3 === 2) continue;   // split의 두 번째 캡처(태그 이름)
@@ -149,12 +149,14 @@ export function linkNames(text, people, { max = LINK_MAX } = {}) {
       const p = map.get(name);
       if (count >= max || done.has(p)) return name;
       count++; done.add(p);
-      return linkHtml(name, p.html);
+      return overlay && p.id ? nameSpan(name, p.id) : linkHtml(name, p.html);
     });
   }
   return out;
 }
 export const NAMECARD_CSS = TAB_CSS + "@keyframes dkPcIn{from{opacity:0;transform:translate(-50%,-46%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}" + PC_OPEN_CSS;
+// 2.2.24: 리스 화면 위에 상태창을 띄울 수 있을 때 — 응답 안엔 이름만(클릭은 cardoverlay가 단다)
+export const nameSpan = (name, pid) => `<span data-dusk="nm" data-pid="${esc(pid)}" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(139,111,224,.55);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</span>`;
 export function linkHtml(name, inner) {
   // 이름은 수수하게: 글자색·굵기는 그대로, 아주 옅은 밑줄만. 누르면 화면 가운데 상태창이 바로 뜬다(살짝 떠오르는 움직임)
   return `<details x-dusk="pc" data-dusk="pc" data-name="${esc(name)}" style="display:inline-block;vertical-align:baseline;margin:0;padding:0"><summary style="display:inline;cursor:pointer;list-style:none;color:inherit;font:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.38);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</summary><span data-nm>${esc(name)}</span>`

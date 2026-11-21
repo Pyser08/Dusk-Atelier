@@ -133,13 +133,43 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const closed = await page.evaluate(() => !document.querySelector('#tabdemo details[data-dusk="pc"]').open);
   ok(`[${tag}] 캐릭터 상태창 바깥을 누르면 닫힘`, closed && nameBefore > 10, JSON.stringify({ closed, nameBefore }));
   await page.evaluate(() => document.getElementById("tabdemo")?.remove());
+  // 2.2.24: 리스 화면 위에 상태창 띄우기 — 리스의 비동기 문서 래퍼를 흉내 내 실제 문서에 연결
+  const ov = await page.evaluate(async () => {
+    const W = (el) => !el ? null : ({ _el: el,
+      setAttribute: async (k, v) => el.setAttribute(k, v), getAttribute: async (k) => el.getAttribute(k), setStyleAttribute: async (v) => el.setAttribute("style", v),
+      setInnerText: async (t) => { el.textContent = t; }, appendChild: async (c) => el.appendChild(c._el), remove: async () => el.remove(),
+      addEventListener: async (t, f) => el.addEventListener(t, () => f()), querySelector: async (q) => W(el.querySelector(q)),
+      querySelectorAll: async (q) => { const l = [...el.querySelectorAll(q)]; return { length: async () => l.length, at: async (i) => W(l[i]) }; } });
+    const doc = { ...W(document.documentElement), querySelector: async (q) => W(document.querySelector(q)), createElement: async (t) => W(document.createElement(t)),
+      querySelectorAll: async (q) => { const l = [...document.querySelectorAll(q)]; return { length: async () => l.length, at: async (i) => W(l[i]) }; } };
+    const api = __app.ctx.memory.nameLinks; const host = __app.ctx.api;
+    const save = [host.getRootDocument, host.requestPluginPermission];
+    host.getRootDocument = async () => doc; host.requestPluginPermission = async () => true;
+    api.invalidate(); await api.link("시로코가 웃었다."); await new Promise((r) => setTimeout(r, 200));
+    const out = await api.link("시로코가 웃었다. 세라도 웃었다.");
+    const d = document.createElement("div"); d.id = "ovdemo"; d.style.cssText = "position:fixed;inset:0;z-index:5;background:#14131b;color:#eee;padding:20px"; d.innerHTML = out; document.body.append(d);
+    await api.overlay.hook();
+    const nm = d.querySelector('[data-dusk="nm"]'); nm?.click(); await new Promise((r) => setTimeout(r, 400));
+    const ovEl = document.querySelector('[x-dusk="card-ov"]'), box = ovEl?.querySelector('[data-dusk="pcbox"]');
+    const r = box?.getBoundingClientRect(); const z = ovEl ? getComputedStyle(ovEl).zIndex : null;
+    const face = box?.querySelector("[data-face]"); const faceBg = face ? getComputedStyle(face).backgroundImage : "";
+    const cssMounted = !!document.querySelector('[x-dusk="dusk-status-css"]');
+    ovEl?.firstElementChild?.click(); await new Promise((r) => setTimeout(r, 200));
+    const closed = !document.querySelector('[x-dusk="card-ov"]');
+    d.remove(); host.getRootDocument = save[0]; host.requestPluginPermission = save[1]; api.invalidate();
+    return { spans: (out.match(/data-dusk="nm"/g) ?? []).length, details: (out.match(/x-dusk="pc"/g) ?? []).length, opened: !!box, w: Math.round(r?.width ?? 0), z, face: !!face, faceBg: faceBg.slice(0, 30), cssMounted, closed };
+  });
+  ok(`[${tag}] 리스 화면 위 상태창: 응답엔 이름만, 누르면 맨 위에 뜨고, 바깥 누르면 닫힘`, ov.spans === 2 && ov.details === 0 && ov.opened && ov.w >= 280 && Number(ov.z) > 1e9 && ov.face && ov.cssMounted && ov.closed, JSON.stringify(ov));
   // 장면 상태창(응답 아래, 로어북 위)
   const sc = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const out = await M.gauge.onDisplay("[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 쏟아졌다. 시로코가 세라를 바라봤다."); return out; });
-  ok(`[${tag}] 장면 상태창: 날짜·시간·장소·날씨·등장인물(이름은 캐릭터 상태창)`, /x-dusk="scene"/.test(sc) && /22:40/.test(sc) && /은빛 여관/.test(sc) && /🌧️/.test(sc) && (sc.split('x-dusk="scene"')[1].match(/x-dusk="pc"/g) ?? []).length === 2, sc.slice(-300));
+  ok(`[${tag}] 장면 상태창: 날짜·시간·장소·날씨·등장인물(이름은 캐릭터 상태창)`, /x-dusk="scene"/.test(sc) && /22:40/.test(sc) && /은빛 여관/.test(sc) && /🌧️/.test(sc) && (sc.split('x-dusk="scene"')[1].match(/x-dusk="pc"|data-dusk="nm"/g) ?? []).length === 2, sc.slice(-300));
   // 2.2.22: 등장인물 띠의 이름을 누르면 상태창이 띠 안이 아니라 화면 가운데에 크게 뜬다
   const chipPop = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "chipdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;overflow:auto"; d.innerHTML = html; document.body.append(d);
-    const det = d.querySelector('div[x-dusk="scene"] details[x-dusk="pc"]'); if (!det) { d.remove(); return null; } det.open = true; await new Promise((r) => setTimeout(r, 250));
-    const r = det.querySelector("[data-nm] + span").getBoundingClientRect(); const out = { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight }; d.remove(); return out; }, sc);
+    const det = d.querySelector('div[x-dusk="scene"] details[x-dusk="pc"]');
+    let r = null;
+    if (det) { det.open = true; await new Promise((r) => setTimeout(r, 250)); r = det.querySelector("[data-nm] + span").getBoundingClientRect(); }
+    else { const nm = d.querySelector('div[x-dusk="scene"] [data-dusk="nm"]'); if (nm) { await __app.ctx.memory.nameLinks.overlay.hook(); nm.click(); await new Promise((r) => setTimeout(r, 400)); r = document.querySelector('[x-dusk="card-ov"] [data-dusk="pcbox"]')?.getBoundingClientRect() ?? null; await __app.ctx.memory.nameLinks.overlay.close(); } }
+    const out = r ? { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight } : null; d.remove(); return out; }, sc);
   ok(`[${tag}] 장면 상태창 등장인물 이름 → 상태창이 화면 가운데 제 크기로(띠 안에 갇히지 않음)`, chipPop && chipPop.w >= Math.min(300, chipPop.vw - 40) && chipPop.h >= 200 && chipPop.h <= chipPop.vh * 0.8, JSON.stringify(chipPop));
   ok(`[${tag}] 장면 상태창 날씨 상자: 4일 예보(낮·밤·확률)`, /x-dusk="wx"/.test(sc) && /4일 예보/.test(sc) && /모레/.test(sc) && /💧/.test(sc) && /%/.test(sc));
   ok(`[${tag}] 캐릭터 상태창에 옷차림·삽화용 상세`, /옷차림/.test(link.out) && /흰 셔츠/.test(link.out) && /삽화용 상세 ›/.test(link.out) && /소매를 걷어 올림/.test(link.out));
