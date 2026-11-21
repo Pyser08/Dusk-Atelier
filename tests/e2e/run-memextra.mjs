@@ -120,15 +120,15 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "pcdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px;line-height:1.7"; d.innerHTML = html; document.body.append(d); d.querySelector('details[x-dusk="pc"]').open = true; }, link.out);
     await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/extra-${tag}-namecard.png` }); await page.evaluate(() => document.getElementById("pcdemo")?.remove()); }
   // 일반 / NSFW 탭: NSFW를 누르면 일반이 닫히고 NSFW만 보임(스크립트 없이 details name)
-  const tabs = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "tabdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px"; d.innerHTML = html; document.body.append(d);
-    const pc = d.querySelector('details[x-dusk="pc"]'); pc.open = true; const g = pc.querySelector('details[x-tab="g"]'), n = pc.querySelector('details[x-tab="n"]'); const before = [g.open, n.open];
+  const tabs = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "tabdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px"; d.innerHTML = html.replace(/\sx-[\w-]+(="[^"]*")?/g, ""); document.body.append(d);   // 리스 소독기처럼 x-* 속성을 지운 뒤
+    const pc = d.querySelector('details[data-dusk="pc"]'); pc.open = true; const g = pc.querySelector('details[data-tab="g"]'), n = pc.querySelector('details[data-tab="n"]'); const before = [g.open, n.open];
     n.querySelector("summary").click(); await new Promise((r) => setTimeout(r, 350)); return { before, after: [g.open, n.open], nsVis: n.querySelector("span").getBoundingClientRect().height > 50 }; }, link.out);
   ok(`[${tag}] 캐릭터 상태창 일반/NSFW 탭 전환`, tabs.before.join() === "true,false" && tabs.after.join() === "false,true" && tabs.nsVis, JSON.stringify(tabs));
   if (OUT) await page.screenshot({ path: `${OUT}/extra-${tag}-namecard-nsfw.png` });
   // 2.2.23: 상태창 바깥(화면 귀퉁이)을 누르면 닫히고, 이름은 그 자리에 그대로 보인다
-  const nameBefore = await page.evaluate(() => document.querySelector('#tabdemo details[x-dusk="pc"]').getBoundingClientRect().width);
+  const nameBefore = await page.evaluate(() => document.querySelector('#tabdemo details[data-dusk="pc"]').getBoundingClientRect().width);
   await page.mouse.click(6, 6); await page.waitForTimeout(250);
-  const closed = await page.evaluate(() => !document.querySelector('#tabdemo details[x-dusk="pc"]').open);
+  const closed = await page.evaluate(() => !document.querySelector('#tabdemo details[data-dusk="pc"]').open);
   ok(`[${tag}] 캐릭터 상태창 바깥을 누르면 닫힘`, closed && nameBefore > 10, JSON.stringify({ closed, nameBefore }));
   await page.evaluate(() => document.getElementById("tabdemo")?.remove());
   // 장면 상태창(응답 아래, 로어북 위)

@@ -132,14 +132,14 @@ test("상태창: 요약·스탯·상태이상·몸 흔적·NSFW(약점 자리)",
   const h = statusCardHtml(f, f.wiki.documents.a);
   for (const s of ["검을 쓰는 기사 지망생", "성실함", "시로코에게 비밀을 말했다", "호감", "6/10", "신뢰", "4/10", "취함", "목 키스마크", "약점", "왼쪽 귓불", "밧줄", ">지금 상태<", ">요약<", ">NSFW<"]) assert.ok(h.includes(s), s);
   assert.equal((h.match(/x-dusk="tab"/g) ?? []).length, 2, "일반·NSFW 두 탭");
-  assert.match(h, /x-tab="g" name="(dkpc-[\w-]+)" open[\s\S]*x-tab="n" name="\1"(?! open)/, "같은 묶음, 일반이 열림");
-  assert.ok(h.indexOf("목 키스마크") > h.indexOf('x-tab="n"'), "몸 흔적은 NSFW 탭");
+  assert.match(h, /data-tab="g" name="(dkpc-[\w-]+)" open[\s\S]*data-tab="n" name="\1"(?! open)/, "같은 묶음, 일반이 열림");
+  assert.ok(h.indexOf("목 키스마크") > h.indexOf('data-tab="n"'), "몸 흔적은 NSFW 탭");
   assert.doesNotMatch(statusCardHtml(f, f.wiki.documents.a, { adult: false }), /x-dusk="tab"/, "성인 프로필 없으면 탭 없이 한 판");
   const linked = linkNames("세라가 왔다", [{ names: ["세라"], html: h }]);
   assert.equal(linkNames(linked, [{ names: ["세라"], html: h }]), linked, "이미 단 상태창 안은 다시 안 건드림");
   assert.doesNotMatch(statusCardHtml(f, f.wiki.documents.a, { adult: false }), />NSFW</);
   assert.match(h, /linear-gradient\(140deg/, "사진 없으면 글자 동그라미");
-  assert.match(statusCardHtml(f, f.wiki.documents.a, { img: "data:image/jpeg;base64,AAA" }), /<img x-face src="data:image\/jpeg;base64,AAA"/);
+  assert.match(statusCardHtml(f, f.wiki.documents.a, { img: "data:image/jpeg;base64,AAA" }), /<img data-face src="data:image\/jpeg;base64,AAA"/);
   applyExtra(f, extraFrom("wear|세라|상의|흰 블라우스|얇은 흰 면 블라우스, 단추 두 개 풀림\nwear|세라|목걸이|은 목걸이|가는 은사슬", (n) => n), { turn: 10 });
   const h2 = statusCardHtml(f, f.wiki.documents.a);
   assert.match(h2, />옷차림</); assert.match(h2, /흰 블라우스/); assert.match(h2, /삽화용 상세 ›/); assert.match(h2, /단추 두 개 풀림/);
