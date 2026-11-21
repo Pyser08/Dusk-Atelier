@@ -60,7 +60,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     ok(`[${tag}] 소문 직접 추가`, (await win.getByText("성문 열쇠 위치").count()) > 0); }
   // 캘린더(세계 › 캘린더): 약속 직접 추가 → 고치기
   { await page.locator(".rb-seg button", { hasText: "캘린더" }).first().click(); await page.waitForTimeout(300);
-    ok(`[${tag}] 세계 · 캘린더 4묶음(생일·연인·약속·특별한 날)`, (await page.locator(".rb-world .rb-mem-sec").count()) === 4);
+    ok(`[${tag}] 세계 · 캘린더 5묶음(생일·연인·약속·특별한 날·날씨)`, (await page.locator(".rb-world .rb-mem-sec").count()) === 5);
     await page.locator(".rb-er-foot .rb-btn", { hasText: "+ 약속" }).click(); await page.waitForTimeout(200);
     const inp = page.locator(".rb-er-form input"); await inp.nth(0).fill("3월 14일"); await inp.nth(1).fill("영화 보기");
     await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
@@ -68,6 +68,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     await page.locator(".rb-er-row", { hasText: "영화 보기" }).locator("button[aria-label=고치기]").click(); await page.waitForTimeout(200);
     await inp.nth(1).fill("영화 보고 저녁"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(500);
     ok(`[${tag}] 약속 고치기`, (await page.locator(".rb-er-row", { hasText: "영화 보고 저녁" }).count()) === 1); }
+  { await page.locator("button[aria-label='날씨 고치기']").click(); await page.waitForTimeout(200);
+    await page.locator(".rb-modal input").last().fill("눈"); await page.locator(".rb-modal .rb-btn", { hasText: "저장" }).last().click(); await page.waitForTimeout(500);
+    ok(`[${tag}] 날씨 직접 고치기`, (await page.locator(".rb-er-row", { hasText: "날씨" }).filter({ hasText: "눈" }).count()) === 1); }
   // 인물 → NSFW
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { tab: "people", personKey: "시로코" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
@@ -153,6 +156,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
       await page.locator(".rb-er-form input").nth(0).fill("비 오는 날 우산을 같이 씀"); await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(600);
       ok(`[${tag}] 관계 · 추억 직접 추가`, (await page.locator(".rb-wk2-bond", { hasText: "우산을 같이" }).count()) === 1);
     } else ok(`[${tag}] 관계 · 추억 + 추가 버튼`, false); }
+  { const add = page.locator(".rb-wk2-tlcard .rb-btn", { hasText: "+ 전환점" }).first();
+    if (await add.count()) { await add.click(); await page.waitForTimeout(200); const inp = page.locator(".rb-er-form input"); await inp.nth(1).fill("처음으로 손을 잡음");
+      await page.locator(".rb-er-form .rb-btn", { hasText: "저장" }).click(); await page.waitForTimeout(600); }
+    ok(`[${tag}] 관계 연표 · 전환점 직접 추가`, (await page.locator("#rb-rel-timeline li", { hasText: "처음으로 손을 잡음" }).count()) === 1); }
   ok(`[${tag}] 관계 · 갈등·오해 직접 적기 줄`, (await page.locator(".rb-wk2-link", { hasText: "+ 갈등" }).count()) > 0 || (await page.locator(".rb-wk2-card", { hasText: "갈등" }).count()) > 0);
   // 본문 이름 링크 → 상태창(실제 표시 경로: 로어북 로그가 부르는 memory.gauge.onDisplay)
   // 2.2.24: 상태창 CSS는 리스 화면에 한 번 넣는다(실제로는 namelinks가 mainDom 권한으로) — 시험에선 같은 CSS를 직접 넣는다
@@ -240,6 +247,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const tk = await page.evaluate(() => { const r = document.getElementById("rb-mem-tokens"); if (!r) return null; return Math.round(r.querySelector(".t").getBoundingClientRect().width / r.getBoundingClientRect().width * 100); });
   ok(`[${tag}] 기억 넣기 토큰 줄도 글이 좁아지지 않음`, tk != null && tk >= (tag === "모바일" ? 95 : 30), String(tk));
   ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("캐릭터 상태창 (본문 이름 링크)").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문)").count()) > 0);
+  { const open = page.locator("#rb-guides-open"); ok(`[${tag}] 설정에 묘사 지침 줄`, (await open.count()) === 1);
+    if (await open.count()) { await open.click(); await page.waitForTimeout(600);
+      ok(`[${tag}] 묘사 지침 창: 기본 조각 141개`, (await page.locator("#rb-guides .rb-gd-row").count()) === 141);
+      await page.locator("#rb-guides .rb-gd-row input[type=checkbox]").first().uncheck(); await page.locator("#rb-guides-save").click(); await page.waitForTimeout(600);
+      ok(`[${tag}] 조각 끄기 저장`, await page.evaluate(async () => ((await __app.ctx.memory.store.getIndex?.())?.settings?.guides?.off ?? __app.ctx.memory?.idx?.settings?.guides?.off ?? []).length === 1 || document.querySelector(".rb-mem-options")?.innerText.includes("끈 조각 1개"))); } }
   // 2.2.26: 게이지 배수 — 인간적 호감·그 밖의 감정 / 이성적 호감 / 성욕 묶음, 이성적 호감 배수는 따로 저장
   const gm = await page.evaluate(async () => { const card = document.querySelector("#rb-gauge-mult"); if (!card) return null; const heads = [...card.querySelectorAll(".rb-gauge-gh")].map((x) => x.textContent);
     const r = card.querySelector("#rb-gauge-romUp"); if (!r) return { heads }; r.value = "0.5"; r.dispatchEvent(new Event("change", { bubbles: true })); await new Promise((res) => setTimeout(res, 400));

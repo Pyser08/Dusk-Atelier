@@ -3,7 +3,8 @@ import { h } from "../../dom.js";
 import { characterDocs } from "../../../engine/usernsfw.js";
 import { btn, modal, promptDialog, confirmDialog } from "../../kit.js";
 import { memStore } from "./memstore.js";
-import { editRows, EDITROWS_CSS } from "./editrows.js";
+import { editRows, editForm, EDITROWS_CSS } from "./editrows.js";
+import { GUIDES_CSS } from "./guidesui.js";
 import { cumNow, saturation, bodyOf, capacityOf, fertilityFactor, preventOf, chanceNow, BODY, CONTRA_LABEL, STANDING } from "../../../engine/fertility.js";
 import { lifeView } from "../../../engine/nsfwlife.js";
 import { mem, fail, loadBots, loadChats } from "./common.js";
@@ -116,7 +117,8 @@ export function outfitCard(env, card, doc) {
     h("div", { class: "rb-of-top" }, note("기록기가 응답에서 부위별로 적어요. 간단히는 사람들이 볼 모습, 상세는 삽화를 그릴 때 쓸 설명이에요."),
       h("button", { type: "button", class: ["rb-of-tg", detail && "on"], "aria-pressed": detail ? "true" : "false", onClick: () => { m.outfitDetail[doc.id] = !detail; env.redraw?.(); } }, detail ? "간단히 ‹" : "삽화용 상세 ›")),
     h("ul", { class: "rb-of" }, rows),
-    h("div", { class: "rb-of-acc" }, h("small", null, "액세서리"), acc.length ? acc.map((x, i) => h("span", { title: x.d }, x.s, detail && x.d !== x.s ? h("i", null, ` — ${x.d}`) : null, local ? h("button", { type: "button", class: "rb-bzb", "aria-label": "지우기", onClick: () => save(env, (g) => { const e = extraOf(g), xx = e.outfit[nk(doc.title)]; if (xx) xx.acc.splice(i, 1); g.extra = e; }) }, "✕") : null)) : h("span", { class: "rb-muted" }, "없음"),
+    h("div", { class: "rb-of-acc" }, h("small", null, "액세서리"), acc.length ? acc.map((x, i) => h("span", { title: x.d }, x.s, detail && x.d !== x.s ? h("i", null, ` — ${x.d}`) : null, local ? h("button", { type: "button", class: "rb-bzb", "aria-label": "액세서리 고치기", title: "고치기", onClick: async () => { const v = await editForm(env.ctx.win, "액세서리 고치기", [{ k: "s", label: "간단히", len: 40 }, { k: "d", label: "삽화용 상세", len: 200, need: false }], x); if (v) save(env, (g) => { const e = extraOf(g), xx = e.outfit[nk(doc.title)]; if (xx?.acc?.[i]) xx.acc[i] = { ...xx.acc[i], s: v.s, d: v.d || v.s, user: true }; g.extra = e; }); } }, "✎") : null,
+      local ? h("button", { type: "button", class: "rb-bzb", "aria-label": "지우기", onClick: () => save(env, (g) => { const e = extraOf(g), xx = e.outfit[nk(doc.title)]; if (xx) xx.acc.splice(i, 1); g.extra = e; }) }, "✕") : null)) : h("span", { class: "rb-muted" }, "없음"),
       local ? btn("+ 추가", { size: "sm", onClick: edit("acc") }) : null),
   ], null, "rb-life");
 }
@@ -207,6 +209,17 @@ export async function openDiaryHere(ctx) {
   return openDiary(ctx, { chaId: cur.chaId, chatId: cur.chatId, ci: cur.ci, doc, folder }).catch((e) => { ctx.toast?.(e?.message ?? String(e), { error: true, seconds: 8 }); return null; });
 }
 
+// 인물 일기 목록(기록 탭): 쓴 일기를 보고 고치고 지운다
+export function diaryCard(env, card, doc) {
+  if (!doc) return null;
+  const all = extraOf(env.folder).diary.map((x, i) => ({ x, i })).filter(({ x }) => x.docId === doc.id || nk(x.name) === nk(doc.title));
+  const { rows, foot } = editRows(env, { kind: "diary", id: `diary:${doc.id}`, title: "일기", cls: "rb-diary-row",
+    rows: all.reverse(), get: (g) => extraOf(g).diary, set: (g, arr) => { const e = extraOf(g); e.diary = arr; g.extra = e; },
+    fields: [{ k: "text", label: "일기", type: "area", len: 1200 }],
+    row: (d) => h("div", { class: "txt" }, h("small", { class: "rb-muted" }, d.at != null ? `#${d.at + 1} 응답` : ""), h("p", { style: "margin:2px 0;white-space:pre-wrap" }, d.text)) });
+  return card("📔 일기", [rows.length ? h("ul", { class: "rb-mem-reclist" }, rows) : note("아직 쓴 일기가 없어요. 인물 머리의 ‘📔 일기’로 써요."), foot], null, "rb-life");
+}
+
 // 다른 봇으로 옮기기: 문서·기본 성격·성인 프로필·몸과 마음·기억 기록·목표를 복사(원본은 그대로, 관계는 옮기지 않음)
 export async function openMovePerson(env, doc) {
   const { ctx } = env, bots = (await loadBots(ctx)).filter((b) => b.character?.chats?.length);
@@ -232,7 +245,7 @@ export async function openMovePerson(env, doc) {
   ctx.toast(`${bot.character.name} › ${chat.name ?? "채팅"}에 ‘${res?.title ?? doc.title}’을(를) 옮겼어요.`, { seconds: 8 });
 }
 
-export const EXTRA_CSS = `${EDITROWS_CSS}.rb-btn.rb-mem-fill{background:linear-gradient(135deg,#f7d154,#eaa82a)!important;color:#2a1c00!important;border-color:transparent!important;box-shadow:0 6px 18px rgba(234,168,42,.35)!important;animation:rbFillPulse 2.4s ease-in-out infinite}.rb-btn.rb-mem-fill svg{color:#2a1c00}@keyframes rbFillPulse{0%,100%{box-shadow:0 6px 18px rgba(234,168,42,.3)}50%{box-shadow:0 6px 26px rgba(234,168,42,.6)}}
+export const EXTRA_CSS = `${EDITROWS_CSS}${GUIDES_CSS}.rb-btn.rb-mem-fill{background:linear-gradient(135deg,#f7d154,#eaa82a)!important;color:#2a1c00!important;border-color:transparent!important;box-shadow:0 6px 18px rgba(234,168,42,.35)!important;animation:rbFillPulse 2.4s ease-in-out infinite}.rb-btn.rb-mem-fill svg{color:#2a1c00}@keyframes rbFillPulse{0%,100%{box-shadow:0 6px 18px rgba(234,168,42,.3)}50%{box-shadow:0 6px 26px rgba(234,168,42,.6)}}
 .rb-race-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.rb-race-head>b{font-size:16px}.rb-race-head>small{opacity:.7}
 .rb-race-tag{font-size:11px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,#3aa597 14%,transparent);border:1px solid color-mix(in srgb,#3aa597 35%,transparent)}.rb-race-tag.mute{opacity:.65;background:transparent}
 .rb-race-tx{margin:8px 0 0;font-size:13px;line-height:1.6;white-space:normal}.rb-race-tx small{display:inline-block;margin-right:6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#3aa597}.rb-race-tx.nsfw small{color:#e8578e}

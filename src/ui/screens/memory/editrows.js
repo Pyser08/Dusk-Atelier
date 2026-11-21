@@ -10,13 +10,14 @@ import { ignoreKeyOf, addIgnore, dropIgnore, editAt, addTo, removeAt, findSame }
 const turnOf = (f) => (Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0);
 const store = (env, fn) => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, fn)).then(() => env.redraw?.()).catch(fail(env.ctx));
 
-// fields: [{k, label, type?: "text"|"num"|"select", max?, min?, len?, opts?: [[value, label]], need?}]
+// fields: [{k, label, type?: "text"|"area"|"num"|"select", max?, min?, len?, opts?: [[value, label]], need?}]
 export function editForm(win, title, fields, cur = {}) {
   return modal(win, (done) => {
     const inputs = fields.map((fd) => {
       const v = cur[fd.k] ?? fd.def ?? "";
       const el = fd.type === "select"
         ? h("select", { class: "rb-input", "aria-label": fd.label }, fd.opts.map(([o, l]) => h("option", { value: o, selected: String(o) === String(v) ? "" : null }, l)))
+        : fd.type === "area" ? h("textarea", { class: "rb-input", rows: 6, maxlength: fd.len ?? 600, "aria-label": fd.label }, String(v))
         : h("input", { class: "rb-input", type: fd.type === "num" ? "number" : "text", value: String(v), "aria-label": fd.label, ...(fd.type === "num" ? { min: fd.min, max: fd.max } : { maxlength: fd.len ?? 80 }) });
       return [fd, el];
     });

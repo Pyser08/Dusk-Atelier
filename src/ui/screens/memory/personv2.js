@@ -10,7 +10,7 @@ import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
 import { nsfwCard, nsfwStatusCard, nsfwTempCard, nsfwTagsCard } from "./nsfwcard.js";
 import { adultCandCard } from "./adultcands.js";
-import { marksCard, compatCard, statusCard, fertilityCard, outfitCard, raceCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
+import { marksCard, compatCard, statusCard, fertilityCard, outfitCard, raceCard, diaryCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
 import { subTabs } from "./subtabs.js";
 import { lustCard, moodCard, bodyCard, humanCard, heatOf, heatFx, compareCard } from "./lifecards.js";
 import { eroLoad, eroInfoCard, eroSumCard, eroPairCard, eroPartnerCards, eroSummaryCard } from "./erosyncwiki.js";
@@ -57,6 +57,18 @@ export function personTabs(env, parts) {
     rift: { box: "rifts", title: "갈등", fields: [{ k: "about", label: "무엇 때문에", len: 80 }, { k: "state", label: "상태", type: "select", def: "open", opts: [["open", "안 풀림"], ["apologized", "사과함"], ["resolved", "화해함"]] }, { k: "grudge", label: "앙금", type: "select", def: "none", opts: [["none", "없음"], ["some", "조금"], ["deep", "깊음"]] }] },
     belief: { box: "beliefs", title: "오해", fields: [{ k: "thinks", label: "잘못 알고 있는 것", len: 80 }, { k: "truth", label: "실제로는", len: 80 }] },
   };
+  // 관계 연표(전환점): 기록된 사건은 숨기기, 직접 적은 전환점은 고치기·지우기
+  const tlSig = (e) => `${e.kind}|${e.at ?? ""}|${e.when ?? ""}|${[e.a, e.b].map((x) => String(x ?? "")).sort().join("+")}`;
+  const samePair = (e, a, b) => [e.a, e.b].map((x) => String(x ?? "").replace(/\s+/g, "")).sort().join("|") === [a, b].map((x) => String(x ?? "").replace(/\s+/g, "")).sort().join("|");
+  const TLF = [{ k: "when", label: "언제(예: 2025-03-14, 비워도 돼요)", len: 20, need: false }, { k: "note", label: "무슨 일", len: 60 }];
+  const tlCard = (tl, other) => (tl.length || local) ? card("관계 연표", tl.length ? h("ol", { class: "rb-wk2-tl", id: "rb-rel-timeline" }, tl.map((e) => h("li", null,
+    h("small", { class: "rb-muted" }, e.when || (e.at != null ? `#${e.at + 1} 응답` : "")), h("span", null, e.kind === "note" ? e.note : eventText(e)),
+    local ? h("span", { class: "rb-er-acts" }, e.kind === "note" ? h("button", { type: "button", class: "rb-bzb", title: "고치기", "aria-label": "전환점 고치기", onClick: () => run(editForm(ctx.win, "전환점 고치기", TLF, e).then((v) => v && save((fo) => { const o = (fo.tlUser ?? []).find((y) => y.id === e.id); if (o) Object.assign(o, v); }, "고쳤어요."))) }, "✎") : null,
+      h("button", { type: "button", class: "rb-bzb", title: e.kind === "note" ? "지우기" : "연표에서 숨기기", "aria-label": "전환점 지우기", onClick: () => save((fo) => { if (e.kind === "note") fo.tlUser = (fo.tlUser ?? []).filter((y) => y.id !== e.id); else fo.tlHide = [...new Set([...(fo.tlHide ?? []), tlSig(e)])].slice(-200); }, "지웠어요.") }, "✕")) : null))) : h("p", { class: "rb-muted" }, "아직 전환점이 없어요."),
+    local ? btn("+ 전환점", { size: "sm", onClick: () => run(editForm(ctx.win, "전환점 추가", TLF).then((v) => v && save((fo) => { fo.tlUser = [...(fo.tlUser ?? []), { id: `utl${Date.now().toString(36)}`, kind: "note", a: me, b: other, ...v, at: turnNow(fo), user: true }].slice(-60); }, "추가했어요."))) }) : null, "rb-wk2-tlcard") : null;
+  const local = env.backend?.id === "local";
+  const editExp = (x) => run(editForm(ctx.win, "기대 차이 고치기", [{ k: "ae", label: `${shown(x.a)}의 기대`, len: 80 }, { k: "as", label: "말로 했나요", type: "select", opts: [["", "말하지 않음"], ["1", "말로 함"]] }, { k: "be", label: `${shown(x.b)}의 기대`, len: 80 }, { k: "bs", label: "말로 했나요", type: "select", opts: [["", "말하지 않음"], ["1", "말로 함"]] }], { ...x, as: x.as ? "1" : "", bs: x.bs ? "1" : "" })
+    .then((v) => v && save((fo) => { for (const o of Object.values(fo.exp ?? {})) if (o.a === x.a && o.b === x.b) Object.assign(o, { ae: v.ae, be: v.be, as: !!v.as, bs: !!v.bs, user: true }); }, "고쳤어요.")));
   const turnNow = (fo) => (Number.isInteger(fo?.cursor?.at) ? fo.cursor.at : 0);
   const addHuman = (kind, other) => run(editForm(ctx.win, `${HF[kind].title} 추가`, kind === "belief" ? [{ k: "who", label: "누가 잘못 알고 있나요", type: "select", def: other, opts: [[other, shown(other)], [me, shown(me)]] }, ...HF[kind].fields] : HF[kind].fields).then((v) => v && save((fo) => {
     const item = { id: `u${kind}${Date.now().toString(36)}`, ...(kind === "belief" ? { open: true } : { a: me, b: other }), ...v, at: turnNow(fo), at_ms: Date.now(), user: true };
@@ -271,20 +283,22 @@ export function personTabs(env, parts) {
   // 상대 한 명과의 카드 조각. 빈 칸은 null 대신 empty에 이름만 모은다(개편 A·B·C안에서 숨김).
   const pieces = (other) => {
     const v = pairView(f, selfNames, other, now), ties = tiesWith(other), empty = [];
-    const tl = selfNames.flatMap((n) => timeline(f, n, other)).filter((e, i, a) => a.indexOf(e) === i), u = unreqOf(other);
+    const hide = new Set(f.tlHide ?? []), mine = (f.tlUser ?? []).filter((e) => selfNames.some((n) => samePair(e, n, other)));
+    const tl = [...selfNames.flatMap((n) => timeline(f, n, other)).filter((e, i, a) => a.indexOf(e) === i && !hide.has(tlSig(e))), ...mine].sort((x, y) => (x.at ?? -1) - (y.at ?? -1)), u = unreqOf(other);
     const ms = metrics.filter((x) => x.targets.some((t) => nk(t) === nk(other)));
     const P = {
       v, ties,
       stage: card("관계", [relMeter(v, other), ties.length ? h("div", { class: "rb-wk2-chips" }, ties.map((t) => h("span", { class: "rb-wk2-chip rb-wk2-tie" }, t.label))) : h("p", { class: "rb-muted" }, "아직 드러난 관계가 없어요. 가족·동료·주종처럼 이야기에 나오면 채워져요."),
         h("p", { class: "rb-muted" }, `함께한 장면 ${v.stage.shared}번`)], btn("고치기", { size: "sm", onClick: () => editTies(other, ties) }), "rb-wk2-stagecard rb-rm-card"),
       lover: loverCard(other),
-      tl: tl.length ? card("관계 연표", h("ol", { class: "rb-wk2-tl", id: "rb-rel-timeline" }, tl.map((e) => h("li", null, h("small", { class: "rb-muted" }, e.when || (e.at != null ? `#${e.at + 1} 응답` : "")), h("span", null, eventText(e))))), null, "rb-wk2-tlcard") : null,
+      tl: tlCard(tl, other),
       unreq: u ? card("짝사랑", h("p", { class: "rb-wk2-p" }, `${subj(shown(u.from))} ${shown(u.to)}에게 끌리지만(끌림 ${u.v}) 상대는 아직 아니에요(끌림 ${u.back}).`), null, "rb-wk2-lovercard off") : null,
       nums: ms.length ? card("수치", [...ms.map((x) => metricRow(x, true)), h("small", { class: "rb-muted" }, "이 상대가 대상인 수치만 보여요.")]) : null,
       talk: card("호칭 · 말투", [talkRow(v.talk.ab, me, other), h("hr", { class: "rb-wk2-hr" }), talkRow(v.talk.ba, other, me)]),
       rifts: v.rifts?.length ? card("갈등", v.rifts.map(riftItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("rift", other) })) : null,
       bonds: v.bonds.length ? card("둘만의 추억", v.bonds.map(bondItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("bond", other) })) : null,
-      exp: v.exp ? card("기대 차이", h("div", { class: "rb-wk2-exp" }, [[v.exp.a, v.exp.ae, v.exp.as], [v.exp.b, v.exp.be, v.exp.bs]].map(([n, e, said]) => h("div", null, h("small", { class: "rb-muted" }, `${topic(shown(n))}`), h("span", null, e), h("small", { class: "rb-muted" }, said ? "말로 했어요" : "말하지 않았어요"))))) : null,
+      exp: v.exp ? card("기대 차이", h("div", { class: "rb-wk2-exp" }, [[v.exp.a, v.exp.ae, v.exp.as], [v.exp.b, v.exp.be, v.exp.bs]].map(([n, e, said]) => h("div", null, h("small", { class: "rb-muted" }, `${topic(shown(n))}`), h("span", null, e), h("small", { class: "rb-muted" }, said ? "말로 했어요" : "말하지 않았어요")))),
+        local ? h("span", { class: "rb-er-acts" }, btn("고치기", { size: "sm", onClick: () => editExp(v.exp) }), btn("지우기", { size: "sm", onClick: () => save((fo) => { for (const [k, x] of Object.entries(fo.exp ?? {})) if (x.a === v.exp.a && x.b === v.exp.b) delete fo.exp[k]; }, "지웠어요.") })) : null) : null,
       face: card("사람 앞 태도", [faceRow(v.face?.ab, me, other), h("hr", { class: "rb-wk2-hr" }), faceRow(v.face?.ba, other, me)]),
       beliefs: v.beliefs.length ? card("오해", v.beliefs.map(beliefItem), btn("+ 추가", { size: "sm", onClick: () => addHuman("belief", other) }), "warn") : null,
       ero: eroPairCard(ctx, card, ero, eroSelf(), ero ? eroPersonByName(ero, other) : null),
@@ -473,6 +487,7 @@ export function personTabs(env, parts) {
     parts.onLog?.();   // 2.2.22: 기록 목록은 이때 처음 만든다
     const blocks = (parts.logBlocks ?? []).filter(Boolean), sum = lay === "B4" ? summary("log") : null;
     const items = [sum && { id: "sum", label: "달라진 점", icon: "✨", hint: "바뀐 것·남은 순간", render: () => h("div", { class: "rb-wk2-pane" }, summary("log")) },
+      doc && { id: "diary", label: "일기", icon: "📔", hint: "인물 일기 보기·고치기", render: () => h("div", { class: "rb-wk2-pane" }, diaryCard(env, card, doc)) },
       ...blocks.map((b, i) => ({ id: `b${i}`, label: b.querySelector?.("summary b, .rb-wk2-ch b, h4, summary")?.textContent?.trim()?.slice(0, 10) || (i ? "이야기 기록" : "문서 관리"), icon: i ? "📖" : "🗂️", render: () => h("div", { class: "rb-wk2-pane" }, b) }))].filter(Boolean);
     return items.length > 1 ? sub2("log", items) : h("div", { class: "rb-wk2-pane" }, sum, ...blocks);
   };
