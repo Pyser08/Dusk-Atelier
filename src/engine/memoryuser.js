@@ -1,6 +1,7 @@
 // {{user}} = 나(플레이어) (1.8.3, 순수). 분석 결과에서 플레이어를 가리키는 이름을 모두 "{{user}}" 하나로 모은다.
 // 리스가 프롬프트의 {{user}}를 페르소나 이름으로 바꿔 보내면 AI가 그 이름(또는 user·유저)으로 적어 같은 사람이 둘로 갈라지기 때문.
-import { counterparts, pairView, nowOf, momentsOf } from "./memoryhuman.js";
+import { counterparts, pairView, nowOf, momentsOf, keyOf } from "./memoryhuman.js";
+import { tiesBetween } from "./ties.js";
 export const USER = "{{user}}";
 const GENERIC = ["{{user}}", "user", "유저", "플레이어", "player", "{{persona}}"];
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -102,7 +103,7 @@ export function meView(folder, now = nowOf(folder)) {
   const others = counterparts(folder, self, now).map((c) => {
     const pv = pairView(folder, self, c.name, now);
     return {
-      name: c.name, stage: c.stage, stageLabel: STAGE_LABEL[c.stage] ?? c.stage, shared: c.shared, warmth: c.warmth,
+      name: c.name, stage: c.stage, stageLabel: tiesBetween(folder?.extra?.ties, USER, c.name, keyOf(folder)).map((t) => t.label).join(" · "), shared: c.shared, warmth: c.warmth,
       feel: pv.feel.ba?.tags ?? {}, myFeel: pv.feel.ab?.tags ?? {},
       callsMe: pv.talk.ba?.call ?? "", toneToMe: pv.talk.ba?.tone ?? "", iCall: pv.talk.ab?.call ?? "",
       face: pv.face.ba ? { alone: pv.face.ba.alone ?? "", public: pv.face.ba.public ?? "" } : null,

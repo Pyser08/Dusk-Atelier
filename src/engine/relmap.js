@@ -1,8 +1,9 @@
 // 인물 관계도(반3D) 데이터 계산 (v1.9.3, 순수 함수). 화면 코드 없음.
 // 장기기억 폴더(folder.people · emo · rels · scenes · rifts · beliefs)에서 노드와 선을 만든다.
 // 새 필드가 없어도 그려지게 기본 모양을 쓰고, 나중에 person.faction · person.status가 생기면 그대로 반영한다.
-import { pairView, nowOf } from "./memoryhuman.js";
-import { STAGE_LABEL, USER } from "./memoryuser.js";
+import { pairView, nowOf, intimacyOf } from "./memoryhuman.js";
+import { TIE_BY_ID, tiesBetween } from "./ties.js";
+import { USER } from "./memoryuser.js";
 import { liveTies } from "./memoryplus.js";
 import { isLoverKind, strayRisk } from "./lover.js";
 import { unrequited, triangles, exPairs, isSecret, timeline, eventText } from "./romance.js";
@@ -70,8 +71,9 @@ export function buildRelMap(folder, { max = RM.MAX_NODES, mode = "affinity" } = 
       sum: cut(pv.bonds.at(-1)?.moment || sorted[0]?.act || "", 90),
       rec: sorted.slice(0, 3).map((r) => [r.at != null ? `#${r.at + 1}` : "", cut(r.act, 70)]),
       // {{user}}와의 선
-      uLabel: pv.talk.ba?.call ? `${STAGE_LABEL[pv.stage.stage] ?? ""} · ${pv.talk.ba.call}라고 부름` : STAGE_LABEL[pv.stage.stage] ?? "관계",
-      uStrength: clamp(0.25 + (pv.stage.shared ?? 0) * 0.12, 0.25, 1),
+      // 2.2.30: 관계 진도 대신 관계 종류(없으면 친밀도)
+      uLabel: [tiesBetween(folder?.extra?.ties, USER, name, key).map((t) => t.label).join("·") || `친밀도 ${intimacyOf(folder, USER, name, nowAt).v}`, pv.talk.ba?.call ? `${pv.talk.ba.call}라고 부름` : ""].filter(Boolean).join(" · "),
+      uStrength: clamp(0.2 + intimacyOf(folder, USER, name, nowAt).v * 0.08, 0.2, 1),
       uSpecial: pv.rifts.some((r) => r.state !== "resolved") || pv.beliefs.some((b) => b.open),
       uRecent: thisTurn || (lastAt >= 0 && nowAt - lastAt <= 3)
     });
@@ -101,6 +103,15 @@ export function buildRelMap(folder, { max = RM.MAX_NODES, mode = "affinity" } = 
     const a = key(t.a), b = key(t.b); if (!keep.has(a) || !keep.has(b) || a === b || edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a))) continue;
     const lv = isLoverKind(t.kind);
     edges.push({ id: `${a}~${b}`, k: `tie:${a}>${b}`, a, b, w: lv ? 0.9 : 0.3, s: lv ? 0.7 : 0.35, sp: 0, rc: 0, ...(lv ? { lover: true } : {}), label: (lv ? "💗 " : "") + cut(t.kind, lv ? 12 : 14), items: [[t.at != null ? `#${t.at + 1}` : "", `${t.b}: ${t.a}의 ${t.kind}`]] });
+  }
+  // 2.2.30 관계 종류(가족·동료·주종·사제 …): 선 이름으로 쓰고(연인 선은 그대로), 기록이 없는 두 사람도 잇는다
+  for (const x of Object.values(folder?.extra?.ties ?? {})) {
+    const a = key(x.a), b = key(x.b), kinds = Object.keys(x.kinds ?? {}).filter((id) => TIE_BY_ID[id]);
+    if (!kinds.length || !keep.has(a) || !keep.has(b) || a === b) continue;
+    const lab = tiesBetween(folder.extra.ties, x.a, x.b, key).map((t) => t.ko).join("·"), item = ["", `관계: ${tiesBetween(folder.extra.ties, x.a, x.b, key).map((t) => (t.up ? `${t.ko}(${t.up}가 ${TIE_BY_ID[t.id].up?.[0] ?? "위"})` : t.ko)).join(", ")}`];
+    const e = edges.find((y) => (y.a === a && y.b === b) || (y.a === b && y.b === a));
+    if (e) { if (!e.lover) e.label = cut(lab, 14); e.tie = lab; e.items = [item, ...(e.items ?? [])]; }
+    else edges.push({ id: `${a}~${b}`, k: `xt:${a}>${b}`, a, b, w: kinds.some((id) => ["enemy", "nemesis", "rival", "target", "captor"].includes(id)) ? -0.6 : 0.4, s: 0.45, sp: 0, rc: 0, label: cut(lab, 14), tie: lab, items: [item] });
   }
   // 나와의 관계: 'A에게 B는 kind'라서, 내가 A인 관계(그 인물이 나의 kind)를 먼저 쓰고, 반대 방향만 있으면 '나는 kind'로 보인다
   for (const n of nodes) { const t = tieOf(key(USER), n.id); if (t) n.uLabel = `${key(t.a) === key(USER) ? cut(t.kind, 10) : `나는 ${cut(t.kind, 8)}`} · ${n.uLabel}`; }

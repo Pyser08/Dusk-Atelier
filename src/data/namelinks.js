@@ -6,7 +6,7 @@ import { readChar } from "./apiread.js";
 import { statusCardHtml, linkNames, NAMECARD_CSS } from "../engine/namecard.js";
 import { scenePanelHtml, sceneOf, peopleIn, SCENE_CSS } from "../engine/scenepanel.js";
 import { charThumb } from "./charimg.js";
-import { createCardOverlay } from "./cardoverlay.js";
+import { createCardOverlay, xifyCss } from "./cardoverlay.js";
 import { FAB_CSS } from "./floatbtn.js";
 import { logEvent } from "./memlog.js";
 import { folderIdOf } from "./memorystore.js";
@@ -27,7 +27,7 @@ export function createCssMount(api) {
       const d = await api.getRootDocument(); if (!d) return null;
       const old = await d.querySelector(`[x-dusk="${CSS_ID}"]`); if (old) await old.remove();
       const parent = (await d.querySelector("head")) ?? (await d.querySelector("body"));
-      const el = await d.createElement("style"); await el.setAttribute("x-dusk", CSS_ID); await el.setInnerText(STATUS_CSS); await parent.appendChild(el);
+      const el = await d.createElement("style"); await el.setAttribute("x-dusk", CSS_ID); await el.setInnerText(xifyCss(STATUS_CSS)); await parent.appendChild(el);
       doc = d; state = "done"; return d;
     } catch { return null; }
   })().finally(() => { job = null; }));

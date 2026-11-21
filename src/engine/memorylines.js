@@ -60,7 +60,7 @@ export const LINES_STAGE1_MIN = "Reply with lines only. First: scene|1-2 sentenc
 const SUBJ = "the focus character";
 function stage2Rules(N, { light, beliefs, wiki, extraLines }) {
   const r = ["Check first:"];
-  if (wiki) r.push(`like|+1 +2 +3 or -1 -2 -3|exact quote      how ${N}'s feeling toward {{user}} moved in newest (1 slight, 2 clear, 3 strong). Omit if it did not move.`);
+  // 2.2.30: like 줄(호감 +n)은 묻지 않는다 — 호감도는 감정·친밀도·첫인상으로 엔진이 계산(affinityderive.js)
   r.push(`to|Other|warm or cold or same|deed|exact quote      how ${N} treated Other (max 3 lines). deed: help attack confess refuse promise apologize touch flirt jealous none (touch/flirt = romantic or sexual; jealous only between lovers)`);
   r.push(`   Other can be ANY character, not only {{user}} — write romantic pull between other characters too. Judge it by ${N}'s own taste and the real chemistry: {{user}} is not special; never mark flirt/confess/touch toward {{user}} unless newest clearly shows ${N} doing it for a reason that fits ${N}.`);
   if (wiki) r.push(`now|${N}'s relationship with {{user}} right now, one sentence      only if it changed; it replaces card.relationship`);
@@ -83,7 +83,7 @@ function stage2Rules(N, { light, beliefs, wiki, extraLines }) {
   return r;
 }
 const NEW_LINES = (N) => ["id|basic profile: role, looks, affiliation, age (stated facts only; unknown = 미확인)", `first|${N}'s first impression of {{user}}, one sentence`, "profile|one-line personality|trait1,trait2|what they value"];
-const EXAMPLE = (wiki) => `${wiki ? "like|+2|함께 가자고 손을 잡았다\nnow|{{user}}를 믿을 수 있는 동료로 여기기 시작했다\n" : ""}to|{{user}}|warm|help|함께 가자고 손을 잡았다\ncall|{{user}}|선배|casual\nkeys|열쇠,옥상`;
+const EXAMPLE = (wiki) => `${wiki ? "now|{{user}}를 믿을 수 있는 동료로 여기기 시작했다\n" : ""}to|{{user}}|warm|help|함께 가자고 손을 잡았다\ncall|{{user}}|선배|casual\nkeys|열쇠,옥상`;
 export function linesStage2(_name, { light = false, beliefs = false, wiki = false, isNew = false, extraLines = [] } = {}) {
   const N = SUBJ;
   const r = [

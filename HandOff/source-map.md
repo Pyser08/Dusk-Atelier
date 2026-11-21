@@ -39,7 +39,7 @@
 - `cardassets.js` (6줄) 카드 에셋(자동 생성): 기본 프레임 1장(글자 제거·투명 처리, 1024x1536 WebP)과 Gi… — CARD_FRAME_DATA, CARD_FONT_DATA, CARD_FRAME_SIZE
 - `cardbot.js` (34줄) 카드로 새 봇 객체 만들기. 원본 봇은 수정하지 않고 새 객체만 반환한다. — buildCardCharacter
 - `cardflow.js` (78줄) 카드 만들기 흐름(AI 호출 3회: 카드·연결·첫 메시지)과 에셋 고르기. 화면 코드 없이 api만 … — roleNamesOf, generateCard, generateLink, listBotImages, pickIllustrations
-- `cardoverlay.js` (92줄) 2.2.24: 캐릭터 상태창을 응답 안이 아니라 리스 화면 맨 위에 직접 띄운다. — mountNodes, createCardOverlay
+- `cardoverlay.js` (134줄) 2.2.24: 캐릭터 상태창을 응답 안이 아니라 리스 화면 맨 위에 직접 띄운다. — mirrorName, mountNodes, wireTabs, xifyCss, createCardOverlay
 - `cardstore.js` (42줄) 카드 저장소: 카드 본문(dusk.mem.v2.card.<id>), 목록 인덱스, 카드 설정. 직렬 … — CARD_PREFIX, CARD_INDEX_KEY, CARD_CFG_KEY, DEFAULT_CARD_CFG, createCardStore
 - `castlore.js` (41줄) 지금 채팅에 걸린 로어북으로 '새로 만들어도 되는 인물' 판단기를 만든다(장기기억 애드온 전용). — createCastReader, castOfCard, modulesOf
 - `cellar.js` (102줄) Dusk Cellar 연결 (1.8.3): 리스 서버 옆에서 도는 선택 서버(Pyser08/Dusk-… — CELLAR_URL_KEY, CELLAR_DEFAULT_URL, DOWN_AFTER, CELLAR_ON_KEY, loadCellarEnabled
@@ -65,7 +65,7 @@
 - `erosynctags.js` (39줄) 인물별 선호(페티시) 태그와 금기 태그. 직접 적은 글만 저장하고 AI는 부르지 않는다. — TAGS_KEY, MAX_TAGS, MAX_TAG_LEN, normTagList, normTags
 - `erosyncturn.js` (158줄) Dusk 2.2.0: Erosync 매 턴 계산(HandOff/EROSYNC-TURN.md). 장기기… — TURN_KEY, AUTO_KEY, TURN_DEFAULT, normalizeTurnSettings, seedBatch
 - `fairplay.js` (88줄) 공정한 전개 훅 (v1.6.8). 장기기억과 무관하게 설정에서 켜고 끈다. 기본 꺼짐. — FAIR_KEY, DICE_KEY, DICE_MODE_KEY, DICE_LEVEL_KEY, DICE_CUTS_KEY
-- `featurefill.js` (52줄) 2.2.25 장기기억: 새 기능 빈칸 채우기. 기능이 생기기 전에 기록한 채팅은 종족·기후·옷차림 같… — FILL_FEATURES, featureGaps, fillPrompt, fillFeatures
+- `featurefill.js` (54줄) 2.2.25 장기기억: 새 기능 빈칸 채우기. 기능이 생기기 전에 기록한 채팅은 종족·기후·옷차림 같… — FILL_FEATURES, featureGaps, fillPrompt, fillFeatures
 - `floatbtn.js` (72줄) 2.2.25: 채팅 위 떠 있는 버튼(인물 관계도)을 Dusk가 리스 화면에 직접 그린다 — 동그랗고… — FAB_POS_KEY, FAB_STYLE, FAB_CSS, presetSpots, clampPos
 - `gauge.js` (142줄) 게이지 서비스: 정의(idx.gauges[chaId]) · 값/이력(folder.gauge) 저장, … — createGaugeService
 - `gaugemult.js` (19줄) 게이지 배수 저장(pluginStorage 한 키). 장기 기억 기록기·위키 기록기·Erosync 매… — readGauge, saveGauge, peekGauge
@@ -95,11 +95,11 @@
 - `memorystore3.js` (201줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
 - `memoryswitches.js` (80줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
 - `memorytools.js` (33줄) 인물 AI 도구(7단계 B): 리수폿 컨트롤러를 한 묶음으로 만든다. 턴 흐름이 켜져 있고 그 채팅이… — makeTools
-- `memoryturn.js` (487줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — cutByLimit, promptKeysOf, stageOf, createTurnFlow
+- `memoryturn.js` (511줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — cutByLimit, promptKeysOf, stageOf, createTurnFlow
 - `modcompat.js` (266줄) 모듈 호환(애드온 modcompat 전용): 리스 훅 셋(output·display·process) … — DEFAULTS, createModCompat, stripOwnSetvars, overlaps
 - `modelhub.js` (97줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (248줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
-- `namelinks.js` (106줄) 장기기억 애드온(0.3.22): 응답 화면(display)에 붙이는 두 가지. 모델에 보내는 글·저장… — STATUS_CSS, createCssMount, createNameLinks
+- `namelinks.js` (111줄) 장기기억 애드온(0.3.22): 응답 화면(display)에 붙이는 두 가지. 모델에 보내는 글·저장… — STATUS_CSS, createCssMount, createNameLinks
 - `nsfwturn.js` (118줄) addon-rebuild: 매 턴 기록기가 보고한 성인 프로필 변화(taste·sexval)를 이 채… — applyNsfwQueue, nsfwByName, applyDriveQueue, applyLifeTurn, seedZones
 - `persona.js` (152줄) — loadPersonaMap, savePersonaMap, setPersonaLink, syncPersonaModules
 - `personabotdef.js` (96줄) 봇 기본 페르소나 (aibuild 애드온 전용 — 페르소나 공방의 '이 봇 기본 페르소나'를 Dusk… — loadBotDefaults, saveBotDefaults, injectBlock, createBotDefaults
@@ -112,7 +112,7 @@
 - `plugins.js` (231줄) 플러그인 탭 데이터 계층 — DA Interop v1 호스트 + 플러그인 관리 — listInterop, sendPatch, presetValues, waitAck, pruneInterop
 - `potstorage.js` (71줄) 리수폿 컨트롤러가 쓰는 저장소(pluginStorage 모양)를 Dusk 저장소 v3 위에 얹는 어댑… — scopeIdsOf, createPotStorage
 - `presets.js` (140줄) — loadPresets, savePresets, snapshotOf, recordActive, applyPreset
-- `profileseed.js` (100줄) addon-rebuild: 인물 기본 성격 + 채팅별 NSFW 값을 미리 만들어 둔다. — missingProfiles, missingNsfw, profileText, ensureProfiles
+- `profileseed.js` (102줄) addon-rebuild: 인물 기본 성격 + 채팅별 NSFW 값을 미리 만들어 둔다. — missingProfiles, missingNsfw, profileText, ensureProfiles
 - `protlink.js` (195줄) ProtLink+ (v1.9.2): Proton Drive 공유 링크를 캐릭터·모듈·플러그인에 연결해… — PL_KEY, PL_LINKS, PL_SET, PL_ORIGINAL, loadProtLinkOn
 - `regexprep.js` (25줄) v1.8.1 정규식 전처리 공급자: 이 채팅에 적용할 정규식 목록을 모아 준다. 읽기만 하며 실패하면… — createRegexPrep
 - `regress.js` (50줄) 회귀 (v1.9.2): 고른 인물의 기억만 들고 같은 봇에 새 채팅을 만든다. 원래 채팅과 그 기억은… — createRegressChat
@@ -185,6 +185,7 @@
 - `addons.js` (136줄) 애드온 순수 로직(2.0.0 시험): 목록(manifest) 검사 · 버전 비교 · 업데이트 고르기.… — ADDON_FORMAT, cmpVer, parseManifest, installOrder, bootOrder
 - `adultseed.js` (196줄) 2.2.6 처음 등장한 인물의 성인 항목 무작위 기록(순수, 기억 옵션 ‘처음 등장 때 성인 항목 무… — SEED_KEY, DESIRE_CATS, KINK_CATS, DESIRES, KINKS
 - `affhud.js` (144줄) 호감도 HUD 프리셋(순수): 배경 HTML 조각·기본 변수 설치/제거, 리스폿 수치 읽기, 자체 보… — MARK_A, AFF_DEFAULTS, AFF_KEYS, hudHtml, hasHud
+- `affinityderive.js` (47줄) 2.2.30 장기기억: 호감도(위키 affinity.score, -100~300)를 감정·첫인상·친밀… — firstTone, AFF_MIN, deriveAffinity, syncAffinity
 - `affprompts.js` (54줄) 호감도 HUD가 보조모델에 보내는 기본 프롬프트. 문구만 고치면 되도록 한곳에 모았다. (로직은 af… — JUDGE_SYSTEM, JUDGE_USER, DESIGN_SYSTEM, DESIGN_USER, DESIGN_RETRY
 - `airesponse.js` (30줄) — extractRunAIText
 - `aistop.js` (99줄) AI 생성 중지 (2.1.0): 플러그인·애드온의 모든 AI 호출을 한곳에서 센다. 하나라도 돌고 있… — describeAi, activeTasks, aiTask, onAiChange, trackAi
@@ -244,7 +245,7 @@
 - `lorerules.js` (788줄) Dusk 로어북 규칙 (DA Lore Rules v1) — RULE_VERSION, DONT_ACTIVATE, STATE_VAR, SET_OPS, MAX_HIST
 - `lover.js` (55줄) 애인 판정(순수). 기록기가 남긴 오래가는 관계(tie: "B는 A의 무엇") 중 연인·배우자처럼 명… — isLoverKind, pairKey, loverPairs, isLover, loverOf
 - `match.js` (60줄) — normalizeName, stripTrailingNumber, findCandidates
-- `memextra.js` (282줄) 장기기억 애드온(0.3.22): 새 기록 줄과 그 저장·주입(순수, 모델 호출 없음). — nk, EXTRA_STAGE1, MARK_STAGE1, STATUS_STAGE1, OUTFIT_PARTS
+- `memextra.js` (286줄) 장기기억 애드온(0.3.22): 새 기록 줄과 그 저장·주입(순수, 모델 호출 없음). — nk, EXTRA_STAGE1, MARK_STAGE1, STATUS_STAGE1, OUTFIT_PARTS
 - `memoryapply.js` (141줄) 분석 결과를 폴더에 반영하는 순수 함수. — findPersonKey, latestScene, applyAnalysis, DONE_MAX, doneHashes
 - `memorycompose.js` (91줄) 새 봇 합성: 기록 선택 → 상황 블록 → 로어북 후보 → 생성 프롬프트. 순수 함수. — selectRecords, sceneBlocks, pickLore, relationshipPrompt, descPrompt
 - `memorydelete.js` (27줄) 기록 삭제 연쇄 처리 (v1.6.5 4단계, 순수): 같은 응답에서 나온 관계 변화·떡밥 찾기, di… — TOMB_MAX, tombKey, isTombed, relatedOf, deleteRecord
@@ -254,8 +255,8 @@
 - `memoryemo.js` (157줄) v1.7.1 2단계: 다차원 감정 태그(순수). 호감도 하나를 6태그로 나누고, 코드가 게이지와 종합… — EMO_TAGS, EMO_LABEL, LOVER_TAGS, tagsFor, GAUGE_MIN
 - `memorygrade.js` (71줄) 장기기억 등급 D < C < B < A < S < EX. 모델은 p·s·r(0~3)만 내고 등급은 여… — GRADES, GRADE_WEIGHT, SCORE_TABLE, GRADE_CAP, MAX_PER_RESPONSE
 - `memoryguide.js` (10줄) 장기기억 첫 켜기 가이드 글(순수 데이터). 화면마다 작은 ? 버튼이 이걸 보여 준다. — GUIDE_ORDER, GUIDE
-- `memoryhuman.js` (472줄) v1.8.3 사람다운 기억(순수). 추가 AI 호출 없음. — setUserNames, keyOf, displayOf, COOL_HALF, COOL_FLOOR
-- `memoryinject.js` (274줄) 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수. — MARKER, HEADER, stateLines, hasLiveMemory, injectVerdict
+- `memoryhuman.js` (497줄) v1.8.3 사람다운 기억(순수). 추가 AI 호출 없음. — setUserNames, keyOf, displayOf, COOL_HALF, COOL_FLOOR
+- `memoryinject.js` (277줄) 장기기억 주입: 고정 예산으로 [Dusk Memory] 블록을 조립한다. 순수 함수. — MARKER, HEADER, stateLines, hasLiveMemory, injectVerdict
 - `memoryinner.js` (151줄) v1.7.1 3단계: 인물 관점과 내면(순수). 전부 '중요한 상황에만', 선택 기입. — IMPORTANT_MIN, POV_MAX, validateSelf, validateInner, isImportant
 - `memorykeys.js` (43줄) v1.7.1 2단계: 검색 키(순수). 기억을 만들 때 인물·장소·키워드를 함께 저장하고, 현재 장면… — KEYS_MAX, normText, validateKeys, keysOf, keyHits
 - `memorylines.js` (472줄) 장기 기억 분석의 '한 줄 형식' (1.9.1). 약한 모델이 JSON 문법(따옴표·괄호·잘림)에서 … — JSON_FALLBACK, LINES_STAGE1, LINES_STAGE1_MIN, linesStage2, linesStage2Group
@@ -267,7 +268,7 @@
 - `memoryswitch.js` (97줄) v1.7.0 2단계: 기억 스위치와 리수폿 스위치를 서로 분리해서 다루는 순수 로직. — migrateIndex, memoryState, potState, setMemoryForBot, setPotForBot
 - `memorytrust.js` (197줄) v1.7.1 1단계: 기억의 신뢰성(순수). 출처·확신도·유효성, 충돌 판정, 반복 횟수 중복 제거. — CONF_RANK, CONF_LABEL, KIND_LABEL, ATTR_CATS, HIST_MAX
 - `memoryusage.js` (39줄) v1.7.0 3단계: 기억 화면 '저장된 기록 막대'(순수). 기록 N건이 마지막 요청에서 어떻게 쓰… — usageOf, injectLine, recentOf
-- `memoryuser.js` (116줄) {{user}} = 나(플레이어) (1.8.3, 순수). 분석 결과에서 플레이어를 가리키는 이름을 모… — USER, userKeySet, normalizeUserNames, userMergePlan, relinkNames
+- `memoryuser.js` (117줄) {{user}} = 나(플레이어) (1.8.3, 순수). 분석 결과에서 플레이어를 가리키는 이름을 모… — USER, userKeySet, normalizeUserNames, userMergePlan, relinkNames
 - `memoryv3.js` (58줄) 장기기억 v3 순수 변환: v2 → v3, 리수폿 백업/저장소 덤프 → v3 조각, 봇 전체 인물 모… — V3, indexV2toV3, folderV2toV3, parsePotBundle, botPeople
 - `memsrc.js` (3줄) 앵커 → 출처 표시(게이지·기억 공용) — srcOf
 - `merge.js` (37줄) 합치기(RisuTide) 연결: 인물·세계관 가져오기, 전체 합치기, 출처별 업데이트, 떼어내기, A… — adaptCharacterPrompt, conflictTidyPrompt, mergeInput, prepareScopedSelection, applyScopedSelection
@@ -296,14 +297,14 @@
 - `races.js` (304줄) 장기기억 애드온(0.3.22): 종족 표·계산(순수). 기록기 AI가 인물의 종족을 한 줄로 알려 주… — RACES, RACE_BY_ID, FRAMES, raceIdOf, RACE_STAGE1
 - `rawrecall.js` (68줄) 2.2.2 원문 회상(순수 함수): 지난 대화 원문을 조각내고, 의미 순위와 글자 순위를 합쳐(RRF… — splitText, stripStatus, buildChunks, lexScores, rrf
 - `recall.js` (107줄) v1.6.4 회상(Recall, 순수): 리수폿이 고른 인물의 Dusk 기록을 골라 Director에… — RECALL_DEFAULTS, keywordBoost, scoreRecord, pickPeople, unknownFor
-- `recorder.js` (600줄) Dusk 기록기 (2.0.0) — 리수폿 '기록하기(Writer)'를 대신하는 짧은 단계별 기록. 순… — isNoneReply, parseWriterRun, cardOf, RECORDER_OUTPUT, recorderText
+- `recorder.js` (621줄) Dusk 기록기 (2.0.0) — 리수폿 '기록하기(Writer)'를 대신하는 짧은 단계별 기록. 순… — isNoneReply, RECENT_MAX, parseWriterRun, cardOf, RECORDER_OUTPUT
 - `refusal.js` (21줄) addon-rebuild: 모델 답이 '검열(거절)'인지 판별. 확실할 때만 검열이라 한다 — 근거는… — refusalText, blockedError, isCensored, censorMessage, problemMessage
 - `regexprep.js` (46줄) v1.8.1 정규식 전처리(순수): 기억 분석 입력과 임베딩 질의에서 상태창·HTML 같은 군더더기를… — DEFAULT_REGEX, normEntry, normEntries, parseRegexFile, collectEntries
 - `regexview.js` (28줄) 정규식 '바로 시험' 결과 보기 (v1.6.7 7단계): 입력 글을 일치 위치로 잘라 강조·요약한다.… — segments, describeMatch, summarize
 - `regress.js` (144줄) 회귀 (v1.9.2, 순수): 고른 인물 한 명의 기억만 들고 새 채팅을 시작한다. — detach, findPerson, regressWiki, regressSlice, regressCandidates
-- `relmap.js` (227줄) 인물 관계도(반3D) 데이터 계산 (v1.9.3, 순수 함수). 화면 코드 없음. — RM, STATUS_LABEL, affinityOf, importanceOf, buildRelMap
+- `relmap.js` (238줄) 인물 관계도(반3D) 데이터 계산 (v1.9.3, 순수 함수). 화면 코드 없음. — RM, STATUS_LABEL, affinityOf, importanceOf, buildRelMap
 - `relremove.js` (36줄) addon-rebuild 관계 지우기(수동): 두 사람 사이 관계를 장기기억·위키 양쪽에서 지운다. … — removePairMemory, removePairWiki, promoteAlias
-- `retrycache.js` (26줄) 다시 요청(메인 모델이 검열·오류로 끊겨 같은 말을 다시 보냄)할 때 보조 모델을 또 부르지 않게 하… — routerKey, swapRequestRef, directionKey, boundedSet
+- `retrycache.js` (41줄) 다시 요청(메인 모델이 검열·오류로 끊겨 같은 말을 다시 보냄)할 때 보조 모델을 또 부르지 않게 하… — routerKey, castKey, swapRequestRef, directionKey, boundedSet
 - `romance.js` (156줄) 2.2.6 연애 흐름(순수): 고백 → 수락(사귐)/거절(어색한 기간), 이별(미련이 천천히 식음),… — EVENT_MAX, EVENT_LABEL, unrequited, triangles, isSecret
 - `romancecue.js` (91줄) 2.2.6 썸 행동 지침(순수): 이성적 호감(attraction 0~10) 단계와 그 인물의 성격(… — NO_SUDDEN_LUST, ROMANCE_RULE, STAGES, styleOf, romanceLines
 - `rpack.js` (13줄) — rpackDecode
@@ -323,6 +324,7 @@
 - `storytime.js` (69줄) 이야기 시간 (v1.6.8, 순수). 메인 AI가 응답 맨 위에 적는 상태 줄 `[YYYY-MM-DD… — TIME_MARK, emptyState, timeFromText, parseStatus, latestStoryState
 - `tideplan.js` (188줄) RisuTide 판단 로직(src/tide/)을 Dusk 업데이트 흐름에 잇는 곳. — charFields, modFields, fieldsToMod, makePlan, regexAutoNote
 - `tidestore.js` (146줄) RisuTide가 남긴 기록을 읽는다 (읽기 전용). — localStore, tideBase, listTideBackups, loadTideBackup, loadProvenance
+- `ties.js` (115줄) 2.2.30 장기기억: 관계 종류(가족·파티·동료·직장 동료·주종·사제 …). 관계 진도(처음 봄→아… — TIE_GROUPS, TIE_KINDS, TIE_BY_ID, tieKind, TIE_STAGE1
 - `tokens.js` (16줄) 코어 화면이 기억 엔진 전체를 끌어오지 않게 작은 도우미만 따로 둔다(2.2.4 — 기억 엔진은 애드… — estimateTokens, injectReasonText, DEFAULT_EMBED
 - `trackpreset.js` (66줄) 추적 수준 프리셋·기능 카드(순수). 리수폿 features(affinity·register·perc… — FEATURE_IDS, FEATURE_CARDS, LEVELS, levelPatch, applyLevel
 - `turninfo.js` (146줄) 응답 아래 표시 (1.8.3, 순수): 주사위 결과 · 모델 호출 정보. 리스 메시지 안이라 인라인 … — VERDICTS, judgeRoll, estimateTokens, fmtTokens, fmtSec
@@ -600,14 +602,14 @@
 - `infotab.js` (188줄) v1.8.3 인물 위키 '상세 정보' 탭(최종안): 바로가기 · 기본 성격(성향 2열) · 수치(값 …
 - `jevmodal.js` (43줄) 2.2.4 Jev 재정렬 설정 창(선택 기능): 켜기·공급자(오픈라우터/Vercel)·키·모델·연결 …
 - `ledger.js` (56줄) v1.6.2 장부 탭: 열린 항목 · 관계 변화 · 세계 시간선. 로컬 저장소일 때만 고칠 수 있다.
-- `lifecards.js` (585줄) 장기기억 애드온: 인물 위키 카드 — 성욕 게이지·몸 상태(NSFW), 마음 흐름(관계), 성감대 인…
+- `lifecards.js` (586줄) 장기기억 애드온: 인물 위키 카드 — 성욕 게이지·몸 상태(NSFW), 마음 흐름(관계), 성감대 인…
 - `loreeditor.js` (71줄) 주입 로어 편집 (v1.7.1, 고급 모드 전용): 대화에 실제로 들어가는 [Dusk Memory] …
 - `lorexport.js` (45줄) 인물 위키의 '정리된 정보'를 봇 로어북으로 내보내기 (v1.8.3). 사용자가 누를 때만, 고른 인…
 - `madv.js` (55줄) 기억 화면 '고급' 영역 (1.7.0 3단계). 고급 모드에서만 보인다. 자주 쓰는 것을 위에, 예전…
 - `makebot.js` (24줄) 카드 → 새 봇 만들기(공용). 카드 이미지 PNG를 에셋으로 저장하고, 카드를 저장한 뒤, 봇을 추…
 - `mbots.js` (43줄) 봇별 기억 (1.7.0 3단계, 계획 §3.2): 검색 · 봇마다 사용 스위치 · 눌러서 기록 보기.
 - `mdetail.js` (80줄) 기록 보기 (1.8.3 목업 3): 인물 위키 · 상황 · 시간선 · 열린 항목 · 관계 중 한 번에…
-- `memaddoncss.js` (407줄) 2.2.6 장기기억 애드온이 직접 넣는 CSS(애인 분홍·새 감정 색, 게이지 배수 카드, 관계도 시…
+- `memaddoncss.js` (428줄) 2.2.6 장기기억 애드온이 직접 넣는 CSS(애인 분홍·새 감정 색, 게이지 배수 카드, 관계도 시…
 - `memoryfileui.js` (68줄) 장기 기억 홈 ‘더보기’ 메뉴: 장기 기억을 파일로 내보내기·불러오기, Erosync 값 지우기.
 - `memstore.js` (7줄) 장기기억 애드온이 업데이트되며 다시 켜지는 사이(ctx.memory가 잠깐 비는 때) 버튼을 눌러도 …
 - `menv.js` (16줄) 열린 봇·채팅의 기억 환경(env)을 만든다. 기록 보기·리수폿·인물 화면이 같이 쓴다 (1.7.0 …
@@ -618,7 +620,7 @@
 - `modeladv.js` (66줄) 고급 모델 설정(고급 모드): 공급자 전체 · 모델 목록 불러오기 · 온도/최대 출력/문맥/제한시간 …
 - `nsfwcard.js` (235줄) addon-rebuild: 인물 위키 NSFW 탭의 성인 프로필 카드 — 이 채팅 장기기억(folde…
 - `people.js` (267줄) 
-- `personv2.js` (462줄) v1.8.3 인물 위키 개편: 머리 + 탭(요약 / 관계 / 상세 정보 / 기록). 넓은 화면(@co…
+- `personv2.js` (494줄) v1.8.3 인물 위키 개편: 머리 + 탭(요약 / 관계 / 상세 정보 / 기록). 넓은 화면(@co…
 - `potpage.js` (55줄) 장기 기억 → 리수폿 화면(2.0.0): Erosync 화면처럼 위에 상태·켜기, 아래에 탭(개요·설…
 - `quickrows.js` (23줄) 장기기억 애드온(0.3.22): 홈 빠른 설정에 붙는 줄 — 캐릭터 상태창(본문 이름 링크)·장면 상…
 - `racebody.js` (110줄) 장기기억 애드온(0.3.22): 종족별 인체 모형 특징(순수 모양 데이터 + SVG 노드). 좌표는 …
@@ -626,7 +628,7 @@
 - `recovery.js` (53줄) 복구·실행 기록(고급 모드): Writer 원문 JSON을 붙여넣어 진단 → 고치기 → 반영(또는 강…
 - `regexui.js` (28줄) v1.8.1 정규식 전처리 설정 카드: 기억 분석 입력·임베딩 질의에서 상태창 같은 군더더기를 걷어 …
 - `scenes.js` (34줄) 
-- `settings.js` (202줄) 
+- `settings.js` (200줄) 
 - `settingstools.js` (135줄) 기억 설정 도구(7단계 B 그룹 4): 범위 칩 · 설정 검색 · 변경 이력 10개 되돌리기 · 프리…
 - `setup.js` (93줄) 처음 설정하기: 3단계(AI 고르기 → 무엇을 기억할까요 → 켜기). 읽을 글은 한 줄씩, 버튼은 크…
 - `skillchat.js` (95줄) AI로 스킬 만들기(v1.8.1): 코코아 탭 우하단 버튼 → AI와 대화하며 스킬 초안을 실시간으로…
@@ -677,7 +679,7 @@
 - `style.js` (4줄) 주의: :host에 overflow:hidden/auto나 overscroll-behavior를 주면… — WH_CSS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(84), `getDatabase`(55), `getChatFromIndex`(34), `getCurrentCharacterIndex`(30), `getCurrentChatIndex`(27), `setCharacterToIndex`(24), `setDatabaseLite`(18), `nativeFetch`(15), `addRisuScriptHandler`(15), `setChatToIndex`(11), `addRisuReplacer`(8), `saveAsset`(8), `getRootDocument`(7), `requestPluginPermission`(6), `readImage`(6), `hideContainer`(6), `registerButton`(5), `getLocalPluginStorage`(5), `toggle`(5), `showContainer`(4), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
+`getCharacterFromIndex`(85), `getDatabase`(55), `getChatFromIndex`(35), `getCurrentCharacterIndex`(31), `getCurrentChatIndex`(28), `setCharacterToIndex`(24), `setDatabaseLite`(18), `nativeFetch`(15), `addRisuScriptHandler`(15), `setChatToIndex`(11), `addRisuReplacer`(8), `saveAsset`(8), `getRootDocument`(7), `requestPluginPermission`(6), `readImage`(6), `hideContainer`(6), `registerButton`(5), `getLocalPluginStorage`(5), `toggle`(5), `showContainer`(4), `risuFetch`(2), `addProvider`(2), `getDatabaseCached`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.

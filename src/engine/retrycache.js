@@ -12,6 +12,21 @@ export function routerKey(prompt) {
   const cat = Object.entries(ref.wiki_catalog ?? {}).map(([k, v]) => `${k}=${v?.title ?? ""}`).sort();
   return squash(JSON.stringify({ user, recent, cat }));
 }
+// 2.2.30 보조 토큰 절약: 고르기(router)는 '이번 대화에 나온 위키 인물'을 고르는 호출이다. 위키 목록이 같고, 내 말·최근 대화에 이름이 나온
+// 위키 인물이 지난번과 같으면 결과도 같으므로 지난 답을 다시 쓴다(호출자가 연속 재사용 횟수를 제한). 이름이 안 나오면 null(재사용 안 함).
+export function castKey(prompt) {
+  const t = String(prompt ?? ""), a = t.indexOf(REF_START), b = t.indexOf(REF_END);
+  if (a < 0 || b < a) return null;
+  let ref; try { ref = JSON.parse(t.slice(a + REF_START.length, b).trim()); } catch { return null; }
+  const user = /"current_user":\s*(\{[^{}]*\}|"(?:[^"\\]|\\.)*")/.exec(t)?.[1] ?? "";
+  const recent = JSON.stringify((ref.recent_chat?.messages ?? ref.recent_chat ?? []).slice(-2));
+  const text = (user + "\n" + recent).toLowerCase();
+  const cat = Object.entries(ref.wiki_catalog ?? {});
+  if (!cat.length) return null;
+  const hit = cat.filter(([, v]) => [v?.title, ...(v?.aliases ?? [])].some((n) => n && String(n).length >= 2 && text.includes(String(n).toLowerCase()))).map(([k]) => k).sort();
+  if (!hit.length) return null;
+  return squash(JSON.stringify({ cat: cat.map(([k]) => k).sort(), hit }));
+}
 // 저장해 둔 응답의 request_ref를 이번 요청 것으로 바꾼다(리수폿은 같은 요청 번호만 받는다)
 export function swapRequestRef(raw, prompt) {
   const want = /"request_ref":"([^"]+)"/.exec(String(prompt ?? ""))?.[1];

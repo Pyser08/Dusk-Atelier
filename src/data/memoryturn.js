@@ -35,6 +35,9 @@ import { appendDuskSection, splitDusk, checkDusk, SECTION_MARK } from "../engine
 import { CYCLE_BLOCK_MARK, CYCLE_FIELD_PROMPT, applyCycleReport, applyCycleReportObject } from "../engine/cyclereport.js";
 import { parseJson } from "../engine/memoryprompt.js";
 import { cycleStates, milestonesBetween } from "../engine/cyclememo.js";
+import { setLeanWriter, LEAN_MARK } from "../engine/pot/writer-prompt.js";
+import { syncAffinity } from "../engine/affinityderive.js";
+import { keyOf as keyOfH, nowOf as nowOfH, effectiveTags as effectiveTagsH, intimacyOf as intimacyOfH } from "../engine/memoryhuman.js";
 import { healDeps } from "../engine/settingdeps.js";
 import { makeTools } from "./memorytools.js";
 import { potConfirm } from "../engine/memoryswitch.js";
@@ -45,7 +48,7 @@ const nkey = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+
 import { readGauge } from "./gaugemult.js";
 import { readSeedOpt } from "./adultseed.js";
 import { cleanJsonReply } from "../engine/jsonreply.js";
-import { routerKey, swapRequestRef, directionKey, boundedSet } from "../engine/retrycache.js";
+import { routerKey, castKey, swapRequestRef, directionKey, boundedSet } from "../engine/retrycache.js";
 import { parseDirectorRun, factSheet, directionMessages, parseDirection, renderDirection, directorEnvelope } from "../engine/director.js";
 import { createCastReader } from "./castlore.js";
 import { dropCreates } from "../engine/castfilter.js";
@@ -66,7 +69,9 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
   // addon-rebuild: 지난 대화 분석이 예약한 기록이면 턴 알림에 source "backfill". 취소돼 끝 알림(backfillPotWait)이 안 와도 풀리게 시각으로 둔다(마지막 예약 뒤 10분).
   let backfillUntil = 0; const BACKFILL_HOLD_MS = 10 * 60 * 1000;
   const tellTurn = (info) => { for (const fn of turnListeners) { try { Promise.resolve(fn(info)).catch((e) => log("턴 알림 처리 실패", e?.message ?? e)); } catch (e) { log("턴 알림 처리 실패", e?.message ?? e); } } };
-  let rt = null, starting = null, lastTurn = null, cold = null, lastRecord = null, lastNote = null, retryHits = 0, lastSkipped = null;
+  // 2.2.30: 기록은 늘 Dusk 기록기 → 리수폿 Writer 프롬프트는 지침 없이(데이터만) 조립한다(리수폿 기록 방식은 없앰)
+  setLeanWriter(() => !!rt);
+  let castHits = 0, rt = null, starting = null, lastTurn = null, cold = null, lastRecord = null, lastNote = null, retryHits = 0, lastSkipped = null;
   // pure: 기억 저장소가 '끔'이면 Dusk 자체 기억(기록·회상·주입)은 전부 빼고 리수폿 위키 정리만 돌린다
   let pure = false;
   let cyclePending = null, cycleNote = ""; const cycleEvents = [], cycleSync = [], nsfwQueue = [], driveQueue = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
@@ -160,7 +165,6 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const cycleScope = (label) => { const m = /batch\s*(\d+)/i.exec(String(label ?? "")); if (!m || +m[1] <= 1) cycleDone.clear(); return { done: cycleDone, label: String(label ?? "") }; };
     const recordWithDusk = async (a, k, preset, prompt, opts, cy = { done: cycleDone, label: "" }) => {
       const s0 = (await store.getIndex()).settings ?? {};
-      if (s0.recorder === "pot") return null;
       const cyc = String(prompt).includes(CYCLE_BLOCK_MARK);   // 2.1.4: 월경·임신 기록도 기록기로(1단계에 줄 몇 개 더, 예전엔 늘 리수폿 Writer)
       const run = parseWriterRun(prompt); if (!run) return null;
       run.cycleOn = cyc;
@@ -252,6 +256,8 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         let failed = null; recorderFailed = false;
         const out = await attemptDuskRecord(() => recordWithDusk(a, k, preset, prompt, opts, cycleScope(label)), (e) => { failed = e; });
         if (out != null) return out;
+        // 2.2.30: 지침 없이 조립한 프롬프트(기록기 전용)는 모델에 그대로 보내면 안 된다 → 기록 실패로 끝낸다(다음 응답·다시 시도 때 전체로 다시 조립)
+        if (!failed && String(prompt).includes(LEAN_MARK)) failed = new Error("기록기가 이번 요청을 읽지 못했어요");
         if (failed) {
           const message = String(failed?.message ?? failed).slice(0, 200);
           const fallback = false;   // 2.2.2 '예전 리수폿 기록으로 대신' 설정 없앰(늘 꺼짐)
@@ -311,17 +317,21 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     const main = new MainWikiHook(api, settings, wiki, keys, libFor("fast"), auto, null, trace);
     // 2.0.0 Dusk 정리 노트: 리수폿 정리 노트 지침(8만 자 안팎)을 보내지 않고, 저장된 위키 값으로 인물 정리표를 프로그램이 만든다(늘 같은 값).
     // 연출 모드면 짧은 질문 1번으로 '이번 응답 방향'만 덧붙인다. 해석이 안 되면 예전 길로.
-    const routerSeen = new Map(), dirSeen = new Map();   // 다시 요청 때 재사용(retrycache.js)
+    const routerSeen = new Map(), dirSeen = new Map(); let lastCast = null;   // 다시 요청 때 재사용(retrycache.js)
     main.llmCall = async (a, k, preset, prompt, opts = {}) => {
       const label = String(opts.stageLabel ?? "");
       if (/^router/i.test(label)) {
         const key = routerKey(prompt);
         if (key && routerSeen.has(key)) { retryHits++; return swapRequestRef(routerSeen.get(key), prompt); }
+        // 2.2.30: 나온 위키 인물·위키 목록이 지난번과 같으면 다시 묻지 않는다(연속 3번까지, 4번째엔 새로 물어 새 인물을 놓치지 않게)
+        const ck = castKey(prompt);
+        if (ck && lastCast?.key === ck && lastCast.n < 3) { lastCast.n++; castHits++; return swapRequestRef(lastCast.out, prompt); }
         const out = await stageCall(a, k, preset, prompt, opts);
         if (key && typeof out === "string") boundedSet(routerSeen, key, out);
+        lastCast = ck && typeof out === "string" ? { key: ck, out, n: 0 } : null;
         return out;
       }
-      if (/^director pass/i.test(label) && (await store.getIndex()).settings?.recorder !== "pot") {
+      if (/^director pass/i.test(label)) {
         const run = parseDirectorRun(prompt);
         if (run) {
           const sheet = factSheet(run); let rows = [];
@@ -429,6 +439,8 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
             if (res && JSON.stringify(res.last) !== JSON.stringify(e.cycleSync)) await store.updateFolder(chaId, ck, (f) => { const x = extraOf(f); x.cycleSync = res.last; f.extra = x; });
             if (res?.changed.length) { log(`월경 주기 동기화: ${res.changed.join(", ")}`); logEvent({ area: "월경·임신", title: `함께 사는 사람끼리 주기가 조금 가까워졌어요 · ${res.changed.join(", ")}` }); } }
         } catch (e) { log("월경 주기 동기화 실패", e?.message ?? e); } }
+        // 2.2.30 호감도 = 감정(인간적·이성적 호감·신뢰, 적대·두려움) + 친밀도 + 첫인상(엔진 계산, 호출 없음)
+        if (ok) { try { await syncAffinityNow(r); } catch (e) { log("호감도 계산 실패", e?.message ?? e); } }
         return ok;
       };
       link.takeCycle = () => cycleEvents.splice(0);
@@ -457,6 +469,18 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     return true;
   }
   // 설정(flow.on·mode, 모델)이 바뀐 뒤 부른다.
+  async function syncAffinityNow(r) {
+    const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(), ch = await api.getCharacterFromIndex(ci), chat0 = await api.getChatFromIndex(ci, ti);
+    const chaId = ch ? String(ch.chaId) : "", ck = chat0 ? chatKeyOf(chat0, ti) : "", fo = chaId && ck ? await store.getFolder(chaId, ck) : null;
+    if (!fo?.emo) return;
+    let policy = null; try { policy = JSON.parse(r.main.sourceLibrary?.base?.policies ?? "{}")?.policies?.["affinity.score"] ?? null; } catch { policy = null; }
+    if (!policy) return;
+    const K = keyOfH(fo), now = nowOfH(fo), uk = K("{{user}}");
+    const feelOf = (names) => { const ks = new Set(names.map(K)); const p = Object.values(fo.emo).find((x) => ks.has(K(x.from)) && K(x.to) === uk); return p ? { has: true, tags: effectiveTagsH(p, now) } : { has: false }; };
+    let res = null; const st = r.wiki.requireStore();
+    st.replace((v) => { res = syncAffinity(v, { feelOf, intimOf: (title) => intimacyOfH(fo, "{{user}}", title, now).v, policy }); return res.scope; }); await st.flush();
+    if (res?.changed.length) log(`호감도 계산: ${res.changed.map((c) => `${c.title} ${c.from}→${c.to}`).join(", ")}`);
+  }
   async function apply() {
     const f = await flowOf();
     if (!f.on) { await stop(); return false; }

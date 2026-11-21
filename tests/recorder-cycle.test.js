@@ -89,3 +89,9 @@ test("성인 항목이 켜지면 1단계에 장면 판단·성인 프로필 줄 
   assert.equal(rec.stage1.drive.replies[0].answer, "yes");
   assert.equal(rec.stage1.nsfw[0].label, "샤워실");
 });
+
+test("2.2.30 가벼운 조립에서도 월경 표식이 남아 기록기가 월경 줄을 묻는다", async () => {
+  const { setLeanWriter } = await import("../src/engine/pot/writer-prompt.js");
+  setLeanWriter(() => true);
+  try { const p = assembleWriterPrompt({ sourceLibrary: LIB, settings: await cycleSettings(), wikiScope: createEmptyWikiScope({ characterId: "c1", chatKey: "k1" }), rpText: RP, requestRef: "r0" }).prompt; assert.ok(p.includes(CYCLE_BLOCK_MARK)); assert.ok(p.length < 60000, String(p.length)); assert.ok(parseWriterRun(p)); } finally { setLeanWriter(() => false); }
+});

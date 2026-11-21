@@ -40,6 +40,6 @@ test("'나' 보기: 나를 아는 인물별 진도·감정(상대→나)·호칭
   const f = mk(); mergeIntoUser(f, ["Sensei"]);
   const v = meView(f);
   assert.equal(v.records, 3); assert.equal(v.others.length, 1);
-  const o = v.others[0]; assert.equal(o.name, "호시노"); assert.equal(o.callsMe, "선생님"); assert.equal(o.feel.trust, 3); assert.equal(o.face.alone, "다정"); assert.ok(o.stageLabel);
+  const o = v.others[0]; assert.equal(o.name, "호시노"); assert.equal(o.callsMe, "선생님"); assert.equal(o.feel.trust, 3); assert.equal(o.face.alone, "다정"); assert.equal(typeof o.stageLabel, "string", "2.2.30: 진도 대신 관계 종류(없으면 빈 글)");
   assert.equal(meView({ people: {} }).others.length, 0);
 });

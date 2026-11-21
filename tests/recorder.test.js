@@ -133,3 +133,50 @@ test("다시 요청: 고르기 열쇠는 위키 내용이 바뀌어도 같은 �
   assert.equal(routerKey(mk("req:router_1", "옛")), routerKey(mk("req:router_2", "새")));
   assert.equal(swapRequestRef('{"schema_version":1,"request_ref":"req:router_1","selected":[]}', mk("req:router_2", "")), '{"schema_version":1,"request_ref":"req:router_2","selected":[]}');
 });
+
+test("2.2.30 기본 성격: 처음 등장 때 profile 줄이 빠지면 다음 응답에서 다시 묻고, 받으면 생긴다", async () => {
+  const settings = await potSettings(); let scope = createEmptyWikiScope({ characterId: "c9", chatKey: "k9" }); const sys = [];
+  let withProfile = false;
+  const model = async (msgs) => {
+    const s = msgs[0].content, u = JSON.parse(msgs[1].content); sys.push(s);
+    if (s.startsWith("You are the memory recorder")) return "scene|민지가 {{user}}에게 고마워했다|카페|오후|yes\nwho|민지|{{user}}의 손을 잡고 고마워했다|2";
+    if (u.focus === "민지" || (u.people ?? []).some((p) => p.name === "민지")) return withProfile ? "profile|다정함|다정함,조심성|가족" : "id|대학생";
+    return "none";
+  };
+  const turn = async (rp, ref, cand = []) => {
+    const llmCall = async (_a, _k, _p, prompt) => { const run = parseWriterRun(prompt); const rec = await recordTurn(model, run, {}); return JSON.stringify(buildEnvelope(run, rec)); };
+    const input = { settings, sourceLibrary: LIB, wikiScope: scope, rpText: rp, userText: "", recentContext: "", userIdentity: { title: "현우", aliases: [], known: true }, requestRef: ref, seedSources: {}, candidateDocumentIds: cand, newCharacterCandidates: [], allowCreate: true };
+    const out = await executeWriterBatches({ input, preset: {}, api: {}, keyStore: {}, llmCall, batchRef: "b" + ref, contributionRef: "c" + ref });
+    scope = out.scope;
+  };
+  await turn(RP1, "r1");
+  const minji = () => Object.values(scope.documents).find((d) => d.title === "민지");
+  assert.ok(minji() && !scope.people.profiles[minji().id], "첫 응답에서 모델이 빠뜨림");
+  sys.length = 0; withProfile = true;
+  await turn("민지는 {{user}}의 손을 다시 잡았다. \"오늘도 와 줘서 고마워.\" 민지는 수줍게 웃으며 창밖을 바라보았다.", "r2", [minji().id]);
+  assert.ok(sys.some((s) => /personality is not in the card yet/.test(s)), "기존 인물에게도 기본 성격을 물음");
+  assert.ok(scope.people.profiles[minji().id], "다음 응답에서 기본 성격이 생김");
+});
+
+test("2.2.30 가벼운 조립: 기록기용 프롬프트는 지침 없이 데이터만 — 기록기가 읽는 내용은 전체와 같고 크기는 1/4 이하", async () => {
+  const { setLeanWriter, LEAN_MARK } = await import("../src/engine/pot/writer-prompt.js");
+  const settings = await potSettings(), wikiScope = createEmptyWikiScope({ characterId: "c", chatKey: "k" });
+  const args = { sourceLibrary: LIB, settings, wikiScope, rpText: RP1, requestRef: "r" };
+  const full = assembleWriterPrompt(args);
+  setLeanWriter(() => true);
+  try {
+    const lean = assembleWriterPrompt(args);
+    assert.ok(lean.prompt.includes(LEAN_MARK) && !full.prompt.includes(LEAN_MARK));
+    assert.ok(lean.prompt.length * 4 < full.prompt.length, `${lean.prompt.length} vs ${full.prompt.length}`);
+    const a = parseWriterRun(full.prompt), b = parseWriterRun(lean.prompt);
+    assert.ok(b, "기록기가 읽을 수 있음");
+    assert.deepEqual({ ...b, slots: [...b.slots.keys()], missingProfiles: [...b.missingProfiles] }, { ...a, slots: [...a.slots.keys()], missingProfiles: [...a.missingProfiles] });
+  } finally { setLeanWriter(() => false); }
+});
+
+test("2.2.30 성적인 장면이 아니면 성인 줄은 욕구·피로·잠만(보조 토큰 절약), 성적인 장면이면 전부", async () => {
+  const { isHotText, NSFW_LITE_STAGE1 } = await import("../src/engine/recorder.js");
+  assert.equal(isHotText("유우카는 장부를 서랍에 넣고 잠갔다."), false);
+  for (const t of ["시로코는 세라의 목에 입을 맞춰 자국을 남겼다.", "둘은 침대에서 서로의 옷을 벗기고 키스했다.", "She moaned softly."]) assert.equal(isHotText(t), true, t);
+  assert.match(NSFW_LITE_STAGE1, /gauge\|Name\|lust or fatigue/); assert.doesNotMatch(NSFW_LITE_STAGE1, /zone\||taste\|/);
+});

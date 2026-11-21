@@ -26,6 +26,9 @@ export function isNoneReply(raw) {
 }
 const REF_START = "<<<RISUPOT_REFERENCE_DATA_START>>>", REF_END = "<<<RISUPOT_REFERENCE_DATA_END>>>", MANIFEST = "# Text Control Manifest";
 const nk = (n) => String(n ?? "").toLowerCase().replace(/[\s'"“”‘’「」『』\[\]()（）<>.,!?~·]/g, "");
+// 2.2.30 보조 토큰 절약: 최근 대화는 바로 앞부분만(앞 응답은 이미 기록됨, 누가 누구인지 이어 보는 데 2천 자면 충분)
+export const RECENT_MAX = 2000;
+const tail = (v, n) => { const t = String(v ?? "").replace(/\s+/g, " ").trim(); return t.length > n ? "…" + t.slice(-n) : t; };
 const cut = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 
 // ── ① 리수폿 Writer 프롬프트에서 데이터 꺼내기 ──
@@ -154,9 +157,20 @@ export const CYCLE_STAGE1 = [
   "birth|Name      she gives birth in newest",
 ].join("\n");
 import { DRIVE_STAGE1, driveFrom } from "./scenedrive.js";
+import { TIE_STAGE1 } from "./ties.js";
 import { EXTRA_STAGE1, MARK_STAGE1, STATUS_STAGE1, OUTFIT_STAGE1, WEATHER_STAGE1, COHABIT_STAGE1, extraFrom } from "./memextra.js";
 import { RACE_STAGE1 } from "./races.js";   // 0.3.22 소문·목표·세계 문서·몸 흔적
 // addon-rebuild: 채팅별 성인 프로필(체위·장소·성적 수치) 변화 — 성인 항목이 켜졌을 때만 1단계에 줄 두 개를 더 받는다. 대부분의 턴엔 아무 줄도 없다.
+// 2.2.30: 성적인 장면인지(성인 줄을 다 물을지) — 글에 성적 행위·노출·애무 낱말이 있으면. 놓치면 그 턴 체위·약점 기록만 빠지고 욕구·피로는 늘 묻는다
+const HOT_RE = /섹스|성관계|관계를 (?:가졌|맺)|삽입|사정|절정|오르가즘|애무|신음|젖꼭지|유두|가슴을 (?:만|주무|움켜|핥|빨)|알몸|나체|벗(?:기|겼|었|은|어)|속옷|팬티|브라|허벅지 ?안|사타구니|성기|음경|자지|보지|클리|질 ?안|항문|엉덩이를 (?:만|주무|움켜)|핥|빨(?:았|아|고)|펠라|커닐|자위|발정|흥분(?:해|한|된)|야하|음란|키스|입맞|입을 맞|자국을 남|키스 ?마크|목덜미|혀를 (?:섞|넣)|쓰다듬|끌어안|껴안|\b(?:sex|fuck|cum|orgasm|moan|naked|nude|nipple|penis|cock|pussy|clit|blowjob|lick|kiss|aroused|horny)/i;
+export const isHotText = (t) => HOT_RE.test(String(t ?? ""));
+export const NSFW_LITE_STAGE1 = [
+  "",
+  "",
+  "Sexual profile tracking is on — ALSO write these lines only when newest clearly shows it (most replies have none):",
+  "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      arousal never rises on its own — write lust only when newest moves this character's arousal; fatigue for real exertion or rest",
+  "sleep|Name",
+].join("\n");
 export const NSFW_STAGE1 = [
   "",
   "",
@@ -258,11 +272,14 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
   const key = nk(source).slice(0, 4000);
-  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "") + "|human" + (world ? "|world" : "") + (status ? "|status" : "") + (outfit ? "|outfit" : "") + (weather ? "|weather" : "") + (race ? "|race" : "");
-  const extra = (cycle ? CYCLE_STAGE1 + COHABIT_STAGE1 : "") + (nsfw ? NSFW_STAGE1 + MARK_STAGE1 + DRIVE_STAGE1 : "") + HUMAN_STAGE1 + (world ? EXTRA_STAGE1 : "") + (status ? STATUS_STAGE1 : "") + (outfit ? OUTFIT_STAGE1 : "") + (weather ? WEATHER_STAGE1 : "") + (race ? RACE_STAGE1 : "");   // 0.3.22 소문·목표·세계 문서는 설정 ‘세계 탭’(기본 꺼짐)   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
+  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "") + "|human|tie" + (world ? "|world" : "") + (status ? "|status" : "") + (outfit ? "|outfit" : "") + (weather ? "|weather" : "") + (race ? "|race" : "") + (nsfw && isHotText([run.user, source].join("\n")) ? "|hot" : "");
+  // 2.2.30 보조 토큰 절약: 성적인 장면이 아니면 성인 줄은 욕구·피로·잠(매 턴 필요)만 묻고 나머지(체위·약점·흔적 등 10여 줄)는 뺀다.
+  // 바뀌는 부분(성인 줄)은 맨 뒤에 둬서 앞부분 지침이 매번 같게 — 모델 제공사의 프롬프트 캐시가 먹는다.
+  const hot = nsfw && isHotText([run.user, source].join("\n"));
+  const extra = (cycle ? CYCLE_STAGE1 + COHABIT_STAGE1 : "") + HUMAN_STAGE1 + TIE_STAGE1 + (world ? EXTRA_STAGE1 : "") + (status ? STATUS_STAGE1 : "") + (outfit ? OUTFIT_STAGE1 : "") + (weather ? WEATHER_STAGE1 : "") + (race ? RACE_STAGE1 : "") + (nsfw ? (hot ? NSFW_STAGE1 + MARK_STAGE1 + DRIVE_STAGE1 : NSFW_LITE_STAGE1 + DRIVE_STAGE1) : "");   // 0.3.22 소문·목표·세계 문서는 설정 ‘세계 탭’(기본 꺼짐)   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
   let stage1 = cache?.get(ckey) ?? null;
   if (!stage1) {
-    const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: cut(run.recent || (dusk?.recent ?? []).join("\n"), 4000), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
+    const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: tail(run.recent || (dusk?.recent ?? []).join("\n"), RECENT_MAX), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
     stage1 = await ask(call, [{ role: "system", content: LINES_STAGE1 + extra }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
       const lines = parseLines(raw); if (!lines.length) return null;
       const got = fromStage1(lines, { known, source, openIds });
@@ -299,7 +316,11 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   // 2.2.6 첫인상이 아직 없는 기존 인물에게도 첫인상 줄을 묻는다(처음 등장 때 놓친 경우)
   const noFirst = (t) => !!t.doc && !entryText(t.doc, "affinity.appraisal", "actor:user");
   const firstLine = (who) => `first|${who}'s first impression of {{user}}, one sentence      only if it is not in the card yet`;
-  const askPerson = (t, payload, isNew, useLight, tries = 2) => ask(call, [{ role: "system", content: linesStage2(t.name, { light: useLight, beliefs, wiki: true, isNew, extraLines: [...deepMenu(run), ...startLine(run), ...(noFirst(t) ? [firstLine("the focus character")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+  // 2.2.30 기본 성격: 예전엔 처음 등장한 응답에서만 profile 줄을 물어, 그때 모델이 빠뜨리면 그 인물은 기본 성격이 영영 안 생겼다
+  // (자동으로 메우는 ensureProfiles는 부르는 곳이 없었다) → 위키 문서는 있는데 기본 성격이 없는 인물에게도 계속 묻는다
+  const noProfile = (t) => !!t.doc && run.peopleOn !== false && !!run.missingProfiles?.has?.(t.doc.ref);
+  const profileLine = (who) => `profile|one-line personality|trait1,trait2|what they value      for ${who}: write it (its personality is not in the card yet)`;
+  const askPerson = (t, payload, isNew, useLight, tries = 2) => ask(call, [{ role: "system", content: linesStage2(t.name, { light: useLight, beliefs, wiki: true, isNew, extraLines: [...deepMenu(run), ...startLine(run), ...(noFirst(t) ? [firstLine("the focus character")] : []), ...(noProfile(t) ? [profileLine("the focus character")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
     if (isNoneReply(raw)) return { lines: [] };
     const lines = parseLines(raw); return lines.length ? { lines } : null;
   }, { tries });
@@ -325,7 +346,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const askGroup = async (chunk) => {
     const names = chunk.map((t) => t.name), anyNew = chunk.some((t) => !t.doc);
     const payload = { known: known.map((p) => p.name), overview: { scene: stage1.scene?.sum ?? "" }, people: chunk.map((t) => { const p = payloadOf(t); delete p.focus; delete p.known; delete p.newest; return { name: t.name, ...(t.doc ? {} : { new: true }), ...p, overview: undefined, act: t.act ?? "" }; }), newest: source.slice(0, 8000) };
-    return ask(call, [{ role: "system", content: linesStage2Group({ light: lite, beliefs, wiki: true, anyNew, extraLines: [...deepMenu(run), ...startLine(run), ...(chunk.some(noFirst) ? [firstLine("each character whose card has no first impression")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+    return ask(call, [{ role: "system", content: linesStage2Group({ light: lite, beliefs, wiki: true, anyNew, extraLines: [...deepMenu(run), ...startLine(run), ...(chunk.some(noFirst) ? [firstLine("each character whose card has no first impression")] : []), ...(chunk.some(noProfile) ? [profileLine(`each of ${chunk.filter(noProfile).map((t) => t.name).join(", ")}`)] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
       const m = splitGroupReply(raw, names); if (!m || !m.size) return null;
       return new Map([...m].map(([n, block]) => [n, isNoneReply(block) ? [] : parseLines(block)]));
     }, { tries: 2 });

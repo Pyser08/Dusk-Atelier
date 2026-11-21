@@ -4,10 +4,11 @@ import { regressLine } from "./regress.js";
 import { GRADE_WEIGHT } from "./memorygrade.js";
 import { injectable, trustTag, changeNote, currentState, isGoneState } from "./memorytrust.js";
 import { emoLines, hasEmo } from "./memoryemo.js";
-import { effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bondLines, beliefLines, riftLines, faceLines } from "./memoryhuman.js";
+import { keyOf, effectiveTags, returnGap, earlierIds, fading, stageLines, talkLines, bondLines, beliefLines, riftLines, faceLines } from "./memoryhuman.js";
 import { keyHits, keyBoost } from "./memorykeys.js";
 import { semBoost, semHit } from "./embed.js";
 import { povLines, innerLines, expLines } from "./memoryinner.js";
+import { tieLines as kindLines } from "./ties.js";
 import { lastTouch, strength, forgotten, knowLines, openLines, relLines, sourceLines, currentStoryTime, tieLines, settledLines } from "./memoryplus.js";
 
 export const MARKER = "[Dusk Memory";
@@ -205,7 +206,7 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
     add("emo", "Feelings (current gauges 0-10):", emoLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.emoTokens ?? 160);
     add("romance", "Romantic pull (how each shows it now):", romanceLines(folder, { relevant: rel.size ? rel : null, ...(cool ? { now: messageCount, eff: effectiveTags } : {}) }), settings.romanceTokens ?? 200);   // 2.2.6 썸 행동 지침
     if (human) {
-      add("stage", "Relationship stage (closeness should change gradually):", stageLines(folder, cur?.who ?? [], messageCount), settings.stageTokens ?? 90);
+      add("stage", "Relationship stage (closeness should change gradually):", stageLines(folder, cur?.who ?? [], messageCount), settings.stageTokens ?? 120);
       if (rel.size) {   // 장면에 관련 인물이 있을 때만
         add("talk", "How they address each other (keep it unless it changes):", talkLines(folder, rel), settings.talkTokens ?? 100);
         add("bond", "Shared memories they might bring up (only if natural):", bondLines(folder, rel, messageCount), settings.bondTokens ?? 80);
@@ -219,7 +220,9 @@ export function buildBlock(folder, { messageCount = 0, recentText = "", settings
       add("self", "Inner states (own view vs likely real reason; the reason is only inferred):", innerLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never"), { relevant: rel.size ? rel : null }), settings.selfTokens ?? 140);
       add("exp", "Expectation gaps between characters:", expLines(folder, { relevant: rel.size ? rel : null }), settings.expTokens ?? 140);
     }
-    add("ties", "Relationships (who is what to whom):", tieLines(folder, rel.size ? rel : null), settings.tieTokens ?? 120);
+    // 2.2.30 관계 종류(extra.ties): 장면 인물 + 유저 사이만(장면 인물이 없으면 전체 일부)
+    const kinds = kindLines(folder?.extra?.ties, rel.size ? [...rel, "{{user}}", ...(settings.userNames ?? [])] : Object.values(folder?.extra?.ties ?? {}).flatMap((x) => [x.a, x.b]), keyOf(folder), 8);
+    add("ties", "Relationships (who is what to whom):", [...kinds, ...tieLines(folder, rel.size ? rel : null)], settings.tieTokens ?? 160);
     add("rel", "Relationship shifts (recent):", relLines(folder, { relevant: rel.size ? rel : null }), settings.relTokens ?? 140);
     add("know", "Knowledge limits (who knows what):", knowLines(Object.values(folder.people ?? {}).filter((p) => (p.ctx ?? "auto") !== "never")), settings.knowTokens ?? 160);
     if (messages) { const src = sourceLines(folder, messages, { limit: settings.srcCount ?? 2 }); add("src", "Source lines (verbatim from the story):", src.map((x) => x.line), settings.srcTokens ?? 300); manifest.recordIds.push(...src.map((x) => x.id)); }

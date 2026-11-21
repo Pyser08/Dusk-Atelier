@@ -61,7 +61,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     switchEl(v0, { label: title, onChange: (v, el) => { setSwitch(el, v); full ? save((st) => set(st, v)) : saveQuiet((st) => set(st, v), el, v); } }));
   ensureMemAddonCss(ctx);
   const memOptions = h("section", { class: "rb-card bordered rb-scard rb-mem-options" }, h("span", { class: "h" }, "기억 옵션"), aiLegend(),
-    orow("사람다운 기억", "관계 진도·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }, "human"),
+    orow("사람다운 기억", "관계 종류·호칭·말투·둘만의 추억 등을 기억해요.", inj.human !== false, (o, v) => { o.human = v; }, "human"),
     orow("감정이 시간이 지나면 식어요", "적대·두려움은 빨리, 애정은 천천히 누그러져요.", inj.cool !== false, (o, v) => { o.cool = v; }, "cool"),
     orow("거짓말·오해 추적", "누가 무엇을 잘못 믿는지 기억해요. 분석 모델이 약하면 틀릴 수 있어요.", inj.beliefs === true, (o, v) => { o.beliefs = v; }, "beliefs"));
   // 2.2.4 기억 토큰 절약: 칸별 예산을 줄여 기억 블록 약 4,100 → 2,900토큰(LoCoMo 정답률 약 1~2점 손해)

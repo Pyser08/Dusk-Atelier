@@ -95,7 +95,7 @@ export function statusCardHtml(folder, doc, { turn = null, when = "", adult = tr
   const raceNs = showRace ? [rv.heat?.label ? chip(rv.heat.on ? `🔥 ${rv.heat.label}` : rv.heat.label, rv.heat.on ? "rgba(232,87,142,.18)" : "rgba(127,127,127,.12)", rv.heat.on ? C.rose : "inherit") : "", rv.nsfw ? `<span style="display:block;font-size:12px;line-height:1.6;opacity:.9">${esc(cut(rv.nsfw, 160))}</span>` : ""].join("") : "";
   const nsBody = sec(`종족 체질${showRace ? ` · ${esc(rv.custom || rv.label)}` : ""}`, raceNs, { color: C.teal }) + sec("몸 흔적", mkChips && `<span style="display:block">${mkChips}</span>`, { color: C.deep }) + sec("성적 상태", ns, { color: C.deep });
   return head + `<span data-tabbox style="display:block;position:relative;height:min(50vh,400px);margin-top:12px">`
-    + `<span style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:11.5px;${MUTE}">위 탭을 눌러 보세요</span>`
+    + `<span data-dusk="tabhint" style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:11.5px;${MUTE}">위 탭을 눌러 보세요</span>`
     + tab(g, "g", "일반", grid + general, true) + tab(g, "n", "NSFW", nsGrid + nsBody, false) + `</span>`;
 }
 let tabSeq = 0;

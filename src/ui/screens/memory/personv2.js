@@ -18,11 +18,10 @@ import { isLover, loverPairs, setLover, pairKey } from "../../../engine/lover.js
 import { timeline, eventText, isSecret, setSecret, unrequited } from "../../../engine/romance.js";
 import { ensureMemAddonCss, wkLayoutOf } from "./memaddoncss.js";
 import { parseCycleBody } from "../../../engine/pot/cycle-tracking.js";
-import { setUserNames, nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
+import { TIE_KINDS, TIE_GROUPS, tiesBetween, setTies } from "../../../engine/ties.js";
+import { extraOf } from "../../../engine/memextra.js";
+import { keyOf, intimacyOf, setIntimacy, INTIM_MAX, INTIM_WORDS, setUserNames, nowOf, counterparts, pairView, changesOf, currentAttrs, momentsOf, returnGap, setTalk, toggleTalkLock, deleteTalk, editBond, deleteBond, resolveBelief, deleteBelief, resolveRift, deleteRift, setFace, deleteFace } from "../../../engine/memoryhuman.js";
 
-const STAGES = [["just met", "처음 봄"], ["acquaintances", "아는 사이"], ["close", "친한 사이"], ["very close", "아주 가까움"]];
-const stageIdx = (s) => Math.max(0, STAGES.findIndex(([k]) => k === s));
-const stageName = (s) => STAGES[stageIdx(s)][1];
 const TONE = { formal: "존댓말", casual: "반말", mixed: "섞어 씀" };
 const TABS = [["sum", "요약"], ["rel", "관계"], ["info", "상세 정보"], ["nsfw", "NSFW"], ["log", "기록"]];
 const GRADE_TIP = { A: "가장 중요한 순간", B: "중요한 순간", C: "보통", D: "사소한 일" };
@@ -66,7 +65,22 @@ export function personTabs(env, parts) {
   // ── 요약 ──
   const card = (title, kids, extra, cls) => h("section", { class: ["rb-wk2-card", cls] }, h("div", { class: "rb-wk2-ch" }, h("b", null, title), h("span", { style: "flex:1" }), extra ?? null), kids);
   const profileText = (env.folder.wiki?.people?.profiles?.[doc?.id]?.summary) || p?.digest || "";
-  const track = (s, small) => h("span", { class: ["rb-wk2-trk", small && "sm"], role: "img", "aria-label": `관계 진도 ${stageName(s)}` }, STAGES.map((_, i) => h("i", { class: i <= stageIdx(s) ? "on" : "" })));
+  // 2.2.30: 관계 진도(처음 봄→아주 가까움) 대신 관계 종류(가족·동료·주종·사제 …). 진도는 짐작이라 가족도 ‘처음 봄’으로 나와 몰입을 깼다
+  const tiesWith = (other) => { const T = extraOf(f).ties, K = keyOf(f); for (const n of selfNames) { const t = tiesBetween(T, n, other, K); if (t.length) return t; } return []; };
+  const tieText = (other) => tiesWith(other).map((t) => t.label).join(" · ");
+  // 관계 종류 직접 고치기(저장하면 잠겨서 AI가 바꾸지 않음)
+  const editTies = (other, cur) => run(modal(ctx.win, (done) => {
+    const it = intimacyOf(f, me, other, now), intim = h("input", { class: "rb-input", type: "number", min: 0, max: INTIM_MAX, placeholder: `자동(${it.manual ? "-" : it.v})`, value: it.manual ? it.v : "", style: "width:110px", "aria-label": "친밀도" });
+    const rows = TIE_KINDS.map((k) => {
+      const had = cur.find((t) => t.id === k.id), cb = h("input", { type: "checkbox", checked: !!had, "aria-label": k.ko });
+      const sel = k.up ? h("select", { class: "rb-input", style: "width:auto;padding:2px 6px", "aria-label": `${k.ko} 위쪽` }, h("option", { value: "" }, "위아래 모름"), h("option", { value: me, selected: had?.up && keyOf(f)(had.up) === keyOf(f)(me) }, `${subj(shown(me))} ${k.up[0]}`), h("option", { value: other, selected: had?.up && keyOf(f)(had.up) === keyOf(f)(other) }, `${subj(shown(other))} ${k.up[0]}`)) : null;
+      return { k, cb, sel, el: h("label", { style: "display:flex;align-items:center;gap:8px;padding:3px 0" }, cb, h("span", { style: "min-width:96px" }, k.ko), sel) };
+    });
+    return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(440px,94vw)" }, h("h3", null, `${shown(me)} ↔ ${shown(other)} 관계`), h("p", { class: "rb-muted" }, "여러 개 고를 수 있어요. 저장하면 잠겨서 AI가 바꾸지 않아요."),
+      h("label", { class: "rb-mem-field", style: "display:flex;align-items:center;gap:8px" }, h("span", null, `친밀도 (0~${INTIM_MAX}, 비우면 자동)`), intim),
+      h("div", { class: "rb-tie-groups", style: "max-height:46vh;overflow:auto" }, TIE_GROUPS.map(([g, gl]) => h("fieldset", { class: "rb-tie-g" }, h("legend", null, gl), rows.filter((x) => x.k.g === g).map((x) => x.el)))),
+      h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done({ list: rows.filter((x) => x.cb.checked).map((x) => ({ id: x.k.id, up: x.sel?.value ?? "" })), intim: intim.value.trim() }) })));
+  }).then((r) => r && save((fo) => { const e = extraOf(fo); setTies(e.ties, me, other, r.list); fo.extra = e; setIntimacy(fo, me, other, r.intim === "" ? null : r.intim); }, "관계를 저장했어요.")));
   const goPair = (name) => { withSel[pk] = name; tabs[pk] = "rel"; paint(); };
   // 수치(리수폿 호감도·첫인상·음란도·의심도 등)와 직접 만든 게이지
   const metrics = parts.metrics ?? [];
@@ -86,7 +100,7 @@ export function personTabs(env, parts) {
     h("button", { type: "button", class: "rb-wk2-link", onClick: () => { tabs[pk] = "info"; paint(); } }, "자세히"));
   numCard.hidden = !metrics.length;
   if (parts.gauges) Promise.resolve().then(parts.gauges).then((g) => { gauges = g ?? []; fillGauges(); }).catch(() => {});
-  const glanceCard = () => people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, (lay === "B4" ? people : people.slice(0, 6)).map((x) => h("button", { type: "button", class: ["rb-wk2-gl", selfNames.some((n) => isLover(f, n, x.name)) && "lover", gcls(x.name)], "aria-pressed": lay === "B4" && x.name === (withSel[pk] ?? people[0]?.name) ? "true" : null, onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), track(x.stage, true), h("small", { class: `st-${stageIdx(x.stage)}` }, stageName(x.stage))))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null;
+  const glanceCard = () => people.length ? card("관계 한눈에", h("div", { class: "rb-wk2-glance" }, (lay === "B4" ? people : people.slice(0, 6)).map((x) => h("button", { type: "button", class: ["rb-wk2-gl", selfNames.some((n) => isLover(f, n, x.name)) && "lover", gcls(x.name)], "aria-pressed": lay === "B4" && x.name === (withSel[pk] ?? people[0]?.name) ? "true" : null, onClick: () => goPair(x.name) }, avatar(shown(x.name), ""), h("b", null, shown(x.name)), tieText(x.name) ? h("small", { class: "rb-wk2-tie" }, tieText(x.name)) : null))), h("small", { class: "rb-muted" }, "누르면 관계 탭")) : null;
   // what: "all"(예전·모바일 요약 탭) | "side"(B4 PC 왼쪽 열: 수치·관계 한눈에) | "tab"(B4 PC 요약 탭: 나머지를 꾸며서)
   const summary = (what = "all") => {
     const prof = () => card(`지금의 ${me}`, [profileText ? h("p", { class: "rb-wk2-p" }, profileText) : h("p", { class: "rb-muted" }, "아직 요약이 없어요. 상세 정보에서 기본 성격을 만들거나 ‘요약 정리’를 눌러 보세요."),
@@ -104,6 +118,24 @@ export function personTabs(env, parts) {
 
   // ── 관계 ──
   const loverWith = (other) => selfNames.some((n) => isLover(f, n, other));
+  // 2.2.30 친밀도 고리(두 사람 공통) · 관계 카드(친밀도 + 양쪽 호감 마주 보기 막대 + 관계 종류)
+  const intimRing = (other, big) => { const it = intimacyOf(f, me, other, now), r = 34, c = 2 * Math.PI * r;
+    return h("div", { class: ["rb-gx-ring", "e-intim-c", big && "big"], title: it.manual ? "직접 정한 값" : "함께한 장면·추억·감정·관계 종류로 계산해요", role: "progressbar", "aria-label": "친밀도", "aria-valuemin": 0, "aria-valuemax": INTIM_MAX, "aria-valuenow": it.v },
+      h("svg", { viewBox: "0 0 84 84", "aria-hidden": "true", ref: (el) => { el.innerHTML = `<circle cx="42" cy="42" r="${r}" class="bg"/><circle cx="42" cy="42" r="${r}" class="fg" style="stroke-dasharray:${c};--off:${c * (1 - it.v / INTIM_MAX)}"/>`; } }),
+      h("div", { class: "in" }, h("b", null, String(it.v)), h("small", null, "친밀도")), it.manual ? h("small", { class: "lk", title: "직접 정한 값" }, "🔒") : null); };
+  const relMeter = (v, other) => {
+    const it = intimacyOf(f, me, other, now), side = (back, t) => (back ? v.feel.ba : v.feel.ab)?.tags?.[t] ?? 0, known = (back, t) => (back ? v.feel.ba : v.feel.ab)?.stored?.[t] != null;
+    const fly = (t, label) => h("div", { class: ["rb-rm-row", `e-${t}-c`] },
+      h("b", { class: "v" }, known(false, t) ? String(side(false, t)) : "—"),
+      h("span", { class: "t l", role: "img", "aria-label": `${me} → ${shown(other)} ${label} ${side(false, t)}` }, h("i", { style: { width: `${side(false, t) * 10}%` } })),
+      h("small", { class: "lb" }, label),
+      h("span", { class: "t r", role: "img", "aria-label": `${shown(other)} → ${me} ${label} ${side(true, t)}` }, h("i", { style: { width: `${side(true, t) * 10}%` } })),
+      h("b", { class: "v" }, known(true, t) ? String(side(true, t)) : "—"));
+    return h("div", { class: "rb-rm" },
+      h("div", { class: "rb-rm-hero" }, h("div", { class: "who" }, avatar(me, ""), h("b", null, me)), h("div", { class: "mid" }, intimRing(other, true), h("small", { class: "word" }, INTIM_WORDS[it.v] ?? "")), h("div", { class: "who" }, avatar(shown(other), ""), h("b", null, shown(other)))),
+      h("div", { class: "rb-rm-rows" }, fly("affection", "인간적 호감"), fly("attraction", "이성적 호감")),
+      h("small", { class: "rb-rm-leg rb-muted" }, h("span", null, `← ${subj(me)} 느끼는 마음`), h("span", null, `${subj(shown(other))} 느끼는 마음 →`)));
+  };
   const feelCard = (v, other, dir) => {   // dir: 없으면 방향 바꾸기 링크, true/false면 그 방향 고정(A안 마주 보기)
     const TAGS = tagsFor(loverWith(other));   // 2.2.6 소유욕·독점욕은 애인일 때만
     const fixed = dir != null, back = fixed ? dir : !!rev[pk + "|" + other], fv = back ? v.feel.ba : v.feel.ab, a = back ? shown(other) : me, b = back ? me : shown(other);
@@ -135,7 +167,7 @@ export function personTabs(env, parts) {
       const pips = (t, heart) => h("div", { class: ["rb-gx-pips", heart && "heart"] }, h("span", null, EMO_LABEL[t]), h("span", { class: "row", role: "img", "aria-label": `${EMO_LABEL[t]} ${val(t)}/${GAUGE_MAX}` }, Array.from({ length: GAUGE_MAX }, (_, i) => h("i", { class: [i < val(t) && "on", `e-${t}-c`], style: { "--i": i } }))), h("small", null, String(val(t))));
       const shownT = (list) => list.filter((t) => TAGS.includes(t) && has(t));
       return h("div", { class: "rb-gx" },
-        h("div", { class: "rb-gx-rings" }, ring("affection", "인간적 호감"), ring("attraction", "이성적 호감")),
+        h("div", { class: "rb-gx-rings three" }, ring("affection", "인간적 호감"), intimRing(other), ring("attraction", "이성적 호감")),
         shownT(BAR).length ? h("div", { class: "rb-gx-group" }, shownT(BAR).map(bar)) : null,
         shownT(PIP).length ? h("div", { class: "rb-gx-group" }, shownT(PIP).map((t) => pips(t))) : null,
         shownT(HEART).length ? h("div", { class: "rb-gx-group" }, shownT(HEART).map((t) => pips(t, true))) : null);
@@ -216,13 +248,13 @@ export function personTabs(env, parts) {
   const unreqOf = (other) => unrequited(f).find((x) => selfNames.some((n) => (nk(x.from) === nk(n) && nk(x.to) === nk(other)) || (nk(x.to) === nk(n) && nk(x.from) === nk(other))));
   // 상대 한 명과의 카드 조각. 빈 칸은 null 대신 empty에 이름만 모은다(개편 A·B·C안에서 숨김).
   const pieces = (other) => {
-    const v = pairView(f, selfNames, other, now), si = stageIdx(v.stage.stage), empty = [];
+    const v = pairView(f, selfNames, other, now), ties = tiesWith(other), empty = [];
     const tl = selfNames.flatMap((n) => timeline(f, n, other)).filter((e, i, a) => a.indexOf(e) === i), u = unreqOf(other);
     const ms = metrics.filter((x) => x.targets.some((t) => nk(t) === nk(other)));
     const P = {
-      v, si,
-      stage: card("관계 진도", [h("div", { class: "rb-wk2-steps", role: "img", "aria-label": `지금 ${STAGES[si][1]}` }, STAGES.map(([, l], i) => h("span", { class: ["st", i < si && "past", i === si && "now"] }, h("i", null), h("small", null, l)))),
-        h("p", { class: "rb-muted" }, `함께한 장면 ${v.stage.shared}번${si <= 1 ? " · 아직 가깝지 않아서, AI가 갑자기 너무 친해지지 않게 해요." : ""}`)], null, "rb-wk2-stagecard"),
+      v, ties,
+      stage: card("관계", [relMeter(v, other), ties.length ? h("div", { class: "rb-wk2-chips" }, ties.map((t) => h("span", { class: "rb-wk2-chip rb-wk2-tie" }, t.label))) : h("p", { class: "rb-muted" }, "아직 드러난 관계가 없어요. 가족·동료·주종처럼 이야기에 나오면 채워져요."),
+        h("p", { class: "rb-muted" }, `함께한 장면 ${v.stage.shared}번`)], btn("고치기", { size: "sm", onClick: () => editTies(other, ties) }), "rb-wk2-stagecard rb-rm-card"),
       lover: loverCard(other),
       tl: tl.length ? card("관계 연표", h("ol", { class: "rb-wk2-tl", id: "rb-rel-timeline" }, tl.map((e) => h("li", null, h("small", { class: "rb-muted" }, e.when || (e.at != null ? `#${e.at + 1} 응답` : "")), h("span", null, eventText(e))))), null, "rb-wk2-tlcard") : null,
       unreq: u ? card("짝사랑", h("p", { class: "rb-wk2-p" }, `${subj(shown(u.from))} ${shown(u.to)}에게 끌리지만(끌림 ${u.v}) 상대는 아직 아니에요(끌림 ${u.back}).`), null, "rb-wk2-lovercard off") : null,
@@ -261,7 +293,7 @@ export function personTabs(env, parts) {
   const curOther = () => people.find((x) => x.name === withSel[pk])?.name ?? people[0].name;
   const pickRow = (other) => h("div", { class: "rb-wk2-pick", role: "group", "aria-label": "누구와의 관계를 볼까요?" }, h("small", { class: "rb-muted" }, "누구와의 관계를 볼까요?"),
     h("div", { class: "rb-wk2-pickrow" }, people.slice(0, 12).map((x) => h("button", { type: "button", class: ["rb-wk2-who", loverWith(x.name) && "lover"], title: loverWith(x.name) ? "애인" : null, "aria-pressed": x.name === other ? "true" : "false", onClick: () => { withSel[pk] = x.name; paint(); } },
-      avatar(shown(x.name), ""), h("b", null, shown(x.name)), h("small", null, stageName(x.stage))))));
+      avatar(shown(x.name), ""), h("b", null, shown(x.name)), tieText(x.name) ? h("small", null, tieText(x.name)) : null))));
   // 마주 보기 판(A안·C안 펼침): 양쪽 감정 + 가운데 관계 상태
   const duel = (other, P) => h("div", { class: "rb-wk2-duel" },
     feelCard(P.v, other, false),
@@ -285,17 +317,17 @@ export function personTabs(env, parts) {
       h("summary", null, h("b", null, title), ...chips.filter(Boolean).map((c) => h("small", { class: "rb-wk2-chip" }, c)), h("span", { style: "flex:1" }), h("i", { class: "arr", "aria-hidden": "true" })),
       h("div", { class: "rb-wk2-accb" }, list));
   };
-  const miniBars = (other) => { const v = pairView(f, selfNames, other, now); return h("span", { class: "rb-wk2-mini", "aria-hidden": "true" }, h("i", { class: "e-attraction", style: { width: feelOf(v, false, "attraction") * 6 + "px" } }), h("i", { class: "e-affection", style: { width: feelOf(v, false, "affection") * 6 + "px" } })); };
+  const miniBars = (other) => { const v = pairView(f, selfNames, other, now); return h("span", { class: "rb-wk2-mini", "aria-hidden": "true" }, h("i", { class: "e-attraction", style: { width: feelOf(v, false, "attraction") * 6 + "px" } }), h("i", { class: "e-affection", style: { width: feelOf(v, false, "affection") * 6 + "px" } }), h("i", { class: "e-intim", style: { width: intimacyOf(f, me, other, now).v * 6 + "px" } })); };
   const layoutB = () => {
     if (!people.length) return noPeople();
     const other = curOther(), P = pieces(other), v = P.v;
     // 상대 고르기: 가로 칩 한 줄(작은 끌림·호감 막대)
     const chips = h("div", { class: "rb-wk2-bchips", role: "group", "aria-label": "누구와의 관계를 볼까요?" }, people.slice(0, 20).map((x) => h("button", { type: "button", class: ["rb-wk2-sidewho", loverWith(x.name) && "lover", gcls(x.name)], "aria-pressed": x.name === other ? "true" : "false", onClick: () => { withSel[pk] = x.name; paint(); } },
-      avatar(shown(x.name), ""), h("span", { class: "t" }, h("b", null, shown(x.name), loverWith(x.name) ? " 💗" : ""), h("small", { class: "rb-muted" }, stageName(x.stage), u2(x.name) ? " · 짝사랑" : ""), miniBars(x.name)))));
+      avatar(shown(x.name), ""), h("span", { class: "t" }, h("b", null, shown(x.name), loverWith(x.name) ? " 💗" : ""), h("small", { class: "rb-muted" }, [tieText(x.name), u2(x.name) ? "짝사랑" : ""].filter(Boolean).join(" · ")), miniBars(x.name)))));
     const talkTxt = [v.talk.ab?.call, v.talk.ba?.call].filter(Boolean).map((c) => `“${c}”`).join(" · ");
     const groups = [
       acc("feel", "감정", [`${me} ↔ ${shown(other)}`], [h("div", { class: "rb-wk2-grid2" }, feelCard(v, other, false), feelCard(v, other, true))]),
-      acc("state", "관계 상태", [loverWith(other) ? "💗 애인" : null, STAGES[P.si][1], P.unreq ? "짝사랑" : null, P.tl ? `연표 ${P.tl.querySelectorAll("li").length}` : null], [P.stage, P.lover, P.tl, P.unreq]),
+      acc("state", "관계 상태", [loverWith(other) ? "💗 애인" : null, tieText(other) || null, P.unreq ? "짝사랑" : null, P.tl ? `연표 ${P.tl.querySelectorAll("li").length}` : null], [P.stage, P.lover, P.tl, P.unreq]),
       acc("talk", "말과 태도", [talkTxt || null], [P.talk, P.faceEmpty ? null : P.face]),
       acc("story", "추억 · 갈등 · 오해", [v.bonds.length ? `추억 ${v.bonds.length}` : null, v.rifts?.length ? `갈등 ${v.rifts.length}` : null, v.beliefs.length ? `오해 ${v.beliefs.length}` : null], [P.nums, P.bonds, P.rifts, P.exp, P.beliefs]),
       acc("ero", "Erosync", [], [P.ero])];
@@ -312,15 +344,15 @@ export function personTabs(env, parts) {
       return h("section", { class: ["rb-wk2-card", "rb-wk2-crow", loverWith(x.name) && "rb-wk2-lovercard", open && "open"] },
         h("button", { type: "button", class: "rb-wk2-crowh", "aria-expanded": open ? "true" : "false", onClick: () => { openRow[k] = !open; paint(); } },
           avatar(shown(x.name), ""), h("b", null, shown(x.name), loverWith(x.name) ? " 💗" : ""),
-          h("span", { class: "bars" }, bar("attraction", "이성적"), bar("affection", "인간적")),
-          h("small", { class: "rb-wk2-chip" }, stageName(x.stage)), u2(x.name) ? h("small", { class: "rb-wk2-chip" }, "짝사랑") : null, h("i", { class: "arr", "aria-hidden": "true" })),
+          h("span", { class: "bars" }, bar("attraction", "이성적"), bar("affection", "인간적"), h("div", { class: "rb-wk2-bar" }, h("i", { class: "dot e-intim", "aria-hidden": "true" }), h("span", null, "친밀도"), h("span", { class: "track" }, h("i", { class: "e-intim", style: { width: intimacyOf(f, me, x.name, now).v * 10 + "%" } })), h("small", null, `${intimacyOf(f, me, x.name, now).v}/${INTIM_MAX}`))),
+          tieText(x.name) ? h("small", { class: "rb-wk2-chip" }, tieText(x.name)) : null, u2(x.name) ? h("small", { class: "rb-wk2-chip" }, "짝사랑") : null, h("i", { class: "arr", "aria-hidden": "true" })),
         open ? h("div", { class: "rb-wk2-cbody" }, duel(x.name, P), P.tl, h("div", { class: "rb-wk2-grid2" }, filled(P)), emptyRow(P), relDel(x.name)) : null);
     }), hint());
   };
   // 세부 탭(PC 왼쪽 레일 · 모바일 아래 반원 다이얼). 고른 세부 탭은 인물·탭마다 기억
   const subSel = (m.wkSub ??= {});
   const sub2 = (tab, items) => subTabs(ctx, subSel, `${pk}|${tab}`, items, { label: "세부 탭" });
-  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "진도·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }, doc && { id: "cond", label: "상태이상", icon: "🤒", hint: "취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) }, doc && { id: "outfit", label: "옷차림", icon: "👗", hint: "부위별 옷·액세서리(삽화용 상세)", render: () => outfitCard(env, card, doc) }, doc && { id: "race", label: "종족", icon: "🧬", hint: "종족 체질·발정기·몸 모형", render: () => raceCard(env, card, doc) }]);
+  const relation = () => sub2("rel", [{ id: "rel", label: "관계", icon: "💞", hint: "관계·감정·호칭·추억", n: people.length, render: relation0 }, doc && { id: "mood", label: "마음 흐름", icon: "🌊", hint: "온도 추세·보고 싶음·질투·기념일", render: () => moodCard(env, card, doc) }, doc && { id: "cond", label: "상태이상", icon: "🤒", hint: "취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) }, doc && { id: "outfit", label: "옷차림", icon: "👗", hint: "부위별 옷·액세서리(삽화용 상세)", render: () => outfitCard(env, card, doc) }, doc && { id: "race", label: "종족", icon: "🧬", hint: "종족 체질·발정기·몸 모형", render: () => raceCard(env, card, doc) }]);
   const relation0 = () => {
     if (lay === "A") return layoutA();
     if (fam === "B") return layoutB();

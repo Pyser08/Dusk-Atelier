@@ -4,6 +4,7 @@
 // 저장은 폴더의 새 키(talk·bonds·beliefs)만 쓰고 기존 형식은 바꾸지 않는다. 사라진 응답(리롤)에서 생긴 것은 되돌린다(src).
 import { srcOf } from "./memoryreconcile.js";
 import { sameKoreanPerson } from "./namekr.js";
+import { tieFloor } from "./ties.js";
 
 const cut = (v, n) => String(v ?? "").trim().slice(0, n);
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -124,8 +125,32 @@ export function stageOf(folder, a, b, now) {
   let stage = shared + evidence <= 1 && warmth < 3 ? "just met" : (shared < 5 && !(shared >= 3 && warmth >= 7)) || warmth < 4 ? "acquaintances" : warmth < 7 ? "close" : "very close";
   if (hostile > warmth && (stage === "close" || stage === "very close")) stage = "acquaintances";
   const floor = (folder?.start?.[[key(a), key(b)].sort().join("|")] ?? folder?.start?.[[ka, kb].sort().join("|")])?.level;   // 본문이 '이미 아는 사이'라고 밝힌 경우의 바닥
-  const RANK = ["just met", "acquaintances", "close", "very close"], min = floor === "close" ? 2 : floor === "friendly" ? 1 : 0;
+  // 2.2.30: 관계 종류(가족·부부·소꿉친구는 친한 사이부터, 동료·파티 등은 아는 사이부터)도 바닥으로
+  const RANK = ["just met", "acquaintances", "close", "very close"], min = Math.max(floor === "close" ? 2 : floor === "friendly" ? 1 : 0, tieFloor(folder?.extra?.ties, a, b, K));
   return { stage: RANK[Math.max(RANK.indexOf(stage), min)], shared, warmth };
+}
+// ── 2.2.30 친밀도(0~10): 두 사람이 얼마나 가까운지 한 눈금으로. 함께한 장면·둘만의 추억·애정·신뢰·관계 종류로 엔진이 계산(호출 없음).
+// 가족·부부처럼 원래 가까운 관계는 장면이 적어도 높게 시작하고, 적대·두려움은 깎는다. 직접 정하면(folder.intim) 그 값을 쓴다.
+export const INTIM_MAX = 10;
+export function intimacyOf(folder, a, b, now) {
+  const K = keyOf(folder), ka = K(a), kb = K(b), pk = [ka, kb].sort().join("|");
+  const man = folder?.intim?.[pk];
+  if (Number.isFinite(man?.v)) return { v: man.v, manual: true };
+  const st = stageOf(folder, a, b, now), pair = (x, y) => (K(x) === ka && K(y) === kb) || (K(x) === kb && K(y) === ka);
+  const bonds = (folder?.bonds ?? []).filter((x) => pair(x.a, x.b)).length;
+  let hostile = 0, aff = 0, trust = 0;
+  for (const p of Object.values(folder?.emo ?? {})) { if (!pair(p.from, p.to)) continue; const t = effectiveTags(p, now); hostile = Math.max(hostile, t.hostility ?? 0, t.fear ?? 0); aff = Math.max(aff, t.affection ?? 0); trust = Math.max(trust, t.trust ?? 0); }
+  const casual = Object.values(folder?.talk ?? {}).some((t) => pair(t.from, t.to) && t.tone === "casual") ? 0.8 : 0;
+  const base = [0, 3, 6][tieFloor(folder?.extra?.ties, a, b, K)] ?? 0;
+  const raw = 0.35 * aff + 0.25 * trust + Math.min(2.5, Math.log2(1 + st.shared)) + Math.min(2, bonds * 0.5) + casual;
+  const v = Math.max(base + Math.min(4, raw * 0.5), raw) - hostile * 0.35;
+  return { v: Math.max(0, Math.min(INTIM_MAX, Math.round(v))), manual: false, shared: st.shared, bonds };
+}
+export const INTIM_WORDS = ["낯섦", "낯섦", "어색함", "알아가는 중", "알아가는 중", "편한 사이", "편한 사이", "가까움", "가까움", "아주 가까움", "떼려야 뗄 수 없음"];
+export function setIntimacy(folder, a, b, v) {
+  const K = keyOf(folder), pk = [K(a), K(b)].sort().join("|");
+  folder.intim ??= {};
+  if (v == null || v === "") delete folder.intim[pk]; else folder.intim[pk] = { v: Math.max(0, Math.min(INTIM_MAX, Math.round(Number(v)))), at_ms: Date.now() };
 }
 // 관계 진도별 AI가 올릴 수 있는 애정·신뢰 상한(감정이 진도보다 훨씬 앞서 가지 않게). 진도가 오르면 상한도 오른다.
 export const STAGE_CEILING = Object.freeze({ "just met": 5, acquaintances: 7, close: 9, "very close": 10 });
@@ -149,9 +174,9 @@ export function stageLines(folder, names, now, limit = 3) {
     const s = stageOf(folder, list[i], list[j], now);
     if (!s.shared && !s.warmth) continue;
     const note = s.stage === "just met" || s.stage === "acquaintances" ? " — let closeness grow gradually" : "";
-    out.push(`- ${list[i]} ↔ ${list[j]}: ${s.stage} (${s.shared} scene${s.shared === 1 ? "" : "s"} together)${note}`);
+    out.push(`- ${list[i]} ↔ ${list[j]}: ${s.stage}, intimacy ${intimacyOf(folder, list[i], list[j], now).v}/10 (${s.shared} scene${s.shared === 1 ? "" : "s"} together)${note}`);
   }
-  return out;
+  return out;   // 2.2.30 관계 종류는 'Relationships' 묶음(memoryinject)에서 유저 포함해 넣는다
 }
 
 // ── ⑥ 호칭·말투 · ⑩ 둘만의 추억 · ⑤ 잘못된 믿음: 검증 ──
