@@ -236,7 +236,8 @@ export async function openMovePerson(env, doc) {
   ctx.toast(`${bot.character.name} › ${chat.name ?? "채팅"}에 ‘${res?.title ?? doc.title}’을(를) 옮겼어요.`, { seconds: 8 });
 }
 
-export const EXTRA_CSS = `.rb-race-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.rb-race-head>b{font-size:16px}.rb-race-head>small{opacity:.7}
+export const EXTRA_CSS = `.rb-btn.rb-mem-fill{background:linear-gradient(135deg,#f7d154,#eaa82a)!important;color:#2a1c00!important;border-color:transparent!important;box-shadow:0 6px 18px rgba(234,168,42,.35)!important;animation:rbFillPulse 2.4s ease-in-out infinite}.rb-btn.rb-mem-fill svg{color:#2a1c00}@keyframes rbFillPulse{0%,100%{box-shadow:0 6px 18px rgba(234,168,42,.3)}50%{box-shadow:0 6px 26px rgba(234,168,42,.6)}}
+.rb-race-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.rb-race-head>b{font-size:16px}.rb-race-head>small{opacity:.7}
 .rb-race-tag{font-size:11px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,#3aa597 14%,transparent);border:1px solid color-mix(in srgb,#3aa597 35%,transparent)}.rb-race-tag.mute{opacity:.65;background:transparent}
 .rb-race-tx{margin:8px 0 0;font-size:13px;line-height:1.6;white-space:normal}.rb-race-tx small{display:inline-block;margin-right:6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#3aa597}.rb-race-tx.nsfw small{color:#e8578e}
 .rb-race-heat{margin:6px 0 0;font-size:12.5px;opacity:.8}.rb-race-heat.on{color:#e8578e;opacity:1;font-weight:700}

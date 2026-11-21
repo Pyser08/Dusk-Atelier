@@ -94,7 +94,7 @@ export function extraOf(f) {
   const e = f?.extra && typeof f.extra === "object" ? f.extra : {};
   return { rumors: Array.isArray(e.rumors) ? e.rumors : [], goals: e.goals && typeof e.goals === "object" ? e.goals : {},
     world: { place: e.world?.place ?? {}, item: e.world?.item ?? {}, faction: e.world?.faction ?? {} }, marks: Array.isArray(e.marks) ? e.marks : [], diary: Array.isArray(e.diary) ? e.diary : [], status: Array.isArray(e.status) ? e.status : [], outfit: e.outfit && typeof e.outfit === "object" ? e.outfit : {}, weather: e.weather ?? null,
-    climate: e.climate?.zone ? e.climate : null, cohabit: Array.isArray(e.cohabit) ? e.cohabit : [], cycleSync: e.cycleSync && typeof e.cycleSync === "object" ? e.cycleSync : {}, race: e.race && typeof e.race === "object" ? e.race : {} };
+    climate: e.climate?.zone ? e.climate : null, cohabit: Array.isArray(e.cohabit) ? e.cohabit : [], cycleSync: e.cycleSync && typeof e.cycleSync === "object" ? e.cycleSync : {}, race: e.race && typeof e.race === "object" ? e.race : {}, filled: e.filled && typeof e.filled === "object" ? e.filled : {} };
 }
 export const RUMOR_MAX = 60, MARK_MAX = 30, GOAL_MAX = 4;
 

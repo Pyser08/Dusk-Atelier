@@ -1,5 +1,6 @@
 // 기억 화면 (1.8.3 목업 3): 상태 카드 하나(스위치·숫자 3·막대·범례) → 지난 대화 분석(큰 버튼) → 바로가기 4칸 → 기억 옵션 → 최근 기록.
-import { readChat } from "../../../data/apiread.js";
+import { readChat, readChar } from "../../../data/apiread.js";
+import { featureGaps, fillFeatures } from "../../../data/featurefill.js";
 import { maybePromptIntro } from '../promptstab.js';
 // 오른쪽(PC)·아래(모바일): (PC 고급) 기억 방식 바로 보임 → 설정 한 줄 목록 → 고급 묶음(한 줄씩 접음).
 import { h, replace } from "../../dom.js";
@@ -185,7 +186,10 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     const nextPlan = caps.analyze && M.runner ? M.runner.planBackfill(loadedMsgs, { from: 0, to: Math.max(0, loadedMsgs.length - 1), size: idx.settings?.backfillBatch }, folder) : null;
     m.homeChatPlan = { key: cacheKey, plan: nextPlan, t: Date.now() };
     if (m.homeChatPromise?.key === cacheKey) m.homeChatPromise = null;
-    if (ctx.state.tab === "memory" && mem(ctx) === m) redraw();
+    if (!(ctx.state.tab === "memory" && mem(ctx) === m)) return;
+    // 2.2.23 성능: 개수가 나오면 그 숫자·버튼 글자만 바꾼다(예전엔 화면 전체를 한 번 더 그렸다). 자리를 못 찾으면 예전처럼 다시 그린다
+    const nb = ctx.win?.querySelector?.('[data-num="todo"] b'), ab = ctx.win?.querySelector?.("#rb-mem-analyze > span");
+    if (nb && ab && nextPlan) { nb.textContent = String(nextPlan.todo); if (!ab.closest(".rb-mem-fill")) ab.textContent = `지난 대화 분석 · 미처리 ${nextPlan.todo}개`; } else redraw();
   }).catch(() => {});
   const botCfg = idx.bots[cur.chaId] ?? {}, last = M.injector?.lastRequest?.() ?? null;
   const on = sw.memory.on;
@@ -242,16 +246,30 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
 
   // ── 상태 카드: 상태·스위치·숫자 3·막대·범례 (머리 스위치와 합침) ──
   const onSw = switchEl(on, { label: "이 채팅에서 사용", onChange: (v, el) => { setSwitch(el, v); setOn(v); } });
-  const num = (n, lab) => h("div", { class: "rb-hnum" }, h("b", null, String(n)), h("small", null, lab));
+  const num = (n, lab, key) => h("div", { class: "rb-hnum", "data-num": key }, h("b", null, String(n)), h("small", null, lab));
   const bar = u.total ? h("div", { class: "rb-mbar", role: "img", "aria-label": USAGE_KINDS.map(([k, l]) => `${l} ${u[k]}건`).join(", ") }, USAGE_KINDS.filter(([k]) => u[k]).map(([k]) => h("i", { class: `u-${k}`, style: `flex:${u[k]}` }))) : null;
   const legend = u.total ? h("ul", { class: "rb-mbar-legend" }, USAGE_KINDS.map(([k, l]) => h("li", null, h("i", { class: `u-${k}` }), `${l} ${u[k]}`))) : null;
   const statusBox = h("section", { class: "rb-card bordered rb-mem-statuscard" },
     h("div", { class: "rb-mem-statushead" }, status, onSw),
-    h("div", { class: "rb-hnums rb-mem-nums" }, num(u.total, "저장된 기록"), num(last?.injected ? u.used : 0, "이번에 넣음"), num(plan ? plan.todo : "–", "미처리")),
+    h("div", { class: "rb-hnums rb-mem-nums" }, num(u.total, "저장된 기록"), num(last?.injected ? u.used : 0, "이번에 넣음"), num(plan ? plan.todo : "–", "미처리", "todo")),
     bar, legend);
 
   // ── 큰 버튼 하나 + 바로가기 4칸 ──
-  const bigAct = caps.analyze && M.runner
+  // 2.2.25: 새 기능(종족·기후·옷차림 등)이 생기기 전에 기록한 채팅이면 버튼을 노랗게 — 누르면 AI 한 번으로 빈칸을 채우고, 미처리 기록이 있으면 이어서 분석
+  const gaps = folder ? featureGaps(folder, idx.settings?.inject ?? {}) : [];
+  const fillGaps = async () => {
+    try {
+      ctx.toast(`새 기능 채우는 중 · ${gaps.map((g) => g.label).join("·")}`);
+      const chat = await readChat(ctx.api, cur.ci, cur.ti).catch(() => null), ch = await readChar(ctx.api, cur.ci, cur.ti).catch(() => null);
+      const changed = await fillFeatures(ctx.api, M.store, { chaId: cur.chaId, chatId: cur.chatId, chat, folder, gaps, bot: [ch?.name, String(ch?.desc ?? "")].filter(Boolean).join("\n") });
+      ctx.toast(changed.length ? `채웠어요 · ${changed.slice(0, 6).join(", ")}${changed.length > 6 ? " …" : ""}` : "이야기에서 찾을 만한 게 없었어요. 다음 응답부터 기록돼요.");
+      M.nameLinks?.invalidate?.();
+      if (plan?.todo > 0) return analyze(); redraw();
+    } catch (e) { fail(ctx)(e); }
+  };
+  const bigAct = caps.analyze && M.runner && gaps.length
+    ? (() => { const b = btn(`지난 대화 분석 · 새 기능 ${gaps.map((g) => g.label).join("·")}${plan?.todo ? ` + 미처리 ${plan.todo}개` : ""}`, { kind: "primary", icon: "sparkle", onClick: fillGaps, id: "rb-mem-analyze", title: "이 채팅을 기록한 뒤에 생긴 기능의 빈칸을 지금까지의 이야기로 채워요(AI 1번)" }); b.classList.add("rb-mem-fill"); return b; })()
+    : caps.analyze && M.runner
     ? btn(plan ? `지난 대화 분석 · 미처리 ${plan.todo}개` : "지난 대화 분석", { kind: "primary", icon: "sparkle", onClick: analyze, id: "rb-mem-analyze" })
     : btn("기록 보기", { kind: "primary", icon: "brain", onClick: () => openDetail(), id: "rb-mem-analyze" });
   bigAct.classList.add("rb-bigbtn");

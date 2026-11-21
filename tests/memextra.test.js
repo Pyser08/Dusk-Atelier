@@ -123,6 +123,16 @@ test("이름 링크: 인물마다 첫 등장에만 상태창, 태그·코드·�
   assert.equal((linkNames('<div style="x">세라</div> 그리고 세라', ppl).match(/x-dusk="pc"/g) ?? []).length, 1, "상자 밖 첫 등장에");
 });
 
+test("2.2.24: 응답 안에는 <style>을 넣지 않고, 응답 안 상태창은 떠 있는 창이 아니라 이름 아래 펼침(2.2.25)", async () => {
+  const t = linkNames("세라가 왔다", [{ names: ["세라"], html: "C" }]);
+  assert.match(linkNames("세라가 왔다", [{ id: "a", names: ["세라"], html: "C" }], { overlay: true }), /<span data-dusk="nm" data-pid="a"[^>]*>세라<\/span>가/, "화면 위 방식이면 이름만");
+  assert.doesNotMatch(t, /<style/i); assert.doesNotMatch(t, /position:fixed/, "메시지 층에 갇히는 고정 창 안 씀");
+  const { scenePanelHtml } = await import("../src/engine/scenepanel.js");
+  assert.doesNotMatch(scenePanelHtml({ date: "2026-01-01", time: "10:00", place: "집", weather: "비", people: [{ name: "세라", card: "C" }] }), /<style/i);
+  const { STATUS_CSS } = await import("../src/data/namelinks.js");
+  assert.doesNotMatch(STATUS_CSS, /::before|\[x-|position:fixed/, "x-* 속성·::before·고정 막에 기대지 않음");
+});
+
 test("상태창: 요약·스탯·상태이상·몸 흔적·NSFW(약점 자리)", () => {
   const f = { cursor: { at: 10 }, wiki: { documents: { a: { ...doc("a", "세라"), sections: [] } }, people: { profiles: { a: { summary: "검을 쓰는 기사 지망생", coreTraits: ["성실함"] } } } },
     people: { 세라: { name: "세라", records: [{ act: "시로코에게 비밀을 말했다", orphan: false }] } }, emo: { "세라>{{user}}": { from: "세라", to: "{{user}}", tags: { affection: 6, trust: 4 } } },
@@ -132,14 +142,14 @@ test("상태창: 요약·스탯·상태이상·몸 흔적·NSFW(약점 자리)",
   const h = statusCardHtml(f, f.wiki.documents.a);
   for (const s of ["검을 쓰는 기사 지망생", "성실함", "시로코에게 비밀을 말했다", "호감", "6/10", "신뢰", "4/10", "취함", "목 키스마크", "약점", "왼쪽 귓불", "밧줄", ">지금 상태<", ">요약<", ">NSFW<"]) assert.ok(h.includes(s), s);
   assert.equal((h.match(/x-dusk="tab"/g) ?? []).length, 2, "일반·NSFW 두 탭");
-  assert.match(h, /x-tab="g" name="(dkpc-[\w-]+)" open[\s\S]*x-tab="n" name="\1"(?! open)/, "같은 묶음, 일반이 열림");
-  assert.ok(h.indexOf("목 키스마크") > h.indexOf('x-tab="n"'), "몸 흔적은 NSFW 탭");
+  assert.match(h, /data-tab="g" name="(dkpc-[\w-]+)" open[\s\S]*data-tab="n" name="\1"(?! open)/, "같은 묶음, 일반이 열림");
+  assert.ok(h.indexOf("목 키스마크") > h.indexOf('data-tab="n"'), "몸 흔적은 NSFW 탭");
   assert.doesNotMatch(statusCardHtml(f, f.wiki.documents.a, { adult: false }), /x-dusk="tab"/, "성인 프로필 없으면 탭 없이 한 판");
   const linked = linkNames("세라가 왔다", [{ names: ["세라"], html: h }]);
   assert.equal(linkNames(linked, [{ names: ["세라"], html: h }]), linked, "이미 단 상태창 안은 다시 안 건드림");
   assert.doesNotMatch(statusCardHtml(f, f.wiki.documents.a, { adult: false }), />NSFW</);
   assert.match(h, /linear-gradient\(140deg/, "사진 없으면 글자 동그라미");
-  assert.match(statusCardHtml(f, f.wiki.documents.a, { img: "data:image/jpeg;base64,AAA" }), /<img x-face src="data:image\/jpeg;base64,AAA"/);
+  assert.match(statusCardHtml(f, f.wiki.documents.a, { img: "data:image/jpeg;base64,AAA" }), /<img data-face src="data:image\/jpeg;base64,AAA"/);
   applyExtra(f, extraFrom("wear|세라|상의|흰 블라우스|얇은 흰 면 블라우스, 단추 두 개 풀림\nwear|세라|목걸이|은 목걸이|가는 은사슬", (n) => n), { turn: 10 });
   const h2 = statusCardHtml(f, f.wiki.documents.a);
   assert.match(h2, />옷차림</); assert.match(h2, /흰 블라우스/); assert.match(h2, /삽화용 상세 ›/); assert.match(h2, /단추 두 개 풀림/);

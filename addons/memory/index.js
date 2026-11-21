@@ -50,6 +50,7 @@ export async function activate(api, ctx) {
   // 0.3.22 본문 인물 이름 → 상태창 링크: 본문(t)에만 달고, 게이지 박스·일기는 그 뒤에 그대로 붙인다(일기·게이지 매칭은 원래 글로)
   // 0.3.22 장면 상태창은 그 아래(로어북 버튼 바로 위)에 붙인다
   const names = createNameLinks(memory, api); memory.nameLinks = names;
+  setTimeout(() => { names.prepare?.().catch(() => {}); }, 1500);   // 2.2.25 응답을 그리기 전에 상태창 방식(화면 위/펼침)을 정한다
   if (memory.gauge && typeof gaugeShow === "function") memory.gauge.onDisplay = async (t) => {
     const g = await gaugeShow(t), d = await diary.onDisplay(g);
     if (typeof t !== "string" || typeof d !== "string" || !d.startsWith(t)) return d;

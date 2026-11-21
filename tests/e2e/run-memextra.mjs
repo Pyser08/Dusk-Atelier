@@ -88,6 +88,12 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 종족별 몸 모형: 여우 귀·꼬리, 서큐버스 뿔·날개·꼬리, 라미아·인어·켄타우로스·아라크네 하반신, 하피 날개`, R.fox?.ear === 2 && R.fox?.tail === 1 && R.succubus?.horn === 2 && R.succubus?.wing === 2 && R.succubus?.tail >= 1 && R.lamia?.low === 1 && R.mermaid?.low === 1 && R.centaur?.low === 2 && R.arachne?.low === 3 && R.harpy?.wing === 2 && R.elf?.ear === 2, JSON.stringify(R).slice(0, 600));
   ok(`[${tag}] 하반신 종족은 발·무릎 점이 없음`, !R.lamia?.lbl?.some((x) => x.startsWith("발")) && R.fox?.lbl?.some((x) => x.startsWith("발")));
   await setRace(null); await page.waitForTimeout(600);
+  // 2.2.25: 새 기능 빈칸(종족·기후 등)이 있으면 기억 홈의 ‘지난 대화 분석’ 버튼이 노랗게
+  const prevPage = await page.evaluate(() => { const p = __app.ctx.state.mem.page; Object.assign(__app.ctx.state.mem, { page: "home" }); __app.ctx.go("memory"); return p ?? null; }); await page.waitForTimeout(1500);
+  const fillBtn = await page.evaluate(() => { const b = document.querySelector("#rb-mem-analyze"); return b ? { fill: b.classList.contains("rb-mem-fill"), text: b.textContent, bg: getComputedStyle(b).backgroundImage.slice(0, 40) } : null; });
+  ok(`[${tag}] 새 기능 빈칸이 있으면 ‘지난 대화 분석’ 버튼이 노란색(새 기능 이름 표시)`, fillBtn?.fill && /새 기능/.test(fillBtn.text) && /종족/.test(fillBtn.text) && /gradient/.test(fillBtn.bg), JSON.stringify(fillBtn));
+  if (OUT && tag === "PC") await page.screenshot({ path: `${OUT}/extra-${tag}-fillbtn.png` });
+  await page.evaluate((p) => { __app.ctx.state.mem.page = p ?? undefined; __app.ctx.go("memory"); }, prevPage); await page.waitForTimeout(800);
   // 세라는 성감대가 비어 있음 → 무작위로 채우기
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "세라" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
@@ -112,6 +118,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
   ok(`[${tag}] 상태이상 카드: 감기`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
   // 본문 이름 링크 → 상태창(실제 표시 경로: 로어북 로그가 부르는 memory.gauge.onDisplay)
+  // 2.2.24: 상태창 CSS는 리스 화면에 한 번 넣는다(실제로는 namelinks가 mainDom 권한으로) — 시험에선 같은 CSS를 직접 넣는다
+  await page.evaluate(() => { if (!document.getElementById("dusk-status-css-test")) { const st = document.createElement("style"); st.id = "dusk-status-css-test"; st.textContent = __app.ctx.memory.nameLinks?.css?.() ?? ""; document.head.append(st); } });
   const link = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const reply = "시로코가 세라에게 다가갔다. 세라는 웃었다."; const out = await M.gauge.onDisplay(reply); return { out, n: (out.split('x-dusk="scene"')[0].match(/x-dusk="pc"/g) ?? []).length }; });
   ok(`[${tag}] 본문 이름마다 상태창 링크(인물마다 첫 등장 한 번)`, link.n === 2, link.out.slice(0, 200));
   const inl = await page.evaluate((html) => { const d = document.createElement("p"); d.style.cssText = "width:360px;font-size:15px"; d.innerHTML = html; document.body.append(d); const h = d.getBoundingClientRect().height; d.remove(); return Math.round(h); }, link.out);
@@ -120,25 +128,54 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "pcdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px;line-height:1.7"; d.innerHTML = html; document.body.append(d); d.querySelector('details[x-dusk="pc"]').open = true; }, link.out);
     await page.waitForTimeout(200); await page.screenshot({ path: `${OUT}/extra-${tag}-namecard.png` }); await page.evaluate(() => document.getElementById("pcdemo")?.remove()); }
   // 일반 / NSFW 탭: NSFW를 누르면 일반이 닫히고 NSFW만 보임(스크립트 없이 details name)
-  const tabs = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "tabdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px"; d.innerHTML = html; document.body.append(d);
-    const pc = d.querySelector('details[x-dusk="pc"]'); pc.open = true; const g = pc.querySelector('details[x-tab="g"]'), n = pc.querySelector('details[x-tab="n"]'); const before = [g.open, n.open];
+  const tabs = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "tabdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#1d1b26;color:#eee;padding:20px;font-size:15px"; d.innerHTML = html.replace(/\sx-[\w-]+(="[^"]*")?/g, ""); document.body.append(d);   // 리스 소독기처럼 x-* 속성을 지운 뒤
+    const pc = d.querySelector('details[data-dusk="pc"]'); pc.open = true; const g = pc.querySelector('details[data-tab="g"]'), n = pc.querySelector('details[data-tab="n"]'); const before = [g.open, n.open];
     n.querySelector("summary").click(); await new Promise((r) => setTimeout(r, 350)); return { before, after: [g.open, n.open], nsVis: n.querySelector("span").getBoundingClientRect().height > 50 }; }, link.out);
   ok(`[${tag}] 캐릭터 상태창 일반/NSFW 탭 전환`, tabs.before.join() === "true,false" && tabs.after.join() === "false,true" && tabs.nsVis, JSON.stringify(tabs));
   if (OUT) await page.screenshot({ path: `${OUT}/extra-${tag}-namecard-nsfw.png` });
-  // 2.2.23: 상태창 바깥(화면 귀퉁이)을 누르면 닫히고, 이름은 그 자리에 그대로 보인다
-  const nameBefore = await page.evaluate(() => document.querySelector('#tabdemo details[x-dusk="pc"]').getBoundingClientRect().width);
-  await page.mouse.click(6, 6); await page.waitForTimeout(250);
-  const closed = await page.evaluate(() => !document.querySelector('#tabdemo details[x-dusk="pc"]').open);
-  ok(`[${tag}] 캐릭터 상태창 바깥을 누르면 닫힘`, closed && nameBefore > 10, JSON.stringify({ closed, nameBefore }));
+  // 2.2.25: 응답 안 상태창(리스 화면 권한이 없을 때)은 떠 있는 창이 아니라 이름 아래 펼침 — 이름을 다시 누르면 닫힘
+  const inl2 = await page.evaluate(async () => { const det = document.querySelector('#tabdemo details[data-dusk="pc"]'); const sp = det.querySelector("summary + span");
+    const pos = getComputedStyle(sp).position; det.querySelector("summary").click(); await new Promise((r) => setTimeout(r, 150)); return { pos, closed: !det.open }; });
+  ok(`[${tag}] 응답 안 상태창은 이름 아래 펼침(고정 창 아님), 이름을 다시 누르면 닫힘`, inl2.pos !== "fixed" && inl2.closed, JSON.stringify(inl2));
   await page.evaluate(() => document.getElementById("tabdemo")?.remove());
+  // 2.2.24: 리스 화면 위에 상태창 띄우기 — 리스의 비동기 문서 래퍼를 흉내 내 실제 문서에 연결
+  const ov = await page.evaluate(async () => {
+    const W = (el) => !el ? null : ({ _el: el,
+      setAttribute: async (k, v) => el.setAttribute(k, v), getAttribute: async (k) => el.getAttribute(k), setStyleAttribute: async (v) => el.setAttribute("style", v),
+      setInnerText: async (t) => { el.textContent = t; }, appendChild: async (c) => el.appendChild(c._el), remove: async () => el.remove(),
+      addEventListener: async (t, f) => el.addEventListener(t, () => f()), querySelector: async (q) => W(el.querySelector(q)),
+      querySelectorAll: async (q) => { const l = [...el.querySelectorAll(q)]; return { length: async () => l.length, at: async (i) => W(l[i]) }; } });
+    const doc = { ...W(document.documentElement), querySelector: async (q) => W(document.querySelector(q)), createElement: async (t) => W(document.createElement(t)),
+      querySelectorAll: async (q) => { const l = [...document.querySelectorAll(q)]; return { length: async () => l.length, at: async (i) => W(l[i]) }; } };
+    const api = __app.ctx.memory.nameLinks; const host = __app.ctx.api;
+    const save = [host.getRootDocument, host.requestPluginPermission];
+    host.getRootDocument = async () => doc; host.requestPluginPermission = async () => true;
+    api.invalidate(); await api.link("시로코가 웃었다."); await new Promise((r) => setTimeout(r, 200));
+    const out = await api.link("시로코가 웃었다. 세라도 웃었다.");
+    const d = document.createElement("div"); d.id = "ovdemo"; d.style.cssText = "position:fixed;inset:0;z-index:5;background:#14131b;color:#eee;padding:20px"; d.innerHTML = out; document.body.append(d);
+    await api.overlay.hook();
+    const nm = d.querySelector('[data-dusk="nm"]'); nm?.click(); await new Promise((r) => setTimeout(r, 400));
+    const ovEl = document.querySelector('[x-dusk="card-ov"]'), box = ovEl?.querySelector('[data-dusk="pcbox"]');
+    const r = box?.getBoundingClientRect(); const z = ovEl ? getComputedStyle(ovEl).zIndex : null;
+    const face = box?.querySelector("[data-face]"); const faceBg = face ? getComputedStyle(face).backgroundImage : "";
+    const cssMounted = !!document.querySelector('[x-dusk="dusk-status-css"]');
+    ovEl?.firstElementChild?.click(); await new Promise((r) => setTimeout(r, 200));
+    const closed = !document.querySelector('[x-dusk="card-ov"]');
+    d.remove(); host.getRootDocument = save[0]; host.requestPluginPermission = save[1]; api.invalidate();
+    return { spans: (out.match(/data-dusk="nm"/g) ?? []).length, details: (out.match(/x-dusk="pc"/g) ?? []).length, opened: !!box, w: Math.round(r?.width ?? 0), z, face: !!face, faceBg: faceBg.slice(0, 30), cssMounted, closed };
+  });
+  ok(`[${tag}] 리스 화면 위 상태창: 응답엔 이름만, 누르면 맨 위에 뜨고, 바깥 누르면 닫힘`, ov.spans === 2 && ov.details === 0 && ov.opened && ov.w >= 280 && Number(ov.z) > 1e9 && ov.face && ov.cssMounted && ov.closed, JSON.stringify(ov));
   // 장면 상태창(응답 아래, 로어북 위)
   const sc = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const out = await M.gauge.onDisplay("[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 쏟아졌다. 시로코가 세라를 바라봤다."); return out; });
-  ok(`[${tag}] 장면 상태창: 날짜·시간·장소·날씨·등장인물(이름은 캐릭터 상태창)`, /x-dusk="scene"/.test(sc) && /22:40/.test(sc) && /은빛 여관/.test(sc) && /🌧️/.test(sc) && (sc.split('x-dusk="scene"')[1].match(/x-dusk="pc"/g) ?? []).length === 2, sc.slice(-300));
+  ok(`[${tag}] 장면 상태창: 날짜·시간·장소·날씨·등장인물(이름은 캐릭터 상태창)`, /x-dusk="scene"/.test(sc) && /22:40/.test(sc) && /은빛 여관/.test(sc) && /🌧️/.test(sc) && (sc.split('x-dusk="scene"')[1].match(/x-dusk="pc"|data-dusk="nm"/g) ?? []).length === 2, sc.slice(-300));
   // 2.2.22: 등장인물 띠의 이름을 누르면 상태창이 띠 안이 아니라 화면 가운데에 크게 뜬다
   const chipPop = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "chipdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;overflow:auto"; d.innerHTML = html; document.body.append(d);
-    const det = d.querySelector('div[x-dusk="scene"] details[x-dusk="pc"]'); if (!det) { d.remove(); return null; } det.open = true; await new Promise((r) => setTimeout(r, 250));
-    const r = det.querySelector("summary + span").getBoundingClientRect(); const out = { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight }; d.remove(); return out; }, sc);
-  ok(`[${tag}] 장면 상태창 등장인물 이름 → 상태창이 화면 가운데 제 크기로(띠 안에 갇히지 않음)`, chipPop && chipPop.w >= Math.min(300, chipPop.vw - 40) && chipPop.h >= 200 && chipPop.h <= chipPop.vh * 0.8, JSON.stringify(chipPop));
+    const det = d.querySelector('div[x-dusk="scene"] details[x-dusk="pc"]');
+    let r = null;
+    if (det) { det.open = true; await new Promise((r) => setTimeout(r, 250)); r = det.querySelector("summary + span").getBoundingClientRect(); }
+    else { const nm = d.querySelector('div[x-dusk="scene"] [data-dusk="nm"]'); if (nm) { await __app.ctx.memory.nameLinks.overlay.hook(); nm.click(); await new Promise((r) => setTimeout(r, 400)); r = document.querySelector('[x-dusk="card-ov"] [data-dusk="pcbox"]')?.getBoundingClientRect() ?? null; await __app.ctx.memory.nameLinks.overlay.close(); } }
+    const out = r ? { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight } : null; d.remove(); return out; }, sc);
+  ok(`[${tag}] 장면 상태창 등장인물 이름 → 상태창이 제 크기로(띠 안에 갇히지 않음)`, chipPop && chipPop.w >= Math.min(300, chipPop.vw - 60) && chipPop.h >= 200 && chipPop.h <= chipPop.vh * 0.85, JSON.stringify(chipPop));
   ok(`[${tag}] 장면 상태창 날씨 상자: 4일 예보(낮·밤·확률)`, /x-dusk="wx"/.test(sc) && /4일 예보/.test(sc) && /모레/.test(sc) && /💧/.test(sc) && /%/.test(sc));
   ok(`[${tag}] 캐릭터 상태창에 옷차림·삽화용 상세`, /옷차림/.test(link.out) && /흰 셔츠/.test(link.out) && /삽화용 상세 ›/.test(link.out) && /소매를 걷어 올림/.test(link.out));
   if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "scdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;font-size:15px;line-height:1.7;overflow:auto"; d.innerHTML = html; document.body.append(d); }, sc);
