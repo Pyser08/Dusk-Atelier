@@ -56,7 +56,7 @@ const NIGHT_SKY = "linear-gradient(170deg,#0b1030 0%,#1b2356 55%,#3a3570 100%)";
 const DUSK_SKY = "linear-gradient(170deg,#3b3a7a 0%,#c0628a 55%,#ffb37a 100%)";
 const DAWN_SKY = "linear-gradient(170deg,#4a5a9a 0%,#c98bb0 55%,#ffd3a8 100%)";
 // 움직임: 모두 transform·opacity·background-position만 써서 부드럽게. 한 번만 넣는다
-export const SCENE_CSS = "<style>"
+export const SCENE_CSS = ""
   + "@keyframes dkRain{to{background-position:0 110px,0 70px}}"
   + "@keyframes dkFall{to{background-position:0 120px,0 70px,0 40px}}"
   + "@keyframes dkSway{0%,100%{transform:translateX(-6px)}50%{transform:translateX(6px)}}"
@@ -77,7 +77,7 @@ export const SCENE_CSS = "<style>"
   + "@keyframes dkBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}"
   + "[data-dusk=scene] summary::-webkit-details-marker{display:none}" + PC_OPEN_CSS + "details[data-dusk=wx][open]>summary{background:rgba(255,255,255,.3)!important;transform:translateY(1px)}details[data-dusk=wx]>summary{transition:background .2s,transform .2s}" + TAB_CSS
   + "@keyframes dkPcIn{from{opacity:0;transform:translate(-50%,-46%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}"
-  + "@media (prefers-reduced-motion:reduce){[data-dusk=scene],[data-dusk=scene] *{animation:none!important}}</style>";
+  + "@media (prefers-reduced-motion:reduce){[data-dusk=scene],[data-dusk=scene] *{animation:none!important}}";
 
 const L = (s) => `<div aria-hidden="true" style="position:absolute;pointer-events:none;${s}"></div>`;
 const A = (name, dur, rest = "linear infinite", delay = 0) => `animation:${name} ${dur} ${rest}${delay ? ` ${delay}s` : ""};`;
@@ -201,7 +201,7 @@ export function scenePanelHtml({ date = "", time = "", place = "", weather = "",
     + `<span style="font-size:11px;font-weight:700;letter-spacing:.04em;margin-top:2px">${esc(weather || "날씨")}${temp ? ` <span style="font-weight:800">${temp}</span>` : ""}</span>`
     + (fcBody ? `<span style="font-size:9px;opacity:.75;letter-spacing:.08em">예보 ▾</span>` : "") + `</summary>`;
   const wxDetails = `<details x-dusk="wx" data-dusk="wx" style="display:block;margin:0">${box}${fcBody ? `<span style="display:block;position:relative;z-index:1;margin:0 10px 10px;padding:9px 8px 8px;border-radius:16px;background:rgba(0,0,0,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:dkUp .4s cubic-bezier(.22,1,.36,1)"><span style="display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 7px"><b style="font-size:11px;letter-spacing:.12em">4일 예보</b><span style="font-size:10px;opacity:.7">${zone}</span></span>${fcBody}<span style="display:block;margin:7px 4px 0;font-size:9.5px;opacity:.6">%는 그 날씨일 확률 · 💧 강수 확률 · 이야기 속 날씨에 따라 바뀌어요</span></span>` : ""}</details>`;
-  return `\n\n${SCENE_CSS}<div x-dusk="scene" data-dusk="scene" style="margin:14px 0 6px;font-style:normal">` + `<div style="position:relative;isolation:isolate;contain:paint;border-radius:22px;overflow:hidden;color:${fg};background:${bg};animation:dkPop .7s cubic-bezier(.22,1,.36,1) both;box-shadow:0 12px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1px rgba(255,255,255,.08);font-style:normal;line-height:1.35;text-shadow:0 1px 3px rgba(0,0,0,.28)">`
+  return `\n\n<div x-dusk="scene" data-dusk="scene" style="margin:14px 0 6px;font-style:normal">` + `<div style="position:relative;isolation:isolate;contain:paint;border-radius:22px;overflow:hidden;color:${fg};background:${bg};animation:dkPop .7s cubic-bezier(.22,1,.36,1) both;box-shadow:0 12px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1px rgba(255,255,255,.08);font-style:normal;line-height:1.35;text-shadow:0 1px 3px rgba(0,0,0,.28)">`
     + `<div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none">${fx}`
     + L(`top:0;bottom:0;left:0;width:35%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);animation:dkSheen 1.6s cubic-bezier(.4,0,.2,1) .35s both`)
     + L(`inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.22))`) + `</div>`

@@ -112,6 +112,8 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   { const rt = page.locator(".rb-wk2-tab[data-t=rel]").first(); if (await rt.count()) { await rt.click(); await page.waitForTimeout(600); } }
   ok(`[${tag}] 상태이상 카드: 감기`, (await page.locator(".rb-marks li", { hasText: "감기" }).count()) === 1);
   // 본문 이름 링크 → 상태창(실제 표시 경로: 로어북 로그가 부르는 memory.gauge.onDisplay)
+  // 2.2.24: 상태창 CSS는 리스 화면에 한 번 넣는다(실제로는 namelinks가 mainDom 권한으로) — 시험에선 같은 CSS를 직접 넣는다
+  await page.evaluate(() => { if (!document.getElementById("dusk-status-css-test")) { const st = document.createElement("style"); st.id = "dusk-status-css-test"; st.textContent = __app.ctx.memory.nameLinks?.css?.() ?? ""; document.head.append(st); } });
   const link = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const reply = "시로코가 세라에게 다가갔다. 세라는 웃었다."; const out = await M.gauge.onDisplay(reply); return { out, n: (out.split('x-dusk="scene"')[0].match(/x-dusk="pc"/g) ?? []).length }; });
   ok(`[${tag}] 본문 이름마다 상태창 링크(인물마다 첫 등장 한 번)`, link.n === 2, link.out.slice(0, 200));
   const inl = await page.evaluate((html) => { const d = document.createElement("p"); d.style.cssText = "width:360px;font-size:15px"; d.innerHTML = html; document.body.append(d); const h = d.getBoundingClientRect().height; d.remove(); return Math.round(h); }, link.out);
@@ -137,7 +139,7 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // 2.2.22: 등장인물 띠의 이름을 누르면 상태창이 띠 안이 아니라 화면 가운데에 크게 뜬다
   const chipPop = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "chipdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;overflow:auto"; d.innerHTML = html; document.body.append(d);
     const det = d.querySelector('div[x-dusk="scene"] details[x-dusk="pc"]'); if (!det) { d.remove(); return null; } det.open = true; await new Promise((r) => setTimeout(r, 250));
-    const r = det.querySelector("summary + span").getBoundingClientRect(); const out = { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight }; d.remove(); return out; }, sc);
+    const r = det.querySelector("[data-nm] + span").getBoundingClientRect(); const out = { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight }; d.remove(); return out; }, sc);
   ok(`[${tag}] 장면 상태창 등장인물 이름 → 상태창이 화면 가운데 제 크기로(띠 안에 갇히지 않음)`, chipPop && chipPop.w >= Math.min(300, chipPop.vw - 40) && chipPop.h >= 200 && chipPop.h <= chipPop.vh * 0.8, JSON.stringify(chipPop));
   ok(`[${tag}] 장면 상태창 날씨 상자: 4일 예보(낮·밤·확률)`, /x-dusk="wx"/.test(sc) && /4일 예보/.test(sc) && /모레/.test(sc) && /💧/.test(sc) && /%/.test(sc));
   ok(`[${tag}] 캐릭터 상태창에 옷차림·삽화용 상세`, /옷차림/.test(link.out) && /흰 셔츠/.test(link.out) && /삽화용 상세 ›/.test(link.out) && /소매를 걷어 올림/.test(link.out));

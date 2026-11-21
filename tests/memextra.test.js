@@ -123,6 +123,15 @@ test("이름 링크: 인물마다 첫 등장에만 상태창, 태그·코드·�
   assert.equal((linkNames('<div style="x">세라</div> 그리고 세라', ppl).match(/x-dusk="pc"/g) ?? []).length, 1, "상자 밖 첫 등장에");
 });
 
+test("2.2.24: 응답 안에는 <style>을 넣지 않는다(리스가 바꿔 해석하다 CSS ERROR), 이름 사본은 열렸을 때만 보이는 내용 안에", async () => {
+  const t = linkNames("세라가 왔다", [{ names: ["세라"], html: "C" }]);
+  assert.doesNotMatch(t, /<style/i); assert.match(t, /<\/summary><span data-nm>세라<\/span>/);
+  const { scenePanelHtml } = await import("../src/engine/scenepanel.js");
+  assert.doesNotMatch(scenePanelHtml({ date: "2026-01-01", time: "10:00", place: "집", weather: "비", people: [{ name: "세라", card: "C" }] }), /<style/i);
+  const { STATUS_CSS } = await import("../src/data/namelinks.js");
+  assert.match(STATUS_CSS, /details\[data-dusk=pc\]\[open\]>summary\{position:fixed/); assert.doesNotMatch(STATUS_CSS, /::before|\[x-/, "x-* 속성·::before에 기대지 않음");
+});
+
 test("상태창: 요약·스탯·상태이상·몸 흔적·NSFW(약점 자리)", () => {
   const f = { cursor: { at: 10 }, wiki: { documents: { a: { ...doc("a", "세라"), sections: [] } }, people: { profiles: { a: { summary: "검을 쓰는 기사 지망생", coreTraits: ["성실함"] } } } },
     people: { 세라: { name: "세라", records: [{ act: "시로코에게 비밀을 말했다", orphan: false }] } }, emo: { "세라>{{user}}": { from: "세라", to: "{{user}}", tags: { affection: 6, trust: 4 } } },

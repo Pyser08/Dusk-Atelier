@@ -101,8 +101,9 @@ export function statusCardHtml(folder, doc, { turn = null, when = "", adult = tr
 let tabSeq = 0;
 const tab = (g, k, label, body, open) => `<details x-dusk="tab" data-dusk="tab" data-tab="${k}" name="${g}"${open ? " open" : ""} style="display:inline-block;margin:0 4px 0 0"><summary style="list-style:none;cursor:pointer;display:inline-block;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;border:1px solid ${k === "n" ? "rgba(232,87,142,.4)" : "rgba(139,111,224,.4)"};color:${k === "n" ? C.rose : C.vio}">${label}</summary><span style="display:block;position:absolute;left:0;right:0;top:38px;bottom:0;overflow:auto;padding:0 2px 6px;background:var(--risu-theme-bgcolor,#1b1a24);animation:dkTabIn .22s cubic-bezier(.22,1,.36,1)">${body}</span></details>`;
 // 2.2.23: 상태창 바깥을 눌러도 닫힌다(스크립트 없이) — 열리면 이름(summary)이 화면 전체를 덮는 옅은 막이 되고, 그 막을 누르면 details가 닫힌다.
-// 원래 이름 자리는 details::before가 x-name으로 그대로 보여 준다(글 흐름이 안 흔들리게). 상태창(z 60)은 막(z 59) 위.
-export const PC_OPEN_CSS = "details[data-dusk=pc]>summary::-webkit-details-marker{display:none}details[data-dusk=pc][open]::before{content:attr(data-name);text-decoration:underline;text-decoration-color:rgba(138,99,210,.6);text-underline-offset:3px}details[data-dusk=pc][open]>summary{position:fixed;inset:0;z-index:59;margin:0;background:rgba(0,0,0,.28);color:transparent!important;text-decoration:none!important;font-size:0!important;cursor:default;-webkit-tap-highlight-color:transparent;animation:dkFadeIn .16s ease-out}@keyframes dkFadeIn{from{opacity:0}to{opacity:1}}";
+// 원래 이름 자리는 열렸을 때만 보이는 이름 사본(data-nm)이 지킨다(글 흐름이 안 흔들리게). 상태창(z 60)은 막(z 59) 위.
+// 2.2.24: 이 CSS는 응답 안 <style>로 넣지 않고 리스 화면에 한 번만 넣는다(namelinks.ensureCss). 응답 안 <style>은 리스가 바꿔 해석하다 ‘CSS ERROR’를 띄웠다.
+export const PC_OPEN_CSS = "details[data-dusk=pc]>summary::-webkit-details-marker{display:none}[data-nm]{text-decoration:underline;text-decoration-color:rgba(138,99,210,.6);text-underline-offset:3px}details[data-dusk=pc][open]>summary{position:fixed;inset:0;z-index:59;margin:0;background:rgba(0,0,0,.28);color:transparent!important;text-decoration:none!important;font-size:0!important;cursor:default;-webkit-tap-highlight-color:transparent;animation:dkFadeIn .16s ease-out}@keyframes dkFadeIn{from{opacity:0}to{opacity:1}}";
 export const TAB_CSS = "details[data-dusk=tab]>summary::-webkit-details-marker{display:none}details[data-dusk=tab][open]>summary{color:#fff!important;border-color:transparent!important;background:linear-gradient(135deg,#8b6fe0,#a77bf0);box-shadow:0 4px 14px rgba(139,111,224,.35)}details[data-tab=n][open]>summary{background:linear-gradient(135deg,#e8578e,#f07aa4);box-shadow:0 4px 14px rgba(232,87,142,.35)}@keyframes dkTabIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}"
   // 2.2.22 휴대폰: 상태창이 화면을 다 덮던 문제 → 더 작게
   + "@media (max-width:600px){details[data-dusk=pc]>span{max-height:60vh!important;padding:10px 10px 8px!important;font-size:12px!important;border-radius:16px!important}details[data-dusk=pc] [data-tabbox]{height:min(36vh,300px)!important}details[data-dusk=pc] [data-face]{width:48px!important;height:48px!important;font-size:19px!important}}";
@@ -151,12 +152,12 @@ export function linkNames(text, people, { max = LINK_MAX } = {}) {
       return linkHtml(name, p.html);
     });
   }
-  return count ? POP_CSS + out : out;
+  return out;
 }
-const POP_CSS = "<style>" + TAB_CSS + "@keyframes dkPcIn{from{opacity:0;transform:translate(-50%,-46%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}" + PC_OPEN_CSS + "</style>";
+export const NAMECARD_CSS = TAB_CSS + "@keyframes dkPcIn{from{opacity:0;transform:translate(-50%,-46%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}" + PC_OPEN_CSS;
 export function linkHtml(name, inner) {
   // 이름은 수수하게: 글자색·굵기는 그대로, 아주 옅은 밑줄만. 누르면 화면 가운데 상태창이 바로 뜬다(살짝 떠오르는 움직임)
-  return `<details x-dusk="pc" data-dusk="pc" data-name="${esc(name)}" style="display:inline-block;vertical-align:baseline;margin:0;padding:0"><summary style="display:inline;cursor:pointer;list-style:none;color:inherit;font:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.38);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</summary>`
+  return `<details x-dusk="pc" data-dusk="pc" data-name="${esc(name)}" style="display:inline-block;vertical-align:baseline;margin:0;padding:0"><summary style="display:inline;cursor:pointer;list-style:none;color:inherit;font:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.38);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</summary><span data-nm>${esc(name)}</span>`
     + `<span style="display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);animation:dkPcIn .16s ease-out;z-index:60;width:min(340px,calc(100vw - 28px));max-height:min(76vh,640px);overflow:auto;overscroll-behavior:contain;padding:14px 14px 10px;border-radius:20px;background:var(--risu-theme-bgcolor,#1b1a24);color:var(--risu-theme-textcolor,#eee);border:1px solid rgba(139,111,224,.32);box-shadow:0 24px 60px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;line-height:1.5;text-align:left;font-style:normal;font-weight:400;white-space:normal;text-decoration:none">`
     + `${inner}<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">바깥을 누르면 닫혀요 · Dusk 캐릭터 상태창</span></span></details>`;
 }
