@@ -1,5 +1,6 @@
 // 기억 편집기 (v1.7.1, 고급 모드 전용): 저장된 기억(기록·상황·감정·기대)을 로어북 항목처럼 그 자리에서 고친다.
 // 고친 칸은 잠겨서(🔒) 자동 기록이 덮지 않는다. 직전 수정 1건은 되돌릴 수 있다. 화면 로직은 engine/memoryedit.js(순수)에 있다.
+import { readChat } from "../../../data/apiread.js";
 import { h, replace, copyText } from "../../dom.js";
 import { btn, chip, modal, note, confirmDialog, promptDialog, loading, segmented } from "../../kit.js";
 import { fail, gradeBadge, at } from "./common.js";
@@ -31,7 +32,7 @@ export function memoryEditor(ctx, cur, { redraw }) {
   const edit = (loc, fn, label) => mutate((f) => editTarget(f, loc, fn, label));
 
   async function load() {
-    const chat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+    const chat = await readChat(ctx.api, cur.ci, cur.ti).catch(() => null);
     folder = await loadReconciled(M.store, cur.chaId, cur.chatId, chat?.message ?? []);
   }
 

@@ -1,4 +1,5 @@
 // 기억 화면 (1.8.3 목업 3): 상태 카드 하나(스위치·숫자 3·막대·범례) → 지난 대화 분석(큰 버튼) → 바로가기 4칸 → 기억 옵션 → 최근 기록.
+import { readChat } from "../../../data/apiread.js";
 import { maybePromptIntro } from '../promptstab.js';
 // 오른쪽(PC)·아래(모바일): (PC 고급) 기억 방식 바로 보임 → 설정 한 줄 목록 → 고급 묶음(한 줄씩 접음).
 import { h, replace } from "../../dom.js";
@@ -172,7 +173,7 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
   if (!hasCachedPlan) {
     if (m.homeChatPromise?.key === cacheKey) chatPromise = m.homeChatPromise.promise;
     else {
-      chatPromise = ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+      chatPromise = readChat(ctx.api, cur.ci, cur.ti).catch(() => null);
       m.homeChatPromise = { key: cacheKey, promise: chatPromise };
     }
   }
@@ -210,11 +211,11 @@ export async function renderMemoryHome(ctx, host, { redraw }) {
     let activeChat = null, activeMsgs = [], activePlan = plan;
     if (!activePlan || !activePlan.todo) {
       activeChat = await chatPromise;
-      if (!activeChat) activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+      if (!activeChat) activeChat = await readChat(ctx.api, cur.ci, cur.ti).catch(() => null);
       activeMsgs = activeChat?.message ?? [];
       activePlan = activeChat && M.runner ? M.runner.planBackfill(activeMsgs, { from: 0, to: Math.max(0, activeMsgs.length - 1), size: idx.settings?.backfillBatch }, folder) : activePlan;
     } else {
-      activeChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti).catch(() => null);
+      activeChat = await readChat(ctx.api, cur.ci, cur.ti).catch(() => null);
       activeMsgs = activeChat?.message ?? [];
     }
     let redo = false;

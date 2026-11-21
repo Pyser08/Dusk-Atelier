@@ -125,6 +125,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     n.querySelector("summary").click(); await new Promise((r) => setTimeout(r, 350)); return { before, after: [g.open, n.open], nsVis: n.querySelector("span").getBoundingClientRect().height > 50 }; }, link.out);
   ok(`[${tag}] 캐릭터 상태창 일반/NSFW 탭 전환`, tabs.before.join() === "true,false" && tabs.after.join() === "false,true" && tabs.nsVis, JSON.stringify(tabs));
   if (OUT) await page.screenshot({ path: `${OUT}/extra-${tag}-namecard-nsfw.png` });
+  // 2.2.23: 상태창 바깥(화면 귀퉁이)을 누르면 닫히고, 이름은 그 자리에 그대로 보인다
+  const nameBefore = await page.evaluate(() => document.querySelector('#tabdemo details[x-dusk="pc"]').getBoundingClientRect().width);
+  await page.mouse.click(6, 6); await page.waitForTimeout(250);
+  const closed = await page.evaluate(() => !document.querySelector('#tabdemo details[x-dusk="pc"]').open);
+  ok(`[${tag}] 캐릭터 상태창 바깥을 누르면 닫힘`, closed && nameBefore > 10, JSON.stringify({ closed, nameBefore }));
   await page.evaluate(() => document.getElementById("tabdemo")?.remove());
   // 장면 상태창(응답 아래, 로어북 위)
   const sc = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const out = await M.gauge.onDisplay("[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 쏟아졌다. 시로코가 세라를 바라봤다."); return out; });

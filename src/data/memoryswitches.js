@@ -1,5 +1,6 @@
 // v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.updateIndex)에, 흐름 반영은 flow.apply()로.
 // 화면은 지금 열린 채팅을 기본으로 쓴다(currentChat). 다른 봇은 chaId를 직접 넘기면 된다.
+import { readChar } from "./apiread.js";
 import { cacheGen } from "./dbcache.js";
 import { comboOf, memoryState, potCharOn, potState, scopeKeyOf, setMemoryForBot, setMemoryGlobal, setPotChar, setPotForBot, setPotGlobal } from "../engine/memoryswitch.js";
 import { chatKeyOf, legacyChatKeyOf } from "../engine/chatkey.js";
@@ -31,7 +32,7 @@ export function createSwitches({ api, store, flow = null, now = () => Date.now()
     if (!(ci >= 0) || !(ti >= 0)) return null;
     const pos = `${ci}:${ti}`, g = cacheGen();
     if (!fresh && curByPos && curByPos.pos === pos && curByPos.g === g && now() - curByPos.t < CUR_TTL) return curByPos.v;
-    const v = await currentChat({ getCurrentCharacterIndex: async () => ci, getCurrentChatIndex: async () => ti, getCharacterFromIndex: (i) => api.getCharacterFromIndex(i) });
+    const v = await currentChat({ getCurrentCharacterIndex: async () => ci, getCurrentChatIndex: async () => ti, getCharacterFromIndex: (i) => (fresh ? api.getCharacterFromIndex(i) : readChar(api, i, ti)) });   // 2.2.23 같이 읽기(fresh면 새로)
     // 예전 키(chat.id) 폴더에 쌓인 기억을 지금 범위 키 폴더로 옮긴다(한 번만). 화면이 빈 폴더를 보던 문제(2.0.0)
     if (v && v.legacyId && v.legacyId !== v.chatId) { try { await store.adoptFolder?.(v.chaId, v.legacyId, v.chatId); } catch { /* 옮기기 실패는 막지 않음 */ } }
     curByPos = v ? { pos, g, t: now(), v } : null;

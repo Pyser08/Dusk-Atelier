@@ -3,7 +3,7 @@
 // 호스트가 <style>을 지우면 그라데이션 바탕만 남는다(그래도 읽기엔 문제없음). 스크립트는 쓰지 않는다.
 import { parseStatus } from "./storytime.js";
 import { weatherOf, nk } from "./memextra.js";
-import { linkHtml, TAB_CSS } from "./namecard.js";
+import { linkHtml, TAB_CSS, PC_OPEN_CSS } from "./namecard.js";
 import { forecast, climateOf, anchorOf, weekday, parseIso, ZONES, STATES } from "./weather.js";
 import { extraOf } from "./memextra.js";
 
@@ -75,7 +75,7 @@ export const SCENE_CSS = "<style>"
   + "@keyframes dkPop{0%{transform:translateY(10px) scale(.97);opacity:0;filter:blur(4px)}60%{transform:translateY(-2px) scale(1.005);opacity:1;filter:blur(0)}100%{transform:none}}"
   + "@keyframes dkUp{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}"
   + "@keyframes dkBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}"
-  + "[x-dusk=scene] summary::-webkit-details-marker{display:none}details[x-dusk=wx][open]>summary{background:rgba(255,255,255,.3)!important;transform:translateY(1px)}details[x-dusk=wx]>summary{transition:background .2s,transform .2s}" + TAB_CSS
+  + "[x-dusk=scene] summary::-webkit-details-marker{display:none}" + PC_OPEN_CSS + "details[x-dusk=wx][open]>summary{background:rgba(255,255,255,.3)!important;transform:translateY(1px)}details[x-dusk=wx]>summary{transition:background .2s,transform .2s}" + TAB_CSS
   + "@keyframes dkPcIn{from{opacity:0;transform:translate(-50%,-46%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}"
   + "@media (prefers-reduced-motion:reduce){[x-dusk=scene],[x-dusk=scene] *{animation:none!important}}</style>";
 
