@@ -65,6 +65,20 @@ function harness({ model = {} } = {}) {
         if (prompt.includes(SECTION_MARK) && s?.dusk) body.dusk = s.dusk;
         return JSON.stringify(body);
       }
+      // 2.2.30 리수폿 기록 방식을 없앴다 → 기록은 늘 Dusk 기록기. 시험용 기본 답(SCRIPT의 장면·인물·새 문서)
+      if (kind === "other" && /You (are the memory recorder|update the memory of)/.test(prompt)) {
+        const t = /"newest":"\[(T\d+)\]/.exec(prompt)?.[1] ?? /\[(T\d+)\]/.exec(prompt)?.[1], sc = SCRIPT[t];
+        if (/You are the memory recorder/.test(prompt)) {
+          if (!sc) return "scene|조용한 사무실|샬레||no";
+          const ppl = (sc.dusk?.people ?? []).map((x) => `who|${x.name}|${x.act}|${x.p ?? 1}`);
+          if (sc.doc && !ppl.some((l) => l.startsWith(`who|${sc.doc.title}|`))) ppl.push(`who|${sc.doc.title}|${sc.doc.text.slice(0, 40)}|2`);
+          if (sc.doc) ppl.push(`new|${sc.doc.title}|${sc.doc.text.slice(0, 60)}`);
+          return [`scene|${sc.dusk?.scene?.sum ?? sc.text.slice(5, 40)}|${sc.dusk?.scene?.place ?? "샬레"}||${sc.doc ? "yes" : "no"}`, ...ppl].join("\n");
+        }
+        const line = (n) => (sc?.doc && n === sc.doc.title ? `id|${sc.doc.text}` : "none");
+        if (/SEVERAL/.test(prompt)) return [...prompt.matchAll(/"name":"([^"]+)"/g)].map((m) => `@|${m[1]}\n${line(m[1])}`).join("\n");
+        return line(/"focus":"([^"]+)"/.exec(prompt)?.[1]);
+      }
       if (kind === "dusk") return JSON.stringify(SCRIPT[/\[T(\d+)\]/.exec(prompt)?.[0]?.slice(1, -1)]?.dusk ?? { people: [], scene: null });
       return "{}";
     }
@@ -91,6 +105,8 @@ const turnOn = async (h, mode = "fast") => {
   assert.equal(await h.mem.start(), "local");
   assert.equal(h.mem.flow.isOn(), true);
 };
+// 2.2.30: 리수폿 기록 방식(기록하기 호출에 Dusk 구획 합치기 등)을 없애며 그 길만 보던 시험 4개를 뺐다
+const isRec = (c) => /You are the memory recorder/.test(c.prompt);   // 2.2.30: 기록하기 = Dusk 기록기 1단계 호출
 const systemTexts = (out) => out.filter((x) => x.role === "system").map((x) => String(x.content));
 
 test("흐름이 꺼져 있으면(기본) 기존 v1.6.2 경로 그대로: 훅 2개, 위키 없음", async () => {
@@ -110,25 +126,6 @@ test("켜면 요청 직전 훅은 하나(이중 주입 방지)이고 출력 훅 
   assert.ok(h.hooks["r:beforeRequest"], "Dusk 주입 훅이 다시 올라감");
 });
 
-test("빠른 모드 10턴: 응답마다 모델 호출 1회(기록하기+Dusk 구획 합침), 위키와 Dusk 기록이 같이 쌓임", async () => {
-  const h = harness(); await turnOn(h);
-  for (let n = 1; n <= 10; n++) await h.say(n === 6 ? "호시노는 뭐 하고 있어?" : `계속하자 (${n})`, "T" + n);
-  const kinds = h.calls.map((c) => c.kind);
-  assert.equal(kinds.filter((k) => k === "dusk").length, 0, "따로 호출하는 Dusk 분석이 없어야 함");
-  assert.equal(kinds.filter((k) => k === "writer").length, 10, "응답마다 기록하기 1회");
-  assert.equal(h.calls.filter((c) => !/You update character gauges/.test(c.prompt)).length, 10, "빠른 모드는 응답 뒤 호출 1회뿐(고르기·정리 노트 없음). 게이지 제안은 8턴마다 따로 작은 호출(2.0.0)");
-  assert.ok(h.calls.filter((c) => c.kind === "writer").every((c) => c.prompt.includes(SECTION_MARK)), "모든 기록하기에 Dusk 구획이 실림: " + h.calls.map((c) => c.turn + ":" + c.prompt.includes(SECTION_MARK)).join(" "));
-  const f = await h.folder();
-  assert.deepEqual(Object.values(f.wiki.documents).map((d) => d.title).sort(), ["이치죠 노아", "타카나시 호시노", "하야세 유우카"]);
-  assert.ok(f.people[personKey("하야세 유우카")].records.length >= 3);
-  assert.equal(f.people[personKey("이치죠 노아")].records.length, 2);
-  assert.ok(f.scenes.length >= 4);
-  assert.ok(f.open.some((o) => /장부 누락/.test(o.text)) && f.open.some((o) => o.kind === "promise"));
-  assert.ok(Object.keys(f.rels).length >= 1);
-  assert.equal(h.mem.runner.session().combined, 10, "러너가 합쳐진 결과를 10번 썼다");
-  assert.equal(h.mem.runner.session().calls, 0);
-});
-
 test("요청 직전: 위키 참고와 [Dusk Memory] 블록이 한 번씩, 고른 인물은 장면에 없어도 블록에 들어감", async () => {
   const h = harness(); await turnOn(h);
   for (let n = 1; n <= 5; n++) await h.say(`계속하자 (${n})`, "T" + n);
@@ -139,37 +136,6 @@ test("요청 직전: 위키 참고와 [Dusk Memory] 블록이 한 번씩, 고른
   const block = sys.find((t) => t.startsWith("[Dusk Memory"));
   assert.match(block, /- 하야세 유우카:/, "T5 장면(노아·유우카)과 별개로 고른 인물 기록이 블록에 있음");
   assert.ok(h.mem.flow.last().focus.includes("하야세 유우카"), "고른 인물에 유우카: " + h.mem.flow.last().focus);
-});
-
-test("Dusk 구획이 없는 응답이면 기존 방식(따로 한 번 더 호출)으로 대신하고, 위키는 그대로 저장", async () => {
-  const h = harness({ model: { writer: (rec) => { const s = SCRIPT[rec.turn], ref = /"request_ref":"(req:[^"]+)"/.exec(rec.prompt)[1]; if (rec.turn !== "T1") return undefined; return JSON.stringify({ schema_version: 1, request_ref: ref, documents: [{ document_ref: "new:yuuka", operation: "create", type: "character", title: s.doc.title, aliases_add: s.doc.aliases, aliases_remove: [], tags_add: [], tags_remove: [], event_context: null, entries: [{ operation: "upsert", entry_ref: null, slot_id: "core.identity", target_refs: [], context_key: null, label: "기본정보", assertion: "fact", text: s.doc.text, evidence_refs: ["source:rp"], links: [], reason: "첫 등장" }] }], metric_ops: [], people_ops: [], issues: [] }); } } });
-  await turnOn(h);
-  await h.say("시작", "T1");
-  const f = await h.folder();
-  assert.equal(Object.keys(f.wiki.documents).length, 1);
-  assert.equal(h.calls.filter((c) => c.kind === "dusk").length, 1, "Dusk 분석은 따로 1회");
-  assert.ok(f.people[personKey("하야세 유우카")], "그래도 Dusk 기록은 남음");
-  assert.equal(h.mem.runner.session().combined ?? 0, 0);
-});
-
-test("구획 독립: 리수폿 쪽 응답이 틀려도 Dusk 구획이 맞으면 Dusk 기록은 저장됨", async () => {
-  const h = harness({ model: { writer: (rec) => { const s = SCRIPT[rec.turn]; return JSON.stringify({ schema_version: 1, request_ref: "req:wrong", documents: [], metric_ops: [], people_ops: [], issues: [], dusk: s.dusk }); } } });
-  await turnOn(h);
-  await h.say("시작", "T1");
-  const f = await h.folder();
-  assert.ok(f.people[personKey("하야세 유우카")], "Dusk 구획은 저장");
-  assert.equal(Object.keys(f.wiki?.documents ?? {}).length, 0, "틀린 위키 변경은 반영하지 않음");
-  assert.equal(h.calls.filter((c) => c.kind === "dusk").length, 0, "Dusk 쪽은 합친 결과를 썼으므로 따로 호출 안 함");
-});
-
-test("Dusk 구획이 깨지면(잘못된 모양) 위키는 저장되고 Dusk는 따로 호출해 채움", async () => {
-  const h = harness({ model: { writer: (rec) => { const s = SCRIPT[rec.turn], ref = /"request_ref":"(req:[^"]+)"/.exec(rec.prompt)[1]; if (rec.turn !== "T1") return undefined; return JSON.stringify({ schema_version: 1, request_ref: ref, documents: [{ document_ref: "new:yuuka", operation: "create", type: "character", title: s.doc.title, aliases_add: s.doc.aliases, aliases_remove: [], tags_add: [], tags_remove: [], event_context: null, entries: [{ operation: "upsert", entry_ref: null, slot_id: "core.identity", target_refs: [], context_key: null, label: "기본정보", assertion: "fact", text: s.doc.text, evidence_refs: ["source:rp"], links: [], reason: "첫 등장" }] }], metric_ops: [], people_ops: [], issues: [], dusk: ["이건", "배열"] }); } } });
-  await turnOn(h);
-  await h.say("시작", "T1");
-  const f = await h.folder();
-  assert.equal(Object.keys(f.wiki.documents).length, 1);
-  assert.equal(h.calls.filter((c) => c.kind === "dusk").length, 1);
-  assert.ok(f.people[personKey("하야세 유우카")]);
 });
 
 test("리롤: 같은 자리의 응답이 바뀌면 Dusk 기록은 새 글 기준으로 교체되고 위키 문서는 중복되지 않음", async () => {
@@ -192,16 +158,15 @@ test("리롤: 같은 자리의 응답이 바뀌면 Dusk 기록은 새 글 기준
 test("정확하게 모드: 고르기·정리 노트 호출이 일어나고 정리 노트 입력에 Dusk 회상이 장기기억 참고로 들어감", async () => {
   const h = harness(); await turnOn(h);
   for (let n = 1; n <= 4; n++) await h.say(`계속하자 (${n})`, "T" + n);
-  await h.mem.store.updateIndex((i) => { i.settings.flow.mode = "accurate"; i.settings.staged = false; i.settings.recorder = "pot"; });
+  await h.mem.store.updateIndex((i) => { i.settings.flow.mode = "accurate"; i.settings.staged = false; });
   await h.mem.flow.apply();
   const before = h.calls.length;
   await h.say("유우카, 아까 그 장부 말이야.", "T5", { requestOnly: true });
   const req = h.calls.slice(before);
   assert.ok(req.some((c) => c.kind === "router"), "고르기 호출");
-  const dir = req.find((c) => c.kind === "director");
+  const dir = req.find((c) => /You help direct the NEXT response/.test(c.prompt));   // 2.2.30: 정리 노트는 늘 Dusk 방향 호출
   assert.ok(dir, "정리 노트 호출");
-  assert.match(dir.prompt, /"source":"dusk"/, "정리 노트 입력의 장기기억 참고에 Dusk 회상이 들어감");
-  assert.match(dir.prompt, /Key moments: .*장부/);
+  // 2.2.30: Dusk 회상은 정리 노트 입력이 아니라 본편 요청의 [Dusk Memory] 블록으로 들어간다(위 ‘요청 직전’ 시험)
 });
 
 test("프롬프트 라이브러리 키·단계 이름 보조 함수", () => {
@@ -258,14 +223,15 @@ test("다음 입력 때 확정(기본): 응답 직후엔 기록하지 않고, �
   assert.equal(h.calls.length, 0, "응답 직후에는 기록하지 않는다");
   await request("계속하자");  // 두 번째 입력 → T1 확정
   assert.ok(await until(async () => (await h.folder())?.cursor?.at === i1 && idle()), "T1이 확정돼 기록돼야 함: " + JSON.stringify(h.mem.runner.session().tick));
-  assert.equal(h.calls.filter((c) => c.kind === "writer").length, 1);
+  assert.equal(h.calls.filter((c) => isRec(c)).length, 1);
   assert.equal(h.calls.filter((c) => c.kind === "dusk").length, 0, "기록하기 호출에 Dusk 구획이 실려 따로 부르지 않는다");
+  const n1 = h.calls.length;   // 2.2.30: 기록기는 한 응답에 여러 번 묻는다(장면 + 인물)
   await reply(SCRIPT.T2.text, "a2"); h.chat.message.pop(); const i3 = await reply(SCRIPT.T3.text, "a3");  // 리롤
   await wait(400);
-  assert.equal(h.calls.length, 1, "리롤되는 응답은 기록하지 않는다");
+  assert.equal(h.calls.length, n1, "리롤되는 응답은 기록하지 않는다");
   await request("그다음은?");
   assert.ok(await until(async () => (await h.folder())?.cursor?.at === i3 && idle()), "리롤된 최종 응답이 확정돼 기록돼야 함: " + JSON.stringify(h.mem.runner.session().tick));
-  assert.equal(h.calls.filter((c) => c.kind === "writer").length, 2);
+  assert.equal(h.calls.filter((c) => isRec(c)).length, 2);
   const f = await h.folder();
   assert.equal(Object.values(f.wiki.documents).filter((d) => d.title === "하야세 유우카").length, 1, "문서가 중복되지 않는다");
 });
@@ -291,7 +257,7 @@ test("이 봇에서 리수폿만 끄면: 위키 호출·기록은 없고 Dusk �
   const h = harness(); await turnOn(h);
   await h.mem.store.updateIndex((i) => { i.potBots = { ba: false }; });
   await h.say("시작하자", "T1");
-  assert.equal(h.calls.filter((c) => c.kind === "writer").length, 0, "리수폿 기록하기 호출이 없다");
+  assert.equal(h.calls.filter((c) => isRec(c)).length, 0, "리수폿 기록하기 호출이 없다");
   assert.ok(h.calls.filter((c) => c.kind === "dusk").length >= 1, "Dusk 기억은 따로 호출해서 쌓는다");
   let f = await h.folder();
   assert.ok(f.people[personKey("하야세 유우카")]?.records.length >= 1, "기억은 쌓였다");
@@ -299,7 +265,7 @@ test("이 봇에서 리수폿만 끄면: 위키 호출·기록은 없고 Dusk �
   await h.mem.switches.setPot("ba", true);
   await h.say("계속하자", "T2");
   f = await h.folder();
-  assert.ok(h.calls.some((c) => c.kind === "writer"), "다시 켜면 기록하기가 돈다");
+  assert.ok(h.calls.some((c) => isRec(c)), "다시 켜면 기록하기가 돈다");
   assert.ok(Object.keys(f.wiki.documents).length >= 1, "위키 문서가 쌓인다");
 });
 test("기록 시점이 따로: 리수폿은 응답 직후(now), 기억은 다음 입력 때(next)로 둘 수 있다", async () => {
@@ -310,7 +276,7 @@ test("기록 시점이 따로: 리수폿은 응답 직후(now), 기억은 다음
   await h.hooks["r:beforeRequest"]([{ role: "system", content: "샬레 세계관" }, { role: "user", content: "시작하자" }], "model");
   h.chat.message.push({ role: "char", data: SCRIPT.T1.text, chatId: "a1" });
   h.hooks["c:output"]?.({ characterIndex: 0, chatIndex: 0, messageIndex: idx + 1, chat: structuredClone(h.chat), char: await h.api.getCharacterFromIndex(0) });
-  assert.ok(await until(async () => h.calls.some((c) => c.kind === "writer")), "리수폿은 응답 직후 바로 기록한다(now)");
+  assert.ok(await until(async () => h.calls.some((c) => isRec(c))), "리수폿은 응답 직후 바로 기록한다(now)");
 });
 
 test("기억 방식 기본은 더 정확하게: 손대지 않은 예전 fast는 따라가고, 직접 고른 fast는 지킨다", async () => {

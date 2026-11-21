@@ -48,3 +48,12 @@ test("묶음 지시문 캐시: 요청 번호는 맨 끝에만, 같은 자료면 
   const head = (t) => t.slice(0, t.indexOf("# PEOPLE"));
   assert.equal(head(a), head(b));
 });
+
+test("2.2.30 기본 성격: 위키 기록이 돌고 있으면 끝날 때까지 기다렸다가 만든다(예전엔 그냥 끝나 거의 안 생김)", async () => {
+  const { ensureProfiles: ep } = await import("../src/data/profileseed.js");
+  let busy = true, made = [];
+  const memory = { flow: { runtime: () => ({ wiki: { snapshot: () => ({ documents: { a: { id: "a", type: "Character", title: "세라" } }, people: { profiles: {} } }) }, settings: { snapshot: () => ({}) }, auto: { status: () => ({ running: busy }) } }), tools: () => ({ busy: () => false, importer: { runCharacters: async (ids) => { made = ids; return { made: ids, failed: [] }; } } }) }, switches: { currentChat: async () => null } };
+  setTimeout(() => { busy = false; }, 30);
+  assert.equal(await ep(memory, { wait: 1000, step: 10 }), 1);
+  assert.deepEqual(made, ["a"]);
+});

@@ -62,7 +62,7 @@ test("relationship stage grows with shared scenes and warmth", () => {
   assert.equal(stageOf(f(sc(9), warm), "Mina", "Yuna", 10).stage, "very close");
   const lines = stageLines(f(sc(2)), ["Mina", "Yuna"], 10);
   assert.equal(lines.length, 1);
-  assert.match(lines[0], /Mina ↔ Yuna: acquaintances \(2 scenes together\) — let closeness grow gradually/);
+  assert.match(lines[0], /Mina ↔ Yuna: acquaintances, intimacy \d+\/10 \(2 scenes together\) — let closeness grow gradually/);
 });
 
 // ⑥ 호칭·말투 · ⑩ 둘만의 추억 · ⑤ 잘못된 믿음

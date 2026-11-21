@@ -25,7 +25,7 @@ function otherCard(o, openWiki, onEdit) {
   return h("article", { class: "rb-card bordered rb-me-card", "data-who": o.name },
     h("header", { class: "rb-me-chead" }, avatar(o.name),
       h("span", { class: "t" }, h("b", null, o.name), h("small", null, `함께한 장면 ${o.shared}개`)),
-      h("span", { class: `rb-me-stage s-${o.stage.replace(/\s+/g, "-")}` }, o.stageLabel)),
+      o.stageLabel ? h("span", { class: "rb-me-stage" }, o.stageLabel) : null),
     h("section", { class: "rb-me-sec" }, h("span", { class: "h" }, `${o.name}이(가) 나에게 느끼는 감정`),
       feelRows.length ? feelRows : h("small", { class: "rb-muted" }, "아직 기록된 감정이 없어요.")),
     (o.callsMe || o.iCall || o.face) ? h("section", { class: "rb-me-sec" }, h("span", { class: "h" }, "호칭 · 태도"),

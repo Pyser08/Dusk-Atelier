@@ -6,6 +6,7 @@ import { pickForStage } from "./modelhub.js";
 import { extraOf, extraFrom, applyExtra, nk, OUTFIT_STAGE1 } from "../engine/memextra.js";
 import { RACE_STAGE1 } from "../engine/races.js";
 import { CLIMATE_STAGE1 } from "../engine/weather.js";
+import { TIE_STAGE1 } from "../engine/ties.js";
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
 import { cleanForMemory } from "../engine/cleantext.js";
 
@@ -13,6 +14,7 @@ import { cleanForMemory } from "../engine/cleantext.js";
 export const FILL_FEATURES = Object.freeze([
   { key: "race", label: "종족", on: (inj) => inj.race !== false, empty: (f, chars) => chars.some((d) => !Object.values(extraOf(f).race).some((r) => nk(r.name) === nk(d.title))), line: RACE_STAGE1 },
   { key: "climate", label: "기후·달력", on: (inj) => inj.scenePanel !== false, empty: (f) => !extraOf(f).climate, line: CLIMATE_STAGE1 },
+  { key: "tie", label: "관계 종류", on: (inj) => inj.human !== false, empty: (f, chars) => chars.length > 0 && Object.keys(extraOf(f).ties).length === 0, line: TIE_STAGE1 },
   { key: "outfit", label: "옷차림", on: (inj) => inj.outfit !== false, empty: (f, chars) => chars.length > 0 && Object.keys(extraOf(f).outfit).length === 0, line: OUTFIT_STAGE1 },
 ]);
 const charsOf = (f) => Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && !/\{\{user\}\}/i.test(d.title ?? ""));
@@ -38,10 +40,10 @@ export async function fillFeatures(api, store, { chaId, chatId, chat, folder, ga
   const msgs = chat?.message ?? [];
   const recent = msgs.slice(-40).map((m) => `${isUserMessage(m) ? "{{user}}" : "AI"}: ${cleanForMemory(extractMessageText(m)).slice(0, 600)}`).join("\n").slice(-9000);
   const raw = await runAITask(`새 기능 채우기 · ${gaps.map((g) => g.label).join("·")}`, api, fillPrompt(folder, gaps, { recent, bot }), await pickForStage(api, "writer"), signal);
-  const known = charsOf(folder), canon = (n) => known.find((d) => [d.title, ...(d.aliases ?? [])].some((x) => nk(x) === nk(n)))?.title ?? "";
+  const known = charsOf(folder), canon = (n) => /\{\{user\}\}|^user$/i.test(String(n ?? "").trim()) ? "{{user}}" : known.find((d) => [d.title, ...(d.aliases ?? [])].some((x) => nk(x) === nk(n)))?.title ?? "";
   const keys = new Set(gaps.map((g) => g.key));
-  const reports = extraFrom(String(raw ?? "").replace(/<think>[\s\S]*?<\/think>/gi, ""), canon, { race: keys.has("race"), weather: keys.has("climate"), outfit: keys.has("outfit"), world: false, status: false })
-    .filter((r) => (r.kind === "race" && keys.has("race")) || (r.kind === "climate" && keys.has("climate")) || ((r.kind === "wear" || r.kind === "strip") && keys.has("outfit")));
+  const reports = extraFrom(String(raw ?? "").replace(/<think>[\s\S]*?<\/think>/gi, ""), canon, { race: keys.has("race"), weather: keys.has("climate"), outfit: keys.has("outfit"), tie: keys.has("tie"), world: false, status: false })
+    .filter((r) => (r.kind === "race" && keys.has("race")) || (r.kind === "climate" && keys.has("climate")) || ((r.kind === "wear" || r.kind === "strip") && keys.has("outfit")) || (r.kind === "tie" && keys.has("tie")));
   let changed = [];
   await store.updateFolder(chaId, chatId, (f) => {
     changed = applyExtra(f, reports, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0 });

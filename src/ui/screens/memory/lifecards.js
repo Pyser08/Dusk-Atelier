@@ -383,9 +383,10 @@ export const LIFE_CSS = `
 .rb-lsteps li.now{color:var(--rb-text);font-weight:700;background:color-mix(in srgb,#ec4f86 14%,transparent)}.rb-lsteps li.now i{background:#ec4f86;box-shadow:0 0 0 3px color-mix(in srgb,#ec4f86 25%,transparent)}
 .rb-lbadge{position:absolute;top:10px;right:12px;font-size:11px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,#5c8bd6 18%,var(--rb-surf));color:#4a76c0}
 @media (max-width:520px){.rb-lhero{grid-template-columns:104px minmax(0,1fr);gap:10px;padding:12px}.rb-lring-wrap{width:104px;height:104px}.rb-lring-wrap .mid b{font-size:26px}.rb-lsteps li{padding:1px 6px;font-size:11px}.rb-lsteps li small{display:none}}
-.rb-ltiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
-.rb-ltile{position:relative;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:var(--rb-surf2);overflow:hidden}
-.rb-ltile::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--c,var(--rb-acc))}
+/* 2.2.30: 칸이 overflow:hidden이라 (i) 말풍선이 잘렸다 → 말풍선은 칸 줄 전체 기준으로 띄우고(가로로도 안 잘림), 왼쪽 색 띠는 안쪽 그림자로 */
+.rb-ltiles{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.rb-ltile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:var(--rb-surf2);box-shadow:inset 3px 0 0 var(--c,var(--rb-acc));min-width:0}
+.rb-ltiles .rb-ibub{z-index:5}.rb-ltile small{display:flex;align-items:center;gap:3px;white-space:nowrap}
 .rb-ltile small{font-size:11px;color:var(--rb-mute)}.rb-ltile b{font-size:16px}
 .rb-ltile.fat{--c:#f0a35e}.rb-ltile.since{--c:#9b7fe0}.rb-ltile.cnt{--c:#ec4f86}.rb-ltile.ph{--c:#5cb6a8}.rb-ltile.ph-fertile{--c:#ec4f86}.rb-ltile.ph-period{--c:#d9534f}
 .rb-ltile .mini{display:block;height:4px;border-radius:2px;margin-top:4px;background:color-mix(in srgb,currentColor 10%,transparent)}.rb-ltile .mini i{display:block;height:100%;border-radius:2px;background:var(--c)}

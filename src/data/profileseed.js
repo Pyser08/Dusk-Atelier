@@ -32,7 +32,7 @@ function fail(area, name, what, f, list) {
   logFailure({ area, title: `‘${name}’ ${what} ${censored(msg) ? "— 검열" : "— 문제"}`, error: msg, fallback: "다음 턴에 다시 시도해요(3번까지)" });
 }
 
-export function ensureProfiles(memory, { max = 4, log = () => {}, api = null } = {}) {
+export function ensureProfiles(memory, { max = 4, log = () => {}, api = null, wait = 0, step = 3000 } = {}) {
   return running ??= (async () => {
     const flow = memory?.flow, rt = flow?.runtime?.(), tools = flow?.tools?.();
     const imp = tools?.importer;
@@ -43,7 +43,9 @@ export function ensureProfiles(memory, { max = 4, log = () => {}, api = null } =
     if (ps.sexualDesireEnabled === true && ps.paraphiliaEnabled !== true) { try { rt.settings.update((s) => { s.paraphiliaEnabled = true; }); ps = rt.settings.snapshot?.() ?? { ...ps, paraphiliaEnabled: true }; logEvent({ kind: "info", area: "설정", title: "욕구 기록과 함께 이상성향 기록도 켰어요(늘 함께)" }); } catch { /* 설정 저장 실패면 이번엔 그대로 */ } }
     // 다른 위키 작업이나 응답 자동 기록 중이면 다음 턴에(겹치면 위키가 바뀌어 호출만 버려진다)
     const autoBusy = () => { try { const st = rt.auto?.status?.(); return !!(st?.running || ["running", "applying", "repairing", "checking"].includes(st?.phase)); } catch { return false; } };
-    if (tools.busy?.() || autoBusy()) return 0;
+    // 2.2.30: 턴 6초 뒤에 불리는데 그때 위키 기록이 아직 돌고 있으면 매번 그냥 끝나 기본 성격이 거의 안 생겼다 → 끝날 때까지 기다린다(wait ms까지)
+    for (const until = Date.now() + wait; (tools.busy?.() || autoBusy()) && Date.now() < until;) await new Promise((r) => setTimeout(r, step));
+    if (tools.busy?.() || autoBusy()) { if (wait) log("기본 성격 만들기: 위키 기록이 길어져 다음 응답 때 다시 해요"); return 0; }
     const cur = await memory.switches?.currentChat?.().catch?.(() => null);
     const adult = ps.sexualDesireEnabled === true;
     const scope = rt.wiki.snapshot?.();
