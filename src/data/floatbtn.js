@@ -33,7 +33,7 @@ export function createFloatButton(api, { ensureDoc, icon, title, open, log = () 
     pos = await load() ?? presetSpots(view.w, view.h)[0];
     pos = clampPos(pos[0], pos[1], view.w, view.h);
     const old = await d.querySelector('[x-dusk="fab"]'); if (old) await old.remove();
-    el = await d.createElement("div"); await el.setAttribute("x-dusk", "fab"); await el.setAttribute("data-dusk", "fab"); await el.setAttribute("title", title); await el.setAttribute("role", "button"); await el.setAttribute("aria-label", title);
+    el = await d.createElement("div"); await el.setAttribute("x-dusk", "fab"); for (const [n, v] of [["data-dusk", "fab"], ["title", title], ["role", "button"], ["aria-label", title]]) { try { await el.setAttribute(n, v); } catch { /* 리스는 x- 속성만 허락 */ } }
     await place();
     try { await el.setInnerHTML(icon); } catch { await el.setInnerText("◎"); }
     // 2.2.29: 판마다 넘겨주는 이벤트가 달라(포켓리스·일반 리스는 포인터 좌표가 없기도) 포인터·터치·마우스를 모두 받는다

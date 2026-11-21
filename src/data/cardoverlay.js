@@ -37,6 +37,8 @@ export async function mountNodes(d, target, html, Parser = globalThis.DOMParser)
   await walk(target, root);
 }
 
+// 2.2.30: 리스는 x- 로 시작하는 속성만 setAttribute를 허락한다(다른 건 예외) → 실패해도 넘어간다
+const attr = async (el, n, v) => { try { await el.setAttribute(n, v); } catch { /* 막힌 속성 */ } };
 // cardOf(pid) → 상태창 안쪽 HTML(없으면 ""). ensureDoc() → 리스 화면 문서(권한 없으면 null)
 export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {}, onFail = () => {} }) {
   let open = null, hooking = false, timers = [], keyHooked = false, loop = null, total = 0;
@@ -50,11 +52,11 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
     await wrap.setStyleAttribute("position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:2147483000;");
     const bg = await d.createElement("div"); await bg.setStyleAttribute("position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.36);");
     await bg.addEventListener("click", () => { close().catch(() => {}); });
-    const box = await d.createElement("div"); await box.setAttribute("data-dusk", "pcbox"); await box.setStyleAttribute(BOX);
+    const box = await d.createElement("div"); await attr(box, "data-dusk", "pcbox"); await box.setStyleAttribute(BOX);
     // 2.2.30: 그리다 실패해도(판마다 DOM 함수가 다름) 글자만이라도 띄운다
     try { await mountNodes(d, box, html + '<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">바깥을 누르면 닫혀요 · Dusk 캐릭터 상태창</span>'); } catch (e) { log("상태창 그리기 일부 실패", e?.message ?? e); try { await box.setInnerText(String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()); } catch { /* 빈 상자라도 */ } }
     // 2.2.28: 닫기(×) — 바깥 누르기가 안 먹는 환경 대비
-    const x = await d.createElement("div"); await x.setAttribute("role", "button"); await x.setAttribute("aria-label", "닫기");
+    const x = await d.createElement("div"); await attr(x, "role", "button"); await attr(x, "aria-label", "닫기");
     await x.setStyleAttribute("position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;background:rgba(127,127,127,.18);color:inherit;z-index:2;");
     await x.setInnerText("×"); await x.addEventListener("click", () => { close().catch(() => {}); }); await box.appendChild(x);
     await wrap.appendChild(bg); await wrap.appendChild(box); await body.appendChild(wrap);
@@ -70,11 +72,11 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
       const d = await ensureDoc(); if (!d) return 0;
       for (const pid of pids()) {
         const safe = String(pid).replace(/[^\w-]/g, ""); if (!safe) continue;
-        const list = await d.querySelectorAll(`[data-pid="${safe}"]:not([data-hk]), .dusk-pid-${safe}:not([data-hk]), .x-risu-dusk-pid-${safe}:not([data-hk])`);
+        const list = await d.querySelectorAll(`[data-pid="${safe}"]:not([data-hk]):not([x-dusk-hk]), .dusk-pid-${safe}:not([data-hk]):not([x-dusk-hk]), .x-risu-dusk-pid-${safe}:not([data-hk]):not([x-dusk-hk])`);
         const len = typeof list?.length === "function" ? await list.length() : list?.length ?? 0;
         for (let i = 0; i < len; i++) {
           const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; if (!el) continue;
-          try { await el.setAttribute("data-hk", "1"); } catch { /* 표시만 못 함 — 다음에 또 달 수 있음 */ }
+          await attr(el, "x-dusk-hk", "1"); await attr(el, "data-hk", "1");
           await el.addEventListener("click", () => { show(pid).then((ok) => { if (!ok) { log("상태창을 열지 못했어요", pid); onFail(); } }).catch((e) => { log("상태창 열기 실패", e?.message ?? e); onFail(); }); });
           n++; total++;
         }
