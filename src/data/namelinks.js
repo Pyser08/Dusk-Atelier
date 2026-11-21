@@ -38,7 +38,11 @@ export function createNameLinks(memory, api = null) {
   const mount = createCssMount(api);
   let byId = new Map();
   // 2.2.28: 방식(화면 위/펼침)을 정하기 전에 응답을 그리면 펼침으로 남았다 → 권한 확인을 잠깐(최대 1.2초) 기다린다
-  const decided = async () => { if (mount.ready()) return true; await Promise.race([mount.ensureDoc().catch(() => null), new Promise((r) => setTimeout(r, 1200))]); return mount.ready(); };
+  // 2.2.30: 화면 위 방식으로 이름만 넣었는데 리스 화면에서 그 이름을 하나도 못 찾으면(판에 따라 응답이 다른 문서·막힌 곳에 그려짐)
+  // 이름을 눌러도 아무 일이 없다 → 펼침 방식으로 바꾸고 기록에 남긴다
+  let spanMode = true, probe = null;
+  const checkSpans = () => { if (probe || !spanMode) return; probe = setTimeout(async () => { probe = null; try { await overlay.hook(); } catch { /* 아래서 판단 */ } if (overlay.total() === 0 && spanMode) { spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "리스 화면에서 이름을 찾지 못해 상태창을 이름 아래 펼침으로 바꿨어요(이름을 다시 누르면 닫혀요)" }); } }, 5000); };
+  const decided = async () => { if (!spanMode) return false; if (mount.ready()) return true; await Promise.race([mount.ensureDoc().catch(() => null), new Promise((r) => setTimeout(r, 1200))]); return mount.ready() && spanMode; };
   const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: (pid) => { const d = byId.get(pid); return d && cache?.cardOf ? cache.cardOf(d) : ""; }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
   let cache = null, checked = 0, loading = null;
   // 2.2.22 성능: 캐릭터 통째(채팅 전체 포함, 큰 채팅은 수십 MB)는 봇이 바뀔 때만 한 번 읽고, 이름·설명·이미지 목록만 남긴다
@@ -88,7 +92,7 @@ export function createNameLinks(memory, api = null) {
     },
     // 본문 글에만 링크(뒤에 붙는 게이지·일기·로어북 상자는 호출하는 쪽이 따로 붙인다)
     async link(text) {
-      try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = await decided(); const out = linkNames(text, c.people, { overlay: ov }); if (ov && out !== text) overlay.soon(); return out; } catch { return text; }
+      try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = await decided(); const out = linkNames(text, c.people, { overlay: ov }); if (ov && out !== text) { overlay.soon(); checkSpans(); } return out; } catch { return text; }
     },
     // 장면 상태창 HTML(없으면 ""). 상태 줄이 있는 응답, 또는 등장인물이 나온 긴 응답에만
     async scene(text) {
@@ -96,8 +100,9 @@ export function createNameLinks(memory, api = null) {
         if (typeof text !== "string" || !text || text.includes('x-dusk="scene"')) return "";
         const c = await ready(); if (!c?.scene) return "";
         const s = sceneOf(text, c.folder, { seed: c.seed, hint: c.hint }), ppl = peopleIn(text, c.folder, c.botName);
-        if (!s.fromLine && text.length < 300) return "";   // 2.2.28: 상태 줄이 없어도 긴 응답이면(채팅 첫 응답 포함) 붙인다 — 짧은 내 입력엔 안 붙음
-        const ov = await decided(); if (ov) overlay.soon();
+        // 2.2.30: 상태 줄이 없으면 등장인물(위키 인물·봇 이름)이 글에 나온 긴 응답에만 — 리스바드는 응답 말고 다른 긴 글에도 이 처리를 거쳐 엉뚱한 곳(채팅 위쪽 전체 너비)에 붙었다
+        if (!s.fromLine && !(ppl.length && text.length >= 300)) return "";
+        const ov = await decided(); if (ov && c.links && ppl.some((p) => p.doc)) { overlay.soon(); checkSpans(); }
         return scenePanelHtml({ ...s, force: true, people: ppl.map((p) => (p.doc && c.links ? (ov ? { name: p.name, pid: p.doc.id } : { name: p.name, card: c.cardOf(p.doc) }) : { name: p.name })) });
       } catch { return ""; }
     },

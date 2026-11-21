@@ -39,7 +39,7 @@ export async function mountNodes(d, target, html, Parser = globalThis.DOMParser)
 
 // cardOf(pid) → 상태창 안쪽 HTML(없으면 ""). ensureDoc() → 리스 화면 문서(권한 없으면 null)
 export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {} }) {
-  let open = null, hooking = false, timers = [], keyHooked = false, loop = null;
+  let open = null, hooking = false, timers = [], keyHooked = false, loop = null, total = 0;
   const close = async () => { const w = open; open = null; if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } } };
   async function show(pid) {
     const d = await ensureDoc(); if (!d) return false;
@@ -75,7 +75,7 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
           const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; if (!el) continue;
           try { await el.setAttribute("data-hk", "1"); } catch { /* 표시만 못 함 — 다음에 또 달 수 있음 */ }
           await el.addEventListener("click", () => { show(pid).then((ok) => { if (!ok) log("상태창을 열지 못했어요", pid); }).catch((e) => log("상태창 열기 실패", e?.message ?? e)); });
-          n++;
+          n++; total++;
         }
       }
     } catch (e) { log("이름 클릭 달기 실패", e?.message ?? e); } finally { hooking = false; }
@@ -87,5 +87,5 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
     for (const t of timers) clearTimeout(t); timers = [300, 1200, 3500].map((ms) => setTimeout(() => { hook().catch(() => {}); }, ms));
     loop ??= setInterval(() => { hook().catch(() => {}); }, 2500);
   }
-  return { show, close, hook, soon, stop: () => { if (loop) clearInterval(loop); loop = null; } };
+  return { show, close, hook, soon, total: () => total, stop: () => { if (loop) clearInterval(loop); loop = null; } };
 }
