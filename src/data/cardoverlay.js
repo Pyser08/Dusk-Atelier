@@ -38,7 +38,7 @@ export async function mountNodes(d, target, html, Parser = globalThis.DOMParser)
 }
 
 // cardOf(pid) → 상태창 안쪽 HTML(없으면 ""). ensureDoc() → 리스 화면 문서(권한 없으면 null)
-export function createCardOverlay({ ensureDoc, cardOf, log = () => {} }) {
+export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {} }) {
   let open = null, hooking = false, timers = [], keyHooked = false, loop = null;
   const close = async () => { const w = open; open = null; if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } } };
   async function show(pid) {
@@ -62,18 +62,21 @@ export function createCardOverlay({ ensureDoc, cardOf, log = () => {} }) {
     return true;
   }
   // 응답 안 이름(data-dusk="nm")에 클릭을 단다. 이미 단 것은 data-hk로 건너뛴다
+  // 응답 안 이름에 클릭을 단다. 2.2.29: 속성을 읽지 않고(판에 따라 getAttribute가 없음) 인물마다 선택자로 찾는다 — data-pid, 클래스(리스가 x-risu- 를 붙이는 판 포함)
   async function hook() {
     if (hooking) return 0; hooking = true; let n = 0;
     try {
       const d = await ensureDoc(); if (!d) return 0;
-      const list = await d.querySelectorAll('[data-dusk="nm"]:not([data-hk])');
-      const len = typeof list?.length === "function" ? await list.length() : list?.length ?? 0;
-      for (let i = 0; i < len; i++) {
-        const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; if (!el) continue;
-        const pid = await el.getAttribute?.("data-pid"); if (!pid) continue;
-        await el.setAttribute("data-hk", "1");
-        await el.addEventListener("click", () => { show(pid).catch((e) => log("상태창 열기 실패", e?.message ?? e)); });
-        n++;
+      for (const pid of pids()) {
+        const safe = String(pid).replace(/[^\w-]/g, ""); if (!safe) continue;
+        const list = await d.querySelectorAll(`[data-pid="${safe}"]:not([data-hk]), .dusk-pid-${safe}:not([data-hk]), .x-risu-dusk-pid-${safe}:not([data-hk])`);
+        const len = typeof list?.length === "function" ? await list.length() : list?.length ?? 0;
+        for (let i = 0; i < len; i++) {
+          const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; if (!el) continue;
+          try { await el.setAttribute("data-hk", "1"); } catch { /* 표시만 못 함 — 다음에 또 달 수 있음 */ }
+          await el.addEventListener("click", () => { show(pid).then((ok) => { if (!ok) log("상태창을 열지 못했어요", pid); }).catch((e) => log("상태창 열기 실패", e?.message ?? e)); });
+          n++;
+        }
       }
     } catch (e) { log("이름 클릭 달기 실패", e?.message ?? e); } finally { hooking = false; }
     return n;

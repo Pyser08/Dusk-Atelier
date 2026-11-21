@@ -156,7 +156,7 @@ export function linkNames(text, people, { max = LINK_MAX, overlay = false } = {}
 }
 export const NAMECARD_CSS = TAB_CSS + "@keyframes dkPcIn{from{opacity:0;transform:translate(-50%,-46%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}" + PC_OPEN_CSS;
 // 2.2.24: 리스 화면 위에 상태창을 띄울 수 있을 때 — 응답 안엔 이름만(클릭은 cardoverlay가 단다)
-export const nameSpan = (name, pid) => `<span data-dusk="nm" data-pid="${esc(pid)}" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(139,111,224,.55);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</span>`;
+export const nameSpan = (name, pid) => `<span data-dusk="nm" data-pid="${esc(pid)}" class="dusk-pid-${esc(String(pid).replace(/[^\w-]/g, ""))}" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(139,111,224,.55);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</span>`;
 export function linkHtml(name, inner) {
   // 이름은 수수하게: 글자색·굵기는 그대로, 아주 옅은 밑줄만. 누르면 화면 가운데 상태창이 바로 뜬다(살짝 떠오르는 움직임)
   return `<details x-dusk="pc" data-dusk="pc" data-name="${esc(name)}" style="display:inline-block;vertical-align:baseline;margin:0;padding:0"><summary style="display:inline;cursor:pointer;list-style:none;color:inherit;font:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.38);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</summary>`

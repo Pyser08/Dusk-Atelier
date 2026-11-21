@@ -7,13 +7,14 @@ import { statusCardHtml, linkNames, NAMECARD_CSS } from "../engine/namecard.js";
 import { scenePanelHtml, sceneOf, peopleIn, SCENE_CSS } from "../engine/scenepanel.js";
 import { charThumb } from "./charimg.js";
 import { createCardOverlay } from "./cardoverlay.js";
+import { FAB_CSS } from "./floatbtn.js";
 import { logEvent } from "./memlog.js";
 import { folderIdOf } from "./memorystore.js";
 
 // 2.2.24: 상태창·장면 상태창 CSS는 응답 안 <style>이 아니라 리스 화면에 한 번만 넣는다.
 // 응답 안 <style>은 리스가 바꿔 해석하다 ‘CSS ERROR’를 띄우고 일부만 적용돼 이름이 두 번 보이기도 했다.
 // 리스 화면에 넣으려면 ‘메인 화면’ 권한이 필요하다(처음 한 번 물을 수 있음). 거절하면 애니메이션·바깥 눌러 닫기만 빠진다.
-export const STATUS_CSS = NAMECARD_CSS + SCENE_CSS;
+export const STATUS_CSS = NAMECARD_CSS + SCENE_CSS + FAB_CSS;
 const CSS_ID = "dusk-status-css";
 // 리스 화면 문서: ‘메인 화면’ 권한을 한 번 묻고(거절하면 다시 묻지 않음), 상태창 CSS를 한 번 넣는다
 export function createCssMount(api) {
@@ -38,7 +39,7 @@ export function createNameLinks(memory, api = null) {
   let byId = new Map();
   // 2.2.28: 방식(화면 위/펼침)을 정하기 전에 응답을 그리면 펼침으로 남았다 → 권한 확인을 잠깐(최대 1.2초) 기다린다
   const decided = async () => { if (mount.ready()) return true; await Promise.race([mount.ensureDoc().catch(() => null), new Promise((r) => setTimeout(r, 1200))]); return mount.ready(); };
-  const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, cardOf: (pid) => { const d = byId.get(pid); return d && cache?.cardOf ? cache.cardOf(d) : ""; }, log: (...a) => console.log("[Dusk 상태창]", ...a) });
+  const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: (pid) => { const d = byId.get(pid); return d && cache?.cardOf ? cache.cardOf(d) : ""; }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
   let cache = null, checked = 0, loading = null;
   // 2.2.22 성능: 캐릭터 통째(채팅 전체 포함, 큰 채팅은 수십 MB)는 봇이 바뀔 때만 한 번 읽고, 이름·설명·이미지 목록만 남긴다
   let charMemo = null;
