@@ -36,6 +36,8 @@ export function createCssMount(api) {
 export function createNameLinks(memory, api = null) {
   const mount = createCssMount(api);
   let byId = new Map();
+  // 2.2.28: 방식(화면 위/펼침)을 정하기 전에 응답을 그리면 펼침으로 남았다 → 권한 확인을 잠깐(최대 1.2초) 기다린다
+  const decided = async () => { if (mount.ready()) return true; await Promise.race([mount.ensureDoc().catch(() => null), new Promise((r) => setTimeout(r, 1200))]); return mount.ready(); };
   const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, cardOf: (pid) => { const d = byId.get(pid); return d && cache?.cardOf ? cache.cardOf(d) : ""; }, log: (...a) => console.log("[Dusk 상태창]", ...a) });
   let cache = null, checked = 0, loading = null;
   // 2.2.22 성능: 캐릭터 통째(채팅 전체 포함, 큰 채팅은 수십 MB)는 봇이 바뀔 때만 한 번 읽고, 이름·설명·이미지 목록만 남긴다
@@ -85,7 +87,7 @@ export function createNameLinks(memory, api = null) {
     },
     // 본문 글에만 링크(뒤에 붙는 게이지·일기·로어북 상자는 호출하는 쪽이 따로 붙인다)
     async link(text) {
-      try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = mount.ready(); const out = linkNames(text, c.people, { overlay: ov }); if (ov && out !== text) overlay.soon(); return out; } catch { return text; }
+      try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = await decided(); const out = linkNames(text, c.people, { overlay: ov }); if (ov && out !== text) overlay.soon(); return out; } catch { return text; }
     },
     // 장면 상태창 HTML(없으면 ""). 상태 줄이 있는 응답, 또는 등장인물이 나온 긴 응답에만
     async scene(text) {
@@ -93,9 +95,9 @@ export function createNameLinks(memory, api = null) {
         if (typeof text !== "string" || !text || text.includes('x-dusk="scene"')) return "";
         const c = await ready(); if (!c?.scene) return "";
         const s = sceneOf(text, c.folder, { seed: c.seed, hint: c.hint }), ppl = peopleIn(text, c.folder, c.botName);
-        if (!s.fromLine && !(ppl.length && text.length >= 300)) return "";
-        const ov = mount.ready(); if (ov) overlay.soon();
-        return scenePanelHtml({ ...s, people: ppl.map((p) => (p.doc && c.links ? (ov ? { name: p.name, pid: p.doc.id } : { name: p.name, card: c.cardOf(p.doc) }) : { name: p.name })) });
+        if (!s.fromLine && text.length < 300) return "";   // 2.2.28: 상태 줄이 없어도 긴 응답이면(채팅 첫 응답 포함) 붙인다 — 짧은 내 입력엔 안 붙음
+        const ov = await decided(); if (ov) overlay.soon();
+        return scenePanelHtml({ ...s, force: true, people: ppl.map((p) => (p.doc && c.links ? (ov ? { name: p.name, pid: p.doc.id } : { name: p.name, card: c.cardOf(p.doc) }) : { name: p.name })) });
       } catch { return ""; }
     },
   };

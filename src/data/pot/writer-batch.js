@@ -27,6 +27,7 @@ function writerBudgetError(assembled,budget,title=''){
   const cause={common:'기본 지침·규격의 비중이 큽니다.',conversation:'현재 RP·최근 대화가 가장 큽니다.',background:'로어북·배경 자료가 가장 큽니다.',documents:'문서·인물 프로필이 가장 큽니다.'}[largest];
   const advice=cause+' 기본 지침·규격도 포함됩니다. 흐름의 Writer 입력 예산을 조절하거나 참고 범위를 줄여주세요.';
   const error=new WriterBatchError('writer-input-budget',`Writer 전체 요청${title?` (대상: ${String(title).slice(0,80)})`:''} 추정 ${k(size.total)} / 플러그인 입력 예산 ${k(budget)} 초과. 공통 지침·규격 ${k(size.common)} | 현재 RP·최근 대화 ${k(size.conversation)} | 로어북·배경 ${k(size.background)} | 문서·인물 ${k(size.documents)}. ${advice} 문자 수 기반 추정치이며 모델의 실제 토큰 한도와는 별개입니다.`);error.inputBudget={...size,budget};return error;
+  error.over=Math.max(0,size.total-budget);
 }
 function planWriterBatches(input,{budgetTokens=writerInputBudgetTokens(input.settings),maxGroups=WRITER_BATCH_MAX_GROUPS}={}){
   const selected=selectWriterDocumentIds(input.wikiScope,input.rpText,input.userText,input.recentContext,{relationshipOnly:Boolean(input.settings?.relationshipOnlyMode),candidateDocumentIds:input.candidateDocumentIds||[],seedSources:input.seedSources||{},ownerDocumentIds:input.ownerFilter?.documentIds??null,trackedDocumentIds:input.trackedDocumentIds||[],newCharacterCandidates:input.newCharacterCandidates||[],userIdentity:input.userIdentity,npcRelationshipEnabled:input.settings?.npcRelationshipEnabled!==false}),budget=Math.max(1000,Math.floor(budgetTokens)),groups=[];
@@ -39,6 +40,28 @@ function planWriterBatches(input,{budgetTokens=writerInputBudgetTokens(input.set
   }if(current.length)groups.push(current);}
   if(groups.length>maxGroups)throw new WriterBatchError('writer-batch-cap','Writer 문서 묶음 수가 안전 한도를 초과했습니다.');return{groups,selectedDocumentIds:selected,budgetTokens:budget};
 }
+// 2.2.28: 예산을 넘으면 바로 실패하지 않고 줄일 수 있는 참고 자료를 줄여 맞춘다 — 로어북·배경(seed) → 최근 대화 → (아주 길면) 현재 응답 앞부분.
+// 공통 지침·문서는 줄이지 않는다(기록 품질). over = 넘친 토큰 추정. 더 줄일 게 없으면 null.
+export function trimWriterInput(input,over){
+  let need=Math.ceil(over*4*1.15)+600,changed=false;const out={...input,seedSources:{...(input.seedSources||{})}};
+  const seeds=Object.entries(out.seedSources).filter(([,v])=>v&&typeof v.content==='string').sort((a,b)=>b[1].content.length-a[1].content.length);
+  const MIN_SEED=900;
+  for(const [ref,v] of seeds){if(need<=0)break;const room=v.content.length-MIN_SEED;if(room<=0)continue;const cut=Math.min(room,need);out.seedSources[ref]={...v,content:v.content.slice(0,v.content.length-cut)+'\n…(예산에 맞춰 줄임)'};need-=cut;changed=true;}
+  const rc=String(out.recentContext||''),MIN_RECENT=1200;
+  if(need>0&&rc.length>MIN_RECENT){const cut=Math.min(rc.length-MIN_RECENT,need);out.recentContext='…(예산에 맞춰 앞부분 줄임)\n'+rc.slice(cut);need-=cut;changed=true;}
+  const rp=String(out.rpText||''),MIN_RP=6000;
+  if(need>0&&rp.length>MIN_RP){const cut=Math.min(rp.length-MIN_RP,need);out.rpText=rp.slice(cut);need-=cut;changed=true;}
+  if(need>0&&seeds.length){for(const [ref] of seeds){if(need<=0)break;const v=out.seedSources[ref];if(!v)continue;need-=v.content.length;delete out.seedSources[ref];changed=true;}}   // 그래도 넘으면 로어북 자료를 뺀다
+  return changed?out:null;
+}
+function planWriterBatchesFit(input,opts){
+  let cur=input;
+  for(let i=0;i<6;i++){
+    try{return{plan:planWriterBatches(cur,opts),input:cur};}
+    catch(error){if(error?.code!=='writer-input-budget')throw error;const next=trimWriterInput(cur,error.over||1000);if(!next)throw error;cur={...next,budgetTrimmed:(cur.budgetTrimmed||0)+1};}
+  }
+  return{plan:planWriterBatches(cur,opts),input:cur};
+}
 class WriterBatchError extends Error{constructor(code,message){super(message);this.name='WriterBatchError';this.code=code;}}
   function writerBatchContract(assembled,input){return{requestRef:input.requestRef,catalog:assembled.catalog,ownerFilter:input.ownerFilter||null,knownCharacterNames:assembled.knownCharacterNames,overviewRequiredRefs:assembled.overviewRequiredRefs,overviewSeedRefs:assembled.overviewSeedRefs,reviewCandidateRefs:assembled.reviewCandidateRefs,missingPeopleProfileRefs:assembled.missingPeopleProfileRefs,userIdentity:assembled.userIdentity,peopleCatalog:assembled.peopleCatalog,peopleProfileEnabled:assembled.peopleProfileEnabled,npcRelationshipEnabled:assembled.npcRelationshipEnabled,relationshipOnlyMode:assembled.relationshipOnlyMode,perceptionMode:assembled.perceptionMode,sexualDesireEnabled:assembled.sexualDesireEnabled,paraphiliaEnabled:assembled.paraphiliaEnabled,requireInitialSpeech:assembled.requireInitialSpeech,speechBootstrapRequiredRefs:assembled.speechBootstrapRequiredRefs,activeSlotMap:assembled.activeSlotMap,policies:assembled.policies,counterRules:assembled.counterRules,sourceCatalog:assembled.request.source_catalog,confirmedSources:assembled.request.confirmed_sources,seedSources:assembled.request.seed_sources,writableDocumentRefs:assembled.writableDocumentRefs,mentionedCharacterRefs:assembled.mentionedCharacterRefs,bootstrapRequiredRefs:assembled.bootstrapRequiredRefs,requiredMetricSetups:assembled.requiredMetricSetups,metricBackgroundSources:assembled.metricBackgroundSources,allowCreate:assembled.allowCreate};}
 function writerBatchLooksTruncated(raw,error){const message=String(error?.message||'');return !String(raw||'').trim()||/JSON 객체를 찾지 못|응답이 비어|출력 배열 한도|truncat|unterminated|unexpected end/i.test(message);}
@@ -47,7 +70,7 @@ function writerBatchLengthRepair(prompt,requestRef){const compact=String(prompt|
 function writerBatchExpandedMaxTokens(preset){const configured=Number(preset?.maxTokens);return Math.min(32768,Math.max(16384,Number.isFinite(configured)&&configured>0?Math.ceil(configured*2):16384));}
 export async function executeWriterBatches({input,preset,api,keyStore,llmCall,traceStore=null,traceScope=null,traceSkills=[],batchRef,contributionRef,repairPrompt=writerBatchDefaultRepair,budgetTokens=writerInputBudgetTokens(input.settings),maxGroups=WRITER_BATCH_MAX_GROUPS,onProgress=()=>{},isCurrent=()=>true}){
   input={...input,candidateDocumentIds:[...new Set([...(input.candidateDocumentIds||[]),...writerLoreIdentityIds(input.wikiScope,input.seedSources)])]};
-  const plan=planWriterBatches(input,{budgetTokens,maxGroups}),queue=plan.groups.map(group=>[...group]);
+  const fitted=planWriterBatchesFit(input,{budgetTokens,maxGroups});input=fitted.input;const plan=fitted.plan,queue=plan.groups.map(group=>[...group]);
   let draft=writerBatchClone(input.wikiScope),index=0,attempts=0,repairAttempted=false,salvagedMetricEvents=0;
   const outputs=[],assemblies=[],createdIds=[],createdRefs=new Set(),reports=[],validationReports=[];
   const originalHistoryIds=new Set((input.wikiScope.history||[]).map(event=>event.id)),trackingHistoryIds=new Set();
@@ -57,7 +80,7 @@ export async function executeWriterBatches({input,preset,api,keyStore,llmCall,tr
     if(!isCurrent())throw new WriterBatchError('writer-batch-stale','Writer 실행 중 채팅·설정 또는 Wiki가 바뀌었습니다.');
     const group=queue[index],assembled=writerBatchAssembly(input,draft,group,index,queue.length,createdIds),assembledTokens=estimateWriterTokens(assembled.prompt),contract=writerBatchContract(assembled,input);
     if(assembledTokens>plan.budgetTokens){
-      if(group.length<=1)throw writerBudgetError(assembled,plan.budgetTokens,draft.documents[group[0]]?.title);
+      if(group.length<=1){const next=trimWriterInput(input,assembledTokens-plan.budgetTokens);if(next){input=next;continue;}throw writerBudgetError(assembled,plan.budgetTokens,draft.documents[group[0]]?.title);}
       const middle=Math.ceil(group.length/2);queue.splice(index,1,group.slice(0,middle),group.slice(middle));if(queue.length>maxGroups)throw new WriterBatchError('writer-batch-cap','Writer 문서 묶음 수가 안전 한도를 초과했습니다.');continue;
     }
     onProgress(index+1,queue.length);

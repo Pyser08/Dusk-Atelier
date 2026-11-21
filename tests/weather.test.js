@@ -103,3 +103,9 @@ test("동거 여성 월경 주기: 한 주기마다 시작일 차이가 좁혀�
 });
 
 test("기후대마다 확률 합이 맞음", () => { for (const z of Object.keys(ZONES)) for (const pos of [0, 0.3, 0.6, 0.9]) { const c = climo(z, pos); assert.ok(Math.abs(c.p.reduce((a, b) => a + b, 0) - 1) < 1e-9, z); } });
+
+test("2.2.28: 날씨 상태창은 정보가 없어도(채팅 첫 응답) force면 ‘날짜 미정’으로 뜸", () => {
+  assert.equal(scenePanelHtml({}), "", "기본은 그대로");
+  const h = scenePanelHtml({ force: true });
+  assert.match(h, /날짜 미정/); assert.match(h, /--:--/);
+});

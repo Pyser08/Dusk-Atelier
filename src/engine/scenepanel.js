@@ -177,8 +177,8 @@ function forecastHtml(fc, cal, fg) {
   return `<span style="display:grid;grid-template-columns:repeat(${fc.days.length},minmax(0,1fr));gap:5px">${cols}</span>`;
 }
 // 패널 HTML. people = [{name, card?: 상태창 안쪽 HTML}], forecast = 엔진 예보, climate = 기후(달력·이름)
-export function scenePanelHtml({ date = "", time = "", place = "", weather = "", people = [], forecast: fc = null, climate: cl = null } = {}) {
-  if (!date && !time && !place && !people.length) return "";
+export function scenePanelHtml({ date = "", time = "", place = "", weather = "", people = [], forecast: fc = null, climate: cl = null, force = false } = {}) {
+  if (!force && !date && !time && !place && !people.length) return "";
   const w = WX[weather] ? weather : "";
   const part = dayPart(time), night = part === "밤";
   const fg = WX[w][4], icon = iconOf(w, night);
