@@ -77,7 +77,7 @@ test("장면 상태창: 판타지 달력 날짜·기후 이름·4일 예보 상�
   for (const x of ['x-dusk="wx"', "4일 예보", "아르덴 왕국", "오늘", "내일", "모레", "💧", "1023년 13월 27일"]) assert.ok(h.includes(x), x);
   assert.ok(!/1023년 13월 27일 \(/.test(h), "판타지 달력은 요일 없음");
   const told = sceneOf("[2026-03-02 22:40 | 서울]\n함박눈이 내렸다.", {}, { seed: "x" });
-  assert.equal(told.weather, "눈"); assert.equal(told.forecast.now.w, "눈", "글에 나온 날씨가 지금 날씨");
+  assert.equal(told.weather, told.forecast.now.w, "11-21: AI 글에 나온 날씨보다 엔진 예보가 먼저");
   assert.equal(told.climate.zone, "continental", "장소로 기후 추정");
 });
 

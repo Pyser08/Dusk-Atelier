@@ -135,6 +135,7 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
     } else if (r.kind === "cohabit") {
       const key = [nk(r.a), nk(r.b)].sort().join("|"); if (!e.cohabit.some((x) => x.key === key)) { e.cohabit.push({ key, a: r.a, b: r.b, at: turn }); changed.push(`동거 ${r.a}·${r.b}`); }
     } else if (r.kind === "weather") {
+      if (e.weather?.user) continue;   // 11-21: 유저가 정한 날씨(입력·직접 고침)는 기록기 보고가 덮지 않음(엔진 예보가 먼저라 기록 날씨는 참고용)
       if (e.weather?.w !== r.w) changed.push(`날씨 ${r.w}`); e.weather = { w: r.w, at: turn, when: text(when, 40) };
     } else if (r.kind === "wear" || r.kind === "strip") {
       const k = nk(r.name), o = (e.outfit[k] ??= { name: r.name, parts: {}, acc: [] });

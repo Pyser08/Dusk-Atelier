@@ -19,20 +19,27 @@ export function sceneOf(text, folder, { seed = "", hint = "" } = {}) {
   const date = s.date || fw.date, time = s.time || fw.time, place = s.place || last?.place || "";
   // 기후·예보(엔진): AI가 정한 기후 → 장소·봇 글 추정. 응답 글에 날씨가 보이면 그게 지금 날씨
   const e = extraOf(folder), cl = climateOf(e, [place, hint].join(" "));
-  // 11-21 제보: 본문에 날씨가 없으면 엔진 예보가 기록된 날씨를 덮어 제멋대로 바뀌었다 → 본문 > 같은 날 기록(또는 사용자가 고친 값) > 엔진 예보
-  const told = weatherOf(body), kept = keptWeather(e.weather, date), now = told || kept;
-  let fc = null; try { fc = date ? forecast(cl, date, time || "12:00", seed || "dusk", { anchor: STATES.includes(told) && parseIso(date) ? null : anchorOf(e, cl) }) : null; } catch { fc = null; }
+  // 11-21 사용자 결정: 엔진 예보가 늘 먼저. 유저가 입력으로 바꾼 날씨(같은 날)·위키에서 고친 날씨만 예보를 덮는다. AI 응답 글은 예보가 없을 때만
+  const told = weatherOf(body), now = keptWeather(e.weather, date);
+  let fc = null; try { fc = date ? forecast(cl, date, time || "12:00", seed || "dusk", { anchor: anchorOf(e, cl) }) : null; } catch { fc = null; }
   if (fc && STATES.includes(now) && fc.days[0]) { const h = fc.days[0].half.find((x) => x?.now); if (h) { h.w = now; h.rain = /비|눈|천둥/.test(now) ? 100 : 0; } fc.now = { ...fc.now, w: now }; }
   let days = []; try { days = date ? upcoming(e, date, cl, 14) : []; } catch { days = []; }   // 다가오는 날(달력)
-  return { date, time, place, weather: now || fc?.now?.w || e.weather?.w || "", fromLine: !!(s.date || s.time), forecast: fc, climate: cl, days };
+  return { date, time, place, weather: now || fc?.now?.w || told || e.weather?.w || "", fromLine: !!(s.date || s.time), forecast: fc, climate: cl, days };
 }
-// 기록된 날씨를 지금 날씨로 쓸지: 사용자가 고친 값이거나, 기록된 날이 지금 장면 날짜와 같을 때(날짜를 모르면 그대로 씀)
+// 유저가 정한 날씨만 예보를 덮는다: 위키에서 고친 값(날짜 없음 → 계속) 또는 유저 입력으로 바뀐 값(그날만)
 export function keptWeather(w, date) {
-  if (!w?.w) return "";
-  if (w.user) return w.w;
+  if (!w?.w || !w.user) return "";
   const a = parseIso(w.when), b = parseIso(date);
-  if (!a || !b) return w.w;
+  if (!a) return w.src === "input" ? "" : w.w;
+  if (!b) return w.w;
   return a.y === b.y && a.m === b.m && a.d === b.d ? w.w : "";
+}
+// 유저 입력에서 날씨 읽기(엄격하게: ‘눈이 마주쳤다’·‘준비가’ 같은 말은 날씨가 아님). 있으면 저장할 값
+const INPUT_WX = [["폭우", /폭우|장대비|억수같이/], ["천둥", /천둥|번개|뇌우/], ["눈", /함박눈|진눈깨비|눈보라|눈송이|눈이\s*(내리|오|와|온|쌓|펑펑|그치)/],
+  ["비", /소나기|이슬비|빗방울|빗줄기|(^|[^준장예설무경])비가\s*(내리|오|와|온|쏟|그치|퍼붓)/], ["안개", /안개/], ["맑음", /맑(음|은 하늘|게 갰|아졌|아진)|화창|햇살이/], ["흐림", /흐려|흐린 하늘|먹구름/], ["바람", /바람이\s*(세|거세|강하)|강풍/]];
+export function inputWeather(text, when = "") {
+  const t = String(text ?? ""); const hit = INPUT_WX.find(([, re]) => re.test(t));
+  return hit ? { w: hit[0], user: true, src: "input", when: String(when ?? "").slice(0, 40) } : null;
 }
 // 이 응답에 나온 인물(위키 문서가 있는 인물 + 봇 캐릭터). [{name, doc}]
 export function peopleIn(text, folder, botName = "") {

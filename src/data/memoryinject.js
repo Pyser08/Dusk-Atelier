@@ -13,7 +13,7 @@ import { GUIDES } from "./guidelib.js";   // addon-rebuild: 척도 표기·기�
 import { stateText } from "../engine/storytime.js";
 import { extraSection, mentionsOf } from "../engine/memextra.js";
 import { fertilitySection } from "../engine/fertility.js";
-import { sceneOf } from "../engine/scenepanel.js";
+import { sceneOf, inputWeather } from "../engine/scenepanel.js";
 import { weatherLine } from "../engine/weather.js";
 import { calSection } from "../engine/storycal.js";
 import { raceSection } from "../engine/races.js";   // 0.3.22 기후·예보(장면 상태창 켜졌을 때)   // 0.3.22 소문·목표·세계·흔적·근황·@인물
@@ -103,6 +103,11 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
         const when = [...(folder?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
         add(fertilitySection(folder, here, Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when));
         add(extraSection(folder, { present: here, recent, turn: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when, pinned, docs: chars, world: idx.settings.inject?.world === true, status: idx.settings.inject?.status !== false, outfit: idx.settings.inject?.outfit !== false }));
+        // 11-21: 엔진 예보가 먼저, 유저가 입력으로 날씨를 바꾸면 그날은 그걸 따른다(저장해서 상태창·다음 요청도 같은 값)
+        { const lastUser = [...msgs].reverse().find((m) => isUserMessage(m));
+          const iw = lastUser ? inputWeather(extractMessageText(lastUser), when) : null;
+          if (iw && (folder.extra?.weather?.w !== iw.w || !folder.extra?.weather?.user)) { folder.extra = { ...(folder.extra ?? {}), weather: iw };
+            store.updateFolder(String(character.chaId), chatKeyOf(chat), (f) => { f.extra = { ...(f.extra ?? {}), weather: iw }; }).catch(() => {}); } }
         { let sc = null; try { sc = sceneOf("", folder, { seed: `${character.chaId}|${chatKeyOf(chat)}`, hint: [character.name, String(character.desc ?? "").slice(0, 1500)].join(" ") }); } catch { sc = null; }
           if (sc?.forecast && idx.settings.inject?.scenePanel !== false) add(weatherLine(sc.forecast, sc.climate));
           if (sc?.date && idx.settings.inject?.scenePanel !== false) add(calSection(folder?.extra, sc.date, sc.climate));   // 이야기 달력: 7일 안의 생일·기념일·약속·공휴일
