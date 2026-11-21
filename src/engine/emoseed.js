@@ -56,7 +56,7 @@ export function sourAttraction(folder, anchor = null, now = Date.now(), { gauge 
     pr.sour = (pr.sour ?? 0) + 1;
     if (pr.sour < every) continue;
     pr.sour = 0;
-    const d = scaleDelta(-1, gauge); if (!d) continue;
+    const d = scaleDelta(-1, gauge, { tag: "attraction" }); if (!d) continue;
     const before = t.attraction, v = Math.max(0, before + d);
     if (v === before) continue;
     t.attraction = v; n++;

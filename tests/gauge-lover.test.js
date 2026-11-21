@@ -11,7 +11,7 @@ import { prefItem } from "../src/ui/screens/memory/erosyncwiki.js";
 import { createErosyncTurn, normalizeTurnSettings } from "../src/data/erosyncturn.js";
 
 test("게이지 배수: 기본은 그대로, 0배는 멈춤, 작은 배수에도 1칸은 남는다", () => {
-  assert.deepEqual(normalizeGauge(null), { up: 1, down: 1, lust: 1 });
+  assert.deepEqual(normalizeGauge(null), { up: 1, down: 1, romUp: 1, romDown: 1, lust: 1 });
   assert.equal(isDefaultGauge({}), true);
   assert.equal(scaleDelta(2, null), 2);
   assert.equal(scaleDelta(2, { up: 2 }), 4);
@@ -19,7 +19,7 @@ test("게이지 배수: 기본은 그대로, 0배는 멈춤, 작은 배수에도
   assert.equal(scaleDelta(1, { up: 0.3 }), 1);
   assert.equal(scaleDelta(3, { up: 0 }), 0);
   assert.equal(scaleDelta(3, { up: 3 }, { max: 3 }), 3);
-  assert.deepEqual(normalizeGauge({ up: 9, down: -1 }), { up: 3, down: 0, lust: 1 });
+  assert.deepEqual(normalizeGauge({ up: 9, down: -1 }), { up: 3, down: 0, romUp: 3, romDown: 0, lust: 1 }, "이성적 호감은 따로 정하기 전엔 따라감");
   assert.equal(scaleTarget(50, 60, { up: 0.5 }), 55);
   assert.equal(scaleTarget(50, 40, { down: 2 }), 30);
 });
