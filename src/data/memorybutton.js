@@ -8,10 +8,14 @@ export async function loadMemoryButtonOn(api) {
     return true;
   }
 }
-export function createMemoryButton(api, { name, icon, open, log }) {
+import { createFloatButton } from "./floatbtn.js";
+// 2.2.25: ensureDoc(리스 화면 문서, 권한 있을 때)가 있으면 Dusk가 직접 그린 동그란 반투명 버튼(끌어서 옮김)을 쓰고, 없으면 리스 버튼
+export function createMemoryButton(api, { name, icon, open, log, ensureDoc = null }) {
   let part = null, on = false;
+  const fab = ensureDoc ? createFloatButton(api, { ensureDoc, icon, title: name, open, log }) : null;
   async function show() {
     if (on) return true;
+    try { if (fab && await fab.show()) { on = true; return true; } } catch (e) { log?.(`떠 있는 버튼 그리기 실패 ${e?.message ?? e}`); }
     try {
       part = await api.registerButton({ name, icon, iconType: "html", location: "action", id: "dusk-memory-button" }, open);   // id가 있어야 포켓리스가 떠 있는 버튼 위치를 옮기고 기억해요
       on = true;
@@ -23,6 +27,7 @@ export function createMemoryButton(api, { name, icon, open, log }) {
   }
   async function hide() {
     if (!on) return true;
+    if (fab?.isOn()) { await fab.hide(); on = false; return true; }
     const id = part?.id ?? part;
     try {
       await api.unregisterUIPart(id);

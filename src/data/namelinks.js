@@ -74,6 +74,7 @@ export function createNameLinks(memory, api = null) {
     invalidate() { cache = null; checked = 0; charMemo = null; },
     css: () => STATUS_CSS,
     overlay,
+    ensureDoc: () => mount.ensureDoc(),
     // 2.2.25: 애드온이 켜질 때 미리 리스 화면 권한을 확인한다(응답을 그리기 전에 방식이 정해지게). 상태창이 꺼져 있으면 묻지 않는다
     async prepare() {
       const idx = await memory?.store?.getIndex?.().catch?.(() => null), inj = idx?.settings?.inject ?? {};
