@@ -246,3 +246,15 @@ test("달아오름 장면 계획은 관계(해소) 뒤나 진정되면 사라짐
   assert.ok(f.life.p[id].lust < 60, `해소로 내려감 ${f.life.p[id].lust}`);
   assert.ok(!Object.values(f.drive.goals).some((g) => g.hot && g.kind === "sex"), "해소 뒤 계획 사라짐");
 });
+
+// 2.2.29 버그리포트: 기억 분석이 묶여 돌면 턴 번호가 그대로라 둘째 응답부터 피로·관계·달아오름이 전혀 안 바뀌었다
+test("응답마다 다른 키면 턴 번호가 같아도 반영, 같은 키(같은 응답)는 한 번만", () => {
+  const f = folder(); tickLife(f, { turn: 10, present: ["유나"] }, () => 80);
+  const id = Object.keys(f.life.p)[0];
+  tickLife(f, { turn: 10, present: ["유나"], evKey: "r1", events: [{ kind: "act", name: "유나", partner: "민호", act: "sex" }] }, () => 80);
+  tickLife(f, { turn: 10, present: ["유나"], evKey: "r2", events: [{ kind: "gauge", name: "유나", key: "fat", delta: 20 }, { kind: "gauge", name: "유나", key: "lust", delta: 15 }] }, () => 80);
+  const L = f.life.p[id];
+  assert.equal(L.sex.n, 1, "첫 응답의 관계"); assert.ok(L.fat >= 15, `둘째 응답의 피로 ${L.fat}`); assert.ok(L.lust > 0, `둘째 응답의 달아오름 ${L.lust}`);
+  tickLife(f, { turn: 10, present: ["유나"], evKey: "r1", events: [{ kind: "act", name: "유나", partner: "민호", act: "sex" }] }, () => 80);
+  assert.equal(L.sex.n, 1, "같은 응답이 다시 와도 한 번만");
+});

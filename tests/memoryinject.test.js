@@ -185,25 +185,22 @@ test("예산이 넉넉하면 trimmedIds는 비어 있다", () => {
 });
 
 // 2.2.11 HypaPlus 방식: process 훅에서 메시지 번호(chat_index)로 뺀다 — 요청 글 모양이 달라도 빠지고, beforeRequest는 다시 빼지 않는다
-test("요약된 옛 대화 빼기(process 훅): 켜면 분석된 옛 메시지를 번호 조건으로 감싸고, 끄면 그대로", async () => {
-  const m = new Map(), msgs = [];
-  for (let i = 0; i < 24; i++) msgs.push({ role: i % 2 ? "char" : "user", data: `${i % 2 ? "봇" : "나"}의 말 ${i}번째 — 충분히 긴 본문이에요.` });
-  const chat = { id: "t", message: msgs };
+test("2.2.29: 요약된 옛 대화 빼기는 process 단계(번호 조건)를 쓰지 않는다 — 최근 메시지까지 빠지던 위험(A3→B1 제보)", async () => {
+  const m = new Map();
   const api = { pluginStorage: { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); }, removeItem: async (k) => { m.delete(k); } },
-    getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getCharacterFromIndex: async () => ({ chaId: "c", name: "봇" }), getChatFromIndex: async () => chat,
+    getCurrentCharacterIndex: async () => 0, getCurrentChatIndex: async () => 0, getCharacterFromIndex: async () => ({ chaId: "c", name: "봇" }), getChatFromIndex: async () => ({ id: "t", message: [] }),
     addRisuReplacer: async (n, f) => { api.rep = f; }, addRisuScriptHandler: async (n, f) => { api[n] = f; } };
   const store = createMemoryStore(api); const inj = createMemoryInjector(api, { store }); await inj.start();
-  assert.equal(await inj.startTrim(), true);
-  await store.updateFolder("c", "t", (f) => { f.cursor = { at: 22 }; f.scenes.push({ id: "s", sum: "장면", facts: [], who: [] }); });
-  assert.equal(await api.process("본문"), "본문", "기본 꺼짐");
-  await store.updateIndex((i) => { i.settings.inject.trimOld = true; i.settings.inject.trimKeep = 4; });
-  await new Promise((r) => setTimeout(r, 2100));   // 경계 캐시(2초)
-  const g = await api.process("본문");
-  assert.match(g, /greater_equal::\{\{chat_index\}\}::16/, "12턴 중 최근 4턴만 남기는 경계(16번부터)");
-  const req = [{ role: "system", content: "sys" }, ...msgs.slice(16).map((x) => ({ role: x.role === "user" ? "user" : "assistant", content: `[x] ${x.data}` }))];
-  const out = await api.rep(req, "model");
-  assert.equal(out.length, req.length + 1, "beforeRequest는 다시 빼지 않고 기억만 넣는다");
-  assert.equal(inj.lastRequest().dropped, 16);
+  assert.equal(await inj.startTrim(), false); assert.equal(api.process, undefined, "process 훅을 달지 않음");
+});
+test("2.2.29: 요청 맞추기로 옛 대화를 빼도 요청 끝쪽(최신 입력·바로 앞 대화)은 늘 남는다", async () => {
+  const { trimCovered } = await import("../src/engine/historytrim.js");
+  const chat = []; for (let i = 0; i < 30; i++) chat.push({ role: i % 2 ? "char" : "user", data: `같은 말 반복되는 본문입니다 ${i % 2 ? "봇" : "나"} — 충분히 길게 ${i < 28 ? i : "x"}` });
+  const req = chat.map((c) => ({ role: c.role === "char" ? "assistant" : "user", content: c.data }));
+  const r = trimCovered(req, chat, { keepTurns: 4, step: 4, coveredAt: 27 });
+  const tail = req.slice(-4).map((x) => x.content);
+  assert.deepEqual(r.messages.slice(-4).map((x) => x.content), tail, "끝 4개는 그대로");
+  assert.ok(r.dropped > 0, "옛 대화는 빠짐");
 });
 
 test("insertBlock end: 기억 블록이 유저의 최신 입력 뒤에 오면, 그 입력에 먼저 반응하라는 줄을 붙인다(입력 무시 방지)", () => {

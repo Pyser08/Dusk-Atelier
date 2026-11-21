@@ -121,7 +121,7 @@ export function developZones(f, docId, parts, g = { up: 1 }) {
   return out;
 }
 // interestOf(doc) → 성적 관심(숫자) 또는 { interest, mult(0.5~2), boost:[글…] }  · text: 이번 응답 글(욕망·이상성향 반응용)
-export function tickLife(f, { turn, present = [], events = [], date = "", gauge = null, text = "" } = {}, interestOf = () => 50) {
+export function tickLife(f, { turn, present = [], events = [], date = "", gauge = null, text = "", evKey = "" } = {}, interestOf = () => 50) {
   if (!f || !Number.isFinite(turn)) return [];
   f.life ??= { turn: null, p: {} }; f.life.p ??= {};
   const last = Number.isFinite(f.life.turn) && f.life.turn <= turn ? f.life.turn : turn;   // 앞선 번호가 남아 있으면 지금부터 다시 센다
@@ -130,8 +130,10 @@ export function tickLife(f, { turn, present = [], events = [], date = "", gauge 
   const evBy = new Map();
   // 같은 응답을 다시 받으면(리롤) 이미 반영한 턴의 행위·게이지 보고는 다시 세지 않는다. 한 턴에 인물·종류마다 게이지 보고는 하나만
   // 2.2.22: 같은 턴(리롤)만 건너뛴다. 번호가 앞서 있으면(지난 대화 분석·삭제·분기) 새 흐름으로 보고 반영(예전엔 영영 버렸다)
-  const fresh = !(Number.isFinite(f.life.evAt) && turn === f.life.evAt);
-  if (events.length && fresh) f.life.evAt = turn;
+  // 2.2.29: 응답마다 다른 키(evKey)로 판단 — 턴 번호(기억 분석이 끝날 때만 오름)는 분석이 묶여 돌면 여러 응답이 같은 번호라 둘째부터 전부 버렸다
+  const keys = Array.isArray(f.life.evKeys) ? f.life.evKeys : [];
+  const fresh = evKey ? !keys.includes(evKey) : !(Number.isFinite(f.life.evAt) && turn === f.life.evAt);
+  if (events.length && fresh) { f.life.evAt = turn; if (evKey) f.life.evKeys = [...keys, evKey].slice(-30); }
   const seenG = new Set();
   events = fresh ? events.filter((e) => { if (e.kind !== "gauge") return true; const k = `${nk(e.name)}|${e.key}`; if (seenG.has(k)) return false; seenG.add(k); return true; }) : events.filter((e) => e.kind === "past");
   for (const e of events) { const d = docByName(f, e.name); if (!d) continue; if (!evBy.has(d.id)) evBy.set(d.id, []); evBy.get(d.id).push(e); }

@@ -143,7 +143,9 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     try {
       if (type && type !== "model") return messages;
       const cur = await current(); if (!cur) return messages;
-      const c = await compose(cur, { focus });
+      // 2.2.29: 기억 블록 만들기가 오래 걸리면(저장소가 바쁨 등) 기다리지 않고 원래 요청을 보낸다 — 메인 요청이 안 나가 멈춘 듯 보이던 문제
+      const c = await Promise.race([compose(cur, { focus }), new Promise((r) => setTimeout(() => r({ reason: "timeout" }), 12000))]);
+      if (c?.reason === "timeout") log("기억 블록 만들기가 늦어 이번 요청은 기억 없이 보냈어요");
       try { Promise.resolve(onRequest?.()).catch(() => {}); } catch { /* 요청을 막지 않는다 */ }
       if (!c?.text) { last = { at: Date.now(), injected: false, manifest: c?.manifest ?? null, reason: c?.reason ?? "" }; return messages; }
       // 요약된 옛 대화 빼고 보내기(설정, 기본 꺼짐): 기억이 실제로 들어갈 때만, 분석이 끝난 옛 대화만 뺀다
@@ -195,7 +197,11 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
     return trimState.p;
   }
   const onProcess = async (text) => { try { const f = await trimFrom(); return f > 0 && typeof text === "string" ? gateProcess(text, f) : text; } catch { return text; } };
+  // 2.2.29: process 단계 번호 빼기는 쓰지 않는다 — 응답 글 속 중괄호(}})로 조건문 짝이 어긋나거나, 리스가 긴 채팅을 자를 때 번호가 달라지면
+  // 최근 메시지까지 빠져 모델이 새 입력을 무시하고 예전 대답을 되풀이할 수 있었다(약 30턴 뒤 ‘A3 → B1’ 제보). 요청 직전 맞추기(trimCovered)만 쓴다.
   async function startTrim() {
+    return false;
+    // eslint-disable-next-line no-unreachable
     if (procOn || typeof api.addRisuScriptHandler !== "function") return procOn;
     try { await api.addRisuScriptHandler("process", onProcess); procOn = true; } catch (e) { log("process 훅 등록 실패(요청 글 맞추기로 대신)", e?.message ?? e); }
     return procOn;

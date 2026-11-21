@@ -217,6 +217,15 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
           const g = gateReports(cs.reports, (n) => { const d = docOf(n); return d ? { nsfw: fo?.nsfw?.[d.id] ?? null, L: fo?.life?.p?.[d.id] ?? null, race: raceFor(fo, [d.title, ...(d.aliases ?? [])]) } : {}; },
             { turn: Number.isInteger(fo?.cursor?.at) ? fo.cursor.at : 0, now: when0, cumOf: (her, him) => cums.find((x) => nkey(x.name) === nkey(her) && (!him || nkey(x.partner) === nkey(him))) ?? null });
           cs.reports = g.reports;
+          // 2.2.29 버그리포트: 관계한 적 없는 인물이 임신 — 기록 모델이 월경 줄에 관계를 잘못 적어도 굴렸다.
+          // 같은 응답에 관계·절정 행동(act) 또는 질 안 사정(cum) 기록이 있을 때만 임신을 굴린다(성인 항목 기록이 켜져 있을 때)
+          if (rec.stage1?.nsfw) {
+            const acts = (rec.stage1.nsfw ?? []).filter((x) => x.kind === "act" && (x.act === "sex" || x.act === "climax"));
+            const did = (her, him) => cums.some((x) => nkey(x.name) === nkey(her)) || acts.some((x) => (nkey(x.name) === nkey(her) && (!him || !x.partner || nkey(x.partner) === nkey(him))) || (nkey(x.partner) === nkey(her) && (!him || nkey(x.name) === nkey(him))));
+            const blocked = [];
+            cs.reports = cs.reports.map((r) => !r?.sex?.length ? r : { ...r, sex: r.sex.map((x) => { if (x.contraception === "used" || did(r.name, x.partner)) return x; blocked.push(`${r.name}↔${x.partner}`); return { ...x, contraception: "used" }; }) });
+            if (blocked.length) logEvent({ area: "임신·피임", title: `관계 기록이 없어 임신을 굴리지 않았어요 · ${blocked.join(", ")}` });
+          }
           if (g.log.length) logEvent({ area: "임신·피임", title: g.log.join(" · ").slice(0, 160), detail: g.log });
           for (const x of cs.reports) { if (x.birth) nsfwQueue.push({ kind: "hist", name: x.name, ev: "birth" }); if (x.loss) nsfwQueue.push({ kind: "hist", name: x.name, ev: "loss" }); }
         } catch (e) { log("기록기: 피임 계산 건너뜀", e?.message ?? e); }

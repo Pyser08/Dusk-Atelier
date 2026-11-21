@@ -39,7 +39,10 @@ export function trimCovered(reqMsgs, chatMsgs, { keepTurns = 20, step = 1, cover
   if (!want.size) return same;
   const keep = new Set(); for (let i = cut; i < chatMsgs.length; i++) { const k = keyOf(textOf(chatMsgs[i])); if (k) keep.add(k); }   // 최근 글과 같은 앞부분은 빼지 않는다
   let dropped = 0;
-  const out = reqMsgs.filter((m) => {
+  // 2.2.29: 요청 끝쪽(최신 입력과 바로 앞 대화)은 무슨 일이 있어도 남긴다
+  const tailFrom = (() => { let n = 0; for (let i = reqMsgs.length - 1; i >= 0; i--) { const r = reqMsgs[i]?.role; if (r === "user" || r === "assistant" || r === "char") { n++; if (n >= 4) return i; } } return 0; })();
+  const out = reqMsgs.filter((m, idx) => {
+    if (idx >= tailFrom) return true;
     if (!m || (m.role !== "user" && m.role !== "assistant" && m.role !== "char")) return true;
     const k = keyOf(typeof m.content === "string" ? m.content : textOf(m));
     if (!k || keep.has(k)) return true;

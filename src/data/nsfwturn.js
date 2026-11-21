@@ -49,7 +49,7 @@ export function applyDriveQueue(f, list) {
 }
 
 // 엔진 계산(성욕·피로·경험·기념일 등): 이번 턴 행위·잠 보고와 장면 인물로 folder.life를 한 턴 진행. 반환: 바뀐 글
-export function applyLifeTurn(f, { events = [], present = [], gauge = null, text = "" } = {}) {
+export function applyLifeTurn(f, { events = [], present = [], gauge = null, text = "", evKey = "" } = {}) {
   const turn = Number.isInteger(f?.cursor?.at) ? f.cursor.at : null;
   if (turn == null) return [];
   const actors = events.map((e) => e.name), who = [...new Set([...present, ...actors])];
@@ -57,7 +57,7 @@ export function applyLifeTurn(f, { events = [], present = [], gauge = null, text
   const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = f?.wiki?.people?.profiles?.[d.id];
     return { interest: n?.sexual?.eroticInterest ?? 50, mult: n?.lustMult ?? 1, spont: n?.sexual?.sexualSpontaneity, initiative: n?.axes?.initiative, when, boost: [n?.boost?.desire !== false && pr?.sexualDesire?.text, n?.boost?.para !== false && pr?.paraphilia?.text].filter(Boolean) }; };
   const date = String(when).match(/\d{1,5}-\d{1,2}-\d{1,2}/)?.[0] ?? "";   // 2.2.22 이야기 날짜(종족 발정기·첫 관계 날짜)
-  const changed = tickLife(f, { turn, present: who, events, gauge, text, date }, profOf);
+  const changed = tickLife(f, { turn, present: who, events, gauge, text, date, evKey }, profOf);
   changed.push(...ensureHotGoals(f));   // 달아오름 90↑ → 장면 판단에 성관계 계획을 실제로 저장
   // 자주 쓴 체위·플레이 → 선호
   for (const [id, L] of Object.entries(f.life?.p ?? {})) {
@@ -103,7 +103,7 @@ export async function applyNsfwTurn(memory, log = () => {}, info = null, api = n
   let out = [], drive = [], life = [], pruned = [], extra = [], zoned = [];
   await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (q.length) out = applyNsfwQueue(f, q);
     if (ex.length) extra = applyExtra(f, ex, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0, when: latestWhen(f) });
-    zoned = seedZones(f, present); if (dq.length) drive = applyDriveQueue(f, dq); life = applyLifeTurn(f, { events, present, gauge, text: String(info?.rp ?? "") });
+    zoned = seedZones(f, present); if (dq.length) drive = applyDriveQueue(f, dq); life = applyLifeTurn(f, { events, present, gauge, text: String(info?.rp ?? ""), evKey: String(info?.key ?? "").slice(0, 600) });
     if (f.wiki?.documents) { const pr = pruneWiki(f.wiki); if (pr.removed.length) { f.wiki = pr.wiki; pruned = pr.removed; } } });
   if (pruned.length) logEvent({ area: "위키 정리", title: `중요도 낮은 정보 ${pruned.length}개를 지웠어요 · ${[...new Set(pruned.map((x) => x.doc))].join(", ")}`, detail: pruned.map((x) => `${x.doc}: ${x.text}`) });
   if (extra.length) logEvent({ area: "이야기 기록", title: extra.join(" · ").slice(0, 160), detail: extra });
