@@ -19,11 +19,20 @@ export function sceneOf(text, folder, { seed = "", hint = "" } = {}) {
   const date = s.date || fw.date, time = s.time || fw.time, place = s.place || last?.place || "";
   // 기후·예보(엔진): AI가 정한 기후 → 장소·봇 글 추정. 응답 글에 날씨가 보이면 그게 지금 날씨
   const e = extraOf(folder), cl = climateOf(e, [place, hint].join(" "));
-  const told = weatherOf(body);
+  // 11-21 제보: 본문에 날씨가 없으면 엔진 예보가 기록된 날씨를 덮어 제멋대로 바뀌었다 → 본문 > 같은 날 기록(또는 사용자가 고친 값) > 엔진 예보
+  const told = weatherOf(body), kept = keptWeather(e.weather, date), now = told || kept;
   let fc = null; try { fc = date ? forecast(cl, date, time || "12:00", seed || "dusk", { anchor: STATES.includes(told) && parseIso(date) ? null : anchorOf(e, cl) }) : null; } catch { fc = null; }
-  if (fc && STATES.includes(told) && fc.days[0]) { const h = fc.days[0].half.find((x) => x?.now); if (h) { h.w = told; h.rain = /비|눈|천둥/.test(told) ? 100 : 0; } fc.now = { ...fc.now, w: told }; }
+  if (fc && STATES.includes(now) && fc.days[0]) { const h = fc.days[0].half.find((x) => x?.now); if (h) { h.w = now; h.rain = /비|눈|천둥/.test(now) ? 100 : 0; } fc.now = { ...fc.now, w: now }; }
   let days = []; try { days = date ? upcoming(e, date, cl, 14) : []; } catch { days = []; }   // 다가오는 날(달력)
-  return { date, time, place, weather: told || fc?.now?.w || e.weather?.w || "", fromLine: !!(s.date || s.time), forecast: fc, climate: cl, days };
+  return { date, time, place, weather: now || fc?.now?.w || e.weather?.w || "", fromLine: !!(s.date || s.time), forecast: fc, climate: cl, days };
+}
+// 기록된 날씨를 지금 날씨로 쓸지: 사용자가 고친 값이거나, 기록된 날이 지금 장면 날짜와 같을 때(날짜를 모르면 그대로 씀)
+export function keptWeather(w, date) {
+  if (!w?.w) return "";
+  if (w.user) return w.w;
+  const a = parseIso(w.when), b = parseIso(date);
+  if (!a || !b) return w.w;
+  return a.y === b.y && a.m === b.m && a.d === b.d ? w.w : "";
 }
 // 이 응답에 나온 인물(위키 문서가 있는 인물 + 봇 캐릭터). [{name, doc}]
 export function peopleIn(text, folder, botName = "") {

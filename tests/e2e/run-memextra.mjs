@@ -212,6 +212,11 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   // 장면 상태창(응답 아래, 로어북 위)
   const sc = await page.evaluate(async () => { const M = __app.ctx.memory; M.nameLinks?.invalidate?.(); const out = await M.gauge.onDisplay("[2026-03-02 22:40 | 은빛 여관]\n창밖에 비가 쏟아졌다. 시로코가 세라를 바라봤다."); return out; });
   ok(`[${tag}] 장면 상태창: 날짜·시간·장소·날씨·등장인물(이름은 캐릭터 상태창)`, /x-dusk="scene"/.test(sc) && /22:40/.test(sc) && /은빛 여관/.test(sc) && /🌧️/.test(sc) && (sc.split('x-dusk="scene"')[1].match(/x-dusk="pc"|data-dusk="nm"/g) ?? []).length === 2, sc.slice(-300));
+  // 11-21 제보: 유저 입력에는 장면 상태창을 붙이지 않는다(채팅의 유저 메시지와 같은 글)
+  const scUser = await page.evaluate(async () => { const M = __app.ctx.memory, A = __app.ctx.api, orig = A.getChatFromIndex, ut = "[2026-03-02 22:41 | 은빛 여관]\n나는 시로코와 세라에게 다가가 우산을 건넨다.";
+    A.getChatFromIndex = async (...a) => { const c = (await orig(...a)) ?? { message: [] }; c.message = [...(c.message ?? []), { role: "user", data: ut }]; return c; };
+    try { await new Promise((r) => setTimeout(r, 1600)); M.nameLinks?.invalidate?.(); return await M.gauge.onDisplay(ut); } finally { A.getChatFromIndex = orig; } });
+  ok(`[${tag}] 유저 입력엔 장면 상태창 없음`, !/x-dusk="scene"/.test(scUser), scUser.slice(-200));
   // 2.2.22: 등장인물 띠의 이름을 누르면 상태창이 띠 안이 아니라 화면 가운데에 크게 뜬다
   const chipPop = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "chipdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;overflow:auto"; d.innerHTML = html; document.body.append(d);
     const det = d.querySelector('div[x-dusk="scene"] details[x-dusk="pc"]');
