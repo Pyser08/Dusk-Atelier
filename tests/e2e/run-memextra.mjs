@@ -207,9 +207,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const gm = await page.evaluate(async () => { const card = document.querySelector("#rb-gauge-mult"); if (!card) return null; const heads = [...card.querySelectorAll(".rb-gauge-gh")].map((x) => x.textContent);
     const r = card.querySelector("#rb-gauge-romUp"); if (!r) return { heads }; r.value = "0.5"; r.dispatchEvent(new Event("change", { bubbles: true })); await new Promise((res) => setTimeout(res, 400));
     const saved = JSON.parse((await __app.ctx.api.pluginStorage.getItem("dusk.gauge.mult")) ?? "{}"); return { heads, romUp: saved.romUp, up: saved.up }; });
-  ok(`[${tag}] 게이지 배수가 인간적 호감·그 밖의 감정 / 이성적 호감 / 성욕으로 나뉘고 이성적 호감만 따로 저장`, gm && gm.heads.join("|") === "인간적 호감 · 그 밖의 감정|이성적 호감|성욕" && gm.romUp === 0.5 && gm.up === 1, JSON.stringify(gm));
+  ok(`[${tag}] 게이지 배수가 인간적 호감·그 밖의 감정 / 이성적 호감 / 부정적 감정 / 성욕으로 나뉘고 따로 저장`, gm && gm.heads.join("|") === "인간적 호감 · 그 밖의 감정|이성적 호감|부정적 감정 (적대감·두려움)|성욕" && gm.romUp === 0.5 && gm.up === 1, JSON.stringify(gm));
   if (OUT && tag === "PC") { const c = page.locator("#rb-gauge-mult"); if (await c.count()) { await c.scrollIntoViewIfNeeded(); await c.screenshot({ path: `${OUT}/gauge-split.png` }); } }
-  await page.evaluate(async () => { await __app.ctx.api.pluginStorage.setItem("dusk.gauge.mult", JSON.stringify({ up: 1, down: 1, romUp: 1, romDown: 1, lust: 1 })); });
+  await page.evaluate(async () => { await __app.ctx.api.pluginStorage.setItem("dusk.gauge.mult", JSON.stringify({ up: 1, down: 1, romUp: 1, romDown: 1, negUp: 1, negDown: 1, lust: 1 })); });
   if (OUT) { await page.locator("#rb-mem-bfspeed").scrollIntoViewIfNeeded().catch(() => {}); await page.screenshot({ path: `${OUT}/extra-${tag}-opt.png` }); }
   const alpha = await page.evaluate(async () => { const P = __app.ctx.prefs; P.ui ??= {}; const before = getComputedStyle(document.querySelector('.rb-win')).backgroundColor; P.ui.theme = { ...(P.ui.theme ?? {}), skin: 'classic', winAlpha: 40 }; __app.ctx.applyTheme(); const after = getComputedStyle(document.querySelector('.rb-win')).backgroundColor; P.ui.theme = { ...P.ui.theme, winAlpha: 0 }; __app.ctx.applyTheme(); return after + ' | was ' + before; });
   ok(`[${tag}] 창 투명도 40%면 창 바탕이 비침`, /(rgba\([^)]*,\s*0?\.\d+\)|\/ 0?\.\d+\)) \|/.test(alpha), alpha);
