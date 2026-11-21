@@ -7,6 +7,7 @@ import { statusCardHtml, linkNames, NAMECARD_CSS } from "../engine/namecard.js";
 import { scenePanelHtml, sceneOf, peopleIn, SCENE_CSS } from "../engine/scenepanel.js";
 import { charThumb } from "./charimg.js";
 import { createCardOverlay } from "./cardoverlay.js";
+import { logEvent } from "./memlog.js";
 import { folderIdOf } from "./memorystore.js";
 
 // 2.2.24: 상태창·장면 상태창 CSS는 응답 안 <style>이 아니라 리스 화면에 한 번만 넣는다.
@@ -73,6 +74,14 @@ export function createNameLinks(memory, api = null) {
     invalidate() { cache = null; checked = 0; charMemo = null; },
     css: () => STATUS_CSS,
     overlay,
+    // 2.2.25: 애드온이 켜질 때 미리 리스 화면 권한을 확인한다(응답을 그리기 전에 방식이 정해지게). 상태창이 꺼져 있으면 묻지 않는다
+    async prepare() {
+      const idx = await memory?.store?.getIndex?.().catch?.(() => null), inj = idx?.settings?.inject ?? {};
+      if ((inj.nameLinks === false && inj.scenePanel === false) || idx?.settings?.backend === "off") return "off";
+      const d = await mount.ensureDoc().catch(() => null);
+      logEvent({ area: "캐릭터 상태창", title: d ? "리스 화면 맨 위에 상태창을 띄워요(바깥을 누르면 닫혀요)" : "리스 화면 권한이 없어 상태창을 이름 아래에 펼쳐요(이름을 다시 누르면 닫혀요)" });
+      return d ? "overlay" : "inline";
+    },
     // 본문 글에만 링크(뒤에 붙는 게이지·일기·로어북 상자는 호출하는 쪽이 따로 붙인다)
     async link(text) {
       try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = mount.ready(); const out = linkNames(text, c.people, { overlay: ov }); if (ov && out !== text) overlay.soon(); return out; } catch { return text; }

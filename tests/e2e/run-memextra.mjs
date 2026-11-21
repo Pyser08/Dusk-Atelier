@@ -88,6 +88,12 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 종족별 몸 모형: 여우 귀·꼬리, 서큐버스 뿔·날개·꼬리, 라미아·인어·켄타우로스·아라크네 하반신, 하피 날개`, R.fox?.ear === 2 && R.fox?.tail === 1 && R.succubus?.horn === 2 && R.succubus?.wing === 2 && R.succubus?.tail >= 1 && R.lamia?.low === 1 && R.mermaid?.low === 1 && R.centaur?.low === 2 && R.arachne?.low === 3 && R.harpy?.wing === 2 && R.elf?.ear === 2, JSON.stringify(R).slice(0, 600));
   ok(`[${tag}] 하반신 종족은 발·무릎 점이 없음`, !R.lamia?.lbl?.some((x) => x.startsWith("발")) && R.fox?.lbl?.some((x) => x.startsWith("발")));
   await setRace(null); await page.waitForTimeout(600);
+  // 2.2.25: 새 기능 빈칸(종족·기후 등)이 있으면 기억 홈의 ‘지난 대화 분석’ 버튼이 노랗게
+  const prevPage = await page.evaluate(() => { const p = __app.ctx.state.mem.page; Object.assign(__app.ctx.state.mem, { page: "home" }); __app.ctx.go("memory"); return p ?? null; }); await page.waitForTimeout(1500);
+  const fillBtn = await page.evaluate(() => { const b = document.querySelector("#rb-mem-analyze"); return b ? { fill: b.classList.contains("rb-mem-fill"), text: b.textContent, bg: getComputedStyle(b).backgroundImage.slice(0, 40) } : null; });
+  ok(`[${tag}] 새 기능 빈칸이 있으면 ‘지난 대화 분석’ 버튼이 노란색(새 기능 이름 표시)`, fillBtn?.fill && /새 기능/.test(fillBtn.text) && /종족/.test(fillBtn.text) && /gradient/.test(fillBtn.bg), JSON.stringify(fillBtn));
+  if (OUT && tag === "PC") await page.screenshot({ path: `${OUT}/extra-${tag}-fillbtn.png` });
+  await page.evaluate((p) => { __app.ctx.state.mem.page = p ?? undefined; __app.ctx.go("memory"); }, prevPage); await page.waitForTimeout(800);
   // 세라는 성감대가 비어 있음 → 무작위로 채우기
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { personKey: "세라" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1200);
@@ -127,11 +133,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     n.querySelector("summary").click(); await new Promise((r) => setTimeout(r, 350)); return { before, after: [g.open, n.open], nsVis: n.querySelector("span").getBoundingClientRect().height > 50 }; }, link.out);
   ok(`[${tag}] 캐릭터 상태창 일반/NSFW 탭 전환`, tabs.before.join() === "true,false" && tabs.after.join() === "false,true" && tabs.nsVis, JSON.stringify(tabs));
   if (OUT) await page.screenshot({ path: `${OUT}/extra-${tag}-namecard-nsfw.png` });
-  // 2.2.23: 상태창 바깥(화면 귀퉁이)을 누르면 닫히고, 이름은 그 자리에 그대로 보인다
-  const nameBefore = await page.evaluate(() => document.querySelector('#tabdemo details[data-dusk="pc"]').getBoundingClientRect().width);
-  await page.mouse.click(6, 6); await page.waitForTimeout(250);
-  const closed = await page.evaluate(() => !document.querySelector('#tabdemo details[data-dusk="pc"]').open);
-  ok(`[${tag}] 캐릭터 상태창 바깥을 누르면 닫힘`, closed && nameBefore > 10, JSON.stringify({ closed, nameBefore }));
+  // 2.2.25: 응답 안 상태창(리스 화면 권한이 없을 때)은 떠 있는 창이 아니라 이름 아래 펼침 — 이름을 다시 누르면 닫힘
+  const inl2 = await page.evaluate(async () => { const det = document.querySelector('#tabdemo details[data-dusk="pc"]'); const sp = det.querySelector("summary + span");
+    const pos = getComputedStyle(sp).position; det.querySelector("summary").click(); await new Promise((r) => setTimeout(r, 150)); return { pos, closed: !det.open }; });
+  ok(`[${tag}] 응답 안 상태창은 이름 아래 펼침(고정 창 아님), 이름을 다시 누르면 닫힘`, inl2.pos !== "fixed" && inl2.closed, JSON.stringify(inl2));
   await page.evaluate(() => document.getElementById("tabdemo")?.remove());
   // 2.2.24: 리스 화면 위에 상태창 띄우기 — 리스의 비동기 문서 래퍼를 흉내 내 실제 문서에 연결
   const ov = await page.evaluate(async () => {
@@ -167,10 +172,10 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const chipPop = await page.evaluate(async (html) => { const d = document.createElement("div"); d.id = "chipdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;overflow:auto"; d.innerHTML = html; document.body.append(d);
     const det = d.querySelector('div[x-dusk="scene"] details[x-dusk="pc"]');
     let r = null;
-    if (det) { det.open = true; await new Promise((r) => setTimeout(r, 250)); r = det.querySelector("[data-nm] + span").getBoundingClientRect(); }
+    if (det) { det.open = true; await new Promise((r) => setTimeout(r, 250)); r = det.querySelector("summary + span").getBoundingClientRect(); }
     else { const nm = d.querySelector('div[x-dusk="scene"] [data-dusk="nm"]'); if (nm) { await __app.ctx.memory.nameLinks.overlay.hook(); nm.click(); await new Promise((r) => setTimeout(r, 400)); r = document.querySelector('[x-dusk="card-ov"] [data-dusk="pcbox"]')?.getBoundingClientRect() ?? null; await __app.ctx.memory.nameLinks.overlay.close(); } }
     const out = r ? { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight } : null; d.remove(); return out; }, sc);
-  ok(`[${tag}] 장면 상태창 등장인물 이름 → 상태창이 화면 가운데 제 크기로(띠 안에 갇히지 않음)`, chipPop && chipPop.w >= Math.min(300, chipPop.vw - 40) && chipPop.h >= 200 && chipPop.h <= chipPop.vh * 0.8, JSON.stringify(chipPop));
+  ok(`[${tag}] 장면 상태창 등장인물 이름 → 상태창이 제 크기로(띠 안에 갇히지 않음)`, chipPop && chipPop.w >= Math.min(300, chipPop.vw - 60) && chipPop.h >= 200 && chipPop.h <= chipPop.vh * 0.85, JSON.stringify(chipPop));
   ok(`[${tag}] 장면 상태창 날씨 상자: 4일 예보(낮·밤·확률)`, /x-dusk="wx"/.test(sc) && /4일 예보/.test(sc) && /모레/.test(sc) && /💧/.test(sc) && /%/.test(sc));
   ok(`[${tag}] 캐릭터 상태창에 옷차림·삽화용 상세`, /옷차림/.test(link.out) && /흰 셔츠/.test(link.out) && /삽화용 상세 ›/.test(link.out) && /소매를 걷어 올림/.test(link.out));
   if (OUT) { await page.evaluate((html) => { const d = document.createElement("div"); d.id = "scdemo"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#14131b;color:#eee;padding:16px;font-size:15px;line-height:1.7;overflow:auto"; d.innerHTML = html; document.body.append(d); }, sc);
