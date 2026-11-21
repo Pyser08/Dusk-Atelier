@@ -13,6 +13,7 @@ import { extraSection, mentionsOf } from "../engine/memextra.js";
 import { fertilitySection } from "../engine/fertility.js";
 import { sceneOf } from "../engine/scenepanel.js";
 import { weatherLine } from "../engine/weather.js";
+import { calSection } from "../engine/storycal.js";
 import { raceSection } from "../engine/races.js";   // 0.3.22 기후·예보(장면 상태창 켜졌을 때)   // 0.3.22 소문·목표·세계·흔적·근황·@인물
 import { applyLore, loreTokens } from "../engine/memorylore.js";
 import { loadReconciled } from "./memoryload.js";
@@ -99,6 +100,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
         add(extraSection(folder, { present: here, recent, turn: Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : msgs.length, when, pinned, docs: chars, world: idx.settings.inject?.world === true, status: idx.settings.inject?.status !== false, outfit: idx.settings.inject?.outfit !== false }));
         { let sc = null; try { sc = sceneOf("", folder, { seed: `${character.chaId}|${chatKeyOf(chat)}`, hint: [character.name, String(character.desc ?? "").slice(0, 1500)].join(" ") }); } catch { sc = null; }
           if (sc?.forecast && idx.settings.inject?.scenePanel !== false) add(weatherLine(sc.forecast, sc.climate));
+          if (sc?.date && idx.settings.inject?.scenePanel !== false) add(calSection(folder?.extra, sc.date, sc.climate));   // 이야기 달력: 7일 안의 생일·기념일·약속·공휴일
           // 0.3.22 종족 체질(몸·생물학만) + 지금 발정·날씨 반응
           if (idx.settings.inject?.race !== false) { try { const h0 = sc?.forecast?.days?.[0]?.half?.find((x) => x?.now); add(raceSection(folder, here, { adult: true, iso: sc?.date ?? "", cal: sc?.climate?.mdays ? sc.climate : null, hemi: sc?.climate?.hemi ?? "N", weather: sc?.weather ?? "", temp: h0?.t ?? null, night: /밤/.test(String(sc?.time ?? "")) || (Number(String(sc?.time ?? "").split(":")[0]) >= 18) })); } catch {} } } }
       // 장면 판단 계획(Erosync 대신). 같은 턴을 다시 보내도 같은 계획이 나오게 턴 번호로 정한 난수

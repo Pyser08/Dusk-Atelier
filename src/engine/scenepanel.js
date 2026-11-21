@@ -6,6 +6,7 @@ import { weatherOf, nk } from "./memextra.js";
 import { linkHtml, nameSpan, TAB_CSS, PC_OPEN_CSS } from "./namecard.js";
 import { forecast, climateOf, anchorOf, weekday, parseIso, ZONES, STATES } from "./weather.js";
 import { extraOf } from "./memextra.js";
+import { upcoming, dLabel } from "./storycal.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 // 응답 하나의 장면 정보: 상태 줄(날짜·시간·장소) → 없으면 저장된 마지막 장면, 날씨는 응답 글 → 저장된 날씨
@@ -21,7 +22,8 @@ export function sceneOf(text, folder, { seed = "", hint = "" } = {}) {
   const told = weatherOf(body);
   let fc = null; try { fc = date ? forecast(cl, date, time || "12:00", seed || "dusk", { anchor: STATES.includes(told) && parseIso(date) ? null : anchorOf(e, cl) }) : null; } catch { fc = null; }
   if (fc && STATES.includes(told) && fc.days[0]) { const h = fc.days[0].half.find((x) => x?.now); if (h) { h.w = told; h.rain = /비|눈|천둥/.test(told) ? 100 : 0; } fc.now = { ...fc.now, w: told }; }
-  return { date, time, place, weather: told || fc?.now?.w || e.weather?.w || "", fromLine: !!(s.date || s.time), forecast: fc, climate: cl };
+  let days = []; try { days = date ? upcoming(e, date, cl, 14) : []; } catch { days = []; }   // 다가오는 날(달력)
+  return { date, time, place, weather: told || fc?.now?.w || e.weather?.w || "", fromLine: !!(s.date || s.time), forecast: fc, climate: cl, days };
 }
 // 이 응답에 나온 인물(위키 문서가 있는 인물 + 봇 캐릭터). [{name, doc}]
 export function peopleIn(text, folder, botName = "") {
@@ -177,7 +179,7 @@ function forecastHtml(fc, cal, fg) {
   return `<span style="display:grid;grid-template-columns:repeat(${fc.days.length},minmax(0,1fr));gap:5px">${cols}</span>`;
 }
 // 패널 HTML. people = [{name, card?: 상태창 안쪽 HTML}], forecast = 엔진 예보, climate = 기후(달력·이름)
-export function scenePanelHtml({ date = "", time = "", place = "", weather = "", people = [], forecast: fc = null, climate: cl = null, force = false } = {}) {
+export function scenePanelHtml({ date = "", time = "", place = "", weather = "", people = [], forecast: fc = null, climate: cl = null, force = false, days = [] } = {}) {
   if (!force && !date && !time && !place && !people.length) return "";
   const w = WX[weather] ? weather : "";
   const part = dayPart(time), night = part === "밤";
@@ -212,5 +214,7 @@ export function scenePanelHtml({ date = "", time = "", place = "", weather = "",
     + wxDetails + `</div>`
     // 2.2.22: 등장인물 띠는 카드 밖 아래로(카드 안 흐림·스크롤 상자에 상태창이 갇혀 작은 띠 안에서 열리던 문제)
     + (chips ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px 0;margin:6px 4px 0;font-size:12px;${up(.38)}"><span style="font-size:10px;letter-spacing:.12em;opacity:.6;margin:0 7px 0 3px">등장</span>${chips}</div>` : "")
+    // 다가오는 날(이야기 달력): 오늘·D-n 칩. 생일 🎂 · 연인 💞 · 약속 📌 · 특별한 날 ✨ · 휴일 🎌 · 기념일 행사 🎉
+    + (days.length ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:6px 4px 0;font-size:12px;${up(.44)}"><span style="font-size:10px;letter-spacing:.12em;opacity:.6;margin:0 2px 0 3px">다가오는 날</span>${days.slice(0, 5).map((x) => `<span title="${esc(x.note ?? "")}" style="display:inline-block;padding:2px 9px;border-radius:999px;background:${x.left === 0 || x.ongoing ? "rgba(232,87,142,.18);border:1px solid rgba(232,87,142,.4)" : "rgba(127,127,127,.12);border:1px solid rgba(127,127,127,.2)"}">${({ bday: "🎂", couple: "💞", plan: "📌", day: "✨", hol: "🎌", event: "🎉" })[x.kind] ?? "📅"} ${esc(String(x.label).replace("{{user}} 생일", "내 생일").replace(/^\{\{user\}\}/, "나"))} <b style="font-weight:700;opacity:.85">${dLabel(x)}</b></span>`).join("")}</div>` : "")
     + `</div>`;
 }

@@ -52,6 +52,7 @@
 - `src/engine/usernsfw.js`: 위키에 유저 문서가 없으면 가짜 문서 `actor:user`를 `characterDocs()`로 더함. nsfwlife(docsOf)·nsfwturn이 사용, 주입·hotActors는 `npcDocs()`(유저 제외).
 - recorder `nsfwFrom`이 {{user}} 줄을 받음 + NSFW_STAGE1에 유저 허용 한 줄. profileseed `userNsfwNeed`(페르소나 설명으로 runNsfw). personv2: 문서 없는 유저 줄에 NSFW 세부 탭, 관계 목록 유저 맨 위. 테스트 tests/usernsfw.test.js.
 - 성별: `src/engine/gender.js`(folder.gender[id] = {g, by:user|story|persona}; genderOf = 저장값→orient→null, 화면·무작위는 null이면 예전처럼 "f"). 기록기 `sex|Name|m/f|quote` → applyNsfwQueue에서 즉시 setGender + `sexZones`. 남성 부위 glans/penis/testicles/prostate(humanitems·zonegen). lifecards 성감대에 성별 고르기(.rb-bsex). 월경 주기는 성별로 막지 않음(기록기 women 판단에 맡김).
+- 이야기 달력(이머헬퍼 V2 모듈 참고): `src/engine/storycal.js` — 기록기 bday/couple/plan/day/country/hol(WEATHER_STAGE1에 붙음, scenePanel 설정과 같이), extra.cal 저장(applyExtra), `upcoming()`→scenepanel ‘다가오는 날’ 칩, `calSection()`→memoryinject(7일 안). KR 음력 명절 표 2024~2027만. 모듈의 ‘캐릭터의 일상’(★ 로그)은 extraSection ‘back after N messages’가 비슷해 안 가져옴.
 - 버전 안 올림. 실기기 확인 안 함.
 
 ## addon-rebuild (2026-11-17, main 4144a3f에서 분기) — 애드온 재구성
