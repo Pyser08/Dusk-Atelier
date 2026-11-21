@@ -1,4 +1,4 @@
-# Dusk Atelier 소스 구조 지도 (v2.2.24 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v2.2.25 기준, tools/source-map.mjs로 자동 생성)
 
 > **다른 AI/새 세션 인계:** 먼저 `HandOff/README.md` → `HandOff/STATE.md` → `HandOff/TASK-MAP.md` 순서로 읽는다.
 
@@ -19,7 +19,7 @@
 
 ## 파일 목록
 ### src/
-- `addonlib.gen.js` (580줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
+- `addonlib.gen.js` (582줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
 - `main.js` (330줄) 
 
 ### src/cellar/
@@ -66,6 +66,7 @@
 - `erosyncturn.js` (158줄) Dusk 2.2.0: Erosync 매 턴 계산(HandOff/EROSYNC-TURN.md). 장기기… — TURN_KEY, AUTO_KEY, TURN_DEFAULT, normalizeTurnSettings, seedBatch
 - `fairplay.js` (88줄) 공정한 전개 훅 (v1.6.8). 장기기억과 무관하게 설정에서 켜고 끈다. 기본 꺼짐. — FAIR_KEY, DICE_KEY, DICE_MODE_KEY, DICE_LEVEL_KEY, DICE_CUTS_KEY
 - `featurefill.js` (52줄) 2.2.25 장기기억: 새 기능 빈칸 채우기. 기능이 생기기 전에 기록한 채팅은 종족·기후·옷차림 같… — FILL_FEATURES, featureGaps, fillPrompt, fillFeatures
+- `floatbtn.js` (64줄) 2.2.25: 채팅 위 떠 있는 버튼(인물 관계도)을 Dusk가 리스 화면에 직접 그린다 — 동그랗고… — FAB_POS_KEY, FAB_STYLE, presetSpots, clampPos, createFloatButton
 - `gauge.js` (142줄) 게이지 서비스: 정의(idx.gauges[chaId]) · 값/이력(folder.gauge) 저장, … — createGaugeService
 - `gaugemult.js` (19줄) 게이지 배수 저장(pluginStorage 한 키). 장기 기억 기록기·위키 기록기·Erosync 매… — readGauge, saveGauge, peekGauge
 - `genstate.js` (9줄) 응답 스트리밍 신호. output 훅이 불릴 때마다 시각을 남겨, 생성 중인지 알아보려고 캐릭터·채팅… — noteStreamChunk, recentlyStreamed, resetStreamSignal
@@ -83,7 +84,7 @@
 - `memorybackend-bardwiki.js` (69줄) 리스바드 BardWiki 읽기 어댑터 + 스냅샷 캐시(dusk.mem.v2.ext.<folderId>… — createBardWikiBackend
 - `memorybackend.js` (16줄) 기억 저장소 백엔드 선택. local = 플러그인 자체 저장·분석·주입, bardwiki = 리스바드… — hasBardWiki, selectBackend, CAPABILITIES, capabilitiesOf
 - `memorybot.js` (22줄) 장기기억에서 합성한 새 봇 객체 만들기. 원본 봇은 수정하지 않는다(새 객체만 반환). — buildMemoryCharacter
-- `memorybutton.js` (50줄) 채팅 메뉴(입력 옆)의 떠 있는 버튼(v1.9.3부터 인물 관계도로 연결)을 설정에서 켜고 끄기 (v… — MEMORY_BUTTON_KEY, loadMemoryButtonOn, createMemoryButton
+- `memorybutton.js` (55줄) 채팅 메뉴(입력 옆)의 떠 있는 버튼(v1.9.3부터 인물 관계도로 연결)을 설정에서 켜고 끄기 (v… — MEMORY_BUTTON_KEY, loadMemoryButtonOn, createMemoryButton
 - `memoryfile.js` (94줄) 장기 기억을 파일 하나로 내보내고 불러오기. 모든 채팅의 기억 폴더 + (있다면) Erosync가 저… — MEMFILE_KIND, listEroKeys, buildMemoryFile, readMemoryFile, summarize
 - `memoryinject.js` (221줄) 장기기억 주입 훅: 요청 사본에만 [Dusk Memory] 블록을 넣는다(저장 데이터 불변). — SAVER_INJECT, effectiveInject, createMemoryInjector
 - `memoryload.js` (48줄) v1.6.5 읽기 경로 대조: 폴더를 읽어 메모리 사본에서만 앵커 정합성(reconcile)을 맞춘다… — hasMemory, findForkParent, inheritFromParent, loadReconciled
@@ -98,7 +99,7 @@
 - `modcompat.js` (266줄) 모듈 호환(애드온 modcompat 전용): 리스 훅 셋(output·display·process) … — DEFAULTS, createModCompat, stripOwnSetvars, overlaps
 - `modelhub.js` (97줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (248줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
-- `namelinks.js` (102줄) 장기기억 애드온(0.3.22): 응답 화면(display)에 붙이는 두 가지. 모델에 보내는 글·저장… — STATUS_CSS, createCssMount, createNameLinks
+- `namelinks.js` (103줄) 장기기억 애드온(0.3.22): 응답 화면(display)에 붙이는 두 가지. 모델에 보내는 글·저장… — STATUS_CSS, createCssMount, createNameLinks
 - `nsfwturn.js` (118줄) addon-rebuild: 매 턴 기록기가 보고한 성인 프로필 변화(taste·sexval)를 이 채… — applyNsfwQueue, nsfwByName, applyDriveQueue, applyLifeTurn, seedZones
 - `persona.js` (152줄) — loadPersonaMap, savePersonaMap, setPersonaLink, syncPersonaModules
 - `personabotdef.js` (96줄) 봇 기본 페르소나 (aibuild 애드온 전용 — 페르소나 공방의 '이 봇 기본 페르소나'를 Dusk… — loadBotDefaults, saveBotDefaults, injectBlock, createBotDefaults

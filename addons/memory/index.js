@@ -64,7 +64,7 @@ export async function activate(api, ctx) {
     try { await openTab("memory"); const { openRegressHere } = await import("../../src/ui/screens/regress.js"); await openRegressHere(app); }
     catch (e) { log(`회귀 창 열기 실패: ${e?.message ?? e}`); }
   };
-  const memBtn = createMemoryButton(api, { name: "인물 관계도", icon: iconMarkup("network", 20), open: () => openTab("relmap"), log });
+  const memBtn = createMemoryButton(api, { name: "인물 관계도", icon: iconMarkup("network", 22), open: () => openTab("relmap"), log, ensureDoc: () => names.ensureDoc() });   // 2.2.25 동그란 반투명 버튼(끌어서 옮김)
   const off = [
     () => { try { seedOff?.(); } catch { /* 이미 떨어짐 */ } },
     ext.add("svc", "memory", memory),
