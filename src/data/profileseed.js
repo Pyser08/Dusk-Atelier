@@ -6,6 +6,19 @@ import { logEvent, logFailure } from "./memlog.js";
 import { normalizeNsfw, withRolledSexual } from "../engine/nsfwprofile.js";
 import { readSeedOpt } from "./adultseed.js";
 import { rollAdult } from "../engine/adultseed.js";
+import { USER_NSFW_ID, userNsfwDoc, setUserNsfwNames } from "../engine/usernsfw.js";
+import { dbRead } from "./dbcache.js";
+import { userNameList, primaryUserName } from "./usernames.js";
+
+// 유저 칸: 위키 문서·기본 성격이 없으니 페르소나 설명으로 성인 프로필을 만든다(3번 실패하면 이번 세션엔 그만)
+export async function userNsfwNeed(api, have) {
+  if (have?.[USER_NSFW_ID] || (nsfwTries.get(USER_NSFW_ID) ?? 0) >= 3) return null;
+  let db = null; try { db = api ? await dbRead(api, ["username", "personas", "selectedPersona"]) : null; } catch { db = null; }
+  if (db) setUserNsfwNames(userNameList(db));
+  const p = (Array.isArray(db?.personas) ? db.personas : [])[db?.selectedPersona ?? 0];
+  const desc = String(p?.personaPrompt ?? "").trim().slice(0, 2500);
+  return { id: USER_NSFW_ID, name: primaryUserName(db) || userNsfwDoc().title, profile: ["플레이어 캐릭터({{user}})", desc && `페르소나 설명: ${desc}`].filter(Boolean).join("\n") };
+}
 
 const tries = new Map(), nsfwTries = new Map();   // docId → 실패 횟수(세션)
 let running = null;
@@ -49,7 +62,7 @@ export function ensureProfiles(memory, { max = 4, log = () => {}, api = null, wa
     const cur = await memory.switches?.currentChat?.().catch?.(() => null);
     const adult = ps.sexualDesireEnabled === true;
     const scope = rt.wiki.snapshot?.();
-    const nameOf = (id) => scope?.documents?.[id]?.title || id;
+    const nameOf = (id) => scope?.documents?.[id]?.title || (id === USER_NSFW_ID ? userNsfwDoc().title : id);
     const nsfwOut = {};   // id → raw
     let made = 0;
 
@@ -70,6 +83,8 @@ export function ensureProfiles(memory, { max = 4, log = () => {}, api = null, wa
       const have = { ...(folder?.nsfw ?? {}), ...nsfwOut };
       const after = rt.wiki.snapshot?.(), prof = after?.people?.profiles ?? {};
       const need = missingNsfw(after, have).slice(0, max).map((d) => ({ id: d.id, name: d.title || d.id, profile: profileText(prof[d.id]) }));
+      const me = await userNsfwNeed(api, have).catch(() => null);
+      if (me && need.length < max) need.push(me);
       if (need.length) {
         const r = await imp.runNsfw(need).catch((e) => ({ byId: {}, failed: need.map((p) => ({ id: p.id, error: e?.message ?? String(e) })) }));
         Object.assign(nsfwOut, r.byId);

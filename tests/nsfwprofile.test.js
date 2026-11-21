@@ -29,9 +29,10 @@ test("턴 반영: taste·sexval만, 같은 값은 그대로, 기록 남김", () 
   assert.equal(applyNsfwReports(n, []).nsfw, n);
 });
 
-test("기록기 줄: taste·sexval 읽기, {{user}} 무시", () => {
+test("기록기 줄: taste·sexval 읽기, {{user}} 줄도 받음", () => {
   const r = nsfwFrom("taste|민지|like|샤워실|\"여기서 해\"\nsexval|민지|sexualOpenness|+3|q\ntaste|{{user}}|like|x|q\nwho|민지|웃음", [{ name: "민지" }]);
-  assert.deepEqual(r.map((x) => x.kind), ["taste", "sexval"]);
+  assert.deepEqual(r.map((x) => x.kind), ["taste", "sexval", "taste"]);
+  assert.equal(r[2].name, "{{user}}");
   assert.equal(r[0].label, "샤워실"); assert.equal(r[1].delta, 3);
   assert.match(NSFW_STAGE1, /taste\|Name/);
 });

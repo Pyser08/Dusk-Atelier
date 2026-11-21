@@ -168,6 +168,7 @@ export const NSFW_LITE_STAGE1 = [
   "",
   "",
   "Sexual profile tracking is on — ALSO write these lines only when newest clearly shows it (most replies have none):",
+  "Name may be {{user}} too when newest or the user message clearly shows it (record only what {{user}} already did or said; never invent it).",
   "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      arousal never rises on its own — write lust only when newest moves this character's arousal; fatigue for real exertion or rest",
   "sleep|Name",
 ].join("\n");
@@ -216,7 +217,7 @@ export function nsfwFrom(raw, known = []) {
   const out = [];
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
     const f = line0.trim().replace(/^(?:[-*•>]+|\d+[.)])\s*/, "").split(/[|｜¦]/).map((x) => x.trim()), tag = (f[0] ?? "").toLowerCase();
-    const name = canonName(String(f[1] ?? "").trim(), known); if (!name || name === "{{user}}") continue;
+    const name = canonName(String(f[1] ?? "").trim(), known); if (!name) continue;   // {{user}} 줄도 받는다 — 유저 칸(actor:user)에 저장
     if (tag === "taste" && f[3]) { const k = /^(position|place|play|체위|장소|플레이)$/i.test(f[3]) && f[4] ? f[3] : "", lab = k ? f[4] : f[3], q = k ? f[5] : f[4];   // 예전 줄(갈래 없음)도 읽는다
       out.push({ kind: "taste", posKind: k, name, preference: /dislike|싫/i.test(f[2] ?? "") ? "disliked" : "preferred", label: lab.slice(0, 60), quote: (q ?? "").slice(0, 160) }); }
     else if (tag === "sexval" && f[2] && f[3]) out.push({ kind: "sexval", name, key: f[2], delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });

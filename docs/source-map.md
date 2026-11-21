@@ -1,4 +1,4 @@
-# Dusk Atelier 소스 구조 지도 (v2.2.29 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v2.2.30 기준, tools/source-map.mjs로 자동 생성)
 
 > **다른 AI/새 세션 인계:** 먼저 `HandOff/README.md` → `HandOff/STATE.md` → `HandOff/TASK-MAP.md` 순서로 읽는다.
 
@@ -100,7 +100,7 @@
 - `modelhub.js` (97줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (248줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
 - `namelinks.js` (111줄) 장기기억 애드온(0.3.22): 응답 화면(display)에 붙이는 두 가지. 모델에 보내는 글·저장… — STATUS_CSS, createCssMount, createNameLinks
-- `nsfwturn.js` (118줄) addon-rebuild: 매 턴 기록기가 보고한 성인 프로필 변화(taste·sexval)를 이 채… — applyNsfwQueue, nsfwByName, applyDriveQueue, applyLifeTurn, seedZones
+- `nsfwturn.js` (120줄) addon-rebuild: 매 턴 기록기가 보고한 성인 프로필 변화(taste·sexval)를 이 채… — applyNsfwQueue, nsfwByName, applyDriveQueue, applyLifeTurn, seedZones
 - `persona.js` (152줄) — loadPersonaMap, savePersonaMap, setPersonaLink, syncPersonaModules
 - `personabotdef.js` (96줄) 봇 기본 페르소나 (aibuild 애드온 전용 — 페르소나 공방의 '이 봇 기본 페르소나'를 Dusk… — loadBotDefaults, saveBotDefaults, injectBlock, createBotDefaults
 - `personabuilder.js` (371줄) 페르소나 빌더: 설명 양식(프리셋) 파싱·조립, AI 프롬프트, 저장소, 공유 코드 — parseTemplate, addField, removeField, addSection, removeSection
@@ -112,7 +112,7 @@
 - `plugins.js` (231줄) 플러그인 탭 데이터 계층 — DA Interop v1 호스트 + 플러그인 관리 — listInterop, sendPatch, presetValues, waitAck, pruneInterop
 - `potstorage.js` (71줄) 리수폿 컨트롤러가 쓰는 저장소(pluginStorage 모양)를 Dusk 저장소 v3 위에 얹는 어댑… — scopeIdsOf, createPotStorage
 - `presets.js` (140줄) — loadPresets, savePresets, snapshotOf, recordActive, applyPreset
-- `profileseed.js` (102줄) addon-rebuild: 인물 기본 성격 + 채팅별 NSFW 값을 미리 만들어 둔다. — missingProfiles, missingNsfw, profileText, ensureProfiles
+- `profileseed.js` (117줄) addon-rebuild: 인물 기본 성격 + 채팅별 NSFW 값을 미리 만들어 둔다. — userNsfwNeed, missingProfiles, missingNsfw, profileText, ensureProfiles
 - `protlink.js` (195줄) ProtLink+ (v1.9.2): Proton Drive 공유 링크를 캐릭터·모듈·플러그인에 연결해… — PL_KEY, PL_LINKS, PL_SET, PL_ORIGINAL, loadProtLinkOn
 - `regexprep.js` (25줄) v1.8.1 정규식 전처리 공급자: 이 채팅에 적용할 정규식 목록을 모아 준다. 읽기만 하며 실패하면… — createRegexPrep
 - `regress.js` (50줄) 회귀 (v1.9.2): 고른 인물의 기억만 들고 같은 봇에 새 채팅을 만든다. 원래 채팅과 그 기억은… — createRegressChat
@@ -280,7 +280,7 @@
 - `module.js` (153줄) — loreIdentity, mergeLorebook, planAssets, buildMergedModule, fieldChanges
 - `namecard.js` (166줄) 장기기억 애드온(0.3.22): 응답 본문의 인물 이름 → 누르면 뜨는 상태창(순수). 스크립트 없이… — statusCardHtml, PC_OPEN_CSS, TAB_CSS, LINK_MAX, linkNames
 - `namekr.js` (23줄) addon-rebuild: 띄어쓰기 없는 한국 이름(성 한 글자 + 이름) 맞추기 — 애드온 전용(e… — KO_SURNAMES, sameKoreanPerson, canonNameKo
-- `nsfwlife.js` (376줄) 장기기억 애드온: 인물의 '살아 있는' 상태를 엔진만으로 계산한다(모델 호출 없음, 순수). — TEMP_LEN, emptyLife, docByName, cycleOf, phaseOf
+- `nsfwlife.js` (377줄) 장기기억 애드온: 인물의 '살아 있는' 상태를 엔진만으로 계산한다(모델 호출 없음, 순수). — TEMP_LEN, emptyLife, docByName, cycleOf, phaseOf
 - `nsfwprofile.js` (176줄) addon-rebuild: 인물 NSFW 값(채팅별, 장기기억 폴더 folder.nsfw[문서 id]… — SEX_LABEL, AXIS_LABEL, SEX_KEYS, cleanPosLabel, POS_MAX
 - `openitems.js` (4줄) 열린 항목(약속·복선) 고르기 — 코어 홈 화면도 쓴다 — isClosed, openItems
 - `patch.js` (148줄) — viewKeys, buildPatch, parsePatch, planPatch, applyPatch
@@ -297,7 +297,7 @@
 - `races.js` (304줄) 장기기억 애드온(0.3.22): 종족 표·계산(순수). 기록기 AI가 인물의 종족을 한 줄로 알려 주… — RACES, RACE_BY_ID, FRAMES, raceIdOf, RACE_STAGE1
 - `rawrecall.js` (68줄) 2.2.2 원문 회상(순수 함수): 지난 대화 원문을 조각내고, 의미 순위와 글자 순위를 합쳐(RRF… — splitText, stripStatus, buildChunks, lexScores, rrf
 - `recall.js` (107줄) v1.6.4 회상(Recall, 순수): 리수폿이 고른 인물의 Dusk 기록을 골라 Director에… — RECALL_DEFAULTS, keywordBoost, scoreRecord, pickPeople, unknownFor
-- `recorder.js` (621줄) Dusk 기록기 (2.0.0) — 리수폿 '기록하기(Writer)'를 대신하는 짧은 단계별 기록. 순… — isNoneReply, RECENT_MAX, parseWriterRun, cardOf, RECORDER_OUTPUT
+- `recorder.js` (622줄) Dusk 기록기 (2.0.0) — 리수폿 '기록하기(Writer)'를 대신하는 짧은 단계별 기록. 순… — isNoneReply, RECENT_MAX, parseWriterRun, cardOf, RECORDER_OUTPUT
 - `refusal.js` (21줄) addon-rebuild: 모델 답이 '검열(거절)'인지 판별. 확실할 때만 검열이라 한다 — 근거는… — refusalText, blockedError, isCensored, censorMessage, problemMessage
 - `regexprep.js` (46줄) v1.8.1 정규식 전처리(순수): 기억 분석 입력과 임베딩 질의에서 상태창·HTML 같은 군더더기를… — DEFAULT_REGEX, normEntry, normEntries, parseRegexFile, collectEntries
 - `regexview.js` (28줄) 정규식 '바로 시험' 결과 보기 (v1.6.7 7단계): 입력 글을 일치 위치로 잘라 강조·요약한다.… — segments, describeMatch, summarize
@@ -329,6 +329,7 @@
 - `trackpreset.js` (66줄) 추적 수준 프리셋·기능 카드(순수). 리수폿 features(affinity·register·perc… — FEATURE_IDS, FEATURE_CARDS, LEVELS, levelPatch, applyLevel
 - `turninfo.js` (146줄) 응답 아래 표시 (1.8.3, 순수): 주사위 결과 · 모델 호출 정보. 리스 메시지 안이라 인라인 … — VERDICTS, judgeRoll, estimateTokens, fmtTokens, fmtSec
 - `upload.js` (61줄) — uploadAssets
+- `usernsfw.js` (24줄) 유저({{user}}) NSFW 칸(순수): 리수폿은 유저용 인물 문서를 만들지 않아서, 문서 id로… — USER_NSFW_ID, setUserNsfwNames, userNsfwDoc, isUserNsfwDoc, characterDocs
 - `util.js` (29줄) — stableJson, slotted, newId
 - `vars.js` (27줄) 초기 변수(defaultVariables) 보기·고치기 (v1.6.7 7단계): 한 줄에 key=va… — parseVars, serializeVars, duplicateKeys
 - `weather.js` (170줄) 장기기억 애드온(0.3.22): 기후·날씨 엔진(순수). 계산은 엔진이, 기후대·달력(판타지)은 기록… — STATES, ZONES, guessClimate, CLIMATE_STAGE1, climateFrom
@@ -589,7 +590,7 @@
 - `erosyncui.js` (58줄) Erosync 화면 맨 위 카드: 상태(꺼짐/준비 중/사용 중/문제 있음) + 켜기 스위치 + 비용 …
 - `erosyncundoui.js` (20줄) Erosync '동작' 탭의 '장면 되돌리기' 카드: 마지막으로 반영된 장면 판단 한 건(관계·목표·…
 - `erosyncwiki.js` (159줄) 인물 위키에 붙는 Erosync 칸(1단계: 읽기만). Erosync가 켜져 있고 이름이 맞는 인물에…
-- `extracards.js` (272줄) 장기기억 애드온(0.3.22): 인물 위키에 붙는 새 칸 — 몸 흔적 · 궁합 · 인물 일기 · 다른…
+- `extracards.js` (273줄) 장기기억 애드온(0.3.22): 인물 위키에 붙는 새 칸 — 몸 흔적 · 궁합 · 인물 일기 · 다른…
 - `faillog.js` (86줄) 2.2.4 실패 기록 창: 실패한 것만 최근 순으로. 항목마다 사용자용(무엇·이유·해 볼 일)과 제보…
 - `fillgaps.js` (22줄) 'AI로 빈칸 채우기' 공용(리수폿·인물 화면): 비어 있는 칸이 있는 인물을 세고, 확인을 받은 뒤…
 - `flowsettings.js` (208줄) 기억 탭 설정: 추적 수준 3종 · 기능 카드 6장 · AI 모델(쉬운/고급) · 가져오기·사용량.
@@ -618,9 +619,9 @@
 - `mhome.js` (365줄) 기억 화면 (1.8.3 목업 3): 상태 카드 하나(스위치·숫자 3·막대·범례) → 지난 대화 분석(…
 - `modebar.js` (49줄) 기억 탭 맨 위: 장기기억 방식(저장소). 간단·고급 모드 모두에서 선택을 유지하고 바꿀 수 있다.
 - `modeladv.js` (66줄) 고급 모델 설정(고급 모드): 공급자 전체 · 모델 목록 불러오기 · 온도/최대 출력/문맥/제한시간 …
-- `nsfwcard.js` (235줄) addon-rebuild: 인물 위키 NSFW 탭의 성인 프로필 카드 — 이 채팅 장기기억(folde…
+- `nsfwcard.js` (237줄) addon-rebuild: 인물 위키 NSFW 탭의 성인 프로필 카드 — 이 채팅 장기기억(folde…
 - `people.js` (267줄) 
-- `personv2.js` (494줄) v1.8.3 인물 위키 개편: 머리 + 탭(요약 / 관계 / 상세 정보 / 기록). 넓은 화면(@co…
+- `personv2.js` (509줄) v1.8.3 인물 위키 개편: 머리 + 탭(요약 / 관계 / 상세 정보 / 기록). 넓은 화면(@co…
 - `potpage.js` (55줄) 장기 기억 → 리수폿 화면(2.0.0): Erosync 화면처럼 위에 상태·켜기, 아래에 탭(개요·설…
 - `quickrows.js` (23줄) 장기기억 애드온(0.3.22): 홈 빠른 설정에 붙는 줄 — 캐릭터 상태창(본문 이름 링크)·장면 상…
 - `racebody.js` (110줄) 장기기억 애드온(0.3.22): 종족별 인체 모형 특징(순수 모양 데이터 + SVG 노드). 좌표는 …

@@ -3,6 +3,8 @@
 // 기존 위키 블록(기본 성격·수치·항목 묶음·위키 패널)은 '상세 정보', 문서 관리·이야기 기록은 '기록' 탭으로 옮긴다(기능은 그대로).
 import { h, replace } from "../../dom.js";
 import { userLabel } from "./username.js";
+import { userNsfwDoc, setUserNsfwNames } from "../../../engine/usernsfw.js";
+import { userKeySet } from "../../../engine/memoryuser.js";
 import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
@@ -54,6 +56,8 @@ export function personTabs(env, parts) {
 
   setUserNames(f, [userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])]);   // 페르소나 이름으로 따로 쌓인 기록도 {{user}} 한 사람으로
   const people = counterparts(f, selfNames, now);
+  // 유저({{user}})는 관계 한눈에·관계 목록에서 늘 맨 위
+  { const uk = userKeySet([userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])].filter(Boolean)), isU = (x) => uk.has(String(x?.name ?? "").toLowerCase().replace(/\s+/g, "")); people.sort((a, b) => isU(b) - isU(a)); }
   // 성별 색: folder.orient(Erosync에서 옮겨 온 성별) 또는 Erosync 인물의 gender. 여 = 분홍, 남 = 파랑
   const genderOf = (name) => { const g = f.orient?.[nk(name)]?.g ?? (ero ? eroPersonByName(ero, name)?.gender : null); return g === "f" || g === "m" ? g : ""; };
   const gcls = (name) => (lay && genderOf(name) ? `g-${genderOf(name)}` : null);
@@ -419,6 +423,17 @@ export function personTabs(env, parts) {
     const cycCard = card("월경·임신", [cv ?? cyc ?? note("아직 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.")], null, "rb-nsfw-base");
     // 세부 탭: 상태(성욕·몸) / 몸(성감대·월경) / 취향(프로필·잠자리·후보·태그) / 장면(장면 판단)
     const pane = (...k) => h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, k.filter(Boolean));
+    // 유저 줄: 위키 문서가 없으니 고정 키(actor:user) 칸으로 성인 프로필·몸 상태를 보여 주고 고친다(위키 글 칸인 후보는 뺌)
+    const uNames = [userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])].filter(Boolean);
+    if (!doc && selfNames.some((n) => userKeySet(uNames).has(String(n).toLowerCase().replace(/\s+/g, "")))) {
+      setUserNsfwNames(uNames);
+      const ud = userNsfwDoc();
+      return sub2("nsfw", [
+        { id: "state", label: "상태", icon: "🌡️", hint: "성욕 게이지·피로·경험·월경·임신", render: () => pane(lustCard(env, card, ud, { after: fertilityCard(env, card, ud), cycle: cv ?? cyc ?? null })) },
+        { id: "taste", label: "취향", icon: "🫦", hint: "프로필·잠자리·태그", render: () => pane(nsfwCard(env, card, ud), humanCard(env, card, ud, "ext"), nsfwTagsCard(env, card, ud)) },
+        { id: "body", label: "몸", icon: "💋", hint: "성감대·몸 흔적", n: (env.folder?.nsfw?.[ud.id]?.zones ?? []).length, render: () => pane(bodyCard(env, card, ud), marksCard(env, card, ud)) },
+        { id: "compat", label: "궁합", icon: "💞", hint: "상대와 취향이 얼마나 맞는지", render: () => pane(compatCard(env, card, ud)) }]);
+    }
     if (!doc) return pane(nsfwStatusCard(env, card, doc), cycCard, adultCandCard(env, card, doc), nsfwCard(env, card, doc), nsfwTempCard(env, card, doc), nsfwTagsCard(env, card, doc));
     const zn = (env.folder?.nsfw?.[doc.id]?.zones ?? []).length;
     const el = sub2("nsfw", [

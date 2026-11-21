@@ -48,6 +48,11 @@
   - **남은 일**: [ ] 실제 리스에서 기록기가 climate·cohabit 줄을 내는지 [ ] 실제 리스에서 details name(탭 하나만 열림)·backdrop-filter 확인 [ ] 사진: 실제 리스에서 readImage·OffscreenCanvas 되는지·이름 링크 HTML 크기(썸네일 약 3KB) 확인 [ ] RisuBard·PocketRisu 실기기 확인 [ ] 배포는 사용자 지시 시(본체 v2.2.21 + 장기기억 0.3.22, minCore 2.2.21 — 코어 변경: 창 투명도·RisuBard 주사위·featurefind·quickset 슬롯)
 - 남은 일: [ ] 실제 RisuAI에서 기록기가 새 줄(told·goal·place·mark·zone 자리)을 잘 내는지 확인 [ ] 일기 상자가 실제 리스 응답 아래(로어북 버튼 위)에 뜨는지 확인 [ ] 배포(장기기억 0.3.22, 사용자 지시 시) [ ] run-regress·run-memed 기존 실패 정리
 
+### 11-21 유저 NSFW 칸 (미릴리스)
+- `src/engine/usernsfw.js`: 위키에 유저 문서가 없으면 가짜 문서 `actor:user`를 `characterDocs()`로 더함. nsfwlife(docsOf)·nsfwturn이 사용, 주입·hotActors는 `npcDocs()`(유저 제외).
+- recorder `nsfwFrom`이 {{user}} 줄을 받음 + NSFW_STAGE1에 유저 허용 한 줄. profileseed `userNsfwNeed`(페르소나 설명으로 runNsfw). personv2: 문서 없는 유저 줄에 NSFW 세부 탭, 관계 목록 유저 맨 위. 테스트 tests/usernsfw.test.js.
+- 버전 안 올림. 실기기 확인 안 함.
+
 ## addon-rebuild (2026-11-17, main 4144a3f에서 분기) — 애드온 재구성
 - **11-20 v2.2.20 + 장기기억 0.3.21(minCore 2.2.20) 버그리포트 4건**: ① 성욕 게이지 자연 상승 제거 — nsfwlife tickLife는 lustK(성향·주기·끌림 배수, LUST_BASE 1.5로 정규화)만 계산해 AI gauge(+) 델타에 곱함(0.2~2.5, 욕망·이상성향 triggerHit면 ×1.3), recorder NSFW_STAGE1 gauge 줄을 'AI가 판단' 규칙으로. ② memoryrunner.resumeServer: cellaranalysis.pendingResume으로 이어받을 작업 있을 때만 aiTask("지난 대화 분석")로 감싸 신호를 server.resume·relayCall에 넘김. follow는 중지 시 cancel 후 즉시 끝(state cancelled). 멈춘 작업은 localStorage dusk.cellar.stoppedJobs(id 또는 chaId|chatId|startedAt/total)로 기억해 자동 이어받기 안 함, run()으로 같은 채팅 새로 시작하면 해제. ③ ui/screens/memory/bfprogress.js — 지난 대화 분석 진행을 모듈 Map에 두고 mhome·settings가 다시 그릴 때 bfAttach. ④ engine/memoryinject insertBlock "end"에서 블록이 유저 입력 뒤면 USER_FIRST(최신 입력 우선) 줄 덧붙임.
 - **11-19 v2.2.19 + 장기기억 0.3.20 갈래 보기**: engine/branchtree.js(parentIdOf: 폴더 adoptedFrom → 위키 scope.forkedFrom(저장 키 끝 맞춤), forkPointOf: 부모와 같은 기록 마지막 at, buildBranchTree: 갈래마다 buildRelMap 호감, 고리 끊기, flattenTree, compareBranches) + ui/screens/branches.js(탭 "branches", 자체 CSS rb-branch-css, 채팅 40개까지) — 애드온 memory index에 탭 등록, mhome 인물 묶음에 #rb-mem-go-branches, featurefind ‘갈래 보기’. 코어 tabs.js엔 안 넣음(애드온 전용 → 위쪽 경로 표시는 기본값). 2차: 리롤·되감기 갈래(메시지 갈림 기록 필요), 이어받기 없는 옛 분기 추정. 테스트 branchtree. 실기기·RisuBard·PocketRisu 미확인.

@@ -10,13 +10,14 @@ import { readGauge } from "./gaugemult.js";
 import { pruneWiki } from "../engine/wikiprune.js";
 import { applyExtra, EXTRA_KINDS } from "../engine/memextra.js";
 import { randomZones } from "../engine/zonegen.js";
+import { characterDocs, setUserNsfwNames } from "../engine/usernsfw.js";
 
 const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 const empty = () => ({ sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] });
 
 // 순수: 폴더(f) 안에서 반영. 반환 [{name, changed:[…]}]
 export function applyNsfwQueue(f, reports) {
-  const docs = Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
+  const docs = characterDocs(f);
   const byDoc = new Map();
   for (const r of reports ?? []) {
     const doc = docs.find((d) => [d.title, ...(d.aliases ?? [])].some((n) => key(n) === key(r.name))) ?? docs.find((d) => sameKoreanPerson(d.title, r.name));
@@ -37,7 +38,7 @@ export function applyNsfwQueue(f, reports) {
 
 // 이름 → 이 채팅 성인 프로필(없으면 null)
 export function nsfwByName(f, name) {
-  const docs = Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
+  const docs = characterDocs(f);
   const d = docs.find((x) => [x.title, ...(x.aliases ?? [])].some((n) => key(n) === key(name))) ?? docs.find((x) => sameKoreanPerson(x.title, name));
   return d ? f?.nsfw?.[d.id] ?? null : null;
 }
@@ -70,7 +71,7 @@ export function applyLifeTurn(f, { events = [], present = [], gauge = null, text
 const latestWhen = (f) => [...(f?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
 // 0.3.22 성감대가 비어 있는 성인 프로필 인물(이번 턴 장면 인물)에게 무작위 성감대를 넣는다. 반환: 채운 인물 이름
 export function seedZones(f, present = []) {
-  const docs = Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character"), done = [];
+  const docs = characterDocs(f), done = [];
   const here = new Set(present.map(key));
   for (const d of docs) {
     const n = f?.nsfw?.[d.id];
@@ -99,6 +100,7 @@ export async function applyNsfwTurn(memory, log = () => {}, info = null, api = n
   if (!q.length && !dq.length && !events.length && !present.length && !ex.length) return 0;
   const cur = await memory.switches?.currentChat?.().catch?.(() => null);
   if (!cur) return 0;
+  try { const ui = memory.flow?.runtime?.()?.wiki?.userIdentity; if (ui?.title) setUserNsfwNames([ui.title, ...(ui.aliases ?? [])]); } catch { /* 이름 모름 → {{user}}만 */ }
   const gauge = await readGauge(api).catch(() => null);
   let out = [], drive = [], life = [], pruned = [], extra = [], zoned = [];
   await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (q.length) out = applyNsfwQueue(f, q);

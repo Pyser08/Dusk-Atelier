@@ -1,5 +1,6 @@
 // 장기기억 애드온(0.3.22): 인물 위키에 붙는 새 칸 — 몸 흔적 · 궁합 · 인물 일기 · 다른 봇으로 옮기기.
 import { h } from "../../dom.js";
+import { characterDocs } from "../../../engine/usernsfw.js";
 import { btn, modal, promptDialog, confirmDialog } from "../../kit.js";
 import { memStore } from "./memstore.js";
 import { cumNow, saturation, bodyOf, capacityOf, fertilityFactor, preventOf, chanceNow, BODY, CONTRA_LABEL, STANDING } from "../../../engine/fertility.js";
@@ -160,7 +161,7 @@ export function raceCard(env, card, doc) {
 export function compatCard(env, card, doc) {
   if (!doc) return null;
   const f = env.folder, m = mem(env.ctx), mine = f?.nsfw?.[doc.id];
-  const others = Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && d.id !== doc.id && f?.nsfw?.[d.id]);
+  const others = characterDocs(f).filter((d) => d.id !== doc.id && f?.nsfw?.[d.id]);   // 유저 칸과의 궁합도
   if (!mine || !others.length) return card("💞 궁합", [note(mine ? "궁합을 볼 상대가 없어요. 성인 프로필이 있는 다른 인물이 생기면 보여요." : "이 인물의 성인 프로필이 아직 없어요.")], null, "rb-life");
   m.compat ??= {};
   const pick = others.find((d) => d.id === m.compat[doc.id]) ?? others[0];
