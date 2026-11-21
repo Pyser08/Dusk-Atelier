@@ -43,7 +43,7 @@ export function createNameLinks(memory, api = null) {
   let spanMode = true, probe = null;
   const checkSpans = () => { if (probe || !spanMode) return; probe = setTimeout(async () => { probe = null; try { await overlay.hook(); } catch { /* 아래서 판단 */ } if (overlay.total() === 0 && spanMode) { spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "리스 화면에서 이름을 찾지 못해 상태창을 이름 아래 펼침으로 바꿨어요(이름을 다시 누르면 닫혀요)" }); } }, 5000); };
   const decided = async () => { if (!spanMode) return false; if (mount.ready()) return true; await Promise.race([mount.ensureDoc().catch(() => null), new Promise((r) => setTimeout(r, 1200))]); return mount.ready() && spanMode; };
-  const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: (pid) => { const d = byId.get(pid); return d && cache?.cardOf ? cache.cardOf(d) : ""; }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
+  const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: async (pid) => { const c = cache ?? await ready().catch(() => null); const d = byId.get(pid); return d && c?.cardOf ? c.cardOf(d) : ""; }, onFail: () => { if (!spanMode) return; spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "상태창 창을 띄우지 못해 이름 아래 펼침으로 바꿨어요(다음 응답부터)" }); }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
   let cache = null, checked = 0, loading = null;
   // 2.2.22 성능: 캐릭터 통째(채팅 전체 포함, 큰 채팅은 수십 MB)는 봇이 바뀔 때만 한 번 읽고, 이름·설명·이미지 목록만 남긴다
   let charMemo = null;

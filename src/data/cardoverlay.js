@@ -38,20 +38,21 @@ export async function mountNodes(d, target, html, Parser = globalThis.DOMParser)
 }
 
 // cardOf(pid) → 상태창 안쪽 HTML(없으면 ""). ensureDoc() → 리스 화면 문서(권한 없으면 null)
-export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {} }) {
+export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {}, onFail = () => {} }) {
   let open = null, hooking = false, timers = [], keyHooked = false, loop = null, total = 0;
   const close = async () => { const w = open; open = null; if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } } };
   async function show(pid) {
     const d = await ensureDoc(); if (!d) return false;
     await close();
-    const html = cardOf(pid); if (!html) return false;
+    const html = await cardOf(pid); if (!html) return false;
     const body = await d.querySelector("body"); if (!body) return false;
     const wrap = await d.createElement("div"); await wrap.setAttribute("x-dusk", "card-ov");
-    await wrap.setStyleAttribute("position:fixed;inset:0;z-index:2147483000;");
-    const bg = await d.createElement("div"); await bg.setStyleAttribute("position:absolute;inset:0;background:rgba(0,0,0,.36);");
+    await wrap.setStyleAttribute("position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:2147483000;");
+    const bg = await d.createElement("div"); await bg.setStyleAttribute("position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.36);");
     await bg.addEventListener("click", () => { close().catch(() => {}); });
     const box = await d.createElement("div"); await box.setAttribute("data-dusk", "pcbox"); await box.setStyleAttribute(BOX);
-    await mountNodes(d, box, html + '<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">바깥을 누르면 닫혀요 · Dusk 캐릭터 상태창</span>');
+    // 2.2.30: 그리다 실패해도(판마다 DOM 함수가 다름) 글자만이라도 띄운다
+    try { await mountNodes(d, box, html + '<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">바깥을 누르면 닫혀요 · Dusk 캐릭터 상태창</span>'); } catch (e) { log("상태창 그리기 일부 실패", e?.message ?? e); try { await box.setInnerText(String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()); } catch { /* 빈 상자라도 */ } }
     // 2.2.28: 닫기(×) — 바깥 누르기가 안 먹는 환경 대비
     const x = await d.createElement("div"); await x.setAttribute("role", "button"); await x.setAttribute("aria-label", "닫기");
     await x.setStyleAttribute("position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;background:rgba(127,127,127,.18);color:inherit;z-index:2;");
@@ -74,7 +75,7 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
         for (let i = 0; i < len; i++) {
           const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; if (!el) continue;
           try { await el.setAttribute("data-hk", "1"); } catch { /* 표시만 못 함 — 다음에 또 달 수 있음 */ }
-          await el.addEventListener("click", () => { show(pid).then((ok) => { if (!ok) log("상태창을 열지 못했어요", pid); }).catch((e) => log("상태창 열기 실패", e?.message ?? e)); });
+          await el.addEventListener("click", () => { show(pid).then((ok) => { if (!ok) { log("상태창을 열지 못했어요", pid); onFail(); } }).catch((e) => { log("상태창 열기 실패", e?.message ?? e); onFail(); }); });
           n++; total++;
         }
       }
