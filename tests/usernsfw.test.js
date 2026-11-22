@@ -12,7 +12,8 @@ test("위키에 유저 문서가 없으면 유저 칸(actor:user)이 더해진�
   const ids = characterDocs(folder()).map((d) => d.id);
   assert.deepEqual(ids, ["a", USER_NSFW_ID]);
   const f = folder(); f.wiki.documents.u = { id: "u", type: "Character", title: "민준" };
-  assert.ok(!characterDocs(f).some((d) => d.id === USER_NSFW_ID), "유저 문서가 있으면 그 문서를 쓴다");
+  // 11-22: 위키에 나의 문서가 있어도(설정 ‘나 위키 문서’) 성인·몸 칸은 유저 칸 하나 — 그 문서는 NPC 목록에서 빠진다
+  assert.deepEqual(characterDocs(f).map((d) => d.id), ["a", USER_NSFW_ID]);
 });
 
 test("기록기가 보고한 유저 취향이 유저 칸에 저장된다", () => {
