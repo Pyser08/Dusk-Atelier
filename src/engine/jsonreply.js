@@ -17,7 +17,7 @@ export function cleanJsonReply(raw) {
   const text = String(raw ?? "");
   const t = text.trim();
   if (!t || tryParse(t)) return text;
-  const body = t.replace(/<(think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, "").replace(/^[\s\S]*?<\/(think|thinking)>/i, "").trim();
+  const body = t.replace(/<(Thoughts|think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, "").replace(/^[\s\S]*?<\/(Thoughts|think|thinking|reasoning)>/i, "").trim();
   const cands = [];
   for (const m of body.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)) cands.push(m[1].trim());
   cands.push(body);

@@ -2,6 +2,7 @@
 import { APPRAISAL_FIRST_PRESERVED, APPRAISAL_TEXT_CONTROL, isAppraisalSlot, shouldPreserveFirstAppraisal } from './appraisal-records.js';
 import { INFORMATION_CONTINUITY_NOTE, preservePersonalityInformation, shouldPreserveInformation } from './information-continuity.js';
 import { INFORMATION_CONTINUITY_CONTROL } from './information-continuity-shared.js';
+import { cleanJsonReply } from '../jsonreply.js';
 import { callWriterModel } from '../../data/pot/llm-client.js';
 import { manualAIReferenceOptions } from './manual-ai-options.js';
 import { collectManualAIReferences } from '../../data/pot/manual-ai-reference.js';
@@ -78,7 +79,7 @@ function fieldValue(value,field){
   return field.slotId===NPC_EMOTION_SLOT?canonicalNpcEmotionText(text(value)):text(value);
 }
 export function preparePeopleField(raw,{scope,documentId,field,requestRef,references}){
-  let value;try{value=JSON.parse(String(raw||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));}catch{throw new Error('AI 작성 응답에서 완성된 JSON을 읽지 못했습니다.');}
+  let value;try{value=JSON.parse(cleanJsonReply(String(raw||'')).trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));}catch{throw new Error('AI 작성 응답에서 완성된 JSON을 읽지 못했습니다.');}
   assertSafeWikiData(value);
   if(!fieldExact(value,['schema_version','request_ref','decision','value','evidence_refs','reason','issues'])||value.schema_version!==1||value.request_ref!==requestRef||!['update','no_change'].includes(value.decision)||typeof value.reason!=='string'||!value.reason.trim()||value.reason.length>800||!Array.isArray(value.evidence_refs)||value.evidence_refs.length>20||value.evidence_refs.some(ref=>typeof ref!=='string'||!Object.hasOwn(references,ref))||!Array.isArray(value.issues)||value.issues.length>12||value.issues.some(issue=>typeof issue!=='string'||issue.length>800))throw new Error('AI 작성 응답 형식이나 근거가 잘못되었습니다.');
   if(['section','new-section'].includes(field.kind)&&(field.slotId==='core.identity'||field.id&&isCharacterOverviewSection(scope.documents?.[documentId]?.sections.find(section=>section.id===field.id)))){
