@@ -40,7 +40,7 @@ export function trimCovered(reqMsgs, chatMsgs, { keepTurns = 20, step = 1, cover
   const keep = new Set(); for (let i = cut; i < chatMsgs.length; i++) { const k = keyOf(textOf(chatMsgs[i])); if (k) keep.add(k); }   // 최근 글과 같은 앞부분은 빼지 않는다
   let dropped = 0;
   // 2.2.29: 요청 끝쪽(최신 입력과 바로 앞 대화)은 무슨 일이 있어도 남긴다
-  const tailFrom = (() => { let n = 0; for (let i = reqMsgs.length - 1; i >= 0; i--) { const r = reqMsgs[i]?.role; if (r === "user" || r === "assistant" || r === "char") { n++; if (n >= 4) return i; } } return 0; })();
+  const tailFrom = (() => { let n = 0, at = reqMsgs.length; for (let i = reqMsgs.length - 1; i >= 0; i--) { const r = reqMsgs[i]?.role; if (r === "user" || r === "assistant" || r === "char") { n++; at = i; if (n >= 4) return i; } } return at; })();   // 11-22: 대화 메시지가 4개보다 적으면(대화를 본문 글로 넣는 프리셋) 있는 것만 지킨다(예전엔 0 → 전부 지켜 아무것도 안 빠짐)
   const out = reqMsgs.filter((m, idx) => {
     if (idx >= tailFrom) return true;
     if (!m || (m.role !== "user" && m.role !== "assistant" && m.role !== "char")) return true;
@@ -49,5 +49,19 @@ export function trimCovered(reqMsgs, chatMsgs, { keepTurns = 20, step = 1, cover
     const n = want.get(k); if (!n) return true;
     want.set(k, n - 1); dropped++; return false;
   });
-  return dropped ? { messages: out, dropped } : same;
+  // 11-22: 대화를 본문 글로 넣는 프리셋(역할 system, "user: …"·"assistant: …")은 글 안에서 옛 대화 덩어리를 찾아 뺀다
+  const olds = []; for (let i = 0; i <= until; i++) { const t = norm(textOf(chatMsgs[i])); const k = keyOf(t); if (t.length >= 20 && k && !keep.has(k)) olds.push(t); }
+  let embedded = 0;
+  const out2 = olds.length ? out.map((m, idx) => {
+    if (idx >= tailFrom || !m || typeof m.content !== "string" || m.content.length < 200) return m;
+    let c = m.content, n = 0;
+    for (const t of olds) {
+      const re = new RegExp(`(^|\\n)[ \\t]*(?:[^\\n:：]{1,40}[:：][ \\t]*)?${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+")}[ \\t]*(?=\\n|$)`);
+      const c2 = c.replace(re, "$1"); if (c2 !== c) { c = c2; n++; }
+    }
+    if (!n) return m;
+    embedded += n; return { ...m, content: c.replace(/\n{3,}/g, "\n\n") };
+  }) : out;
+  dropped += embedded;
+  return dropped ? { messages: out2, dropped } : same;
 }

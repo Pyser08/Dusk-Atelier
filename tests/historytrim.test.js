@@ -63,3 +63,18 @@ test("gateProcess: 번호 조건으로 감싸고, 첫 메시지(-1)는 남긴다
   assert.match(g, /\{\{#if \{\{greater_equal::\{\{chat_index\}\}::20\}\}\}\}\n본문\n\{\{\/if\}\}/);
   assert.match(g, /less::\{\{chat_index\}\}::0/);
 });
+
+// 11-22 버그리포트: 대화를 본문(<Immediate> 블록 등)에 "user: …", "assistant: …" 글로 넣는 프리셋(역할은 모두 system)에서 옛 대화가 하나도 안 빠졌다
+test("trimCovered: system 메시지 안에 글로 들어간 옛 대화도 뺀다(최근 턴은 남김)", async () => {
+  const { trimCovered: tc } = await import("../src/engine/historytrim.js");
+  const chat = []; for (let i = 0; i < 8; i++) { chat.push({ role: "user", data: `유저 말 ${i}번째: 오늘은 어디로 갈까 생각하며 길을 걷는다 ${i}` }); chat.push({ role: "char", data: `캐릭터 답 ${i}번째: 그녀는 잠시 생각하다가 바닷가로 가자고 했다 ${i}` }); }
+  const body = chat.map((m) => `${m.role === "user" ? "user" : "assistant"}: ${m.data}`).join("\n\n");
+  const req = [{ role: "system", content: "규칙 글" }, { role: "system", content: `<Immediate>\n${body}\n</Immediate>` }, { role: "user", content: "새 입력" }];
+  const r = tc(req, chat, { keepTurns: 3, coveredAt: chat.length - 1 });
+  const out = r.messages[1].content;
+  assert.ok(r.dropped >= 8, `빠진 수 ${r.dropped}`);
+  assert.ok(!out.includes("유저 말 0번째") && !out.includes("캐릭터 답 0번째"), "옛 대화는 빠짐");
+  assert.ok(out.includes("유저 말 7번째") && out.includes("캐릭터 답 6번째"), "최근 턴은 남음");
+  assert.ok(out.startsWith("<Immediate>") && out.trimEnd().endsWith("</Immediate>"), "블록 틀은 그대로");
+  assert.equal(r.messages[0].content, "규칙 글");
+});

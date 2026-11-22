@@ -1,6 +1,7 @@
 // 인물 합치기 순수 로직. 합치기 대상은 'Dusk 인물'이 아니라 '목록에 보이는 항목'이다:
 //  · Dusk 인물 한 명(문서가 있으면 같이 묶임)   · 어떤 Dusk 인물과도 이어지지 않은 위키 문서(예전에 Dusk 쪽만 합쳐서 남은 중복 등)
 // 위키 문서 합치기는 리수폿 엔진(pot/person-merge.js)이 맡고, 여기서는 Dusk 인물·별칭 정리를 이어 붙인다.
+import { addUserAlias } from "./useralias.js";
 import { findDoc } from "./personview.js";
 import { planPersonMerge, applyPersonMerge } from "./pot/person-merge.js";
 import { relinkNames } from "./memoryuser.js";
@@ -22,7 +23,10 @@ export function mergeEntries(folder, { visible = () => true } = {}) {
 
 // 사건 기록·별칭 합치기(Dusk 쪽). 합칠 인물은 지워진다.
 export function duskMerge(f, ka, kb) {
+  // 11-22: 유저({{user}})와 합칠 때는 늘 유저 쪽을 남기고, 합친 이름을 유저 별칭으로 배운다(다음 기록에서 다시 갈라지지 않게)
+  if (/^\{\{user\}\}$/i.test(f.people[kb]?.name ?? "") && !/^\{\{user\}\}$/i.test(f.people[ka]?.name ?? "")) [ka, kb] = [kb, ka];
   const pa = f.people[ka], pb = f.people[kb];
+  if (pa && pb && /^\{\{user\}\}$/i.test(pa.name ?? "")) for (const n of [pb.name, ...(pb.aliases ?? [])]) addUserAlias(f, n);
   if (!pa || !pb || ka === kb) throw new Error("두 이름이 서로 다른 기존 인물이어야 해요.");
   pa.aliases = [...new Set([...(pa.aliases ?? []), pb.name, ...(pb.aliases ?? [])])];
   const seen = new Set(pa.records.map((r) => r.act));

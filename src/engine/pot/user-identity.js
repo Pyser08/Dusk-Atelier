@@ -1,9 +1,11 @@
 // 출처: risupot 2.3.0 src/user-identity.mjs — 원작자 허락을 받아 이식 (addon-rebuild부터 Dusk 소스 — 직접 고침, 원본과 다른 곳은 주석)
+import { hangulReadings } from '../useralias.js';
 
 const identityText=(value,max=160)=>typeof value==='string'?value.normalize('NFC').trim().slice(0,max):'';
 export function normalizeUserActor(value){
   const title=identityText(value?.title||value?.name),known=Boolean(title)&&value?.known!==false;
-  const aliases=[...new Set((Array.isArray(value?.aliases)?value.aliases:[]).map(alias=>identityText(alias)).filter(alias=>alias&&alias!==title))].slice(0,16);
+  // 11-22: 영문 페르소나 이름의 한글 읽기(Jade → 제이드)도 별칭으로 — 본문의 한글 표기가 다른 인물로 갈라지지 않게
+  const aliases=[...new Set([...(Array.isArray(value?.aliases)?value.aliases:[]),...hangulReadings(title)].map(alias=>identityText(alias)).filter(alias=>alias&&alias!==title))].slice(0,16);
   return{ref:'actor:user',kind:'user',title:known?title:'Current user (name unavailable)',aliases:known?aliases:[],known,description:known?identityText(value?.description||value?.personaPrompt,1600):'',source:identityText(value?.source,80)||'unavailable'};
 }
 function resolveUserActor(database,chat={},character=null){
