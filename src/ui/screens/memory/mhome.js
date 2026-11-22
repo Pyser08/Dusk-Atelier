@@ -103,7 +103,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
     replace(budgetRow, h("span", { class: "t" }, "자동 기록 입력 예산", defHint(96000, "토큰"), h("small", null, "인물 위키 자동 기록이 한 번에 읽는 글의 양(토큰)이에요. 기본값이면 충분해요.")), inp);
     budgetRow.hidden = false;
   })().catch(() => {});
-  memOptions.append(h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "‘요약된 옛 대화 빼고 보내기’를 켰을 때 이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요. 두 배가 쌓이면 이만큼으로 한 번에 줄여요.")),
+  memOptions.append(h("div", { class: "rb-srow rb-mem-trimkeep", id: "rb-mem-trimkeep" }, h("span", { class: "t" }, "남길 최근 턴", h("small", null, "‘요약된 옛 대화 빼고 보내기’를 켰을 때 이만큼의 최근 대화(내 말 기준)는 늘 그대로 보내요. 두 배가 쌓이면 이만큼으로 한 번에 줄여요. 리스 정보창의 ‘입력 토큰’은 빼기 전 숫자예요. 실제로 줄인 양은 기록에 보여요.")),
     num("턴", () => inj.trimKeep ?? 10, (s, v) => { s.inject ??= {}; s.inject.trimKeep = v; }, { min: 4, max: 200, step: 1 })));
 
   return { memorySettings, memOptions };

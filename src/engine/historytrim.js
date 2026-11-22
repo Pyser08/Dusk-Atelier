@@ -1,6 +1,7 @@
 // 요약된 옛 대화 빼고 보내기(2.0.1): 장기 기억에 이미 분석된(coveredAt 이하) 옛 대화를 모델 요청 사본에서 뺀다.
 // 최근 keepTurns턴(사용자 말 기준)은 언제나 남긴다. 요청 글과 채팅 글을 앞부분으로 맞춰 보고, 못 맞춘 글은 건드리지 않는다(안전).
 import { extractMessageText, isUserMessage } from "./chattext.js";
+import { estimateTokens } from "./tokens.js";
 
 const norm = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 const keyOf = (t) => { const n = norm(t); return n.length >= 12 ? n : null; };   // 11-22: 앞 48자 → 글 전체(머리말 같은 카드)
@@ -87,4 +88,10 @@ export function trimCovered(reqMsgs, chatMsgs, { keepTurns = 20, step = 1, cover
   }) : out;
   dropped += embedded;
   return dropped ? { messages: out2, dropped } : same;
+}
+
+// 11-22: 빼기 전·뒤 요청 글의 토큰 차이(대략). 기록에 '약 N토큰 줄였어요'로 알린다
+export function trimSaved(before, after, textOf = extractMessageText) {
+  const sum = (ms) => (ms ?? []).reduce((n, m) => n + estimateTokens(typeof m?.content === "string" ? m.content : textOf(m)), 0);
+  return Math.max(0, sum(before) - sum(after));
 }

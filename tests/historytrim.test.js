@@ -95,3 +95,11 @@ test("trimCovered: 턴 하나짜리 system 메시지·같은 머리말 응답·�
   assert.match(r.messages[1].content, /안녕 20번/);
   assert.equal(r.messages.at(-1).content, "새 입력");
 });
+
+test("trimSaved: 빼기 전·뒤 토큰 차이를 구한다", async () => {
+  const { trimSaved } = await import("../src/engine/historytrim.js");
+  const r = trimCovered(req(), chat, { keepTurns: 5, coveredAt: 29 });
+  const s = trimSaved(req(), r.messages);
+  assert.ok(s > 100, String(s));
+  assert.equal(trimSaved(req(), req()), 0);
+});
