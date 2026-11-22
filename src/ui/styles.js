@@ -1104,6 +1104,7 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-sk-card .rb-field>div{overflow-wrap:anywhere}.rb-sk-card>button,.rb-sk-card>div>button:only-child{align-self:flex-start}.rb-sk-card>p{margin:0}
 @media(max-width:560px){.rb-pb-chat-fab{right:14px;bottom:14px}.rb-pb-chat{right:10px;bottom:72px;width:calc(100% - 20px);height:min(72%,620px);border-radius:18px}}
 /* v1.8.1 모바일 가독성: 위쪽 영역 줄이기 · 누르는 칸 키우기 · 작은 글씨 올리기 · 칩 줄 끝 표시 · 위키 머리·기록 줄 정리 */
+  .rb-qs-scroll{max-height:min(62vh,460px);overflow-y:auto;overscroll-behavior:contain}.rb-qs-scroll.rb-qs-more{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 44px),rgba(0,0,0,.18));mask-image:linear-gradient(to bottom,#000 calc(100% - 44px),rgba(0,0,0,.18))}
 @media (max-width:760px){
   .rb-crumb{display:none}
   .rb-pagehead{padding:10px 16px 4px;gap:6px}
