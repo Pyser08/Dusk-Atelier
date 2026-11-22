@@ -3,8 +3,7 @@
 import { extractMessageText, isUserMessage } from "./chattext.js";
 
 const norm = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
-const KEY = 48;
-const keyOf = (t) => { const n = norm(t); return n.length >= 12 ? n.slice(0, KEY) : null; };
+const keyOf = (t) => { const n = norm(t); return n.length >= 12 ? n : null; };   // 11-22: 앞 48자 → 글 전체(머리말 같은 카드)
 
 // 묶음 빼기(step): 경계를 step턴마다만 옮긴다 — 그 사이 요청 앞부분이 같아 프롬프트 캐시가 맞는다.
 // 최근 keepTurns~keepTurns+step-1턴이 남고, 분석(coveredAt)이 경계에 못 미치면 이전 묶음 경계로 물러난다.
@@ -34,23 +33,47 @@ export function trimCovered(reqMsgs, chatMsgs, { keepTurns = 20, step = 1, cover
   if (until < 0) return same;
   const users = []; chatMsgs.forEach((m, i) => { if (isUserMessage(m)) users.push(i); });
   const cut = users[users.length - keepTurns];          // 이 위치부터는 남긴다
-  const want = new Map();                               // 앞부분 → 남은 개수
-  for (let i = 0; i <= until; i++) { const k = keyOf(textOf(chatMsgs[i])); if (k) want.set(k, (want.get(k) ?? 0) + 1); }
-  if (!want.size) return same;
-  const keep = new Set(); for (let i = cut; i < chatMsgs.length; i++) { const k = keyOf(textOf(chatMsgs[i])); if (k) keep.add(k); }   // 최근 글과 같은 앞부분은 빼지 않는다
+  // 11-22 버그리포트2: 앞 48자 키는 머리말이 같은 카드에서 전부 겹쳐 아무것도 못 뺐다 → 글 전체로 맞추고,
+  // 처리 단계 정규식 등으로 글이 바뀌었으면 줄 단위로 겹치는 정도(60% 이상)로 어느 채팅 글인지 찾는다.
+  const full = new Map(), lineIdx = new Map();
+  const linesOf = (t) => String(t ?? "").split(/\n/).map(norm).filter((l) => l.length >= 10);
+  chatMsgs.forEach((cm, i) => {
+    const raw = textOf(cm), f = norm(raw);
+    if (f) { if (!full.has(f)) full.set(f, []); full.get(f).push(i); }
+    for (const l of new Set(linesOf(raw))) { if (!lineIdx.has(l)) lineIdx.set(l, []); lineIdx.get(l).push(i); }
+  });
+  const recentFull = new Set(); for (let i = cut; i < chatMsgs.length; i++) { const f = norm(textOf(chatMsgs[i])); if (f) recentFull.add(f); }
+  const used = new Set();
+  // 옛(뺄 수 있는) 채팅 글 번호, 못 찾거나 최근 글이면 -1
+  const matchOld = (text) => {
+    const f = norm(text); if (!f) return -1;
+    if (full.has(f)) { if (recentFull.has(f)) return -1; const i = full.get(f).find((j) => j <= until && !used.has(j)); return i ?? -1; }
+    const ls = linesOf(text); if (!ls.length) return -1;
+    const hit = new Map(); for (const l of ls) for (const j of lineIdx.get(l) ?? []) hit.set(j, (hit.get(j) ?? 0) + 1);
+    let best = -1, bn = 0; for (const [j, n] of hit) if (n > bn || (n === bn && j > best)) { best = j; bn = n; }
+    if (best < 0 || bn / ls.length < 0.6 || best > until || used.has(best)) return -1;
+    return best;
+  };
+  const LABEL = /^[ \t]*[^\n:：]{1,40}[:：][ \t]*/;
+  const keep = new Set(recentFull);
   let dropped = 0;
   // 2.2.29: 요청 끝쪽(최신 입력과 바로 앞 대화)은 무슨 일이 있어도 남긴다
   const tailFrom = (() => { let n = 0, at = reqMsgs.length; for (let i = reqMsgs.length - 1; i >= 0; i--) { const r = reqMsgs[i]?.role; if (r === "user" || r === "assistant" || r === "char") { n++; at = i; if (n >= 4) return i; } } return at; })();   // 11-22: 대화 메시지가 4개보다 적으면(대화를 본문 글로 넣는 프리셋) 있는 것만 지킨다(예전엔 0 → 전부 지켜 아무것도 안 빠짐)
   const out = reqMsgs.filter((m, idx) => {
-    if (idx >= tailFrom) return true;
-    if (!m || (m.role !== "user" && m.role !== "assistant" && m.role !== "char")) return true;
-    const k = keyOf(typeof m.content === "string" ? m.content : textOf(m));
-    if (!k || keep.has(k)) return true;
-    const n = want.get(k); if (!n) return true;
-    want.set(k, n - 1); dropped++; return false;
+    if (idx >= tailFrom || !m) return true;
+    const c = typeof m.content === "string" ? m.content : textOf(m);
+    let j = -1;
+    if (m.role === "user" || m.role === "assistant" || m.role === "char") {
+      j = matchOld(c); if (j < 0 && LABEL.test(c)) j = matchOld(c.replace(LABEL, ""));
+    } else if (m.role === "system" && LABEL.test(c) && !/\n[ \t]*(?:user|assistant|char|model|system)[ \t]*[:：]/i.test(c)) {
+      // 11-22: 'system으로 보내기' 프리셋 — 턴 하나짜리 system 메시지("이름: 글")는 통째로 뺀다
+      j = matchOld(c.replace(LABEL, ""));
+    }
+    if (j < 0) return true;
+    used.add(j); dropped++; return false;
   });
   // 11-22: 대화를 본문 글로 넣는 프리셋(역할 system, "user: …"·"assistant: …")은 글 안에서 옛 대화 덩어리를 찾아 뺀다
-  const olds = []; for (let i = 0; i <= until; i++) { const t = norm(textOf(chatMsgs[i])); const k = keyOf(t); if (t.length >= 20 && k && !keep.has(k)) olds.push(t); }
+  const olds = []; for (let i = 0; i <= until; i++) { if (used.has(i)) continue; const t = norm(textOf(chatMsgs[i])); const k = keyOf(t); if (t.length >= 20 && k && !keep.has(k)) olds.push(t); }
   let embedded = 0;
   const out2 = olds.length ? out.map((m, idx) => {
     if (idx >= tailFrom || !m || typeof m.content !== "string" || m.content.length < 200) return m;

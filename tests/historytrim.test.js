@@ -78,3 +78,20 @@ test("trimCovered: system 메시지 안에 글로 들어간 옛 대화도 뺀다
   assert.ok(out.startsWith("<Immediate>") && out.trimEnd().endsWith("</Immediate>"), "블록 틀은 그대로");
   assert.equal(r.messages[0].content, "규칙 글");
 });
+
+// 11-22 버그리포트2: 'system으로 보내기' 프리셋 — 턴마다 따로 된 system 메시지, 같은 머리말 응답, 처리 단계 정규식이 머리말을 지움
+test("trimCovered: 턴 하나짜리 system 메시지·같은 머리말 응답·처리 정규식으로 바뀐 글도 뺀다", () => {
+  const HEAD = "<Stage of Tales> Saga: 긴 머리말이 모든 응답 앞에 똑같이 붙어요. 아주 길어요.";
+  const ch = [];
+  for (let i = 0; i < 30; i++) ch.push(i % 2
+    ? { role: "char", data: `${HEAD}\n봇이 ${i}번째로 길게 대답하는 본문 첫 줄이에요.\n두 번째 줄 ${i} 이야기가 이어져요.\n[상태: ${i}]` }
+    : { role: "user", data: `안녕 ${i}번` });
+  const req = [{ role: "system", content: "규칙" },
+    ...ch.map((m) => ({ role: "system", content: m.role === "user" ? `user: ${m.data}` : `assistant: ${m.data.replace(HEAD + "\n", "").replace(/\n\[상태: \d+\]/, "")}` })),
+    { role: "user", content: "새 입력" }];
+  const r = trimCovered(req, ch, { keepTurns: 5, coveredAt: 29 });
+  assert.equal(r.dropped, 20, "옛 10턴(20개) 빠짐");
+  assert.equal(r.messages[0].content, "규칙");
+  assert.match(r.messages[1].content, /안녕 20번/);
+  assert.equal(r.messages.at(-1).content, "새 입력");
+});
