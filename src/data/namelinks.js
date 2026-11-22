@@ -5,7 +5,7 @@
 import { readChar } from "./apiread.js";
 import { userTexts, isUserText } from "../engine/msgrole.js";
 import { statusCardHtml, linkNames, NAMECARD_CSS } from "../engine/namecard.js";
-import { scenePanelHtml, sceneOf, peopleIn, SCENE_CSS } from "../engine/scenepanel.js";
+import { scenePanelHtml, sceneOf, peopleIn, SCENE_CSS, streamMemo } from "../engine/scenepanel.js";
 import { charThumb } from "./charimg.js";
 import { createCardOverlay, xifyCss } from "./cardoverlay.js";
 import { FAB_CSS } from "./floatbtn.js";
@@ -90,6 +90,7 @@ export function createNameLinks(memory, api = null) {
     const yes = isUserText(users.set, text); if (!yes) { notUser.add(head); if (notUser.size > 300) notUser.delete(notUser.values().next().value); } return yes;
   };
   const ready = async () => { loading ??= load().finally(() => { loading = null; }); await loading; if (cache && !cache.off) { mount.ensureDoc().catch(() => {}); return cache; } return null; };
+  const sceneMemo = streamMemo();   // 11-22 스트리밍 중 상태창 다시 만들지 않기
   return {
     invalidate() { cache = null; checked = 0; charMemo = null; },
     css: () => STATUS_CSS,
@@ -109,8 +110,12 @@ export function createNameLinks(memory, api = null) {
     },
     // 장면 상태창 HTML(없으면 ""). 상태 줄이 있는 응답, 또는 등장인물이 나온 긴 응답에만
     async scene(text) {
+      if (typeof text !== "string" || !text || text.includes('x-dusk="scene"')) return "";
+      return sceneMemo(text, () => sceneNow(text));   // 11-22: 스트리밍으로 글이 늘어나는 동안은 다시 만들지 않음(깜빡임·렉)
+    },
+  };
+  async function sceneNow(text) {
       try {
-        if (typeof text !== "string" || !text || text.includes('x-dusk="scene"')) return "";
         const c = await ready(); if (!c?.scene) return "";
         const s = sceneOf(text, c.folder, { seed: c.seed, hint: c.hint }), ppl = peopleIn(text, c.folder, c.botName);
         // 2.2.30: 상태 줄이 없으면 등장인물(위키 인물·봇 이름)이 글에 나온 긴 응답에만 — 리스바드는 응답 말고 다른 긴 글에도 이 처리를 거쳐 엉뚱한 곳(채팅 위쪽 전체 너비)에 붙었다
@@ -119,6 +124,5 @@ export function createNameLinks(memory, api = null) {
         const ov = await decided(); if (ov && c.links && ppl.some((p) => p.doc)) { overlay.soon(); checkSpans(); }
         return scenePanelHtml({ ...s, force: true, people: ppl.map((p) => (p.doc && c.links ? (ov ? { name: p.name, pid: p.doc.id } : { name: p.name, card: c.cardOf(p.doc) }) : { name: p.name })) });
       } catch { return ""; }
-    },
-  };
+  }
 }

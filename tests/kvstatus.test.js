@@ -40,3 +40,39 @@ test("날씨 줄이 빠지던 문제: 가장 최근 장면에 날짜가 없으�
   assert.equal(s.date, "1214-11-29"); assert.ok(s.forecast, "예보가 있어야 요청에 날씨 줄이 들어감");
   assert.equal(s.time, "10:43", "시간은 더 최근 장면의 시각"); assert.equal(s.place, "정원");
 });
+
+// 11-22 버그리포트: 이머헬퍼 상태 태그(<imh-now …/>) — att가 붙으면 100자를 넘어 못 읽어 시간이 --:--, 짧으면 연도 2000·장소 '>'
+test("imh-now 태그에서 날짜·시간·장소를 읽는다(긴 att 포함)", async () => {
+  const { kvStatus } = await import("../src/engine/kvstatus.js");
+  const long = '본문이에요.\n<imh-now cal="2025년" date="6월 29일" wd="일" time="17:43" place="한강 공원 벤치" att="세라: 하얀 원피스, 밀짚모자, 샌들" />';
+  assert.deepEqual(kvStatus(long), { date: "2025-06-29", time: "17:43", place: "한강 공원 벤치" });
+  const short = '본문\n<imh-now cal="2025년" date="6월 29일" wd="일" time="17:43" place="카페" />';
+  assert.deepEqual(kvStatus(short), { date: "2025-06-29", time: "17:43", place: "카페" });
+});
+
+test("peopleIn: 이미지 태그·속성 안의 봇 이름은 인물로 세지 않는다", async () => {
+  const { peopleIn } = await import("../src/engine/scenepanel.js");
+  const folder = { wiki: { documents: { a: { id: "a", type: "Character", title: "한세라", aliases: [] } } } };
+  const t = '<img="Sera_normal_smile">\n한세라가 웃었다. 오늘은 날씨가 좋다.';
+  assert.deepEqual(peopleIn(t, folder, "Sera").map((p) => p.name), ["한세라"]);
+  assert.deepEqual(peopleIn("Sera가 손을 흔들었다.", { wiki: { documents: {} } }, "Sera").map((p) => p.name), ["Sera"], "본문에 나오면 그대로");
+});
+
+test("peopleIn: 영문 봇 이름이 본문에 있어도 한글 주인공 문서가 잡혔으면 더하지 않는다", async () => {
+  const { peopleIn } = await import("../src/engine/scenepanel.js");
+  const folder = { wiki: { documents: { a: { id: "a", type: "Character", title: "한세라", aliases: [] } } } };
+  assert.deepEqual(peopleIn("한세라(Sera)가 웃었다.", folder, "Sera").map((p) => p.name), ["한세라"]);
+});
+
+test("streamMemo: 스트리밍으로 글이 늘어나는 동안은 다시 계산하지 않고, 글이 그대로면(응답 끝) 새로 계산", async () => {
+  const { streamMemo } = await import("../src/engine/scenepanel.js");
+  let t = 0, n = 0; const m = streamMemo({ now: () => t });
+  const calc = (v) => () => { n++; return v; };
+  assert.equal(await m("가나다", calc("A")), "A");
+  t = 500; assert.equal(await m("가나다라", calc("B")), "A", "늘어나는 중: 직전 결과");
+  t = 900; assert.equal(await m("가나다라마", calc("C")), "A");
+  t = 1200; assert.equal(await m("가나다라마", calc("D")), "D", "글이 그대로 = 끝난 뒤 다시 그리기");
+  t = 9000; assert.equal(await m("가나다라마바", calc("E")), "E", "오래 지나면 새로");
+  assert.equal(await m("완전히 다른 응답", calc("F")), "F");
+  assert.equal(n, 4);
+});

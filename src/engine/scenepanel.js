@@ -8,6 +8,7 @@ import { linkHtml, nameSpan, TAB_CSS, PC_OPEN_CSS } from "./namecard.js";
 import { forecast, climateOf, anchorOf, weekday, parseIso, ZONES, STATES } from "./weather.js";
 import { extraOf } from "./memextra.js";
 import { upcoming, dLabel } from "./storycal.js";
+import { hangulReadings } from "./useralias.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 // 응답 하나의 장면 정보: 상태 줄(날짜·시간·장소) → 없으면 저장된 마지막 장면, 날씨는 응답 글 → 저장된 날씨
@@ -47,12 +48,16 @@ export function inputWeather(text, when = "") {
 }
 // 이 응답에 나온 인물(위키 문서가 있는 인물 + 봇 캐릭터). [{name, doc}]
 export function peopleIn(text, folder, botName = "") {
-  const low = nk(text), out = [];
+  // 11-22 버그리포트: <img="봇이름_normal_…"> 같은 태그·속성 안의 영문 카드 이름이 인물로 하나 더 붙었다 → 태그는 빼고 찾는다
+  const low = nk(String(text ?? "").replace(/<[^>]*>/g, " ")), out = [];
   for (const d of Object.values(folder?.wiki?.documents ?? {})) {
     if (d?.type !== "Character" || /\{\{user\}\}/i.test(d.title ?? "")) continue;
     if ([d.title, ...(d.aliases ?? [])].some((n) => String(n ?? "").length >= 2 && low.includes(nk(n)))) out.push({ name: d.title, doc: d });
   }
-  if (botName && !out.some((p) => nk(p.name) === nk(botName)) && low.includes(nk(botName))) out.push({ name: botName, doc: null });
+  // 11-22: 봇 이름은 주인공 문서의 다른 이름일 수 있다(영문 카드 이름 Sera ↔ 위키 한세라) — 그 문서가 잡혔으면 더하지 않는다
+  const reads = hangulReadings(botName).map(nk).filter((r) => r.length >= 2);
+  const same = (p) => [p.name, ...(p.doc?.aliases ?? [])].some((n) => nk(n) === nk(botName) || reads.some((r) => nk(n).includes(r)));
+  if (botName && !out.some(same) && low.includes(nk(botName))) out.push({ name: botName, doc: null });
   return out.slice(0, 10);
 }
 export function dateLabel(date, cal = null) {
@@ -237,4 +242,14 @@ export function scenePanelHtml({ date = "", time = "", place = "", weather = "",
     // 다가오는 날(이야기 달력): 오늘·D-n 칩. 생일 🎂 · 연인 💞 · 약속 📌 · 특별한 날 ✨ · 휴일 🎌 · 기념일 행사 🎉
     + (days.length ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:6px 4px 0;font-size:12px;${up(.44)}"><span style="font-size:10px;letter-spacing:.12em;opacity:.6;margin:0 2px 0 3px">다가오는 날</span>${days.slice(0, 5).map((x) => `<span title="${esc(x.note ?? "")}" style="display:inline-block;padding:2px 9px;border-radius:999px;background:${x.left === 0 || x.ongoing ? "rgba(232,87,142,.18);border:1px solid rgba(232,87,142,.4)" : "rgba(127,127,127,.12);border:1px solid rgba(127,127,127,.2)"}">${({ bday: "🎂", couple: "💞", plan: "📌", day: "✨", hol: "🎌", event: "🎉" })[x.kind] ?? "📅"} ${esc(String(x.label).replace("{{user}} 생일", "내 생일").replace(/^\{\{user\}\}/, "나"))} <b style="font-weight:700;opacity:.85">${dLabel(x)}</b></span>`).join("")}</div>` : "")
     + `</div>`;
+}
+// 11-22 버그리포트: 스트리밍 중 글이 늘 때마다 display 훅이 다시 불려 상태창을 통째로 새로 만들어 깜빡이고(날씨 애니메이션도 처음부터) 폰에서 렉.
+// 같은 응답이 이어서 늘어나는 중이면(앞부분이 같고 gap ms 안) 계산하지 않고 직전 결과를 그대로 돌려준다. 글이 그대로인 다시 그리기(응답 끝)에서 새로 계산
+export function streamMemo({ gap = 2500, now = () => Date.now() } = {}) {
+  let prev = null;
+  return async (text, compute) => {
+    const t = String(text ?? ""), at = now(), k = Math.min(200, prev?.text.length ?? 0), head = (s) => s.slice(0, k);
+    if (prev && t !== prev.text && t.length > prev.text.length && head(t) === head(prev.text) && at - prev.at < gap) { prev = { ...prev, text: t, at }; return prev.html; }
+    const html = await compute(); prev = { text: t, at, html }; return html;
+  };
 }
