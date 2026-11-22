@@ -9,7 +9,17 @@ const KEY = { date: /^(date|day|날짜|일자)$/i, time: /^(time|시간|시각)$
 const WORDS = [[/한밤중|자정/, "00:00"], [/새벽/, "04:00"], [/아침/, "08:00"], [/정오|한낮|점심/, "12:00"], [/오전/, "10:00"], [/오후/, "15:00"], [/저녁|해질녘|노을/, "19:00"], [/낮/, "13:00"], [/밤/, "22:00"]];
 export function wordTime(s) { const t = String(s ?? ""); const w = WORDS.find(([re]) => re.test(t)); return w ? w[1] : ""; }
 
+// 11-22 버그리포트: 이머헬퍼 상태 태그 <imh-now cal="2025년" date="6월 29일" time="17:43" place="…" att="…" /> — att가 붙으면 100자를 넘어 못 읽었다
+export function imhStatus(text) {
+  const all = [...String(text ?? "").matchAll(/<imh-now\b([^>]*)\/?>/gi)]; if (!all.length) return null;
+  const a = {}; for (const m of all.at(-1)[1].matchAll(/([\w-]+)\s*=\s*"([^"]*)"/g)) a[m[1].toLowerCase()] = m[2].trim();
+  const dv = [a.cal, a.date].filter(Boolean).join(" "), tv = a.time ?? "";
+  const date = dv ? storyDateFromText(dv, "") : "", time = tv ? timeFromText(tv) || wordTime(tv) : "";
+  if (!date && !time) return null;
+  return { date, time, place: (a.place ?? "").slice(0, 40) };
+}
 export function kvStatus(text) {
+  const imh = imhStatus(text); if (imh) return imh;
   const lines = String(text ?? "").split(/\r?\n/).map((l) => l.trim()).filter((l) => /^[\[【].*[\]】]$/.test(l) && /[=＝]/.test(l));
   for (const line of lines.reverse()) {   // 응답 끝에 쓰는 카드가 많아 뒤에서부터
     const body = line.replace(/^[\[【]\s*|\s*[\]】]$/g, "").replace(/^[^|=]*?[:：]\s*(?=[^|]*=)/, "");
