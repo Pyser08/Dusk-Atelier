@@ -15,10 +15,20 @@ const show = (v) => v == null || v === "" ? "없음" : Array.isArray(v) ? v.map(
 const policyFor = (env, slot) => { try { return JSON.parse(env.ctx.memory.lib.base.policies).policies[slot] ?? null; } catch { return null; } };
 const busy = (s) => s?.running || ["running", "applying"].includes(s?.phase);
 
+// 기억 흐름이 없는 이유 → 안내 글
+export function hookWhy(state) {
+  if (state === "denied") return "리스가 Dusk의 요청 고치기(replacer) 권한을 막았어요. 리스 플러그인 설정에서 Dusk 권한을 허용한 뒤 다시 눌러 주세요.";
+  if (state === "unsupported") return "이 리스(앱)에는 기억 기록에 필요한 기능(채팅 리스너·replacer)이 없어요. 앱을 업데이트해 주세요.";
+  if (state === "failed") return "기억 기록 연결(리스 훅)에 실패했어요. 리스를 새로 고친 뒤 이 봇의 채팅을 열고 다시 눌러 주세요.";
+  return "기억이 켜져 있어야 해요. 기억 화면의 스위치를 확인해 주세요.";
+}
 // 이 인물에 AI 도구를 쓸 수 있는지. 반환: {tools, scope} 또는 {why}
 export async function toolsFor(env) {
-  const { ctx, bot, chatItem } = env, M = ctx.memory, tools = M.flow?.tools?.();
-  if (!tools) return { why: "기억이 켜져 있어야 해요. 기억 화면의 스위치를 확인해 주세요." };
+  const { ctx, bot, chatItem } = env, M = ctx.memory;
+  let tools = M.flow?.tools?.();
+  // 11-22 버그리포트(포켓리스): 시작할 때 리스 훅 등록이 실패하면(모바일은 누르기 전 권한 창이 안 뜨기도) 기억이 켜져 있어도 도구가 없었다 → 누를 때 한 번 더 켜 본다
+  if (!tools) { try { await M.flow?.apply?.(); } catch { /* 아래에서 안내 */ } tools = M.flow?.tools?.(); }
+  if (!tools) return { why: hookWhy(M.flow?.hookState?.()) };
   // 위키가 이 채팅에 아직 연결되지 않았으면(플러그인을 켠 뒤 응답을 받기 전) 지금 연다.
   let scope = liveScope(M, bot.id);
   if (!scope) { try { await M.flow.runtime()?.wiki?.refresh?.(); } catch { /* 아래에서 안내 */ } scope = liveScope(M, bot.id); }
