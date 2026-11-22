@@ -15,5 +15,6 @@ export function mergeWhen(when, iso) {
   const w = String(when ?? "").trim();
   if (!iso) return w;
   if (!w) return iso;
-  return /\d/.test(w) ? w : `${iso} ${w}`;
+  // 11-22: 숫자가 있는지가 아니라 날짜 꼴이 있는지로(‘[10:43]’처럼 시각만 있으면 날짜를 붙임)
+  return /\d{3,4}\s*[-./년]\s*\d{1,2}|\d{1,2}\s*월\s*\d{1,2}\s*일?|\d{1,2}\s*[/.]\s*\d{1,2}(?!\d|:)/.test(w) ? w : `${iso} ${w}`;
 }

@@ -1,4 +1,5 @@
 // 출처: risupot 2.3.0 src/llm-client.mjs — 원작자 허락을 받아 이식 (tools/pot-split.mjs로 생성, 직접 고치지 말 것)
+import { r64Messages } from '../risu64link.js';
 import { CopilotClientError, buildCopilotRequest, completeCopilotLogin, copilotAccess, copilotEmptyDetail, copilotHeaders, copilotModels, copilotResponseText, normalizeProviderModels, startCopilotLogin } from './copilot-client.js';
 import { modelPdfMode, parseExtraBodyJson, usesDeepSeekThinkingOff, withoutDeepSeekThinkingOffFields } from '../../engine/pot/model-options.js';
 import { PDF_FULL_SYSTEM_CONTROL, preparePdfReference, wrapPdfReference } from '../../engine/pot/pdf-reference.js';
@@ -86,11 +87,14 @@ async function callRisuSubmodel(api,preset,prompt,{signal,label,scheduler}){
 }
 
 /** The only module allowed to make model network requests. */
+async function r64Prompt(api, prompt) { try { const out = await r64Messages(api, [{ role: 'user', content: prompt }]); const c = out?.[0]?.content; return typeof c === 'string' && c ? c : prompt; } catch { return prompt; } }
 export async function callWriterModel(api, keyStore, preset, prompt, { signal, stageLabel = 'Writer', scheduler = globalThis, onUsage } = {}) {
   const label=String(stageLabel||'Model').replace(/[^A-Za-z가-힣 ]/g,'').slice(0,30)||'Model';
   if (preset?.provider === 'risuai' && typeof prompt === 'string' && prompt) return await callRisuSubmodel(api, preset, prompt, { signal, label, scheduler });
   if (!preset || typeof prompt !== 'string' || !prompt) throw new LlmClientError(`${label} 모델 요청 설정이 부족합니다.`);
   if (!preset.baseUrl || !preset.model) throw new LlmClientError(`${label} 모델의 Endpoint와 Model을 설정해주세요.`);
+  // 11-22 제보: 직접 API로 보내는 보조 모델(성인 프로필 만들기·인물 분석 등)은 Risu64 난독화를 거치지 않았다 → 보내기 전에 거친다(없거나 실패하면 원문)
+  prompt = await r64Prompt(api, prompt);
   const timeoutSeconds = llmTimeoutSeconds(preset);
   const { body: parsedExtraBody, headers: extraHeaders } = splitExtra(preset.extraBodyJson || '');
   const nativeThinkingOff=deepSeekThinkingDisabled(preset),extraBody=nativeThinkingOff||preset.provider==='vertex-ai'?parsedExtraBody:withoutDeepSeekThinkingOffFields(parsedExtraBody);if(nativeThinkingOff){delete extraBody.reasoning;delete extraBody.reasoning_effort;extraBody.thinking={type:'disabled'};extraBody.response_format={type:'json_object'};}else if(preset.reasoningQuickSetting!=='default'){delete extraBody.reasoning;delete extraBody.reasoning_effort;}

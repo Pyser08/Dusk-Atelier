@@ -9,6 +9,8 @@ import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
 import { isLover, strayRisk } from "./lover.js";
 import { attractionCap } from "./memoryhuman.js";
 import { filterHuman } from "./memedit.js";
+import { userAliasesFor } from "./useralias.js";
+import { othersAct } from "./actowner.js";
 import { seedFromStart, seedFromTies, sourAttraction } from "./emoseed.js";
 import { applyRomance, orientCap } from "./romance.js";
 import { loverPairs, pairKey } from "./lover.js";
@@ -59,7 +61,7 @@ export const latestScene = (folder) => [...(folder.scenes ?? [])].reverse().find
 
 // anchor: {at, mid, h}. 반환: {records, upgraded, scene:'new'|'updated'|null}
 export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore = [], covered = null, storyDate = "", cool = true, userNames = [], smooth = false, gauge = null, userGuard = false, keepAhead = false } = {}) {
-  result = normalizeUserNames(result, userNames);   // 플레이어를 가리키는 이름은 모두 {{user}} 한 사람으로
+  result = normalizeUserNames(result, userAliasesFor(userNames, folder));   // 11-22: 영문 페르소나 이름의 한글 읽기·합칠 때 배운 이름도 {{user}}로   // 플레이어를 가리키는 이름은 모두 {{user}} 한 사람으로
   const named = normalizeKnownNames(result, folder); result = named.result;
   for (const [from, to] of named.moved) {   // 부른 이름을 별칭으로 남겨 다음부터 바로 찾고, 위키·Erosync·관계도도 같은 사람으로 본다
     const pk = findPersonKey(folder, to), p = pk && folder.people[pk];
@@ -80,7 +82,10 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   const sit = latestScene(folder)?.id ?? null;
   const graded = gradeResponse((result?.people ?? []).filter((p) => !ign.has(key(p.name)) && !isCollectiveName(p.name)));   // 반·학년·동급생 같은 집단 이름은 인물로 만들지 않는다
   const important = isImportant(graded, out.scene === "new");  // 3단계(관점·내면)는 중요한 응답에서만 받는다
+  // 11-22: 남의 행동(다른 인물이 주어이고 이 인물이 안 나옴)은 이 인물 기억에 쌓지 않는다(engine/actowner.js)
+  const allNames = [...new Set([...graded.map((p) => p.name), ...Object.values(folder?.people ?? {}).flatMap((p) => [p.name, ...(p.aliases ?? [])])])], uAliases = userAliasesFor(userNames, folder);
   for (const e of graded) {
+    if (othersAct(e, allNames, /^\{\{user\}\}$/i.test(e.name ?? "") ? uAliases : (folder.people?.[findPersonKey(folder, e.name)]?.aliases ?? []))) continue;
     let pk = findPersonKey(folder, e.name);
     if (!pk) { pk = key(e.name); folder.people[pk] = { name: e.name, aliases: [], pinned: false, records: [] }; }
     const person = folder.people[pk];

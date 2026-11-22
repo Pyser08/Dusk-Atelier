@@ -164,7 +164,9 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       let send = messages, dropped = 0;
       // 2.2.11: process 훅이 달려 있으면 리스가 이미 번호로 뺐다(아래는 훅이 없는 환경의 예비 — 요청 글 앞부분 맞추기)
       if (c.trim && procOn) dropped = Math.max(0, trimState.from);
-      else if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped; }
+      else if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped;
+        // 11-22: 뺄 옛 대화가 있는데 하나도 못 뺐으면(요청 글 모양이 달라 못 찾음) 기록에 알린다
+        if (!dropped && trimUntil(cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }) >= 0) logEvent({ area: "기억 넣기", title: "이 프리셋에서는 옛 대화를 찾지 못해 빼지 못했어요(‘남길 최근 턴’이 동작하지 않음)" }); }
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text, dropped };
       logEvent({ area: "기억 넣기", title: "요청에 기억 블록을 넣었어요", detail: { 글자: c.text?.length ?? 0, 위치: c.position } });
       return insertBlock(send, wikiAware(c.text, send), c.position);

@@ -62,3 +62,17 @@ test("메시지가 없는 호출은 건드리지 않는다", async () => {
   const o = { prompt: "x" };
   assert.equal(await r64Opts(fakeApi(), o), o);
 });
+
+// 11-22 제보: Risu64를 켜도 성인 프로필 자동 생성은 검열됨 — 직접 API로 보내는 보조 모델(callWriterModel)이 난독화를 안 거쳤다
+test("직접 API 보조 모델(callWriterModel)도 Risu64 난독화를 거쳐 보낸다", async () => {
+  _resetR64();
+  const { callWriterModel } = await import("../src/data/pot/llm-client.js");
+  const api = fakeApi(); let sent = "";
+  api.nativeFetch = async (url, o) => { sent = o.body; return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "{\"ok\":true}" } }] }), text: async () => "" }; };
+  const stop = await fakeRisu64(api, ({ messages }) => ({ messages: messages.map((x) => ({ ...x, content: `OBF(${x.content})` })) }));
+  try {
+    const keyStore = { has: () => true, use: async (_p, fn) => fn("k") };
+    await callWriterModel(api, keyStore, { provider: "openai", baseUrl: "https://example.invalid/v1", model: "m", temperature: 0.2, maxTokens: 100 }, "비밀 원문", { stageLabel: "NSFW" }).catch(() => null);
+    assert.ok(sent.includes("OBF(비밀 원문)"), sent.slice(0, 300));
+  } finally { stop(); }
+});

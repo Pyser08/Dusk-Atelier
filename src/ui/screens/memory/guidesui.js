@@ -43,7 +43,7 @@ async function openGuides(ctx, idx, save) {
   };
   paint();
   const ok = await modal(ctx.win, (done) => h("div", { class: "rb-dialog", id: "rb-guides", role: "dialog", "aria-modal": "true", "aria-label": "묘사 지침", style: "width:min(640px,96vw);max-height:88vh;display:flex;flex-direction:column;gap:8px" },
-    h("h3", null, "묘사 지침 조각"), note("체크를 끄면 그 조각은 넣지 않아요. 직접 쓴 조각은 기본 조각보다 먼저 골라요."),
+    h("h3", null, "묘사 지침 조각"), note("info", "체크를 끄면 그 조각은 넣지 않아요. 직접 쓴 조각은 기본 조각보다 먼저 골라요."),
     h("div", { class: "rb-mem-edrow", style: "gap:6px" }, h("input", { class: "rb-input", placeholder: "찾기(예: 술, 애도)", "aria-label": "조각 찾기", style: "flex:1", onInput: (e) => { q = e.target.value.trim(); paint(); } }), btn("+ 조각", { size: "sm", onClick: () => edit(null) })),
     h("div", { style: "overflow:auto;flex:1" }, list),
     h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(false) }), btn("저장", { kind: "primary", id: "rb-guides-save", onClick: () => done(true) }))));
