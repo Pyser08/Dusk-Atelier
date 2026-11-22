@@ -103,3 +103,16 @@ test("trimSaved: 빼기 전·뒤 토큰 차이를 구한다", async () => {
   assert.ok(s > 100, String(s));
   assert.equal(trimSaved(req(), req()), 0);
 });
+
+// 2.2.42 버그리포트: 수천 단어짜리 옛 메시지를 정규식으로 만들다 스택이 넘쳤다(모바일 Firefox 'too much recursion')
+test("trimCovered: 아주 긴 옛 메시지가 본문에 들어 있어도 넘치지 않고 뺀다(공백 모양이 달라도)", () => {
+  const long = (i) => Array.from({ length: 12000 }, (_, k) => `단어${i}_${k}`).join(" ");
+  const c = []; for (let i = 0; i < 30; i++) c.push({ role: i % 2 ? "char" : "user", data: i < 4 ? long(i) : `${i % 2 ? "봇" : "나"} 메시지 번호 ${i} 입니다. 충분히 긴 본문이 여기에 이어져요.` });
+  const body = c.map((m, i) => `${m.role === "user" ? "user" : "assistant"}: ${i === 1 ? m.data.replace(/ /g, "  \n") : m.data}`).join("\n");
+  const req = [{ role: "system", content: `<Immediate>\n${body}\n</Immediate>` }, { role: "user", content: "새 입력" }];
+  const r = trimCovered(req, c, { keepTurns: 5, coveredAt: 29 });
+  const out = r.messages[0].content;
+  assert.ok(!out.includes("단어0_5") && !out.includes("단어1_5") && !out.includes("단어3_11999"));
+  assert.match(out, /번호 29 /);
+  assert.match(out, /<\/Immediate>$/);
+});

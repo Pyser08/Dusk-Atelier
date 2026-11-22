@@ -27,6 +27,20 @@ export function gateProcess(text, from) {
   return `{{#if {{greater_equal::{{chat_index}}::${from}}}}}\n${text}\n{{/if}}{{#if {{less::{{chat_index}}::0}}}}\n${text}\n{{/if}}`;
 }
 
+// 글 c 안에서 (공백을 접은) 옛 글 t가 한 줄(들)을 통째로 차지하면(앞에 "이름:" 허용) 그 줄들을 지운다. 없으면 c 그대로.
+const PRE = /^[ \t]*(?:[^\n:：]{1,40}[:：][ \t]*)?$/;
+function cutEmbedded(c, t) {
+  if (!t) return c;
+  let n = "", pos = [], ws = false;
+  for (let i = 0; i < c.length; i++) { const ch = c[i]; if (/\s/.test(ch)) { if (!ws) { n += " "; pos.push(i); ws = true; } } else { n += ch; pos.push(i); ws = false; } }
+  for (let k = n.indexOf(t); k >= 0; k = n.indexOf(t, k + 1)) {
+    const s = pos[k], e = pos[k + t.length - 1] + 1;
+    const ls = c.lastIndexOf("\n", s - 1) + 1; let le = c.indexOf("\n", e); if (le < 0) le = c.length;
+    if (PRE.test(c.slice(ls, s)) && /^[ \t]*$/.test(c.slice(e, le))) return c.slice(0, ls) + c.slice(le);
+  }
+  return c;
+}
+
 export function trimCovered(reqMsgs, chatMsgs, { keepTurns = 20, step = 1, coveredAt = -1, textOf = extractMessageText } = {}) {
   const same = { messages: reqMsgs, dropped: 0 };
   if (!Array.isArray(reqMsgs) || !Array.isArray(chatMsgs)) return same;
@@ -79,9 +93,8 @@ export function trimCovered(reqMsgs, chatMsgs, { keepTurns = 20, step = 1, cover
   const out2 = olds.length ? out.map((m, idx) => {
     if (idx >= tailFrom || !m || typeof m.content !== "string" || m.content.length < 200) return m;
     let c = m.content, n = 0;
-    for (const t of olds) {
-      const re = new RegExp(`(^|\\n)[ \\t]*(?:[^\\n:：]{1,40}[:：][ \\t]*)?${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+")}[ \\t]*(?=\\n|$)`);
-      const c2 = c.replace(re, "$1"); if (c2 !== c) { c = c2; n++; }
+    for (const t of olds) {   // 2.2.42: 정규식(글 전체) 대신 공백을 접은 글에서 indexOf — 긴 글에서 스택 넘침·느림 방지
+      const c2 = cutEmbedded(c, t); if (c2 !== c) { c = c2; n++; }
     }
     if (!n) return m;
     embedded += n; return { ...m, content: c.replace(/\n{3,}/g, "\n\n") };
