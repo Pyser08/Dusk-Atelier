@@ -4,15 +4,17 @@ import { switchEl, setSwitch } from './kit.js';
 import { loadFairOn, loadDiceOn, DICE_KEY } from '../data/fairplay.js';
 import { loadStoryTimeOn } from '../data/storytime.js';
 import { diceRow } from './dicedetail.js';
+import { loadMemoryButtonOn, MEMORY_BUTTON_KEY } from '../data/memorybutton.js';
 import { loadDiceShow, loadCallShow, DICE_SHOW_KEY, CALL_SHOW_KEY, isBardHost } from '../data/turninfo.js';
 
 export async function quickSettingsCard(ctx) {
-  const [fairOn, diceOn, stOn, diceShowOn, callShowOn] = await Promise.all([
+  const [fairOn, diceOn, stOn, diceShowOn, callShowOn, fabOn] = await Promise.all([
     loadFairOn(ctx.api).catch(() => false),
     loadDiceOn(ctx.api).catch(() => false),
     loadStoryTimeOn(ctx.api).catch(() => false),
     loadDiceShow(ctx.api).catch(() => false),
-    loadCallShow(ctx.api).catch(() => false)
+    loadCallShow(ctx.api).catch(() => false),
+    loadMemoryButtonOn(ctx.api).catch(() => true)
   ]);
   const failStory = (e) => ctx.toast(`저장하지 못했어요: ${e?.message ?? e}`, { error: true });
   // 유저 편향 없애기는 공정한 전개 위에서만 작동 → 공정한 전개가 꺼져 있으면 함께 켜고 이유를 알린다
@@ -77,7 +79,18 @@ export async function quickSettingsCard(ctx) {
       onChange(v);
     } })
   );
-  return h("section", { class: "rb-card bordered rb-story-helper" },
+  // 11-22: 떠 있는 버튼(인물 관계도) 없애기. 장기기억 애드온이 꺼져 있으면 설정값만 저장(켜질 때 따름)
+  const setNoFab = async (hide) => {
+    try { const fab = ctx.memoryButton; const ok = fab?.set ? await fab.set(!hide) : (await ctx.api.pluginStorage.setItem(MEMORY_BUTTON_KEY, hide ? "off" : "on"), true); ctx.toast(hide ? (ok === false ? "저장했어요. 다음 실행부터 버튼이 안 보여요." : "떠 있는 버튼을 없앴어요.") : "떠 있는 버튼을 다시 보여줘요."); } catch (e) { failStory(e); }
+  };
+  // 11-22: 설정이 길어 스크롤되면 아래쪽을 살짝 흐리게 해 더 있다는 걸 보여준다(끝까지 내리면 사라짐)
+  const fade = (card) => {
+    const upd = () => card.classList.toggle("rb-qs-more", card.scrollHeight - card.scrollTop - card.clientHeight > 4);
+    card.addEventListener("scroll", upd, { passive: true });
+    try { new (card.ownerDocument.defaultView?.ResizeObserver ?? ResizeObserver)(upd).observe(card); } catch { /* 없으면 스크롤 때만 */ }
+    setTimeout(upd, 0); return card;
+  };
+  return fade(h("section", { class: "rb-card bordered rb-story-helper rb-qs-scroll" },
     (() => { const row = storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair); fairSw = row.querySelector("[role=switch]"); return row; })(),
     diceRow(ctx, { on: diceOn, setOn: setDice, fail: failStory }),
     storyRow("주사위 결과 표시", "응답 아래에 굴린 값과 판정을 보여줘요.", diceShowOn, setDiceShow),
@@ -85,6 +98,7 @@ export async function quickSettingsCard(ctx) {
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory),
     ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null,
     ctx.imgFix ? storyRow("이미지 태그 상황 알림", "직전 옷·동작과 쓸 수 있는 태그를 AI에게 다시 알려줘요.", ctx.imgFix.isHintOn(), setImgHint) : null,
+    storyRow("떠 있는 버튼 없애기", "채팅 위 동그란 인물 관계도 버튼을 숨겨요.", !fabOn, setNoFab),
     ...(ctx.ext?.render?.("slot", "home.quick", ctx) ?? [])   // 2.2.21 애드온이 빠른 설정 줄을 더하는 자리(예: 장기기억의 캐릭터·장면 상태창)
-  );
+  ));
 }
