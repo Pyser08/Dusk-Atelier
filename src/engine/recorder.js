@@ -148,7 +148,7 @@ export const CYCLE_STAGE1 = [
   "",
   "",
   "Cycle tracking is on — ALSO write these lines, only for characters who are women and appear in newest:",
-  "women|Name, Name      REQUIRED in every reply, exactly one line: every woman who appears in newest, or women|none when no woman appears",
+  "women|Name, Name      REQUIRED in every reply, exactly one line: every woman (never {{user}}, the player — even when {{user}} is a woman) who appears in newest, or women|none when no other woman appears",
   "woman|Name      every woman who appears in newest (one line each)",
   "sex|Name|male partner|used, outside or none      vaginal intercourse with a man in newest, one line per man. Count it also when it is clearly implied (a time skip right after undressing in bed, waking up together after it, narration saying they did it, semen inside her). Not oral, anal or hands only. used = condom, pill, IUD or other contraception clearly shown; outside = he clearly pulled out or finished outside her; none = everything else, including when nothing is said",
   "period|Name      newest shows her period starting or that she is on her period (bleeding, cramps from her period, pads or tampons)",

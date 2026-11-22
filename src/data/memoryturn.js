@@ -74,7 +74,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
   let castHits = 0, rt = null, starting = null, lastTurn = null, cold = null, lastRecord = null, lastNote = null, retryHits = 0, lastSkipped = null;
   // pure: 기억 저장소가 '끔'이면 Dusk 자체 기억(기록·회상·주입)은 전부 빼고 리수폿 위키 정리만 돌린다
   let pure = false;
-  let cyclePending = null, cycleNote = ""; const cycleEvents = [], cycleSync = [], nsfwQueue = [], driveQueue = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
+  let cyclePending = null, cycleNote = "", cycleMiss = 0, hookState = ""; const cycleEvents = [], cycleSync = [], nsfwQueue = [], driveQueue = [];  // 월경·임신: 응답 전 상태 → 응답 뒤 달라진 큰 사건(출산 등)을 Dusk 기록 대기열에
   const stash = new Map();  // 메시지 해시 → 검증된 dusk 구획
   const putStash = (h, v) => { stash.set(h, v); while (stash.size > STASH_MAX) stash.delete(stash.keys().next().value); };
   const libFor = (mode) => mode === "accurate" ? sourceLibrary : { ...sourceLibrary, base: { ...sourceLibrary.base, director: undefined } };
@@ -208,8 +208,11 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
           const parts = [`여성 ${R.length}명${R.length ? `(${R.map((x) => x.name).join(", ")})` : ""}`, ...R.flatMap((x) => x.sex.map((y) => `관계 ${x.name}↔${y.partner}(${y.contraception === "used" ? "피임" : "피임 안 함"})`)),
             n((x) => x.period).length && `생리 ${n((x) => x.period).join(", ")}`, n((x) => x.known).length && `임신 알게 됨 ${n((x) => x.known).join(", ")}`, n((x) => x.loss).length && `유산 ${n((x) => x.loss).join(", ")}`, n((x) => x.birth).length && `출산 ${n((x) => x.birth).join(", ")}`,
             cs.dropped.length && `장면에 없어 뺀 관계 ${cs.dropped.join(", ")}`].filter(Boolean);
+          if (R.length || rec.stage1?.cycleDeclared) cycleMiss = 0;
           if (R.length) logEvent({ area: "월경·임신", title: parts.join(" · ") });
           else if (rec.stage1?.cycleDeclared) logEvent({ kind: "skip", area: "월경·임신", title: "기록기가 이번 응답 장면에 여성이 없다고 보고했어요(women|none)" });
+          // 11-22 버그리포트: 한 번 빠뜨린 건(모델이 가끔 줄을 잊음) 문제로 띄우지 않고, 세 번 잇따라 빠질 때만 알린다
+          else if (++cycleMiss < 3) logEvent({ kind: "skip", area: "월경·임신", title: `기록기가 이번 응답에서 월경 줄을 빠뜨렸어요(${cycleMiss}번째 — 다음 응답에서 다시 받아요)` });
           else logFailure({ area: "월경·임신", title: "기록기가 월경 줄을 빠뜨렸어요 — 문제", error: "문제: 월경 추적이 켜져 있는데 기록 모델 답에 women| 줄이 없어요", why: "기록 모델이 월경 지침을 따르지 않았어요(검열이 아니라 지침 누락).", todo: "계속되면 장기 기억 보조 모델을 지침을 더 잘 따르는 모델로 바꿔 보세요.", fallback: "이번 응답은 월경·임신을 기록하지 않았어요" }); }
         // 0.3.22 피임·강제 피임·체내 정액량·출산/유산 이력으로 관계마다 보호 여부를 정한다(코어 월경 추적이 비보호만 배란일 확률로 굴림)
         try {
@@ -426,7 +429,8 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       await syncPot(r.settings, f); r.main.sourceLibrary = libFor(f.mode);
       if (!pure) await injector.stop();
       const state = await r.hooks.ensure();
-      if (state !== "ready") { log("턴 흐름 훅 등록 실패:", state); await r.hooks.dispose().catch(() => {}); if (!pure) await injector.start(); return null; }
+      hookState = state;   // 11-22 버그리포트(포켓리스 위키 안 됨): 실패 이유를 화면 안내·기록에 쓴다
+      if (state !== "ready") { log("턴 흐름 훅 등록 실패:", state); logEvent({ kind: "skip", area: "기억", title: `기억 기록 연결(리스 훅)을 켜지 못했어요: ${state}`, detail: { 다음: "위키 버튼을 누를 때 다시 시도해요" } }); await r.hooks.dispose().catch(() => {}); if (!pure) await injector.start(); return null; }
       link.settle = async (ci, ti) => {
         const ok = await r.auto.waitForScope(ci, ti, { timeoutMs: 180000 });
         try { if (cyclePending) { const ev = milestonesBetween(cyclePending, cycleStates(r.wiki.snapshot())); cyclePending = null; cycleEvents.push(...ev); } } catch { cyclePending = null; }
@@ -506,5 +510,5 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         pr.sexualDesire?.text && `성적 욕망: ${pr.sexualDesire.text}`, pr.paraphilia?.text && `이상성향: ${pr.paraphilia.text}`].filter(Boolean).join("\n").slice(0, 900);
     } catch { return ""; }
   }
-  return { takeNsfw: () => nsfwQueue.splice(0), takeDrive: () => driveQueue.splice(0), onTurn: (fn) => { turnListeners.add(fn); return () => turnListeners.delete(fn); }, start: apply, apply: async () => { dropCold(); return apply(); }, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, lastRecord: () => lastRecord, lastSkipped: () => lastSkipped, lastNote: () => lastNote, retryHits: () => retryHits, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
+  return { takeNsfw: () => nsfwQueue.splice(0), takeDrive: () => driveQueue.splice(0), onTurn: (fn) => { turnListeners.add(fn); return () => turnListeners.delete(fn); }, start: apply, apply: async () => { dropCold(); return apply(); }, hookState: () => hookState, stop, isOn: () => !!rt, tools: () => rt ? (rt.tools ??= makeTools({ api, rt, sourceLibrary, llmCall: rt.stageCall })) : null, last: () => lastTurn, lastRecord: () => lastRecord, lastSkipped: () => lastSkipped, lastNote: () => lastNote, retryHits: () => retryHits, runtime: () => rt, stash: () => stash.size, settings: settingsStore };
 }

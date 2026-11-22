@@ -95,3 +95,15 @@ test("2.2.30 가벼운 조립에서도 월경 표식이 남아 기록기가 월�
   setLeanWriter(() => true);
   try { const p = assembleWriterPrompt({ sourceLibrary: LIB, settings: await cycleSettings(), wikiScope: createEmptyWikiScope({ characterId: "c1", chatKey: "k1" }), rpText: RP, requestRef: "r0" }).prompt; assert.ok(p.includes(CYCLE_BLOCK_MARK)); assert.ok(p.length < 60000, String(p.length)); assert.ok(parseWriterRun(p)); } finally { setLeanWriter(() => false); }
 });
+
+// 11-22 버그리포트: 여성 페르소나 + 남성 NPC 장면에서 기록 모델이 women| 줄을 통째로 빠뜨려 '문제'로 떴다 — 유저는 세지 않는다고 분명히
+test("월경 지침: {{user}}는 세지 않고, 다른 여성이 없으면 women|none", async () => {
+  const { CYCLE_STAGE1 } = await import("../src/engine/recorder.js");
+  assert.match(CYCLE_STAGE1, /never \{\{user\}\}/);
+  assert.match(CYCLE_STAGE1, /women\|none/);
+});
+
+test("기억 흐름이 없을 때 이유별 안내(포켓리스 위키 안 됨 버그리포트)", async () => {
+  const { hookWhy } = await import("../src/ui/screens/memory/aitools.js");
+  assert.match(hookWhy("denied"), /권한/); assert.match(hookWhy("unsupported"), /업데이트/); assert.match(hookWhy("failed"), /새로 고친/); assert.match(hookWhy(""), /켜져 있어야/);
+});
