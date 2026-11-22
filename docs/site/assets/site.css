@@ -209,3 +209,5 @@ pre{position:relative}.cp{position:absolute;top:8px;right:8px;border:1px solid v
 .bt.noimg::before{display:none}
 .bt.noimg{border-color:color-mix(in srgb,var(--tint,var(--g1)) 45%,var(--line))}
 .bt.noimg:hover{border-color:var(--tint,var(--g2));box-shadow:0 12px 32px color-mix(in srgb,var(--tint,var(--g1)) 30%,transparent)}
+
+.mnav{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}.mnav .pill{text-decoration:none;padding:4px 12px;font-size:13px}.mnav .pill.on{background:var(--acc);color:#fff;border-color:transparent}

@@ -1,0 +1,58 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>장기기억 처음 시작 · Dusk Atelier</title><link rel="icon" href="../assets/img/icon.webp"><link rel="stylesheet" href="../assets/site.css"></head>
+<body data-root="../" data-page="guide/memory-start">
+<div class="wrap"><nav class="side"></nav><main>
+<span class="eyebrow">장기기억 · 단계별</span><h1>장기기억 처음 시작</h1>
+<p class="lead">캐릭터가 사람처럼 기억하게 — 설치부터 고치기까지 순서대로.</p>
+<div class="note"><span class="ico">📌</span><div>장기기억이 처음이라면 이 페이지를 위에서부터 따라 하면 돼요. 다 하는 데 5분이면 충분해요.</div></div><p class="mnav"><a class="pill on" href="memory-start.html">처음 시작 (단계별)</a> <a class="pill" href="memory-tabs.html">인물 위키 탭</a> <a class="pill" href="memory-edit.html">고치기 · 지우기 · 되돌리기</a> <a class="pill" href="memory-world.html">세계 · 캘린더 · 날씨</a> <a class="pill" href="memory-adult.html">성인 탭</a> <a class="pill" href="memory-guides.html">묘사 지침</a> <a class="pill" href="memory.html">장기 기억 (전체 설명)</a></p><h2 id="step0">STEP 0 · 준비하기</h2>
+<ol><li>RisuAI <b>설정 → 플러그인</b>에 <code>dusk_atelier.js</code>를 넣어요(이미 쓰고 있으면 최신으로 업데이트). 자세한 건 <a href="start.html">처음 사용자 가이드</a>.</li>
+<li>Dusk를 열고 <b>홈 → 애드온</b>에서 <b>장기기억·관계도</b>의 <b>받기</b>를 눌러요. 받으면 바로 켜져요(새로고침 필요 없음).</li>
+<li>홈에 <b>장기 기억</b> 줄이 생기면 준비 끝이에요.</li></ol><div class="tip"><span class="ico">💡</span><div>장기기억은 본체와 따로 업데이트돼요. 새 버전은 Dusk를 열 때 자동으로 받아요.</div></div>
+<h2 id="step1">STEP 1 · 기록할 AI(보조 모델) 정하기</h2>
+<p>장기기억은 응답마다 <b>보조 모델</b>로 짧게 기록해요. 메인 대화 모델과 따로예요.</p>
+<ol><li>가장 쉬운 방법: RisuAI <b>설정 → 보조 모델</b>에 쓸 모델과 API 키를 넣어요. Dusk는 기본으로 여기로 보내요.</li>
+<li>따로 정하고 싶으면 <b>장기 기억 → 인물 위키 설정</b>에서 AI 모델을 ‘내 API’(Gemini·Claude·OpenAI·버텍스 등)로 바꿔요.</li>
+<li>보조 모델이 검열에 자주 걸리면 <a href="https://arca.live/b/characterai/189558934">Risu64</a>를 함께 켜요. Dusk의 보조 모델 요청을 보내기 전에 난독화해요(성인 프로필 만들기 포함).</li></ol><div class="warn"><span class="ico">⚠️</span><div>‘API 키를 안 넣었다’ 오류가 나면 보조 모델 키가 비어 있는 거예요. 위 1번이나 2번을 다시 확인해요.</div></div>
+<h2 id="step2">STEP 2 · 장기기억 켜기</h2>
+<ol><li><b>홈</b>의 장기 기억 줄 오른쪽 스위치를 켜요(모든 채팅에서 사용).</li>
+<li>리스에서 기억하고 싶은 봇의 채팅을 열어요. 봇마다 켜고 끌 수도 있어요(<b>장기 기억 → 채팅 고르기</b>).</li>
+<li>끄면 기록·불러오기가 멈추지만, 쌓인 기억은 그대로 남아요.</li></ol>
+<h2 id="step3">STEP 3 · 평소처럼 대화하기</h2>
+<p>이제 그냥 대화하면 돼요. 응답이 끝날 때마다 장기기억이 알아서:</p>
+<ul><li>인물별 <b>기록</b>(누가 무엇을 했는지), <b>감정·호감·친밀도</b>, <b>관계 종류</b>, <b>호칭·말투</b>, <b>장면</b>(날짜·장소)을 쌓고</li>
+<li>다음 요청에 지금 장면과 관련된 기억만 골라 넣어요.</li></ul>
+<p>AI 호출은 응답마다 도는 기록 한 번이에요. 새 기능이 생겨도 그 호출에 줄만 더해서 호출 수는 그대로예요.</p><div class="tip"><span class="ico">💡</span><div>기록이 실패하면 오른쪽 아래에 알림이 떠요. <b>‘다시 시도’</b>로 다시 기록하고, <b>‘이유 보기’</b>로 왜 실패했는지 봐요. 같은 응답은 1분쯤 뒤 한 번 자동으로 다시 해 봐요.</div></div>
+<h2 id="step4">STEP 4 · 기억 보기 — 인물 위키</h2>
+<ol><li>Dusk <b>장기 기억 → 기록 보기</b>를 열어요(채팅 위 떠 있는 💞 관계도 버튼으로도 갈 수 있어요).</li>
+<li>왼쪽(휴대폰은 위)에서 인물을 고르면 그 사람의 위키가 열려요.</li>
+<li>위쪽 탭: <b>요약 · 기본 · 마음 · 관계 · 기억 · 성인</b>. 각 탭이 뭔지는 <a href="memory-tabs.html">인물 위키 탭</a>에.</li></ol><div class="note"><span class="ico">📌</span><div>응답 본문의 인물 이름을 누르면 그 사람의 <b>캐릭터 상태창</b>이 떠요. 응답 아래엔 날짜·시간·장소·날씨가 든 <b>장면 상태창</b>이 붙어요. 둘 다 홈 빠른 설정에서 끄고 켜요.</div></div>
+<h2 id="step5">STEP 5 · 잘못 적힌 기억 고치기</h2>
+<p>AI가 잘못 적었으면 그냥 고치면 돼요.</p>
+<ul><li>줄마다 <b>✎ 고치기 · ✕ 지우기</b>, 목록 아래 <b>+ 추가</b>, 마지막으로 바꾼 건 <b>↶ 되돌리기</b>.</li>
+<li>지운 건 기록기가 바로 다시 적지 않아요. 고친 값은 잠기지 않고 이야기에 따라 계속 이어져요.</li></ul>
+<p>자세히: <a href="memory-edit.html">고치기 · 지우기 · 되돌리기</a></p>
+<h2 id="step6">STEP 6 · 예전 채팅도 기억시키기</h2>
+<ol><li>장기기억을 켜기 전부터 하던 채팅이면 <b>장기 기억 홈 → 지난 대화 분석</b>을 눌러요. 처음부터 묶어서 분석해요.</li>
+<li>속도는 <b>설정 → 기억 옵션 → 지난 대화 분석 속도</b>(묶음 크기·동시 처리)로 바꿔요. 요청 한도(429)가 나면 알아서 느려져요.</li>
+<li>‘생성 중지’를 누르면 분석도 멈춰요.</li>
+<li>나중에 생긴 기능(종족·옷차림·기후 등)이 비어 있으면 이 버튼이 <b>노랗게</b> 떠요. 누르면 지금까지의 이야기로 한 번에 채워요.</li></ol>
+<h2 id="step7">STEP 7 · 더 켜 볼 기능</h2>
+<table><tr><th>기능</th><th>어디서 켜요</th><th>기본</th></tr>
+<tr><td>세계 탭(장소·물건·세력·목표·소문·캘린더)</td><td>설정 → 기억 옵션 → 세계 탭</td><td>꺼짐</td></tr>
+<tr><td>상태이상·옷차림·종족</td><td>설정 → 기억 옵션</td><td>켜짐</td></tr>
+<tr><td>캐릭터 상태창 · 장면 상태창</td><td>홈 빠른 설정 또는 기억 옵션</td><td>켜짐</td></tr>
+<tr><td>묘사 지침(심리학·해부학)</td><td>설정 → 기억 옵션 → 묘사 지침</td><td>켜짐</td></tr>
+<tr><td>성인 항목(욕구 기록·월경·임신)</td><td>인물 위키 설정 → 설정 → 성인 항목</td><td>꺼짐</td></tr></table>
+<p>설정의 각 줄 옆 배지가 AI 호출을 알려 줘요: 초록 <b>호출 없음</b>, 파랑 <b>줄 추가</b>, 주황 <b>호출 늘어남</b>.</p>
+<h2 id="step8">STEP 8 · 토큰 아끼기</h2>
+<ul><li><b>기억 토큰 절약</b>(기본 켜짐) — 기억 블록을 칸별 예산으로 줄여요.</li>
+<li><b>요약된 옛 대화 빼고 보내기</b> + <b>남길 최근 턴</b> — 장기기억이 이미 정리한 옛 대화를 요청에서 빼고 최근 턴만 남겨요. 대화를 본문 글로 넣는 프리셋도 돼요. 못 빼면 기록에 알려 줘요.</li>
+<li>묘사 지침은 맞는 장면에만 2개씩 붙어요. 아예 빼고 싶으면 끄면 돼요.</li></ul>
+<h2 id="step9">STEP 9 · 문제가 생기면</h2>
+<ul><li><b>장기 기억 홈 → 실패 기록</b>에서 무엇이 왜 실패했는지 봐요. ‘실패 제보’로 복사해서 알려 주시면 빨리 고칠 수 있어요.</li>
+<li>같은 사람이 둘로 생겼으면 인물 화면 <b>⋯ 인물 관리 → 합치기</b>. 나(유저)와 합치면 그 이름을 기억해서 다시 갈라지지 않아요.</li>
+<li>그 밖엔 <a href="faq.html">자주 묻는 질문</a>.</li></ul>
+
+<div class="pager"><a href="addons.html"><small>← 이전</small>애드온</a><a class="n" href="memory-tabs.html"><small>다음 →</small>인물 위키 탭</a></div>
+<footer>이 페이지는 CHANGELOG와 README를 바탕으로 해요. 앱 버전에 따라 화면 이름이 조금 다를 수 있어요.</footer>
+</main><aside class="toc"></aside></div>
+<script src="../assets/site.js"></script></body></html>
