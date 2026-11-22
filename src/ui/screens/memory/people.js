@@ -10,6 +10,7 @@ import { mem, fail, gradeBadge, avatar, isMe, shownName, at, visibleRecords, top
 import { GRADES } from "../../../engine/memorygrade.js";
 import { cleanOrphans as cleanOrphansIn } from "../../../engine/memoryreconcile.js";
 import { personKey } from "../../../data/memorystore.js";
+import { meVisible } from "../../../engine/medoc.js";
 import { createRewindChat, draftFirstMessage, sceneAt } from "../../../data/memoryrewind.js";
 import { isGenerating, Busy } from "../../../engine/safety.js";
 import { findDoc, stateOf, timelineOf, countsOf, filterTimeline, TL_FILTERS, cycleOf } from "../../../engine/personview.js";
@@ -84,7 +85,7 @@ export function peopleMenuItems(env, people) {
 export async function renderPeople(env, host) {
   const m = mem(env.ctx);
   const { folder, caps } = env;
-  const people = Object.entries(folder.people ?? {}).filter(([, p]) => visibleRecords(p).length || p.digest);
+  const people = Object.entries(folder.people ?? {}).filter(([, p]) => visibleRecords(p).length || p.digest || meVisible(folder, p));   // 11-22: 나 위키 문서(설정)는 기록이 없어도 보임
   if (m.personKey && folder.people?.[m.personKey]) return personDetail(env, host, m.personKey);
   m.personKey = "";
   if (!people.length) return replace(host, h("div", { class: "rb-empty" }, icon("character", 24), h("div", null, "아직 기록된 인물이 없어요."),

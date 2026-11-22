@@ -1,5 +1,6 @@
 // 인물 위키 화면: 리수폿의 배치(왼쪽 인물 목록 + 오른쪽 인물 문서)와 기능에 Dusk의 이야기 기록을 한 페이지로 합친다.
 // 생김새는 Dusk 토큰·카드 스타일, 배치·항목 순서·수정 규칙(고정·편집 중 변경 거절)은 리수폿을 따른다.
+import { meVisible } from "../../../engine/medoc.js";
 import { wkLayoutOf } from "./memaddoncss.js";
 import { h, replace } from "../../dom.js";
 import { icon } from "../../icons.js";
@@ -162,7 +163,7 @@ export async function renderPeopleTab(env, host) {
   const keyOfDoc = new Map();
   for (const [k, p] of Object.entries(people)) { const d = findDoc(wiki, p); if (d) keyOfDoc.set(d.id, k); }
   const rows = docs.map((d) => ({ id: d.id, name: d.title, doc: d, pk: keyOfDoc.get(d.id) ?? null }));
-  for (const [k, p] of Object.entries(people)) if (!findDoc(wiki, p) && (visibleRecords(p).length || p.digest)) rows.push({ id: `p:${k}`, name: p.name, doc: null, pk: k });
+  for (const [k, p] of Object.entries(people)) if (!findDoc(wiki, p) && (visibleRecords(p).length || p.digest || meVisible(env.folder, p))) rows.push({ id: `p:${k}`, name: p.name, doc: null, pk: k });   // 11-22: 나 위키 문서(설정)
 
   if (!rows.length) {
     return replace(host, h("div", { class: "rb-wk" }, h("aside", { class: "rb-wk-side" }, h("div", { class: "rb-wk-count" }, "등록 인물 ", h("b", null, "0"))),

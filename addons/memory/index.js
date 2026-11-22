@@ -17,6 +17,7 @@ import { tracked } from "../../src/ui/screens/memory/settingstools.js";
 import { STAGE_NAMES } from "../../src/ui/screens/memory/advanced.js";
 import { cardSettings } from "../../src/ui/screens/memory/settings.js";
 import { createDiaryDisplay } from "../../src/data/diary.js";
+import { syncMeDoc } from "../../src/data/medoc.js";
 import { createNameLinks } from "../../src/data/namelinks.js";
 import { quickRows } from "../../src/ui/screens/memory/quickrows.js";
 
@@ -31,7 +32,7 @@ export async function activate(api, ctx) {
     storyNow: (c, t) => app.storyTime?.current?.(c, t), notify: toast, potLibrary: POT_PROMPTS, onOpen: () => openTab("memory")
   });
   // 2.2.6 기억 옵션 ‘처음 등장 때 성인 항목 무작위로’: 턴 기록 뒤 위키가 저장될 틈을 두고 새 인물에게 후보를 넣는다
-  const seedOff = memory.flow?.onTurn?.((info) => { setTimeout(async () => { await applyNsfwTurn(memory, log, info, api).catch((e) => log(`성인 프로필 반영 실패 ${e?.message ?? e}`)); await ensureProfiles(memory, { log, api, wait: 120000 }).catch(() => 0); seedWikiNow(api, memory, log).catch((e) => log(`성인 항목 무작위 기록 실패 ${e?.message ?? e}`)); syncOrientNow(memory, app.erosync).catch(() => {}); }, 6000); });
+  const seedOff = memory.flow?.onTurn?.((info) => { setTimeout(async () => { syncMeDoc(memory, api).catch(() => false); await applyNsfwTurn(memory, log, info, api).catch((e) => log(`성인 프로필 반영 실패 ${e?.message ?? e}`)); await ensureProfiles(memory, { log, api, wait: 120000 }).catch(() => 0); seedWikiNow(api, memory, log).catch((e) => log(`성인 항목 무작위 기록 실패 ${e?.message ?? e}`)); syncOrientNow(memory, app.erosync).catch(() => {}); }, 6000); });
   // 2.2.6 지난 대화 분석에서도: 시작 전 성적 지향을 옮기고, 끝나면 새 인물에게 기본 성격·성인 프로필·무작위 성인 항목을 넣는다
   memory.link.beforeBackfill = () => syncOrientNow(memory, app.erosync).catch(() => 0);
   // 이미 3턴 넘게 진행한 채팅이면 글(성적 욕망·이상성향 후보)은 새로 넣지 않고, 비어 있는 수치만 채운다
@@ -50,6 +51,7 @@ export async function activate(api, ctx) {
   // 0.3.22 본문 인물 이름 → 상태창 링크: 본문(t)에만 달고, 게이지 박스·일기는 그 뒤에 그대로 붙인다(일기·게이지 매칭은 원래 글로)
   // 0.3.22 장면 상태창은 그 아래(로어북 버튼 바로 위)에 붙인다
   const names = createNameLinks(memory, api); memory.nameLinks = names;
+  memory.meDoc = { sync: (o) => syncMeDoc(memory, api, o) };   // 설정에서 켤 때 지금 채팅에 바로 만들기
   setTimeout(() => { names.prepare?.().catch(() => {}); }, 1500);   // 2.2.25 응답을 그리기 전에 상태창 방식(화면 위/펼침)을 정한다
   if (memory.gauge && typeof gaugeShow === "function") memory.gauge.onDisplay = async (t) => {
     const g = await gaugeShow(t), d = await diary.onDisplay(g);

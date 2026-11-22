@@ -424,10 +424,14 @@ export function personTabs(env, parts) {
     if (!grid) return which === "prof" ? el : null;
     return h("div", { class: "rb-wk2-pane" }, h("div", { class: "rb-wk3 rb-wk3-solo" }, h("div", { class: "rb-wk3-grid" }, parts[which])));
   };
-  const base = () => doc ? sub2("base", [{ id: "prof", label: "성격·수치", icon: "🧭", hint: "기본 성격과 수치", render: () => infoPart("prof") },
+  const base = () => doc ? sub2("base", [meCard() && { id: "me", label: "나", icon: "🪪", hint: "페르소나 이름·설명", render: () => h("div", { class: "rb-wk2-pane" }, meCard()) }, { id: "prof", label: "성격·수치", icon: "🧭", hint: "기본 성격과 수치", render: () => infoPart("prof") },
     { id: "cond", label: "상태이상", icon: "🤒", hint: "컨디션·취함·부상·감기 등 지금 상태", render: () => statusCard(env, card, doc) },
     { id: "outfit", label: "옷차림", icon: "👗", hint: "부위별 옷·액세서리(삽화용 상세)", render: () => outfitCard(env, card, doc) },
-    { id: "race", label: "종족", icon: "🧬", hint: "종족 체질·발정기·몸 모형", render: () => raceCard(env, card, doc) }]) : info0();
+    { id: "race", label: "종족", icon: "🧬", hint: "종족 체질·발정기·몸 모형", render: () => raceCard(env, card, doc) }].filter(Boolean)) : h("div", { class: "rb-wk2-pane" }, meCard(), info0());
+  // 11-22: 나(페르소나) 위키 문서 — 설정 ‘나 위키 문서 자동 만들기’로 만든 페르소나 이름·설명(보기 전용)
+  const meCard = () => { const md = f?.meDoc; if (!md || !(selfNames.some((n) => /^\{\{user\}\}$/i.test(String(n))) || /^\{\{user\}\}$/i.test(String(parts.p?.name ?? parts.r?.name ?? "")) || doc == null && parts.r?.pk === "{{user}}")) return null;
+    return card("🪪 나 (페르소나)", [h("b", { class: "rb-wk2-p" }, md.name || "이름 없음"), md.desc ? h("p", { class: "rb-wk2-p", style: "white-space:pre-wrap" }, md.desc) : h("p", { class: "rb-muted" }, "페르소나 설명이 비어 있어요."),
+      h("small", { class: "rb-muted" }, "리스 페르소나에서 고치면 다음 응답 때 따라 바뀌어요. 요청에는 넣지 않아요(기록 AI가 나를 대신 쓰지 않게).")], null, "rb-me-doc"); };
   const mind = () => doc ? sub2("mind", [{ id: "emo", label: "감정", icon: "💗", hint: "상대별 감정", render: () => infoPart("emo") },
     { id: "human", label: "사람다움", icon: "🧩", hint: "말버릇·습관·꿈·비밀", render: () => h("div", { class: "rb-wk2-pane" }, humanCard(env, card, doc, "human")) }]) : h("div", { class: "rb-wk2-pane" }, h("p", { class: "rb-muted" }, "인물 문서가 생기면 감정·사람다움이 여기에 보여요."));
   const tabBody = (k) => (k === "base" ? base() : k === "mind" ? mind() : k === "nsfw" ? nsfw() : k === "mem" ? log() : relation());   // Erosync 8가지 성향은 성인 탭의 Erosync 카드
