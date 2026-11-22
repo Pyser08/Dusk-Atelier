@@ -22,6 +22,7 @@ import { peopleExplicitStyleEnabled, peopleSexualFieldEnabled } from './people-p
 import { EXPRESSION_BASELINE_CONTROL, perceptionModeFor, relationshipDocumentType, relationshipMemorySlot } from './relationship-mode.js';
 import { speechChangeMode, speechSignLimit, speechVarietyLevel } from './speech-variety.js';
 import { USER_ACTOR_CONTROL, normalizeUserActor } from './user-identity.js';
+import { USER_DOC_CONTROL } from './user-doc.js';
 import { namedCharacterMention } from './wiki-retrieval.js';
 import { wikiSectionsToMarkdown } from './wiki-schema.js';
 import { compactBuiltinWriterGuide, writerPromptInputSize } from './writer-guidance.js';
@@ -156,7 +157,7 @@ export function assembleWriterPrompt({ sourceLibrary, settings, wikiScope, rpTex
   const request = {
     ...(Object.keys(catalog.mergedReferenceMap).length?{merged_identity_refs:catalog.mergedReferenceMap}:{}),
     user_actor:userActor,
-    user_actor_rule:USER_ACTOR_CONTROL,
+    user_actor_rule:USER_ACTOR_CONTROL+' '+USER_DOC_CONTROL,
     request_ref: requestRef,
     scope_snapshot: { character_id: wikiScope.scope.characterId, chat_key: wikiScope.scope.chatKey, wiki_revision: wikiScope.revision },
     document_catalog: catalog.documents,

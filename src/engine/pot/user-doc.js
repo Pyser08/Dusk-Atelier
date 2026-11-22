@@ -1,0 +1,2 @@
+// 11-22 장기기억 ‘나 위키 문서’(설정): {{user}} 별칭이 붙은 인물 문서는 유저 자신의 문서다. 원본 USER_ACTOR_CONTROL은 그대로 두고 뒤에 덧붙인다.
+export const USER_DOC_CONTROL = "If a Character document already lists {{user}} as an alias, it is the own document of actor:user: keep evidenced facts about the user there (appearance, personality, history, relationships, metrics), but never invent actions, speech, thoughts or decisions for the user.";

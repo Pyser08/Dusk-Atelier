@@ -472,7 +472,7 @@ export function personTabs(env, parts) {
     const pane = (...k) => h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, k.filter(Boolean));
     // 유저 줄: 위키 문서가 없으니 고정 키(actor:user) 칸으로 성인 프로필·몸 상태를 보여 주고 고친다(위키 글 칸인 후보는 뺌)
     const uNames = [userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])].filter(Boolean);
-    if (!doc && selfNames.some((n) => userKeySet(uNames).has(String(n).toLowerCase().replace(/\s+/g, "")))) {
+    if (selfNames.some((n) => n === "{{user}}" || userKeySet(uNames).has(String(n).toLowerCase().replace(/\s+/g, "")))) {   // 11-22: 나의 위키 문서가 있어도 같은 유저 칸
       setUserNsfwNames(uNames);
       const ud = userNsfwDoc();
       return sub2("nsfw", [

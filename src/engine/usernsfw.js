@@ -15,9 +15,11 @@ export const isUserNsfwDoc = (d) => d?.id === USER_NSFW_ID;
 // 위키 인물 문서 + (유저 문서가 위키에 없으면) 유저 칸
 export function characterDocs(f) {
   const docs = Object.values(f?.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
-  const set = userKeySet(names);
-  if (docs.some((d) => [d.title, ...(d.aliases ?? [])].some((n) => set.has(key(n))))) return docs;
-  return [...docs, userNsfwDoc()];
+  // 11-22: 위키에 나의 인물 문서가 있어도(설정 ‘나 위키 문서’) 성인·몸 칸은 유저 칸 하나로 — NPC 목록(장면 계획·주입)에 나를 넣지 않는다
+  const set = userKeySet(names); set.add(key("{{user}}"));
+  const isMe = (d) => [d.title, ...(d.aliases ?? [])].some((n) => set.has(key(n)));
+  const mine = docs.filter(isMe);
+  return [...docs.filter((d) => !isMe(d)), userNsfwDoc(mine.flatMap((d) => [d.title, ...(d.aliases ?? [])]))];
 }
 // 위키에 있는 인물 문서만(유저 칸 빼고) — 장면 계획·주입처럼 유저를 움직이면 안 되는 곳
 export const npcDocs = (f) => characterDocs(f).filter((d) => !isUserNsfwDoc(d));
