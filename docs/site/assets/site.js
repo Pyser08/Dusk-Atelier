@@ -1,6 +1,8 @@
 (function(){
 var NAV=[["처음이라면",[["guide/start","처음 사용자 가이드"]]],
-["기능 가이드",[["guide/addons","애드온"],["guide/memory","장기 기억"],["guide/story","이야기 도우미"],["guide/cocoa","코코아 · 스킬"],["guide/image-tags","이미지 태그"],["guide/look","화면 · 꾸미기"],["guide/stealth","더스크 스텔스"],["guide/provider","프로바이더"],["guide/widgethome","위젯 홈"],["guide/manage","모듈 · 봇 관리"],["guide/cellar","Dusk Cellar (선택 서버)"]]],
+["장기기억 애드온",[["guide/memory-start","처음 시작 (단계별)"],["guide/memory-tabs","인물 위키 탭"],["guide/memory-edit","고치기 · 지우기 · 되돌리기"],["guide/memory-world","세계 · 캘린더 · 날씨"],["guide/memory-adult","성인 탭"],["guide/memory-guides","묘사 지침"],["guide/memory","전체 설명"]]],
+["애드온별",[["guide/addons","애드온 받기 · 목록"],["guide/stealth","더스크 스텔스"],["guide/provider","프로바이더"],["guide/widgethome","위젯 홈"],["guide/manage","모듈 · 봇 관리"],["guide/look","채팅 테마 · 꾸미기"],["guide/persona","AI로 봇 · 페르소나 만들기"],["guide/autoscroll","오토 스크롤"],["guide/modcompat","모듈 호환"],["guide/cellar","Dusk Cellar (선택 서버)"]]],
+["본체 기능",[["guide/story","이야기 도우미"],["guide/cocoa","코코아 · 스킬"],["guide/image-tags","이미지 태그"]]],
 ["도움말",[["guide/switches","기능 스위치 한눈에"],["guide/faq","자주 묻는 질문"]]],
 ["개발자",[["dev/","개발자 가이드"],["dev/host","호스트 호환 규칙"],["dev/workflow","작업 흐름과 파일 찾기"]]]];
 var de=document.documentElement;try{var sv=localStorage.getItem("da-theme");if(sv=="light"||sv=="dark")de.setAttribute("data-theme",sv)}catch(e){}
