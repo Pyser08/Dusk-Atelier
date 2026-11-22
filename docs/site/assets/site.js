@@ -23,5 +23,5 @@ top.querySelector(".menu").onclick=function(){b.classList.toggle("open")};
 var toc=document.querySelector(".toc"),hs=document.querySelectorAll("main h2[id]");
 if(toc&&hs.length){var s="<b>이 페이지</b>";hs.forEach(function(x){s+='<a href="#'+x.id+'">'+x.textContent+"</a>"});toc.innerHTML=s;
 var links=toc.querySelectorAll("a");if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.toggle("on",l.getAttribute("href")=="#"+e.target.id)})}})},{rootMargin:"-80px 0px -70% 0px"});hs.forEach(function(x){io.observe(x)})}}
-var w=document.createElement("script");w.src=root+"assets/widgets.js";document.body.appendChild(w);
+var w=document.createElement("script");w.src=root+"assets/widgets.js?v=20261122";document.body.appendChild(w);
 })();
