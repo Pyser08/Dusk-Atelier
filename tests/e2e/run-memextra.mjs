@@ -88,6 +88,12 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   ok(`[${tag}] 불감 부위: 모형에 ‘발 · 불감’, 목록에 불감 표시`, await page.evaluate(() => [...document.querySelectorAll(".rb-bodymap .lbl")].some((t) => t.textContent === "발 · 불감")) && (await page.locator(".rb-bz .numbb").count()) === 1);
   ok(`[${tag}] 임신·피임 카드: 체내 정액량·포화도·이력`, (await page.locator(".rb-fert-tile", { hasText: "30 ml" }).count()) === 1 && (await page.locator(".rb-fert-tile", { hasText: "포화도" }).count()) === 1 && (await page.locator(".rb-fert-hist span.loss").count()) === 1);
   ok(`[${tag}] 임신·피임 카드가 월경 칸 바로 아래(몸 상태 카드 안)`, await page.evaluate(() => { const f = document.querySelector(".rb-fert-force"); return !!f && !!f.closest(".rb-lcyc"); }));
+  // 11-22 버그리포트: 성감대 남/여를 눌러도 모형이 안 바뀌었다(다시 그릴 때 성별을 안 읽음) — 남으로 바꾸면 남성 부위, 남성 성감대도 채움
+  if (tag === "PC") { await page.locator(".rb-bsex button", { hasText: "남" }).click(); await page.waitForTimeout(900);
+    ok(`[${tag}] 성감대 ‘남’을 누르면 남성 모형으로 바뀜`, await page.evaluate(() => { const t = [...document.querySelectorAll(".rb-bodymap .lbl")].map((x) => x.textContent); return t.some((x) => /음경|귀두|고환/.test(x)) && !t.some((x) => /^질|자궁|클리토리스/.test(x)); }));
+    ok(`[${tag}] 남으로 바꾸면 남성 성감대를 채움`, await page.evaluate(async () => { const f = await __app.ctx.memory.store.getFolder("c1", "t1"); const d = Object.values(f.wiki.documents).find((x) => x.title === "시로코"); return (f.nsfw[d.id].zones ?? []).some((z) => ["glans", "penis", "testicles", "prostate"].includes(z.part)); }));
+    await page.locator(".rb-bsex button", { hasText: "여" }).click(); await page.waitForTimeout(900);
+    ok(`[${tag}] 다시 ‘여’를 누르면 여성 모형`, await page.evaluate(() => [...document.querySelectorAll(".rb-bodymap .lbl")].some((x) => x.textContent.startsWith("질")))); }
   await page.locator(".rb-fert-btn").first().click(); await page.waitForTimeout(900);
   const forced = await page.evaluate(async () => { const f = await __app.ctx.memory.store.getFolder("c1", "t1"); const d = Object.values(f.wiki.documents).find((x) => x.title === "시로코"); return f.nsfw[d.id].fert?.forced === true; });
   ok(`[${tag}] 강제 피임 버튼: 켜면 저장되고 가능성 0%`, forced && (await page.locator(".rb-fert-force.on").count()) === 1 && (await page.locator(".rb-fert-tile.chance b", { hasText: "0.00%" }).count()) === 1);

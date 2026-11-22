@@ -1,4 +1,5 @@
 ## regress-rename (2026-11-20, addon-rebuild 79a777a에서 분기) — **v2.2.22 + 장기기억 0.3.23(11-21, 버그리포트)** · v2.2.21 + 0.3.22(11-21)
+- **11-22 v2.2.38 + 장기기억 0.3.45**: 성감대 남/여 — lifecards repaint가 gender를 안 읽음 + 직접 고를 때 성감대 안 채움 → nsfwturn.fillSexZones(이야기·직접 공용). e2e run-memextra에 남/여 전환. 유저 위키 정보 미생성은 설계(USER_ACTOR_CONTROL: 유저 Character 문서 안 만듦, 나 문서는 보기 전용) — 방향 사용자 확인 대기
 - **11-22 v2.2.37 + 장기기억 0.3.44 버그리포트**: 과거 경험(past)·체내 사정(cum) 줄이 HOT_RE 걸린 응답에서만 물어져(2.2.30 보조 토큰 절약) 안 쌓였음 → NSFW_LITE_STAGE1에 past + memextra CUM_STAGE1(MARK_STAGE1에서 분리) 추가. 저장·주입 경로는 시뮬레이션으로 정상 확인
 - **11-22 v2.2.36 + 장기기억 0.3.43**: 옛 대화 빼기 줄인 양 기록(historytrim.trimSaved, memoryinject logEvent·last.saved). 리스 generationInfo.inputTokens는 빼기 전 숫자(beforeRequest 단계라 덮어쓰지 않음). 남길 최근 턴 안내·안내서 memory.html 50줄
 - **11-22 v2.2.35 홈 빠른 설정**: quickset.js ‘떠 있는 버튼 없애기’(ctx.memoryButton.set, 애드온 없으면 dusk.ui.memoryButton만 저장)·.rb-qs-scroll(최대 높이·스크롤, 넘치면 .rb-qs-more 마스크로 아래 흐림). featurefind 항목, e2e run-home-quickfab. home-dice 10·smoke 4 실패는 이전부터(기존 문제)
