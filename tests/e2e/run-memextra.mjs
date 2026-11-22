@@ -253,6 +253,13 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
   const tk = await page.evaluate(() => { const r = document.getElementById("rb-mem-tokens"); if (!r) return null; return Math.round(r.querySelector(".t").getBoundingClientRect().width / r.getBoundingClientRect().width * 100); });
   ok(`[${tag}] 기억 넣기 토큰 줄도 글이 좁아지지 않음`, tk != null && tk >= (tag === "모바일" ? 95 : 30), String(tk));
   ok(`[${tag}] 설정에 상태이상·이름 링크·세계 탭 스위치`, (await page.getByText("캐릭터 상태창 (본문 이름 링크)").count()) > 0 && (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "상태이상" }).count()) > 0 && (await page.getByText("세계 탭 (장소·물건·세력·목표·소문)").count()) > 0);
+  ok(`[${tag}] 설정에 ‘나 위키 문서 자동 만들기’(기본 꺼짐)`, (await page.locator(".rb-mem-options .rb-srow .t > span", { hasText: "나 위키 문서 자동 만들기" }).count()) === 1 && await page.evaluate(async () => (await __app.ctx.memory.store.getIndex()).settings?.inject?.meDoc !== true));
+  { const made = await page.evaluate(async () => { await __app.ctx.memory.meDoc?.sync?.({ force: true }); const f = await __app.ctx.memory.store.getFolder("c1", "t1"); return !!f.meDoc && !!f.people["{{user}}"]; });
+    ok(`[${tag}] 나 위키 문서 만들기(페르소나로, 호출 없음)`, made); }
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { page: "detail", tab: "people", personKey: "{{user}}" }); __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
+  { const bt = page.locator(".rb-wk2-tab[data-t=base]").first(); if (await bt.count()) { await bt.click(); await page.waitForTimeout(500); } }
+  ok(`[${tag}] 나 위키에 🪪 나(페르소나) 카드`, (await page.locator(".rb-me-doc").count()) === 1);
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem, { page: "home", memTab: "opt", personKey: "" }); __app.ctx.go("memory"); }); await page.waitForTimeout(1200);
   { const open = page.locator("#rb-guides-open"); ok(`[${tag}] 설정에 묘사 지침 줄`, (await open.count()) === 1);
     if (await open.count()) { await open.click(); await page.waitForTimeout(600);
       ok(`[${tag}] 묘사 지침 창: 기본 조각 141개`, (await page.locator("#rb-guides .rb-gd-row").count()) === 141);
