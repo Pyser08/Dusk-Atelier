@@ -23,7 +23,9 @@ export const EXTRA_STAGE1 = [
   "item|name|one Korean line|owner or none      notable object or gift",
   "faction|name|one Korean line|members      group or family",
 ].join("\n");
-export const MARK_STAGE1 = "\nmark|Name|body part|trace (hickey, bite, bruise…) in Korean|days 1-14      a visible trace newly left on a body\ncum|Receiver|Giver|inside, anal, mouth or outside|ml (number; one normal climax 3-5)|none, condom, pill, iud, afterpill, pullout or broke      each ejaculation in newest";
+// 11-22: 체내 사정 줄은 성적인 낱말이 없는(완곡한) 응답에서도 묻도록 따로 뺀다(recorder NSFW_LITE_STAGE1)
+export const CUM_STAGE1 = "\ncum|Receiver|Giver|inside, anal, mouth or outside|ml (number; one normal climax 3-5)|none, condom, pill, iud, afterpill, pullout or broke      each ejaculation in newest (also when only implied, e.g. a fade-out ending inside her)";
+export const MARK_STAGE1 = "\nmark|Name|body part|trace (hickey, bite, bruise…) in Korean|days 1-14      a visible trace newly left on a body" + CUM_STAGE1;
 
 // 0.3.22 상태이상(취함·부상·감기·최음제·수면 부족·저주…): 설정 ‘상태이상’(기본 켜짐)
 export const STATUS_STAGE1 = "\nstatus|Name|condition in Korean (drunk, injured, cold, aphrodisiac, sleepless, cursed…)|1-3 severity|days 1-14 or 0 = until cured      a condition newly starts or worsens\ncure|Name|condition      a condition ends";

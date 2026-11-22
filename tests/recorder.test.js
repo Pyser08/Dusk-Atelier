@@ -180,3 +180,9 @@ test("2.2.30 성적인 장면이 아니면 성인 줄은 욕구·피로·잠만(
   for (const t of ["시로코는 세라의 목에 입을 맞춰 자국을 남겼다.", "둘은 침대에서 서로의 옷을 벗기고 키스했다.", "She moaned softly."]) assert.equal(isHotText(t), true, t);
   assert.match(NSFW_LITE_STAGE1, /gauge\|Name\|lust or fatigue/); assert.doesNotMatch(NSFW_LITE_STAGE1, /zone\||taste\|/);
 });
+
+test("11-22 버그리포트: 과거 경험(past)·체내 사정(cum) 줄은 성적인 낱말이 없는 응답에서도 묻는다", async () => {
+  const { NSFW_LITE_STAGE1 } = await import("../src/engine/recorder.js");
+  assert.match(NSFW_LITE_STAGE1, /past\|Name\|partner\|count/);
+  assert.match(NSFW_LITE_STAGE1, /cum\|Receiver\|Giver/);
+});

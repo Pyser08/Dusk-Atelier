@@ -158,7 +158,7 @@ export const CYCLE_STAGE1 = [
 ].join("\n");
 import { DRIVE_STAGE1, driveFrom } from "./scenedrive.js";
 import { TIE_STAGE1 } from "./ties.js";
-import { EXTRA_STAGE1, MARK_STAGE1, STATUS_STAGE1, OUTFIT_STAGE1, WEATHER_STAGE1, COHABIT_STAGE1, extraFrom } from "./memextra.js";
+import { EXTRA_STAGE1, MARK_STAGE1, CUM_STAGE1, STATUS_STAGE1, OUTFIT_STAGE1, WEATHER_STAGE1, COHABIT_STAGE1, extraFrom } from "./memextra.js";
 import { RACE_STAGE1 } from "./races.js";   // 0.3.22 소문·목표·세계 문서·몸 흔적
 // addon-rebuild: 채팅별 성인 프로필(체위·장소·성적 수치) 변화 — 성인 항목이 켜졌을 때만 1단계에 줄 두 개를 더 받는다. 대부분의 턴엔 아무 줄도 없다.
 // 2.2.30: 성적인 장면인지(성인 줄을 다 물을지) — 글에 성적 행위·노출·애무 낱말이 있으면. 놓치면 그 턴 체위·약점 기록만 빠지고 욕구·피로는 늘 묻는다
@@ -172,7 +172,9 @@ export const NSFW_LITE_STAGE1 = [
   "Name may be {{user}} too when newest or the user message clearly shows it (record only what {{user}} already did or said; never invent it).",
   "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      arousal never rises on its own — write lust only when newest moves this character's arousal; fatigue for real exertion or rest",
   "sleep|Name",
-].join("\n");
+  // 11-22 버그리포트: 과거 경험·체내 정액량이 하나도 안 쌓였다 — 둘 다 성적인 낱말이 있는 응답에서만 물었다(2.2.30). 과거 경험은 평범한 대화에서 나온다
+  "past|Name|partner|count|stated or estimated      they had sex before the story (newest, user message or lorebook); estimate the count when none is given",
+].join("\n") + CUM_STAGE1;
 export const NSFW_STAGE1 = [
   "",
   "",
