@@ -10,6 +10,7 @@ import { HUMAN_FIELDS, EXT_FIELDS, BODY_PARTS, normHuman, normExt, partOf } from
 import { randomZones, spotXY } from "../../../engine/zonegen.js";
 import { raceFor } from "../../../engine/races.js";
 import { genderOf, setGender } from "../../../engine/gender.js";
+import { fillSexZones } from "../../../data/nsfwturn.js";
 import { raceShapes, RACE_BODY_CSS } from "./racebody.js";   // 0.3.22 종족별 모형(귀·뿔·꼬리·날개·하반신)
 
 const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
@@ -17,7 +18,7 @@ const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:nor
 const hosts = new Set();
 function live(docId, render) { const host = h("div", { class: "rb-live" }); host.__doc = docId; host.__paint = () => replace(host, render()); host.__paint(); hosts.add(host); return host; }
 async function repaint(env, doc) {
-  try { const f = await memStore(env.ctx).getFolder(env.bot.id, env.chatItem.id); if (f && env.folder) { env.folder.nsfw = f.nsfw; env.folder.life = f.life; } } catch { /* 아래에서 전체 다시 그림 */ }
+  try { const f = await memStore(env.ctx).getFolder(env.bot.id, env.chatItem.id); if (f && env.folder) { env.folder.nsfw = f.nsfw; env.folder.life = f.life; env.folder.gender = f.gender; /* 11-22: 성별도(남/여 눌러도 모형이 안 바뀌던 문제) */ } } catch { /* 아래에서 전체 다시 그림 */ }
   let n = 0; for (const x of [...hosts]) { if (!x.isConnected) { hosts.delete(x); continue; } if (x.__doc === doc.id) { x.__paint(); n++; } }
   if (!n) env.redraw?.();
 }
@@ -322,7 +323,7 @@ function bodyCard0(env, card, doc, { side: side0 = null } = {}) {
         h("div", { class: ["rb-bseg", side === "b" && "b"], role: "group", "aria-label": "앞뒤" }, h("i", { class: "pill" }), segBtn("f", "앞"), segBtn("b", "뒤")),
         // 성별 고르기: 직접 고르면 잠겨서 이야기 보고로 바뀌지 않음. '자동'은 잠금을 풀고 이야기·Erosync 값을 따른다
         h("div", { class: "rb-bseg rb-bsex", role: "group", "aria-label": "성별", style: "margin-top:6px" }, ...[["f", "여"], ["m", "남"], [null, "자동"]].map(([g, l]) => h("button", { type: "button", class: (g === null ? !gLock : gLock && gx === g) ? "on" : "", "aria-pressed": (g === null ? !gLock : gLock && gx === g) ? "true" : "false", title: g === null ? `자동${gx ? ` (지금 ${gx === "m" ? "남성" : "여성"})` : " (모름)"} — 이야기에서 몸이 바뀌면 따라가요` : "직접 정하기 — 이야기 보고로 바뀌지 않아요",
-          onClick: () => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { setGender(f, doc.id, g, { by: g === null ? "story" : "user" }); })).then(() => repaint(env, doc)).catch((e) => env.ctx.toast?.(e?.message ?? String(e), { error: true })) }, l))),
+          onClick: () => Promise.resolve().then(() => memStore(env.ctx).updateFolder(env.bot.id, env.chatItem.id, (f) => { setGender(f, doc.id, g, { by: g === null ? "story" : "user" }); const g2 = genderOf(f, doc); if (g2) fillSexZones(f, doc.id, g2); })).then(() => repaint(env, doc)).catch((e) => env.ctx.toast?.(e?.message ?? String(e), { error: true })) }, l))),
         svg),
       h("div", { class: "rb-body-list" },
         h("div", { class: "rb-blegend" }, h("span", { class: "l1" }, "약간"), h("span", { class: "l2" }, "민감"), h("span", { class: "l3" }, "약점"), h("span", { class: "l0n" }, "불감"), infoBtn(LIFE_INFO.zone), h("span", { class: "dv" }, "개발도"), infoBtn(LIFE_INFO.dev),

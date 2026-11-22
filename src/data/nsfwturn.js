@@ -19,6 +19,14 @@ const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/
 const empty = () => ({ sexual: {}, axes: {}, pref: null, positions: [], seduction: null, humor: null, by: "ai", at: new Date().toISOString(), log: [] });
 
 // 순수: 폴더(f) 안에서 반영. 반환 [{name, changed:[…]}]
+// 성별이 바뀌었을 때(이야기·직접 고름) 새 성별 부위 성감대가 하나도 없으면 1~2곳 채운다(예전 부위는 지우지 않고 숨김). 반환: 채운 곳 수
+export function fillSexZones(f, id, g) {
+  const n0 = f?.nsfw?.[id];
+  if (!n0 || (g !== "m" && g !== "f") || (n0.zones ?? []).some((z) => BODY_PARTS.find((p) => p.id === z.part)?.sex === g)) return 0;
+  const add = sexZones(id, g, n0.zones ?? []);
+  if (add.length) f.nsfw[id] = { ...n0, zones: [...(n0.zones ?? []), ...add] };
+  return add.length;
+}
 export function applyNsfwQueue(f, reports) {
   const docs = characterDocs(f);
   const byDoc = new Map();
@@ -35,11 +43,7 @@ export function applyNsfwQueue(f, reports) {
     const sx = list.filter((r) => r.kind === "sex").at(-1);
     if (sx && setGender(f, doc.id, sx.g, { by: "story", quote: sx.quote })) {
       const changed = [`성별 → ${sx.g === "m" ? "남성" : "여성"}`];
-      const n0 = f.nsfw[doc.id];
-      if (n0 && Object.keys(n0.sexual ?? {}).length && !(n0.zones ?? []).some((z) => BODY_PARTS.find((p) => p.id === z.part)?.sex === sx.g)) {
-        const add = sexZones(doc.id, sx.g, n0.zones ?? []);
-        if (add.length) { f.nsfw[doc.id] = { ...n0, zones: [...(n0.zones ?? []), ...add] }; changed.push(`성감대 ${add.length}곳 채움`); }
-      }
+      const k = fillSexZones(f, doc.id, sx.g); if (k) changed.push(`성감대 ${k}곳 채움`);
       out.push({ name: doc.title, changed });
     }
     const a = applyNsfwReports(f.nsfw[doc.id] ?? empty(), list.filter((r) => r.kind === "taste" || r.kind === "sexval"));
