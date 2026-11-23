@@ -92,16 +92,19 @@ export function imageTag(pick, style = "img") {
 // 반투명 생각 풍선(스크립트 없음, 인라인 스타일만 — 리스 소독기를 지나도 모양 유지)
 const BUBBLE = "display:flex;gap:12px;align-items:center;margin:10px 0 18px;padding:12px 16px;border-radius:24px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);box-shadow:0 8px 24px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);position:relative;max-width:min(560px,100%);box-sizing:border-box";
 const DOT = (l, b, s) => `<span style="position:absolute;left:${l}px;bottom:${b}px;width:${s}px;height:${s}px;border-radius:50%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22)"></span>`;
-export function bubbleHtml(t, img = "") {
-  return `<span x-dusk="thought" data-dusk="thought" style="${BUBBLE}">`
+// side=true: 본문 옆(같은 줄)에 붙는 풍선 — 꼬리가 왼쪽(본문 쪽)
+export function bubbleHtml(t, img = "", side = false) {
+  return `<span x-dusk="thought" data-dusk="thought" style="${side ? BUBBLE.replace("display:flex", "display:inline-flex").replace("margin:10px 0 18px", "margin:4px 0;text-align:left") : BUBBLE}">`
     + (img ? `<span style="flex:none;width:72px;max-height:96px;overflow:hidden;border-radius:16px;line-height:0;opacity:.95">${img}</span>` : "")
     + `<span style="display:block;min-width:0"><b style="display:block;font-size:11.5px;letter-spacing:.04em;opacity:.7;margin-bottom:2px">💭 ${esc(t.name)}${t.emo ? ` · ${esc(t.emo)}` : ""}</b>`
     + `<i style="display:block;font-size:13.5px;line-height:1.6;opacity:.92">${esc(t.text)}</i></span>`
-    + DOT(26, -9, 10) + DOT(14, -18, 6) + `</span>`;
+    + (side ? DOT(-9, 10, 8) + DOT(-16, 4, 5) : DOT(26, -9, 10) + DOT(14, -18, 6)) + `</span>`;
 }
-// 화면 글: 본문의 속마음 태그는 빼고, 본문 끝 옆에 생각 풍선 아이콘(💭)을 붙인다. 누르면 그 응답의 속마음 풍선들이 펼쳐진다
+// 화면 글: 본문의 속마음 태그는 빼고, 본문 옆에 생각풍선 모양 아이콘(💭+꼬리 점)을 붙인다. 누르면 속마음 풍선이 본문 옆(같은 줄)에 펼쳐진다
 // (<details> — 스크립트 없이 리스 소독기를 지나도 열고 닫힘). 스트리밍 중 아직 안 닫힌 태그는 숨긴다(날글이 보이지 않게)
-const ICON = "list-style:none;display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:1px 7px;vertical-align:baseline;border-radius:999px;font-size:13px;line-height:1.4;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);user-select:none";
+const ICON = "list-style:none;display:inline-block;position:relative;cursor:pointer;margin:0 2px 0 12px;padding:2px 9px;vertical-align:middle;border-radius:14px 14px 14px 14px/12px 12px 12px 12px;font-size:12px;line-height:1.3;letter-spacing:1px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);user-select:none";
+// 생각풍선 꼬리(본문 쪽 왼쪽 아래로 작은 동그라미 둘)
+const TAILDOT = (l, b, s) => `<span style="position:absolute;left:${l}px;bottom:${b}px;width:${s}px;height:${s}px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28)"></span>`;
 // 태그가 있던 자리(그 인물의 행동·대사 끝)에 💭 아이콘 하나. 누르면 그 속마음 풍선이 펼쳐진다
 export function renderThoughts(text, imgFor = () => "") {
   if (typeof text !== "string" || !text.toLowerCase().includes(`<${TAG}`)) return text;
@@ -115,8 +118,8 @@ export function renderThoughts(text, imgFor = () => "") {
 }
 export function thoughtIcon(t, imgFor = () => "") {
   let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; }
-  return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:inline;margin:0"><summary aria-label="${esc(t.name)} 속마음 보기" title="${esc(t.name)} 속마음" style="${ICON}">💭</summary>`
-    + `<span style="display:block">${bubbleHtml(t, img)}</span></details>`;
+  return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:inline;margin:0"><summary aria-label="${esc(t.name)} 속마음 보기" title="${esc(t.name)} 속마음" style="${ICON}">💭${TAILDOT(-6, 1, 6)}${TAILDOT(-11, -2, 3)}</summary>`
+    + `<span style="display:inline-block;vertical-align:middle;margin-left:10px">${bubbleHtml(t, img, true)}</span></details>`;
 }
 
 // 상태창 ‘속마음’ 탭: 채팅 글 전체에서 그 인물의 속마음을 모은다(최근 것이 위)
