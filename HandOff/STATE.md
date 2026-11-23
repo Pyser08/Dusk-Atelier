@@ -3,7 +3,8 @@
 - **실행 시점(확인)**: Lua onInput·listenEdit('editInput')은 로어북 조립 전, onStart는 후. RisuBard 소스(index.svelte.ts loadLoreBookV3Prompt 2194 < start 2986, DefaultChatScreen 810 input) + PocketRisu 실기기 시험(LORE in=1 st=0). editInput은 이번 입력 글을 받고 setChatVar 권한 있음. RisuAI 원본은 미확인.
 - 파일: src/engine/lorelua.js(loreLuaData·buildLoreLua·syncLoreTrigger·luaCoveredRids·unsupportedRules, LUA_ENGINE = lorerules evaluate·applySets·evalExpr + data/lorerules decide·prepare 이식) · editor.js(로어북 탭 ‘플러그인 없이 동작’ 버튼, commit 때 syncLoreLua) · data/lorerules.js(Lua가 맡은 rid는 JS가 건너뜀 luaCovered 15초 캐시, da_state f·t는 맡은 rid만 바꾸는 mergeHist) · tests/lorelua.test.js(wasmoon으로 JS와 상태 비교: 5 시드·리롤·이름 경계 3종, ../RisuBard/node_modules/wasmoon·public/lua/json.lua 필요, 없으면 skip)
 - **PocketRisu 실기기 통과(11-23)**: 시험 모듈(마리·카페 set +1·호감 var≥2·비밀 once)이 단계마다 맞게 켜짐, 마지막 턴 비밀=0(한 번만 지킴), dl_aff=4(카페가 scan 4 범위의 이전 메시지·응답에 남아 2~5턴 모두 켜짐 — JS와 같은 정상 동작).
-- 남은 일: 다시 생성(onOutput) 실기기 확인 · RisuAI 확인 · 그룹 채팅/빈 입력은 editInput이 안 돌아 직전 결정 유지 · 정규식 미지원 · 두 엔진이 섞이면 p/b(리롤 대비)가 겹칠 수 있음 · 리스 안에서 로어북을 고치면 Lua가 낡음(Dusk 저장 때만 다시 만듦) · 내보내기(.risum/.charx) 때 다시 만들기 안 함(저장 때 맞춰짐)
+- 다시 생성도 PocketRisu에서 dl_aff 그대로(4) 확인.
+- 남은 일: RisuAI 확인 · 그룹 채팅/빈 입력은 editInput이 안 돌아 직전 결정 유지 · 정규식 미지원 · 두 엔진이 섞이면 p/b(리롤 대비)가 겹칠 수 있음 · 리스 안에서 로어북을 고치면 Lua가 낡음(Dusk 저장 때만 다시 만듦) · 내보내기(.risum/.charx) 때 다시 만들기 안 함(저장 때 맞춰짐)
 
 ## regress-rename (2026-11-20, addon-rebuild 79a777a에서 분기) — **v2.2.22 + 장기기억 0.3.23(11-21, 버그리포트)** · v2.2.21 + 0.3.22(11-21)
 - **[이어서 할 일] 인물 속마음 보기 애드온 0.1.0 (미배포, 11-23 기준)**
