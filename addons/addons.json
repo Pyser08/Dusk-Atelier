@@ -265,7 +265,7 @@
       "id": "innerthought",
       "name": "인물 속마음 보기",
       "category": "memory",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "minCore": "2.2.42",
       "hooks": true,
       "desc": "메인 모델이 본문과 함께 인물의 속마음을 써요. 그 인물의 행동·대사 옆에 생각풍선 아이콘이 뜨고, 누르면 본문 옆에 반투명 생각 풍선과 그 감정의 봇 이미지가 펼쳐져요. 인물당 최소·최대 횟수를 정하고, 모은 속마음은 캐릭터 상태창(장기기억)의 ‘속마음’ 탭에서 봐요. AI 호출은 늘지 않아요.",
@@ -277,8 +277,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/innerthought.js",
-      "sha256": "a566bb7aa645ba58f43baf28221821deeb77163b546a97733130bd410ea44f55",
-      "size": 15382
+      "sha256": "74fb33b85edefe2b03a964dc2f93f892d961db5cc8d8be95d2721b8bb97e072d",
+      "size": 15458
     }
   ]
 }
