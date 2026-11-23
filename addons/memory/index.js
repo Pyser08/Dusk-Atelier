@@ -24,6 +24,10 @@ import { duplicateGroups, mergeExactDuplicates } from "../../src/engine/peopledu
 import { logEvent } from "../../src/data/memlog.js";
 import { notePersona, personaNames } from "../../src/engine/personas.js";
 import { createMemoryApi } from "../../src/data/memoryapi.js";
+import { personaLoreEntry } from "../../src/engine/personalore.js";
+import { upsertWikiLore } from "../../src/engine/wikilore.js";
+import { isGenerating } from "../../src/engine/safety.js";
+import { dbRead } from "../../src/data/dbcache.js";
 import { loadPrimaryUserName } from "../../src/data/usernames.js";
 import { setPastPersonas } from "../../src/engine/pastpersona.js";
 
@@ -39,6 +43,18 @@ export async function activate(api, ctx) {
   });
   // 11-23 이름(제목)이 완전히 같은 인물 문서는 턴마다 묻지 않고 하나로 합친다(관계도·성인 기록도 함께). 성+이름·별칭만 겹치는 건 그대로
   // 11-23 채팅 도중 페르소나가 바뀌면 그때까지의 {{user}} 기록을 옛 페르소나 인물로 떼어 두고, 새 페르소나는 {{user}}로 새로 시작
+  // 11-23 설정 ‘바꾼 페르소나를 로어북에’(inject.personaLore, 기본 꺼짐): 옛 페르소나 설명을 봇 로어북 항목으로({{user}}는 그 이름으로 바꿔 지움)
+  const personaToLore = async (name) => {
+    const idx = await memory.store.getIndex().catch(() => null); if (idx?.settings?.inject?.personaLore !== true) return;
+    const db = await dbRead(api, ["personas"]).catch(() => null);
+    const p = (Array.isArray(db?.personas) ? db.personas : []).find((x) => String(x?.name ?? "").trim() === name);
+    const entry = personaLoreEntry(name, p?.personaPrompt ?? "");
+    if (!entry) { logEvent({ kind: "skip", area: "페르소나", title: `‘${name}’ 페르소나 설명을 찾지 못해 로어북에 넣지 않았어요` }); return; }
+    const ci = await api.getCurrentCharacterIndex(), ch = await api.getCharacterFromIndex(ci);
+    if (!ch || isGenerating(ch)) { logEvent({ kind: "skip", area: "페르소나", title: "응답이 나오는 중이라 옛 페르소나를 로어북에 넣지 않았어요" }); return; }
+    const r = upsertWikiLore(ch.globalLore, [entry]);
+    if (r.added || r.updated) { await api.setCharacterToIndex(ci, { ...ch, globalLore: r.list }); logEvent({ area: "페르소나", title: `옛 페르소나 ‘${name}’을(를) 봇 로어북에 ${r.added ? "넣었어요" : "갱신했어요"}` }); }
+  };
   const watchPersona = async () => {
     const cur = await memory.switches?.currentChat?.().catch?.(() => null); if (!cur) return;
     let chat = null; try { const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(); chat = await api.getChatFromIndex(ci, ti); } catch { chat = null; }
@@ -46,6 +62,7 @@ export async function activate(api, ctx) {
     let res = { changed: false }, past = [];
     await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { res = notePersona(f, name, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : null }); past = personaNames(f); });
     setPastPersonas(past);
+    if (res.changed) await personaToLore(res.from).catch((e) => log(`옛 페르소나 로어북 등록 실패 ${e?.message ?? e}`));
     if (res.changed) { logEvent({ area: "페르소나", title: `페르소나가 ‘${res.from}’ → ‘${res.to}’로 바뀌었어요 · 지금까지의 기록은 ‘${res.from}’ 인물로 남겼어요` }); toast(`페르소나가 바뀌었어요. 지금까지의 기록은 ‘${res.from}’(으)로 남기고 관계도 가운데에 함께 보여 드려요.`); }
   };
   const autoMergeSame = async () => {
