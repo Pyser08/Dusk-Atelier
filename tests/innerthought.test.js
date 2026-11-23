@@ -24,7 +24,8 @@ test("파싱·빼기", () => {
 test("화면: 그 행동·대사 끝에 💭 아이콘, 누르면(details) 풍선 + 이미지", () => {
   const out = renderThoughts(msg, () => "{{emotion::shy}}");
   assert.ok(!out.includes("<dusk-thought"));
-  assert.match(out, /고개를 돌렸다\. <details x-dusk="thoughts"[^>]*><summary[^>]*>💭<\/summary>/, "같은 줄 끝에");
+  assert.match(out, /고개를 돌렸다\. <details x-dusk="thoughts"[^>]*display:inline-flex[^>]*><summary[^>]*>💭<span[^>]*border-radius:50%/, "같은 줄 끝에 생각풍선(꼬리 점)");
+  assert.match(out, /<\/summary><span style="display:inline-block;vertical-align:middle;margin-left:10px">/, "펼친 풍선은 본문 옆");
   assert.ok(out.indexOf("<details") < out.indexOf("별로"), "본문 맨 아래가 아니라 그 자리");
   assert.match(out, /data-dusk="thought"/); assert.match(out, /\{\{emotion::shy\}\}/);
   assert.equal(renderThoughts(`본문 <dusk-thought name="시로코" emo="기쁨">반쯤`), "본문");
