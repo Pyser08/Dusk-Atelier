@@ -82,17 +82,25 @@ export function bubbleHtml(t, img = "") {
     + `<i style="display:block;font-size:13.5px;line-height:1.6;opacity:.92">${esc(t.text)}</i></span>`
     + DOT(26, -9, 10) + DOT(14, -18, 6) + `</span>`;
 }
-// 화면 글: 태그 → 풍선. 스트리밍 중 아직 안 닫힌 태그는 ‘생각 중’ 풍선으로(날글이 보이지 않게)
+// 화면 글: 본문의 속마음 태그는 빼고, 본문 끝 옆에 생각 풍선 아이콘(💭)을 붙인다. 누르면 그 응답의 속마음 풍선들이 펼쳐진다
+// (<details> — 스크립트 없이 리스 소독기를 지나도 열고 닫힘). 스트리밍 중 아직 안 닫힌 태그는 숨긴다(날글이 보이지 않게)
+const ICON = "list-style:none;display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:3px 10px;border-radius:999px;font-size:13px;line-height:1.4;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);user-select:none";
+export function thoughtsBox(items, imgFor = () => "") {
+  if (!items.length) return "";
+  const bubbles = items.map((t) => { let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; } return bubbleHtml(t, img); }).join("");
+  return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:block;margin:6px 0 2px"><summary aria-label="속마음 보기" title="속마음 보기" style="${ICON}">💭<small style="font-size:11px;opacity:.75">${items.length}</small></summary>`
+    + `<span style="display:block;margin-top:8px">${bubbles}</span></details>`;
+}
 export function renderThoughts(text, imgFor = () => "") {
-  if (typeof text !== "string" || !text.toLowerCase().includes(`<${TAG}`)) return text;
+  if (typeof text !== "string" || !text.toLowerCase().includes(`<${TAG}`) || text.includes('x-dusk="thoughts"')) return text;
+  const items = [];
   let out = text.replace(RE, (all, attrs, body) => {
     const t = { name: attrOf(attrs, "name").trim(), emo: attrOf(attrs, "emo").trim(), text: body.replace(/<[^>]+>/g, "").trim() };
-    if (!t.name || !t.text) return "";
-    let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; }
-    return bubbleHtml(t, img);
+    if (t.name && t.text) items.push(t);
+    return "";
   });
-  out = out.replace(new RegExp(`<${TAG}\\b[^>]*>?[\\s\\S]*$`, "i"), (m) => bubbleHtml({ name: attrOf(m, "name") || "…", emo: "", text: "…" }));
-  return out;
+  out = out.replace(new RegExp(`<${TAG}\\b[^>]*>?[\\s\\S]*$`, "i"), "").replace(/\n{3,}/g, "\n\n").replace(/\s+$/, "");
+  return items.length ? `${out}\n${thoughtsBox(items, imgFor)}` : out;
 }
 
 // 상태창 ‘속마음’ 탭: 채팅 글 전체에서 그 인물의 속마음을 모은다(최근 것이 위)

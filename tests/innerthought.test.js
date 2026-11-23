@@ -21,12 +21,15 @@ test("파싱·빼기", () => {
   assert.ok(!stripThoughts(msg).includes("dusk-thought") && stripThoughts(msg).includes("별로"));
 });
 
-test("화면: 풍선 + 이미지, 안 닫힌 태그는 생각 중", () => {
+test("화면: 본문에서 빼고 끝에 💭 아이콘, 누르면(details) 풍선 + 이미지", () => {
   const out = renderThoughts(msg, () => "{{emotion::shy}}");
+  assert.ok(!out.includes("<dusk-thought") && !out.split("<details")[0].includes("들킨"));
+  assert.match(out, /<details x-dusk="thoughts"[^>]*><summary[^>]*>💭/);
+  assert.ok(out.indexOf("별로") < out.indexOf("<details"), "본문 끝 다음에");
   assert.match(out, /data-dusk="thought"/); assert.match(out, /\{\{emotion::shy\}\}/); assert.match(out, /rgba\(255,255,255,\.10\)/);
-  assert.ok(!out.includes("<dusk-thought"));
+  assert.equal(renderThoughts(out), out, "두 번 처리해도 같음");
   const part = renderThoughts(`본문 <dusk-thought name="시로코" emo="기쁨">반쯤`);
-  assert.ok(part.includes("본문") && part.includes("…") && !part.includes("반쯤"));
+  assert.equal(part, "본문");
 });
 
 test("감정 이미지 고르기: 이름+감정, 동의어, 다른 인물 이미지는 피함", () => {

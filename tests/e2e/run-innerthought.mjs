@@ -35,11 +35,14 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 860 }], ["모바일", { w
   ok(`[${tag}] 요청: 마지막 유저 글 앞에 안내(0~2번·감정 목록)`, !!hint && /0~2번/.test(hint.content) && /shy|happy/.test(hint.content) && req.at(-1).content === "다음", JSON.stringify(req).slice(0, 400));
   ok(`[${tag}] 요청: 지난 속마음 태그는 뺌`, !JSON.stringify(req).includes("옛 생각"));
   const shown = await page.evaluate(() => __host.display('시로코가 고개를 돌렸다.\n<dusk-thought name="시로코" emo="부끄러움">들킨 건 아니겠지</dusk-thought>'));
-  ok(`[${tag}] 화면: 반투명 생각 풍선 + 감정 이미지({{emotion::shy}})`, /data-dusk="thought"/.test(shown) && /\{\{emotion::shy\}\}/.test(shown) && /rgba\(255,255,255,\.10\)/.test(shown) && !shown.includes("<dusk-thought"), shown.slice(0, 300));
+  ok(`[${tag}] 화면: 본문 끝에 💭 아이콘, 안에 반투명 생각 풍선 + 감정 이미지({{emotion::shy}})`, /<details x-dusk="thoughts"[^>]*><summary[^>]*>💭/.test(shown) && shown.indexOf("돌렸다") < shown.indexOf("<details") && /data-dusk="thought"/.test(shown) && /\{\{emotion::shy\}\}/.test(shown) && /rgba\(255,255,255,\.10\)/.test(shown) && !shown.includes("<dusk-thought"), shown.slice(0, 300));
   const angry = await page.evaluate(() => __host.display('<dusk-thought name="시로코" emo="화남">짜증나</dusk-thought>'));
   ok(`[${tag}] 에셋 이미지는 봇 출력 방식(기본 {{img::}})`, /\{\{img::시로코_angry\}\}/.test(angry), angry.slice(0, 200));
   // 풍선 모양 그려 보기
   await page.evaluate((h) => { const d = document.createElement("div"); d.id = "it-demo"; d.style.cssText = "position:fixed;left:0;top:0;right:0;padding:24px;background:linear-gradient(135deg,#2b2540,#4a3a6a);color:#eee;z-index:99999"; d.innerHTML = h.replace(/\{\{emotion::shy\}\}/, '<span style="display:block;width:72px;height:90px;background:#c9a7e8"></span>'); document.body.appendChild(d); }, shown);
+  ok(`[${tag}] 처음엔 접혀 있음(풍선 안 보임)`, await page.evaluate(() => { const b = document.querySelector("#it-demo [data-dusk=thought]"); return !document.querySelector("#it-demo details").open && !b.checkVisibility(); }));
+  if (SHOTS) await page.locator("#it-demo").screenshot({ path: `${SHOTS}/it-${tag}-icon.png` });
+  await page.click("#it-demo summary");
   const box = await page.evaluate(() => { const b = document.querySelector("#it-demo [data-dusk=thought]"); const r = b.getBoundingClientRect(); return { w: r.width, h: r.height, bg: getComputedStyle(b).backgroundColor }; });
   ok(`[${tag}] 풍선이 화면 폭 안에, 반투명 바탕`, box.w > 100 && box.w <= vp.width && /rgba\(255, 255, 255, 0\.1\)/.test(box.bg), JSON.stringify(box));
   if (SHOTS) await page.locator("#it-demo").screenshot({ path: `${SHOTS}/it-${tag}-bubble.png` });
