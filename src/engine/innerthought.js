@@ -118,7 +118,7 @@ export function renderThoughts(text, imgFor = () => "") {
 }
 export function thoughtIcon(t, imgFor = () => "") {
   let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; }
-  return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:inline;margin:0"><summary aria-label="${esc(t.name)} 속마음 보기" title="${esc(t.name)} 속마음" style="${ICON}">💭${TAILDOT(-6, 1, 6)}${TAILDOT(-11, -2, 3)}</summary>`
+  return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:inline-flex;align-items:center;flex-wrap:wrap;vertical-align:middle;max-width:100%;margin:0"><summary aria-label="${esc(t.name)} 속마음 보기" title="${esc(t.name)} 속마음" style="${ICON}">💭${TAILDOT(-6, 1, 6)}${TAILDOT(-11, -2, 3)}</summary>`
     + `<span style="display:inline-block;vertical-align:middle;margin-left:10px">${bubbleHtml(t, img, true)}</span></details>`;
 }
 
