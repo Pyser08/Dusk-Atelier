@@ -23,6 +23,7 @@ import { quickRows } from "../../src/ui/screens/memory/quickrows.js";
 import { duplicateGroups, mergeExactDuplicates } from "../../src/engine/peopledupe.js";
 import { logEvent } from "../../src/data/memlog.js";
 import { notePersona, personaNames } from "../../src/engine/personas.js";
+import { createMemoryApi } from "../../src/data/memoryapi.js";
 import { loadPrimaryUserName } from "../../src/data/usernames.js";
 import { setPastPersonas } from "../../src/engine/pastpersona.js";
 
@@ -93,6 +94,7 @@ export async function activate(api, ctx) {
   const off = [
     () => { try { seedOff?.(); } catch { /* 이미 떨어짐 */ } },
     ext.add("svc", "memory", memory),
+    ext.add("svc", "memoryApi", createMemoryApi(memory)),   // 11-23 다른 애드온용 연동 창구(src/data/memoryapi.js)
     ext.add("svc", "affhud", affhud),
     ext.add("svc", "memoryButton", memBtn),
     ext.add("svc", "memoryui", { tracked, STAGE_NAMES, cardSettings }),

@@ -1,7 +1,7 @@
 // v1.8.1 HypaPlus 안내·가져오기 창. 기억 탭에 처음 들어갔을 때 HypaPlus가 감지되면 자동으로 뜬다(설정에서 다시 열 수도 있다).
 import { h } from "../../dom.js";
 import { btn, modal, note, confirmDialog } from "../../kit.js";
-import { mem, fail } from "./common.js";
+import { mem, fail } from "../../memstate.js";
 import { chatKeyOf } from "../../../engine/chatkey.js";
 
 const plural = (n, t) => `${n}${t}`;

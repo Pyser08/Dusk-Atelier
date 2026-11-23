@@ -19,6 +19,7 @@ const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 �
 
 export async function renderRelMap(ctx) {
   const M = ctx.memory, st = (ctx.state.relmap ??= {});
+  ensureMemAddonCss(ctx);   // 11-23 관계도 CSS는 애드온이 넣는다(불러오는 중·빈 화면에도)
   if (!M) return replace(ctx.main, h("div", { class: "rb-empty" }, "기억 기능이 아직 준비되지 않았어요. 플러그인을 다시 불러와 주세요."));
   const win = ctx.win?.ownerDocument?.defaultView ?? window;
   const redraw = () => renderRelMap(ctx).catch((e) => ctx.toast?.(String(e?.message ?? e), { error: true }));

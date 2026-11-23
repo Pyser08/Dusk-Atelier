@@ -71,7 +71,9 @@ for (const a of src.addons) {
 // 2.2.4: 기억 엔진은 이제 애드온 안에 들어간다(고치면 애드온만 올리면 됨). 다만 이미 깔린 예전 애드온(memory ≤0.2.16·cards ≤0.1.3)이
 //   새 코어에서 자동 업데이트되기 전 한 번 켜질 때 이 모듈들을 코어에서 찾으므로, 당분간 코어도 계속 넘겨 준다(새 애드온은 쓰지 않음).
 const LEGACY_LIB = ["collective", "gauge", "memoryemo", "memoryhuman", "memoryinject", "memoryinner", "memorykeys", "memorylines", "memoryplus", "memoryprompt", "memoryreconcile", "memorytrust", "regress", "embed"].map((n) => `src/engine/${n}.js`);
-const libs = [...new Set([...LEGACY_LIB, ...usedLib, ...[...coreSet].filter((f) => /^src\//.test(f) && /\.(js|ts)$/.test(f) && !/^src\/(main\.js|addonlib\.gen\.js)$/.test(f))])].sort();
+// 11-23 장기기억 화면 공통 등을 코어에서 뺐다 — 이미 배포된 장기기억(0.3.50 이하)이 새 코어에서도 켜지게 계속 넘겨 준다(코어 화면은 쓰지 않음)
+const LEGACY_LIB_FULL = ["src/ui/screens/memory/common.js", "src/ui/screens/memory/username.js", "src/ui/screens/memory/chatload.js", "src/data/memorystore.js", "src/data/memorybutton.js"];
+const libs = [...new Set([...LEGACY_LIB, ...LEGACY_LIB_FULL, ...usedLib, ...[...coreSet].filter((f) => /^src\//.test(f) && /\.(js|ts)$/.test(f) && !/^src\/(main\.js|addonlib\.gen\.js)$/.test(f))])].sort();
 const libCode = `// 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어 모듈을 이름으로 넘겨 준다.\n${libs.map((f, i) => `import * as m${i} from ${JSON.stringify("./" + f.replace(/^src\//, ""))};`).join("\n")}\nexport const LIB = {\n${libs.map((f, i) => `  ${JSON.stringify(f)}: m${i}`).join(",\n")}\n};\n`;
 const json = JSON.stringify(out, null, 2) + "\n", mf = path.join(root, "addons/addons.json");
 if (check) {

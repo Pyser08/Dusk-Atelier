@@ -2,7 +2,7 @@
 import { noteEdits, DUSK_FOLLOW } from "../../../engine/defaultfollow.js";
 import { h, replace } from "../../dom.js";
 import { btn, modal, optionCards, note } from "../../kit.js";
-import { fail } from "./common.js";
+import { fail } from "../../memstate.js";
 import { LEVELS, applyLevel, levelOf } from "../../../engine/trackpreset.js";
 import { WIZARD, firstRunFeatures, potInstalled, wizardSummary } from "../../../engine/firstrun.js";
 import { getCfg, saveCfg, keyStore } from "../../../data/modelhub.js";

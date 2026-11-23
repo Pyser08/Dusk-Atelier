@@ -4,9 +4,9 @@ import { userLabel } from './username.js';
 import { modal } from '../../kit.js';
 import { loadCharacters } from '../../../data/modules.js';
 import { emptyFolder } from '../../../data/memorystore.js';
+import { mem, fail } from '../../memstate.js';
+export { mem, fail };
 
-export const mem = (ctx) => ctx.state.mem ??= { view: "bots", botId: "", chatIndex: 0, tab: "people", personKey: "", grades: [], search: "", personSearch: "", sort: "time", sceneDesc: true, page: 1, bots: null, showHidden: false, compose: null };
-export const fail = (ctx) => (e) => ctx.toast(e?.message ?? String(e), { error: true, seconds: 8 });
 export const gradeBadge = (g) => h("span", { class: "rb-grade", "data-g": g || "-", title: g ? `등급 ${g}` : "등급 없음" }, g || "–");
 export const isMe = (n) => /^\{\{user\}\}$/i.test(String(n ?? "").trim());
 // {{user}}는 동그라미에 '{'가 아니라 지금 페르소나 이름의 첫 글자를 넣고, 강조색으로 구분한다

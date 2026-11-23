@@ -5,6 +5,7 @@ import { LIFE_CSS } from "./lifecards.js";
 import { EXTRA_CSS } from "./extracards.js";
 import { WORLD_CSS } from "./worldtab.js";
 import { h } from "../../dom.js";
+import { RELMAP_CSS } from "../relmap/css.js";   // 11-23 관계도 CSS도 애드온이 넣는다(코어 styles.js에서 뺌)
 
 export const MEM_ADDON_CSS = `.rb-wk-auto{flex-wrap:wrap;min-width:0}.rb-wk-auto>*{min-width:0}.rb-wk-auto .rb-mem-rowact,.rb-wk-page .rb-mem-rowact,.rb-wk4-morebox .rb-mem-rowact{display:flex;flex-wrap:wrap;gap:6px;min-width:0;max-width:100%}
 .rb-bfsel{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -419,7 +420,7 @@ export const MEM_ADDON_CSS = `.rb-wk-auto{flex-wrap:wrap;min-width:0}.rb-wk-auto
 export function ensureMemAddonCss(ctx) {
   try {
     const docs = new Set([ctx?.win?.ownerDocument, typeof document !== "undefined" ? document : null].filter(Boolean));
-    for (const d of docs) if (!d.getElementById("rb-memaddon-css")) d.head.appendChild(h("style", { id: "rb-memaddon-css" }, MEM_ADDON_CSS + SUBTABS_CSS + LIFE_CSS + EXTRA_CSS + WORLD_CSS));
+    for (const d of docs) if (!d.getElementById("rb-memaddon-css")) d.head.appendChild(h("style", { id: "rb-memaddon-css" }, MEM_ADDON_CSS + SUBTABS_CSS + LIFE_CSS + EXTRA_CSS + WORLD_CSS + RELMAP_CSS));
   } catch { /* 문서 없음 */ }
 }
 

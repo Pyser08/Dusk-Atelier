@@ -4,7 +4,7 @@
 import { h, replace } from "../../dom.js";
 import { advFold, btn, chip, iconBtn, note, openMenu, pageHead, toggleRow, emptyState, confirmDialog, promptDialog, loading, modal, switchEl, setSwitch } from "../../kit.js";
 import { icon } from "../../icons.js";
-import { mem, fail } from "./common.js";
+import { mem, fail } from "../../memstate.js";
 import { SKILL_STAGES, SKILL_STAGE_LABEL } from "../../../engine/skillcfg.js";
 import { buildSkillIndex, diagnoseSkillSet, normalizeSkillSet, SKILL_MD, SKILL_LIMITS } from "../../../engine/skills.js";
 import { WEB_PROVIDERS, webReady, formatResults } from "../../../engine/websearch.js";
