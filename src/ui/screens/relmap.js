@@ -4,6 +4,8 @@
 // 탭이 안 보이면 그리기 루프는 알아서 멈춘다(canvas.js).
 import { loadUserName, watchUserName, userLabel } from "./memory/username.js";
 import { loadUserNames } from "../../data/usernames.js";
+import { setPastPersonas, withoutPast } from "../../engine/pastpersona.js";
+import { personaNames } from "../../engine/personas.js";
 import { autoMergeUser } from "../../data/usermerge.js";
 import { h, replace } from "../dom.js";
 import { chip, emptyState, loading, pageHead } from "../kit.js";
@@ -37,7 +39,8 @@ export async function renderRelMap(ctx) {
   replace(ctx.main, h("div", { class: "rb-rm" }, loading("관계도를 불러오는 중")));
   let folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
   // 페르소나 이름으로 따로 쌓인 옛 기록은 {{user}}로 자동으로 합친다. 가운데에는 그 채팅의 페르소나 이름을 보여 준다.
-  const unames = await loadUserNames(ctx.api);
+  setPastPersonas(personaNames(folder));   // 11-23 옛 페르소나는 나로 합치지 않는다
+  const unames = withoutPast(await loadUserNames(ctx.api));
   try {
     const merged = await autoMergeUser(M.store, cur.chaId, cur.chatId, folder, unames);
     if (merged) { folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => folder); ctx.toast?.(`'${merged.names.join("', '") || "다른 이름"}' 기록을 {{user}}(${uname})로 합쳤어요.`); }

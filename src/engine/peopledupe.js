@@ -24,7 +24,7 @@ function surnameOnly(short, all) {
 }
 
 // 항목 목록 → 중복 묶음 [[entry, entry, ...], ...]. 각 묶음의 첫 항목이 '남길 인물'이다.
-export function duplicateGroups(folder, { visible } = {}) {
+export function duplicateGroups(folder, { visible, exact = false } = {}) {
   const items = mergeEntries(folder, visible ? { visible } : {});
   const docOf = (e) => (e.docId ? folder.wiki?.documents?.[e.docId] : null);
   const nick = (e) => new Set((docOf(e)?.aliases ?? []).map(key));
@@ -32,9 +32,9 @@ export function duplicateGroups(folder, { visible } = {}) {
   for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
     const a = items[i], b = items[j], ka = key(a.name), kb = key(b.name);
     if (!ka || !kb) continue;
-    if (ka === kb || nick(a).has(kb) || nick(b).has(ka) || fullAndGiven(a.name, b.name)) parent[find(j)] = find(i);
+    if (ka === kb || (!exact && (nick(a).has(kb) || nick(b).has(ka) || fullAndGiven(a.name, b.name)))) parent[find(j)] = find(i);
   }
-  for (let i = 0; i < items.length; i++) { const h = surnameOnly(items[i].name, items); if (h) parent[find(i)] = find(items.indexOf(h)); }
+  if (!exact) for (let i = 0; i < items.length; i++) { const h = surnameOnly(items[i].name, items); if (h) parent[find(i)] = find(items.indexOf(h)); }
   const groups = new Map();
   items.forEach((e, i) => { const r = find(i); groups.set(r, [...(groups.get(r) ?? []), e]); });
   const size = (e) => (docOf(e)?.sections?.length ?? 0) + (e.pk ? 1 : 0);
@@ -44,9 +44,9 @@ export function duplicateGroups(folder, { visible } = {}) {
 
 // folder를 직접 고친다(updateFolder 안에서 부른다). 겹치는 항목은 남길 쪽 값을 쓴다.
 // 막힌 합치기(blockers)는 건너뛴다. 반환: {merged, skipped:[이름…]}
-export function mergeAllDuplicates(folder, { slotDefinitions = [], visible } = {}) {
+export function mergeAllDuplicates(folder, { slotDefinitions = [], visible, exact = false } = {}) {
   let merged = 0; const skipped = [];
-  for (const group of duplicateGroups(folder, { visible })) {
+  for (const group of duplicateGroups(folder, { visible, exact })) {
     let keepName = group[0].name;
     for (const src of group.slice(1)) {
       // 앞선 합치기로 항목이 바뀌었을 수 있어 매번 새로 읽는다.
@@ -62,3 +62,6 @@ export function mergeAllDuplicates(folder, { slotDefinitions = [], visible } = {
   }
   return { merged, skipped };
 }
+
+// 11-23: 이름(제목)이 완전히 같은 인물은 묻지 않고 하나로 합친다(턴마다). 성+이름·별칭만 겹치는 건 그대로 둔다(다른 사람일 수 있음)
+export function mergeExactDuplicates(folder, { slotDefinitions = [] } = {}) { return mergeAllDuplicates(folder, { slotDefinitions, exact: true }); }

@@ -1,7 +1,7 @@
 // {{user}} = 나(플레이어) (1.8.3, 순수). 분석 결과에서 플레이어를 가리키는 이름을 모두 "{{user}}" 하나로 모은다.
 // 리스가 프롬프트의 {{user}}를 페르소나 이름으로 바꿔 보내면 AI가 그 이름(또는 user·유저)으로 적어 같은 사람이 둘로 갈라지기 때문.
 import { counterparts, pairView, nowOf, momentsOf, keyOf } from "./memoryhuman.js";
-import { tiesBetween } from "./ties.js";
+import { tiesBetween, tieKey } from "./ties.js";
 export const USER = "{{user}}";
 const GENERIC = ["{{user}}", "user", "유저", "플레이어", "player", "{{persona}}"];
 const key = (n) => String(n ?? "").toLowerCase().replace(/\s+/g, "");
@@ -68,6 +68,19 @@ function relinkWith(folder, set, to, hit) {
   folder.start = rekey(folder.start, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), (keep, add) => (keep.level === "close" || add.level !== "close" ? keep : add), to, hit);   // 처음부터 알던 사이: 더 가까운 단계를 남긴다
   folder.exp = rekey(folder.exp, set, ["a", "b"], (x) => [key(x.a), key(x.b)].sort().join("|"), newer, to, hit);
   for (const x of [...(folder.bonds ?? []), ...(folder.rifts ?? [])]) { x.a = side(x.a); x.b = side(x.b); }
+  // 11-23: 관계도의 관계 종류(extra.ties)·몸 흔적·옷차림도 새 이름으로 — 예전엔 합쳐도 관계도에 옛 이름 쪽 관계가 따로 남았다
+  const ex = folder.extra;
+  if (ex?.ties) {
+    const out = {};
+    for (const t0 of Object.values(ex.ties)) {
+      const t = { ...t0, a: side(t0.a), b: side(t0.b) }; if (key(t.a) === key(t.b)) continue;
+      const k = tieKey(t.a, t.b), o = out[k];
+      out[k] = o ? { ...o, lock: !!(o.lock || t.lock), kinds: { ...t.kinds, ...o.kinds } } : t;
+    }
+    ex.ties = out;
+  }
+  if (Array.isArray(ex?.marks)) for (const m of ex.marks) m.name = side(m.name);
+  if (ex?.outfit) for (const [k, o] of Object.entries(ex.outfit)) if (hit(set, o?.name)) { const nk = key(to); delete ex.outfit[k]; if (!ex.outfit[nk]) ex.outfit[nk] = { ...o, name: to }; }
   for (const x of folder.beliefs ?? []) { x.who = side(x.who); if (x.by) x.by = side(x.by); }
   for (const s of folder.scenes ?? []) if (Array.isArray(s.who)) s.who = [...new Set(s.who.map((w) => side(w)))];
 }

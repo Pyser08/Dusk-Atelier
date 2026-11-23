@@ -20,6 +20,11 @@ import { createDiaryDisplay } from "../../src/data/diary.js";
 import { syncMeDoc } from "../../src/data/medoc.js";
 import { createNameLinks } from "../../src/data/namelinks.js";
 import { quickRows } from "../../src/ui/screens/memory/quickrows.js";
+import { duplicateGroups, mergeExactDuplicates } from "../../src/engine/peopledupe.js";
+import { logEvent } from "../../src/data/memlog.js";
+import { notePersona, personaNames } from "../../src/engine/personas.js";
+import { loadPrimaryUserName } from "../../src/data/usernames.js";
+import { setPastPersonas } from "../../src/engine/pastpersona.js";
 
 const log = (m) => console.log(`[Dusk Atelier] ${m}`);
 
@@ -31,8 +36,26 @@ export async function activate(api, ctx) {
   const memory = app.memoryForTest ?? createMemory(api, {
     storyNow: (c, t) => app.storyTime?.current?.(c, t), notify: toast, potLibrary: POT_PROMPTS, onOpen: () => openTab("memory")
   });
+  // 11-23 이름(제목)이 완전히 같은 인물 문서는 턴마다 묻지 않고 하나로 합친다(관계도·성인 기록도 함께). 성+이름·별칭만 겹치는 건 그대로
+  // 11-23 채팅 도중 페르소나가 바뀌면 그때까지의 {{user}} 기록을 옛 페르소나 인물로 떼어 두고, 새 페르소나는 {{user}}로 새로 시작
+  const watchPersona = async () => {
+    const cur = await memory.switches?.currentChat?.().catch?.(() => null); if (!cur) return;
+    let chat = null; try { const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(); chat = await api.getChatFromIndex(ci, ti); } catch { chat = null; }
+    const name = await loadPrimaryUserName(api, { fresh: true, chat }); if (!name) return;
+    let res = { changed: false }, past = [];
+    await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { res = notePersona(f, name, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : null }); past = personaNames(f); });
+    setPastPersonas(past);
+    if (res.changed) { logEvent({ area: "페르소나", title: `페르소나가 ‘${res.from}’ → ‘${res.to}’로 바뀌었어요 · 지금까지의 기록은 ‘${res.from}’ 인물로 남겼어요` }); toast(`페르소나가 바뀌었어요. 지금까지의 기록은 ‘${res.from}’(으)로 남기고 관계도 가운데에 함께 보여 드려요.`); }
+  };
+  const autoMergeSame = async () => {
+    const cur = await memory.switches?.currentChat?.().catch?.(() => null); if (!cur) return;
+    const slots = (() => { try { return JSON.parse(memory.lib.base.slots).slots; } catch { return []; } })();
+    let res = { merged: 0, skipped: [] };
+    await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (duplicateGroups(f, { exact: true }).length) res = mergeExactDuplicates(f, { slotDefinitions: slots }); });
+    if (res.merged) logEvent({ area: "인물 합치기", title: `이름이 같은 인물 ${res.merged}명을 하나로 합쳤어요` });
+  };
   // 2.2.6 기억 옵션 ‘처음 등장 때 성인 항목 무작위로’: 턴 기록 뒤 위키가 저장될 틈을 두고 새 인물에게 후보를 넣는다
-  const seedOff = memory.flow?.onTurn?.((info) => { setTimeout(async () => { syncMeDoc(memory, api).catch(() => false); await applyNsfwTurn(memory, log, info, api).catch((e) => log(`성인 프로필 반영 실패 ${e?.message ?? e}`)); await ensureProfiles(memory, { log, api, wait: 120000 }).catch(() => 0); seedWikiNow(api, memory, log).catch((e) => log(`성인 항목 무작위 기록 실패 ${e?.message ?? e}`)); syncOrientNow(memory, app.erosync).catch(() => {}); }, 6000); });
+  const seedOff = memory.flow?.onTurn?.((info) => { setTimeout(async () => { await watchPersona().catch((e) => log(`페르소나 변경 확인 실패 ${e?.message ?? e}`)); await autoMergeSame().catch((e) => log(`같은 이름 합치기 실패 ${e?.message ?? e}`)); syncMeDoc(memory, api).catch(() => false); await applyNsfwTurn(memory, log, info, api).catch((e) => log(`성인 프로필 반영 실패 ${e?.message ?? e}`)); await ensureProfiles(memory, { log, api, wait: 120000 }).catch(() => 0); seedWikiNow(api, memory, log).catch((e) => log(`성인 항목 무작위 기록 실패 ${e?.message ?? e}`)); syncOrientNow(memory, app.erosync).catch(() => {}); }, 6000); });
   // 2.2.6 지난 대화 분석에서도: 시작 전 성적 지향을 옮기고, 끝나면 새 인물에게 기본 성격·성인 프로필·무작위 성인 항목을 넣는다
   memory.link.beforeBackfill = () => syncOrientNow(memory, app.erosync).catch(() => 0);
   // 이미 3턴 넘게 진행한 채팅이면 글(성적 욕망·이상성향 후보)은 새로 넣지 않고, 비어 있는 수치만 채운다

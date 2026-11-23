@@ -50,11 +50,14 @@ export function buildRelMap(folder, { max = RM.MAX_NODES, mode = "affinity" } = 
   }
   for (const x of Object.values(folder?.rels ?? {})) { add(x?.from); add(x?.to); }
   for (const x of Object.values(folder?.emo ?? {})) { if (key(x?.to) === uk) add(x?.from); else if (key(x?.from) === uk) add(x?.to); }
+  // 11-23 채팅 도중 바뀐 옛 페르소나: 늘 관계도에 넣고(가운데서 나와 함께 돈다) 표시
+  const pastP = new Set((folder?.personas ?? []).map((p) => key(p.name)).filter(Boolean));
+  for (const p of folder?.personas ?? []) add(p.name);
   // 2) 값싼 중요도로 먼저 상위 max명만 고른다. 비싼 계산(pairView)은 이 사람들에게만 한다.
   const cand = [...names].map(([k, name]) => {
     const recs = (peopleByKey[k]?.records ?? []).filter(live);
     return { k, name, recs, imp: importanceOf(recs, nowAt) };
-  }).sort((a, b) => b.imp - a.imp || a.name.localeCompare(b.name, "ko")).slice(0, max);
+  }).sort((a, b) => (pastP.has(b.k) ? 1 : 0) - (pastP.has(a.k) ? 1 : 0) || b.imp - a.imp || a.name.localeCompare(b.name, "ko")).slice(0, max);
   const sceneNow = new Set();
   if (nowAt > 0) for (const sc of folder?.scenes ?? []) if (!sc.orphan && sc.at === nowAt) for (const w of sc.who ?? []) sceneNow.add(key(w));
   const nodes = [];
@@ -66,7 +69,7 @@ export function buildRelMap(folder, { max = RM.MAX_NODES, mode = "affinity" } = 
     const sorted = recs.slice().sort((a, b) => (b.at ?? -1) - (a.at ?? -1));
     const lastAt = recs.reduce((m, r) => Math.max(m, r.at ?? -1), -1);
     nodes.push({
-      id: k, name: shownName(name), faction: String(p?.faction ?? "").trim(), status: STATUS_LABEL[p?.status] ? p.status : "",
+      id: k, name: shownName(name), ...(pastP.has(k) ? { persona: true } : {}), faction: String(p?.faction ?? "").trim(), status: STATUS_LABEL[p?.status] ? p.status : "",
       aff, imp, thisTurn, records: recs.length,
       sum: cut(pv.bonds.at(-1)?.moment || sorted[0]?.act || "", 90),
       rec: sorted.slice(0, 3).map((r) => [r.at != null ? `#${r.at + 1}` : "", cut(r.act, 70)]),
