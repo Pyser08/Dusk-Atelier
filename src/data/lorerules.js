@@ -10,7 +10,7 @@
 // 발동 기록은 채팅 변수 da_state에 둔다 (채팅 복사·분기에 따라감, 현재 턴 이상 기록은 무시하므로 되돌리기에도 맞다).
 import { STATE_VAR, MAX_HIST, affOf, applySets, collectManaged, evaluate, gateValues, setTargets, setBoundaryMode } from '../engine/lorerules.js';
 import { noteStreamChunk, recentlyStreamed } from './genstate.js';
-import { luaCoveredRids } from '../engine/lorelua.js';
+import { luaCoveredRids, syncLoreTrigger, fixRegexKeys } from '../engine/lorelua.js';
 
 const sv = (k) => "$" + k;
 
@@ -32,6 +32,23 @@ export async function loadLoreSettings(api) {
 export async function saveLoreSettings(api, v) {
   setBoundaryMode({ ...LORE_DEFAULTS, ...v }.boundary);
   await api.pluginStorage.setItem(LORE_SETTINGS_KEY, JSON.stringify({ ...LORE_DEFAULTS, ...v }));
+}
+
+// 플러그인 없이 동작(로어북 규칙 Lua): 끈 봇·모듈 id 목록 (편집기와 같은 저장소)
+export const LUA_OFF_KEY = "dusk-lore-lua-off";
+// 내보내기 직전: 규칙에 맞는 Lua 트리거를 넣은 사본을 돌려준다(원본은 그대로). kind: 'module' | 'character'
+export async function withFreshLoreLua(api, obj, kind) {
+  if (!obj || typeof obj !== "object") return obj;
+  const f = kind === "character" ? { lore: "globalLore", trig: "triggerscript", id: "chaId" } : { lore: "lorebook", trig: "trigger", id: "id" };
+  try {
+    const off = JSON.parse(String(await api.pluginStorage.getItem(LUA_OFF_KEY) ?? "[]"));
+    if (Array.isArray(off) && off.includes(`${f.id}:${obj[f.id] ?? ""}`)) return obj;
+  } catch { /* 목록이 없으면 켜짐 */ }
+  const st = await loadLoreSettings(api);
+  const fx = fixRegexKeys(obj[f.lore] ?? []);
+  const r = syncLoreTrigger(obj[f.trig] ?? [], fx.entries, { boundary: st.boundary, reroll: st.reroll });
+  if (!r.changed && !fx.fixed) return obj;
+  return { ...obj, [f.lore]: fx.entries, [f.trig]: r.triggers };
 }
 
 export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규칙]", ...a) } = {}) {
@@ -72,6 +89,8 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
     let set = new Set();
     try {
       const ch = await api.getCharacterFromIndex(charIdx);
+      // 그룹 채팅에서는 리스가 Lua 입력 트리거를 돌리지 않으므로 Dusk가 계속 계산한다
+      if (ch?.type === "group") throw new Error("group");
       const chat = ch?.chats?.[chatIdx];
       let mods = [];
       try {

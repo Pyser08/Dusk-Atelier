@@ -5,7 +5,8 @@
 //   - onOutput: 응답이 끝난 뒤 다시 생성 대비(prepare()와 같은 계산). 설정이 '이전 결과 유지'면 하지 않는다.
 //   - 발동 기록은 Dusk와 같은 채팅 변수 da_state 모양이라, Dusk가 있는 환경과 없는 환경을 오가도 이어진다.
 // Lua로 못 하는 것: 정규식 키(useRegex)·정규식 조건 — 내보낼 때 unsupportedRules()로 알려 준다(그 조건은 안 맞는 것으로 본다).
-import { collectManaged, setTargets, affOf, bodyOf, gateVar } from "./lorerules.js";
+import { collectManaged, setTargets, affOf, bodyOf, gateVar, ruleOf } from "./lorerules.js";
+import { keyOnlyPlan, applyPlan } from "./loredusk.js";
 
 export const LUA_MARK = "-- DUSK-LORE";
 export const LUA_VERSION = 1;
@@ -68,6 +69,18 @@ export function unsupportedRules(entries) {
     }
   }
   return out;
+}
+
+// 규칙이 켜진 항목의 정규식 키를 이름 키로 바꾼다(‘키만 정리’와 같은 방식). Lua에는 정규식이 없어서.
+// 반환: { entries(바뀐 사본 또는 그대로), fixed: 바꾼 항목 수 }
+export function fixRegexKeys(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  if (!list.some((e) => e?.useRegex && ruleOf(e) && ruleOf(e).on !== false)) return { entries: list, fixed: 0 };
+  const plan = keyOnlyPlan(list);
+  plan.keyFixes = plan.keyFixes.filter((k) => k.regexOff && ruleOf(list[k.idx]) && ruleOf(list[k.idx]).on !== false);
+  if (!plan.keyFixes.length) return { entries: list, fixed: 0 };
+  const r = applyPlan(list, plan);
+  return { entries: r.entries, fixed: r.summary.keys };
 }
 
 function longString(s) {

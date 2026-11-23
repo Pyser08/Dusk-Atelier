@@ -255,3 +255,32 @@ test("luaCoveredRids: 트리거 안의 항목 rid를 읽는다", async () => {
   assert.deepEqual([...luaCoveredRids(t)].sort(), ["r1", "r2"]);
   assert.equal(luaCoveredRids([{ effect: [{ type: "triggerlua", code: "-- 남의 코드" }] }]).size, 0);
 });
+
+test("fixRegexKeys: 규칙이 켜진 항목의 정규식 키만 이름 키로 바꾼다", async () => {
+  const { fixRegexKeys } = await import("../src/engine/lorelua.js");
+  rc = 0;
+  const a = E("마리", {}, { key: "/마리|마리쨩/" });
+  a.useRegex = true;
+  const b = { key: "/유키|유키쨩/", useRegex: true, comment: "규칙 없음", content: "x", mode: "normal" };
+  const r = fixRegexKeys([a, b]);
+  assert.equal(r.fixed, 1);
+  assert.equal(r.entries[0].useRegex, false);
+  assert.match(r.entries[0].key, /마리/);
+  assert.equal(r.entries[1].useRegex, true, "규칙 없는 항목은 그대로");
+  assert.equal(fixRegexKeys([b]).fixed, 0);
+});
+
+test("withFreshLoreLua: 내보낼 때 Lua를 넣고, 끈 봇은 그대로 둔다", async () => {
+  const { withFreshLoreLua, LUA_OFF_KEY } = await import("../src/data/lorerules.js");
+  rc = 0;
+  const store = {};
+  const api2 = { pluginStorage: { getItem: async (k) => store[k] ?? null, setItem: async (k, v) => { store[k] = v; } } };
+  const ch = { chaId: "c1", globalLore: [E("마리", {})], triggerscript: [] };
+  const out = await withFreshLoreLua(api2, ch, "character");
+  assert.equal(findLoreTrigger(out.triggerscript) !== null, true);
+  assert.equal(ch.triggerscript.length, 0, "원본은 그대로");
+  store[LUA_OFF_KEY] = JSON.stringify(["chaId:c1"]);
+  assert.equal(await withFreshLoreLua(api2, ch, "character"), ch);
+  const mod = { id: "m1", lorebook: [E("유키", {})], trigger: [] };
+  assert.ok(findLoreTrigger((await withFreshLoreLua(api2, mod, "module")).trigger));
+});

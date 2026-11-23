@@ -5,7 +5,8 @@
 - **PocketRisu 실기기 통과(11-23)**: 시험 모듈(마리·카페 set +1·호감 var≥2·비밀 once)이 단계마다 맞게 켜짐, 마지막 턴 비밀=0(한 번만 지킴), dl_aff=4(카페가 scan 4 범위의 이전 메시지·응답에 남아 2~5턴 모두 켜짐 — JS와 같은 정상 동작).
 - 다시 생성도 PocketRisu에서 dl_aff 그대로(4) 확인.
 - RisuAI 원본: 사용자 확인으로 포켓리스와 같은 동작(트리거·로어북 순서) — 따로 시험 안 함.
-- 남은 일: 그룹 채팅/빈 입력은 editInput이 안 돌아 직전 결정 유지 · 정규식 미지원 · 두 엔진이 섞이면 p/b(리롤 대비)가 겹칠 수 있음 · 리스 안에서 로어북을 고치면 Lua가 낡음(Dusk 저장 때만 다시 만듦) · 내보내기(.risum/.charx) 때 다시 만들기 안 함(저장 때 맞춰짐)
+- **기본 켜짐(11-23)**: 끈 봇·모듈만 pluginStorage `dusk-lore-lua-off`(`chaId:…`/`id:…`)에 기억. 편집기 commit·열 때(낡았으면)·내보내기(modules.js exportRisum, dev.js exportFull·exportCharx → data/lorerules.withFreshLoreLua)에서 fixRegexKeys(loredusk keyOnlyPlan 중 regexOff만, 규칙 켠 항목만) → syncLoreTrigger. 그룹 채팅(ch.type group)은 luaCovered가 빈 집합 → Dusk가 계산. 괄호 묶은 정규식(/(a|b)/)은 keyFixes가 못 바꿔 경고만.
+- 남은 일: 그룹 채팅(Dusk 없을 때) 직전 결정 유지 · 바꾸지 못한 정규식 · 두 엔진이 섞이면 p/b(리롤 대비)가 겹칠 수 있음 · 리스 안에서 키를 고치면 Dusk로 열거나 내보낼 때까지 Lua가 낡음
 
 ## regress-rename (2026-11-20, addon-rebuild 79a777a에서 분기) — **v2.2.22 + 장기기억 0.3.23(11-21, 버그리포트)** · v2.2.21 + 0.3.22(11-21)
 - **[이어서 할 일] 인물 속마음 보기 애드온 0.1.0 (미배포, 11-23 기준)**
