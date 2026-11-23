@@ -34,9 +34,9 @@ export function advancedGroups(ctx, { cur, idx, redraw }) {
     h("div", { class: "rb-mem-sact" }, btn("인물 위키 설정 열기", { onClick: () => { const m = ctx.state.mem ??= {}; m.page = "pot"; m.potTab = "adv"; redraw(); } })));
   const diag = section("진단", h("div", { class: "rb-muted rb-mem-diag" }, diagText(M.runner?.session?.() ?? {})),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 넣은 기억 보기"), man
-        ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : "넣지 않음"}`),
+        ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : `넣지 않음${last.reason ? ` — ${last.reason}` : ""}`}`),
           h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name ?? x.kind} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))))
-        : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")),
+        : last?.at ? h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · 넣지 않음${last.reason ? ` — ${last.reason}` : ""}`) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")),
       idx.status?.lastError ? h("p", { class: "rb-muted" }, `마지막 오류: ${String(idx.status.lastError).slice(0, 120)}`) : null);
   return [
     { id: "track", title: "자동 기록 · 인물 추적", sub: `제외할 이름 ${(bot.ignore ?? []).length}개`, kids: [trackingHost,

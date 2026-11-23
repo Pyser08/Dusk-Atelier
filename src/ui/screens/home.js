@@ -12,7 +12,7 @@ import { injectLine, usageOf } from '../../engine/memoryusage.js';
 import { openItems } from '../../engine/openitems.js';
 import { memoryGlobalOn } from '../../engine/memoryswitch.js';
 import { injectReasonText } from '../../engine/tokens.js';
-import { mem } from './memory/common.js';
+import { mem } from '../memstate.js';
 import { discoverCard } from '../discovercard.js';
 import { TABS, tabHidden } from '../tabs.js';
 import { quickSettingsCard } from '../quickset.js';

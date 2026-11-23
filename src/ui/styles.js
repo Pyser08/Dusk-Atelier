@@ -1,5 +1,4 @@
 import { PROB_CSS } from './probpick.js';
-import { RELMAP_CSS } from './screens/relmap/css.js';
 import { SIZE_CSS } from './screens/sizemeter/css.js';
 import { PROVIDER_CSS } from './screens/provider/css.js';
 import { GLASS_CSS } from './glasscss.js';
@@ -1513,4 +1512,4 @@ button,a,[role=option],.rb-tile{touch-action:manipulation;-webkit-tap-highlight-
 .rb-wk2-tab:active,.rb-tab:active{transform:scale(.97);transition-duration:.08s}
 .rb-modal>.rb-dialog,.rb-modal>.rb-wk3-sheet{animation:rb-pop .3s var(--rb-ease,cubic-bezier(.22,1.12,.36,1))}
 @media (prefers-reduced-motion:reduce){.rb-btn:active,.rb-chip:active,.rb-tab:active,.rb-wk2-tab:active,.rb-iconbtn:active{transform:none}.rb-modal>.rb-dialog,.rb-modal>.rb-wk3-sheet{animation:none}}
-`+PROB_CSS+RELMAP_CSS+PROVIDER_CSS+SIZE_CSS+GLASS_CSS+NAV_CSS+HOMEGRID_CSS+MEMHUB_CSS+MEMTHEME_CSS+WORKHUB_CSS+MANAGEHUB_CSS+GLANCE_CSS+AIBOT_CSS;
+`+PROB_CSS+PROVIDER_CSS+SIZE_CSS+GLASS_CSS+NAV_CSS+HOMEGRID_CSS+MEMHUB_CSS+MEMTHEME_CSS+WORKHUB_CSS+MANAGEHUB_CSS+GLANCE_CSS+AIBOT_CSS;

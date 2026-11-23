@@ -164,16 +164,17 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       let send = messages, dropped = 0;
       // 2.2.11: process 훅이 달려 있으면 리스가 이미 번호로 뺐다(아래는 훅이 없는 환경의 예비 — 요청 글 앞부분 맞추기)
       if (c.trim && procOn) dropped = Math.max(0, trimState.from);
-      else if (c.trim) { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped;
+      else if (c.trim) { try { const r = trimCovered(messages, cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }); send = r.messages; dropped = r.dropped;
         // 11-22: 뺄 옛 대화가 있는데 하나도 못 뺐으면(요청 글 모양이 달라 못 찾음) 기록에 알린다
-        if (!dropped && trimUntil(cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }) >= 0) logEvent({ area: "기억 넣기", title: "이 프리셋에서는 옛 대화를 찾지 못해 빼지 못했어요(‘남길 최근 턴’이 동작하지 않음)" }); }
+        if (!dropped && trimUntil(cur.chat.message ?? [], { keepTurns: c.trim, step: c.trim, coveredAt: c.coveredAt }) >= 0) logEvent({ area: "기억 넣기", title: "이 프리셋에서는 옛 대화를 찾지 못해 빼지 못했어요(‘남길 최근 턴’이 동작하지 않음)" });
+        } catch (e) { send = messages; dropped = 0; log("옛 대화 빼기 실패", e?.message ?? e); logFailure({ area: "기억 넣기", title: "요약된 옛 대화를 빼지 못했어요", error: e, fallback: "옛 대화는 그대로 두고 기억 블록만 넣었어요", ctx: { 메시지: (cur.chat.message ?? []).length } }); } }
       // 11-22: 빼기는 리스가 토큰을 센 뒤(요청 직전)라 리스 정보창 '입력 토큰'은 빼기 전 숫자 → 기록에 줄인 양을 알린다
       const saved = send !== messages && dropped ? trimSaved(messages, send) : 0;
       if (saved) logEvent({ area: "기억 넣기", title: `이번 요청에서 옛 대화 ${dropped}개를 빼서 약 ${saved.toLocaleString()}토큰을 줄였어요`, detail: { 안내: "리스 정보창의 '입력 토큰'은 빼기 전 숫자예요. 실제로 보낸 양은 이만큼 적어요." } });
       last = { at: Date.now(), injected: true, manifest: c.manifest, text: c.text, dropped, saved };
       logEvent({ area: "기억 넣기", title: "요청에 기억 블록을 넣었어요", detail: { 글자: c.text?.length ?? 0, 위치: c.position } });
       return insertBlock(send, wikiAware(c.text, send), c.position);
-    } catch (e) { log("주입 실패", e?.message ?? e); return messages; }
+    } catch (e) { log("주입 실패", e?.message ?? e); last = { at: Date.now(), injected: false, manifest: null, reason: `실패: ${e?.message ?? e}` }; logFailure({ area: "기억 넣기", title: "이번 요청에 기억 블록을 넣지 못했어요", error: e, fallback: "원래 요청을 그대로 보냈어요" }); return messages; }
   }
   // 지금 열린 채팅에 다음 요청 때 들어갈 블록을 미리 만들어 본다. 저장 데이터·사용 횟수는 건드리지 않는다.
   async function preview() {

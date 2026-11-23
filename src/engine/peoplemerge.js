@@ -86,4 +86,25 @@ export function applyEntryMerge(folder, keep, src, plan, choices = {}) {
   if (kp) addAliases(keep.pk, names(kd).concat(names(sd)));
   const keepName = folder.people?.[keep.pk]?.name ?? kd?.title ?? keep.name;
   if (keepName) relinkNames(folder, [src.name, ...names(sd)], keepName);
+  // 11-23: 문서 id로 저장된 성인 기록(관계 횟수·체내 정액·성욕 등 life, 성인 프로필 nsfw)도 남길 문서로 — 예전엔 합칠 쪽 기록이 사라졌다
+  const kid = keep.docId ?? (kd ? kd.id : null) ?? (sd && !kd ? sd.id : null), sid = src.docId;
+  if (kid && sid && kid !== sid) moveDocData(folder, sid, kid);
+}
+const num = (v) => Number(v) || 0;
+export function moveDocData(folder, sid, kid) {
+  const lp = folder.life?.p;
+  if (lp?.[sid]) {
+    const a = lp[kid], b = lp[sid];
+    if (!a) lp[kid] = b;
+    else {
+      const sex = { ...(b.sex ?? {}), ...(a.sex ?? {}) };
+      sex.by = { ...(b.sex?.by ?? {}) };
+      for (const [k, x] of Object.entries(a.sex?.by ?? {})) sex.by[k] = sex.by[k] ? { ...sex.by[k], ...x, n: num(sex.by[k].n) + num(x.n) } : x;
+      sex.n = num(a.sex?.n) + num(b.sex?.n);
+      const cum = a.cum || b.cum ? { ...(b.cum ?? {}), ...(a.cum ?? {}), ml: num(a.cum?.ml) + num(b.cum?.ml), sperm: num(a.cum?.sperm) + num(b.cum?.sperm) } : undefined;
+      lp[kid] = { ...b, ...a, sex, ...(cum ? { cum } : {}), hist: [...(b.hist ?? []), ...(a.hist ?? [])].slice(-20), uses: { ...(b.uses ?? {}), ...(a.uses ?? {}) } };
+    }
+    delete lp[sid];
+  }
+  if (folder.nsfw?.[sid]) { folder.nsfw[kid] ??= folder.nsfw[sid]; delete folder.nsfw[sid]; }
 }

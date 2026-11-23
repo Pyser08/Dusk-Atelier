@@ -66,7 +66,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     const old = {}; for (const n of nodes) old[n.id] = n;
     romance = !!map.romance; ringLabel = map.ringLabel || "호감";
     nodes = map.nodes.map((n) => ({ ...n, x: 0, y: 0, z: 0, tx: 0, tz: 0, ty: 0, vx: 0, vy: 0, vz: 0, pop: 1 }));
-    const lay = layoutNodes(nodes);
+    const lay = layoutNodes(nodes.filter((n) => !n.persona));   // 11-23 옛 페르소나는 고리 대신 가운데서 나와 함께 돈다
     factions = lay.factions; facAng = {}; factions.forEach((f, i) => { facAng[f] = i; });
     const prev = {};
     byId = { u: user };
@@ -157,6 +157,13 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
       st.springUntil = 0;
       for (const n of nodes) { n.x += (n.tx - n.x) * 0.12; n.z += (n.tz - n.z) * 0.12; n.y += (n.ty - n.y) * 0.12; n.pop = Math.min(1, (n.pop ?? 1) + 0.08); }
     }
+    // 11-23 채팅 도중 바뀐 페르소나: 지금의 나와 옛 페르소나가 가운데서 서로 빙글빙글 돈다(움직임 줄이기면 멈춘 채 나란히)
+    const pers = nodes.filter((n) => n.persona);
+    if (pers.length) {
+      const m = pers.length + 1, R = Math.min(RMIN * 0.6, 30 + 6 * pers.length), a0 = reduce ? 0 : performance.now() * 0.0005;
+      const put = (n, i) => { const a = a0 + TAU * i / m; n.x = n.tx = R * Math.cos(a); n.z = n.tz = R * Math.sin(a); n.y = n.ty = 0; };
+      put(user, 0); pers.forEach((n, i) => put(n, i + 1));
+    } else if (user.x || user.z) { user.x = 0; user.z = 0; }
     st.flatT += (st.flat - st.flatT) * 0.12;
     let f = st.flatT; if (Math.abs(st.flat - f) < 0.002) f = st.flatT = st.flat;
     if (!st.flat && !st.drag) {
@@ -194,7 +201,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     const labelQ = [];
 
     // 바닥: 소속 구역 + 호감도 링
-    const c0 = proj(user, f, S, yaw, pitch);
+    const c0 = proj({ x: 0, y: 0, z: 0 }, f, S, yaw, pitch);   // 링 중심은 원점(페르소나가 돌 때 나도 움직임)
     if (factions.length) {
       const sector = 360 / factions.length;
       factions.forEach((fa, gi) => {
@@ -227,7 +234,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     const all = [user, ...nodes];
     for (const n of all) {
       const p = proj(n, f, S, yaw, pitch), fl = proj({ x: n.x, y: 0, z: n.z }, f, S, yaw, pitch);
-      const rad = n.user ? 15 : 7 + (n.imp / 100) * 6;
+      const rad = n.user ? 15 : n.persona ? 12 : 7 + (n.imp / 100) * 6;
       screen[n.id] = { x: p.x, y: p.y, fx: fl.x, fy: fl.y, r: rad * (0.75 + 0.25 * p.k) * Math.sqrt(cam.zm * st.uz) * (n.user ? 1 : 0.35 + 0.65 * easeBack(n.pop ?? 1)), d: p.d, n };
     }
     // 높이 눈금·기둥
@@ -271,7 +278,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
       if (pathRes) al = n.user || pathRes.n[n.id] ? 1 : 0.15;
       if (!visibleN(n)) al = 0.06;
       ctx.globalAlpha = al;
-      if (n.user) {
+      if (n.user || n.persona) {
         const g = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, s.r * 2.6); g.addColorStop(0, rgba(TH.acc, 0.35)); g.addColorStop(1, rgba(TH.acc, 0));
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 2.6, 0, TAU); ctx.fill();
         const gg = ctx.createLinearGradient(s.x - s.r, s.y - s.r, s.x + s.r, s.y + s.r); gg.addColorStop(0, TH.acc); gg.addColorStop(1, TH.accb); ctx.fillStyle = gg;
@@ -286,8 +293,8 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
       if (isSel || n.status !== "missing") { ctx.lineWidth = isSel ? 3 : 1.5; ctx.strokeStyle = isSel ? TH.text : TH.surf; ctx.stroke(); }
       const ap = st.hl && curTS[n.id] && !n.user;
       if (ap) { ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 6 + 3 * pulse, 0, TAU); ctx.strokeStyle = rgba(TH.text, 0.5 + 0.4 * pulse); ctx.lineWidth = 2; ctx.stroke(); }
-      const showL = ap || n.user || isSel || hotId === n.id || n.imp >= 50 || cam.zm * st.uz > 1.5 || f > 0.5 || (!si.none && si.set[n.id]);
-      if (showL && visibleN(n)) labelQ.push({ n, s, al, ap, force: n.user || isSel || hotId === n.id });
+      const showL = ap || n.user || n.persona || isSel || hotId === n.id || n.imp >= 50 || cam.zm * st.uz > 1.5 || f > 0.5 || (!si.none && si.set[n.id]);
+      if (showL && visibleN(n)) labelQ.push({ n, s, al, ap, force: n.user || n.persona || isSel || hotId === n.id });
     });
     ctx.globalAlpha = 1;
     // 이름표: 겹치면 다른 자리로, 그래도 겹치면 숨김

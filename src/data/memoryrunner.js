@@ -43,6 +43,7 @@ import { loadFairOn, loadDiceOn } from "./fairplay.js";
 import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
 import { loadUserNames } from "./usernames.js";
+import { withoutPast } from "../engine/pastpersona.js";
 import { memoryState } from "../engine/memoryswitch.js";
 import { chatKeyOf, legacyChatKeyOf } from "../engine/chatkey.js";
 
@@ -79,7 +80,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   let userCache = { at: 0, names: [] };
   async function userNames() {
     if (Date.now() - userCache.at < 60e3) return userCache.names;
-    const names = await loadUserNames(api);   // 없으면 일반 이름만
+    const names = withoutPast(await loadUserNames(api));   // 11-23 옛 페르소나 이름은 나로 묶지 않음   // 없으면 일반 이름만
     userCache = { at: Date.now(), names };
     return names;
   }

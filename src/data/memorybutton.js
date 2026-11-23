@@ -1,13 +1,5 @@
-// 채팅 메뉴(입력 옆)의 떠 있는 버튼(v1.9.3부터 인물 관계도로 연결)을 설정에서 켜고 끄기 (v1.6.5). 기본 켜짐.
-export const MEMORY_BUTTON_KEY = "dusk.ui.memoryButton";
-export async function loadMemoryButtonOn(api) {
-  try {
-    const raw = await api.pluginStorage.getItem(MEMORY_BUTTON_KEY);
-    return !(raw === "off" || raw === false || raw === "false");
-  } catch {
-    return true;
-  }
-}
+// 채팅 메뉴의 떠 있는 버튼 만들기(장기기억 애드온). 켜고 끄기 설정은 memorybuttonkey.js(코어).
+export { MEMORY_BUTTON_KEY, loadMemoryButtonOn } from "./memorybuttonkey.js";
 import { createFloatButton } from "./floatbtn.js";
 // 2.2.25: ensureDoc(리스 화면 문서, 권한 있을 때)가 있으면 Dusk가 직접 그린 동그란 반투명 버튼(끌어서 옮김)을 쓰고, 없으면 리스 버튼
 export function createMemoryButton(api, { name, icon, open, log, ensureDoc = null }) {

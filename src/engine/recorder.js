@@ -164,6 +164,8 @@ import { RACE_STAGE1 } from "./races.js";   // 0.3.22 소문·목표·세계 문
 // 2.2.30: 성적인 장면인지(성인 줄을 다 물을지) — 글에 성적 행위·노출·애무 낱말이 있으면. 놓치면 그 턴 체위·약점 기록만 빠지고 욕구·피로는 늘 묻는다
 const HOT_RE = /섹스|성관계|관계를 (?:가졌|맺)|삽입|사정|절정|오르가즘|애무|신음|젖꼭지|유두|가슴을 (?:만|주무|움켜|핥|빨)|알몸|나체|벗(?:기|겼|었|은|어)|속옷|팬티|브라|허벅지 ?안|사타구니|성기|음경|자지|보지|클리|질 ?안|항문|엉덩이를 (?:만|주무|움켜)|핥|빨(?:았|아|고)|펠라|커닐|자위|발정|흥분(?:해|한|된)|야하|음란|키스|입맞|입을 맞|자국을 남|키스 ?마크|목덜미|혀를 (?:섞|넣)|쓰다듬|끌어안|껴안|\b(?:sex|fuck|cum|orgasm|moan|naked|nude|nipple|penis|cock|pussy|clit|blowjob|lick|kiss|aroused|horny)/i;
 export const isHotText = (t) => HOT_RE.test(String(t ?? ""));
+// 원문에서 성적인 낱말이 든 첫 문장(그대로 인용, 120자까지) — 없으면 ""
+export function hotQuote(t) { const s = String(t ?? "").split(/(?<=[.!?。…\n])/).map((x) => x.trim()).find((x) => HOT_RE.test(x)); return s ? s.slice(0, 120) : ""; }
 export const NSFW_LITE_STAGE1 = [
   "",
   "",
@@ -234,7 +236,7 @@ export function nsfwFrom(raw, known = []) {
     else if (tag === "past" && f[2] && f[3]) out.push({ kind: "past", name, partner: canonName(String(f[2]).trim(), known) || String(f[2]).trim(), count: Number(String(f[3]).replace(/[^\d]/g, "")) || 0, est: /estim|추정/i.test(f[4] ?? "") });
     else if (tag === "zone" && f[2]) out.push({ kind: "zone", name, part: f[2], level: /^\s*0\s*$|numb|불감/i.test(String(f[3] ?? "")) ? 0 : Number(f[3]) || 2, note: (f[4] ?? "").slice(0, 80), spot: (f[5] ?? "").slice(0, 40) });
     else if (tag === "trait" && f[2] && f[3] && EXT_TRAITS.has(f[2].toLowerCase())) out.push({ kind: "trait", name, field: f[2].toLowerCase(), text: f[3].slice(0, 100) });
-    if (out.length >= 12) break;
+    if (out.length >= 40) break;   // 11-23: 12개에서 끊으면 여러 인물 장면에서 뒤쪽 act(관계 횟수) 줄이 버려졌다
   }
   return out;
 }
@@ -485,7 +487,9 @@ export function buildEnvelope(run, rec) {
     const lewd = one("lewd"), opol = run.policies["openness.score"];
     // 2.2.6 음란도: 줄이 없어도 처음이면 채운다 — 기본 0, 무작위 설정에서 ‘음란도’를 켰으면 이름별 무작위
     if (opol && slotOn("openness.score") && !p.failed) {
-      const step = lewd ? coerceInt(String(lewd[0]).replace(/^\+/, ""), -3, 3, 0) : 0, q = lewd ? exactQuote(lewd[1], src) : "";
+      // 11-23 버그: 관계를 해도 음란도가 그대로였다 — 기록기가 lewd 줄을 거의 안 써서. 이번 응답에 이 인물의 관계·절정(act)이 있고 lewd 줄이 없으면 한 칸 올린다
+      const did = !lewd && (stage1?.nsfw ?? []).some((x) => x.kind === "act" && (x.act === "sex" || x.act === "climax") && [x.name, x.partner].some((n) => nk(n) === nk(p.name)));
+      const step = lewd ? coerceInt(String(lewd[0]).replace(/^\+/, ""), -3, 3, 0) : did ? 1 : 0, q = lewd ? exactQuote(lewd[1], src) : did ? hotQuote(src) : "";
       const has = (doc?.metrics ?? []).some((x) => x.slot_id === "openness.score");
       if (!has && (opol.operations ?? []).includes("init")) { const rv = seedLewd(run.seed, p.name, opol); metricOps.push({ document_ref: p.ref, slot_id: "openness.score", target_refs: [], operation: "init", context_key: null, value: rv ?? ((opol.initial_values ?? [0]).includes(0) ? 0 : (opol.initial_values ?? [0])[0]), evidence_refs: ["source:rp"], reason: rv != null ? "처음 등장 — 무작위 음란도" : "기본값에서 시작" }); }
       const amount = step ? nearest(opol.delta_values, LIKE_STEP[step]) : null;

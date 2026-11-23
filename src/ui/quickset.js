@@ -4,7 +4,7 @@ import { switchEl, setSwitch } from './kit.js';
 import { loadFairOn, loadDiceOn, DICE_KEY } from '../data/fairplay.js';
 import { loadStoryTimeOn } from '../data/storytime.js';
 import { diceRow } from './dicedetail.js';
-import { loadMemoryButtonOn, MEMORY_BUTTON_KEY } from '../data/memorybutton.js';
+import { loadMemoryButtonOn, MEMORY_BUTTON_KEY } from '../data/memorybuttonkey.js';
 import { loadDiceShow, loadCallShow, DICE_SHOW_KEY, CALL_SHOW_KEY, isBardHost } from '../data/turninfo.js';
 
 export async function quickSettingsCard(ctx) {

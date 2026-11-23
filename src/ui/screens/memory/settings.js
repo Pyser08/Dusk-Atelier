@@ -100,7 +100,7 @@ export async function renderGlobalSettings(ctx, host, { redraw, panel = false, b
       num("최근 메시지 겹침 제외(개)", () => S.inject.recentSkip, (s, v) => { s.inject.recentSkip = v; }, { max: 40, def: 8 }),
       h("label", { class: "rb-mem-field" }, h("span", null, "삽입 위치"), h("select", { class: "rb-input", onChange: (e) => save((s) => { s.inject.position = e.target.value; }) }, [["end", "맨 뒤 (권장)"], ["beforeLastUser", "마지막 사용자 메시지 앞"], ["afterSystem", "시스템 프롬프트 뒤"]].map(([v, l]) => h("option", { value: v, selected: S.inject.position === v }, l)))),
       h("details", { class: "rb-mem-man" }, h("summary", null, "마지막 요청에 들어간 기억 보기"), man ? h("div", null, h("p", { class: "rb-muted" }, `${new Date(last.at).toLocaleTimeString()} · ${last.injected ? `넣음 (약 ${man.tokens} 토큰)` : "넣지 않음"}`),
-        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), potOn(S) ? previewBox(ctx) : null) : null);
+        h("ul", null, [...man.included.map((x) => `포함 · ${x.kind === "scene" ? "현재 상황" : x.name ?? x.kind} (${x.tokens})`), ...man.excluded.map((x) => `제외 · ${x.name} (${x.tokens}, 예산 초과)`)].map((t) => h("li", null, t))), last.text ? h("pre", { class: "rb-mem-pre" }, last.text) : null) : h("p", { class: "rb-muted" }, "아직 요청이 없었어요.")), potOn(S) ? previewBox(ctx) : null) : null);
   // 흐름 설정·공유 칸은 읽는 데 오래 걸려서 화면을 먼저 보여 주고 뒤에서 채운다. 접힌 설정은 처음 열 때 채운다.
   let loaded = false;
   const loadHeavy = () => {

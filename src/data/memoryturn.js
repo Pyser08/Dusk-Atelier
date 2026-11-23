@@ -43,6 +43,7 @@ import { makeTools } from "./memorytools.js";
 import { potConfirm } from "../engine/memoryswitch.js";
 import { MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2 } from "./memory-default-prompts.js";
 import { chatKeyOf } from "../engine/chatkey.js";
+const NSFW_QUEUE_MAX = 400;   // 턴 뒤 반영 전까지 쌓이는 줄(지난 대화 분석이 묶여 돌 때 여러 응답분)
 import { gateReports } from "../engine/fertility.js";   // 0.3.22 피임·체내 정액량·이력
 const nkey = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 import { readGauge } from "./gaugemult.js";
@@ -241,9 +242,9 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         const ev = cs.reports.filter((x) => x.period || x.loss).map((x) => ({ name: x.name, period: !!x.period, loss: !!x.loss }));
         if (ev.length) cycleSync.push(...ev); } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
       if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
-      if (rec.stage1?.human?.length) { nsfwQueue.push(...rec.stage1.human); while (nsfwQueue.length > 40) nsfwQueue.shift(); }
-      if (rec.stage1?.extra?.length) { nsfwQueue.push(...rec.stage1.extra); while (nsfwQueue.length > 60) nsfwQueue.shift(); }   // 0.3.22 소문·목표·세계·흔적
-      if (rec.stage1?.nsfw?.length) { nsfwQueue.push(...rec.stage1.nsfw); while (nsfwQueue.length > 40) nsfwQueue.shift(); }
+      // 11-23 버그: 종류마다 합계 40·60개로 잘라 성인 줄을 넣을 때 앞서 넣은 정액·흔적 줄이 버려졌다 — 모두 넣고 한 번만, 넉넉히 자른다
+      nsfwQueue.push(...(rec.stage1?.human ?? []), ...(rec.stage1?.extra ?? []), ...(rec.stage1?.nsfw ?? []));   // 0.3.22 소문·목표·세계·흔적
+      while (nsfwQueue.length > NSFW_QUEUE_MAX) nsfwQueue.shift();
       if (rec.stage1?.drive) { driveQueue.push(rec.stage1.drive); while (driveQueue.length > 6) driveQueue.shift(); }   // 장면 판단 관찰(턴 하나 = 한 묶음)   // addon-rebuild: 채팅별 성인 프로필 변화(애드온이 턴 뒤 폴더에 반영)
       lastRecord = { at: Date.now(), batch: run.batch, ...summarize(rec, env) };
       tellTurn({ rp: run.rp, batch: run.batch, key: fullKey, source: Date.now() < backfillUntil ? "backfill" : "live", people: rec.people.filter((p) => !p.failed).map((p) => ({ name: p.name, aliases: Array.isArray(p.doc?.aliases) ? p.doc.aliases : [], memory: [personaOf(p.doc?.id), (p.lines ?? []).map((l) => typeof l === "string" ? l : l?.text ?? "").join("\n")].filter(Boolean).join("\n").slice(0, 1800) })) });

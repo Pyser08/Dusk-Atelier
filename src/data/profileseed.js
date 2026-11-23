@@ -9,11 +9,12 @@ import { rollAdult } from "../engine/adultseed.js";
 import { USER_NSFW_ID, userNsfwDoc, setUserNsfwNames } from "../engine/usernsfw.js";
 import { dbRead } from "./dbcache.js";
 import { userNameList, primaryUserName } from "./usernames.js";
+import { withoutPast } from "../engine/pastpersona.js";
 
 // 지금 페르소나 이름·설명(유저 칸 성인 프로필·성별 짐작에 씀)
 export async function personaInfo(api) {
   let db = null; try { db = api ? await dbRead(api, ["username", "personas", "selectedPersona"]) : null; } catch { db = null; }
-  if (db) setUserNsfwNames(userNameList(db));
+  if (db) setUserNsfwNames(withoutPast(userNameList(db)));
   const p = (Array.isArray(db?.personas) ? db.personas : [])[db?.selectedPersona ?? 0];
   return { name: primaryUserName(db), desc: String(p?.personaPrompt ?? "").trim().slice(0, 2500) };
 }

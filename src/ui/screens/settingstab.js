@@ -12,7 +12,7 @@ import { renderCleanup, fullBackup, fullRestore } from './tools.js';
 import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
-import { loadMemoryButtonOn } from '../../data/memorybutton.js';
+import { loadMemoryButtonOn } from '../../data/memorybuttonkey.js';
 import { createCellar, loadCellarEnabled, saveCellarEnabled, loadCellarUrl, saveCellarUrl, CELLAR_DEFAULT_URL } from '../../data/cellar.js';
 import { createCellarBackups } from '../../data/cellarbackup.js';
 import { createCellarUpdate } from '../../data/cellarupdate.js';
