@@ -21,15 +21,26 @@ test("파싱·빼기", () => {
   assert.ok(!stripThoughts(msg).includes("dusk-thought") && stripThoughts(msg).includes("별로"));
 });
 
-test("화면: 본문에서 빼고 끝에 💭 아이콘, 누르면(details) 풍선 + 이미지", () => {
+test("화면: 그 행동·대사 끝에 💭 아이콘, 누르면(details) 풍선 + 이미지", () => {
   const out = renderThoughts(msg, () => "{{emotion::shy}}");
-  assert.ok(!out.includes("<dusk-thought") && !out.split("<details")[0].includes("들킨"));
-  assert.match(out, /<details x-dusk="thoughts"[^>]*><summary[^>]*>💭/);
-  assert.ok(out.indexOf("별로") < out.indexOf("<details"), "본문 끝 다음에");
-  assert.match(out, /data-dusk="thought"/); assert.match(out, /\{\{emotion::shy\}\}/); assert.match(out, /rgba\(255,255,255,\.10\)/);
-  assert.equal(renderThoughts(out), out, "두 번 처리해도 같음");
-  const part = renderThoughts(`본문 <dusk-thought name="시로코" emo="기쁨">반쯤`);
-  assert.equal(part, "본문");
+  assert.ok(!out.includes("<dusk-thought"));
+  assert.match(out, /고개를 돌렸다\. <details x-dusk="thoughts"[^>]*><summary[^>]*>💭<\/summary>/, "같은 줄 끝에");
+  assert.ok(out.indexOf("<details") < out.indexOf("별로"), "본문 맨 아래가 아니라 그 자리");
+  assert.match(out, /data-dusk="thought"/); assert.match(out, /\{\{emotion::shy\}\}/);
+  assert.equal(renderThoughts(`본문 <dusk-thought name="시로코" emo="기쁨">반쯤`), "본문");
+  const two = renderThoughts('"가자." <dusk-thought name="A">하나</dusk-thought>\n"응." <dusk-thought name="B">둘</dusk-thought>');
+  assert.equal((two.match(/<details/g) ?? []).length, 2);
+});
+
+test("모델이 고르는 이미지: img 속성 읽기 + 안내에 인물별 실제 이미지 목록", async () => {
+  const { buildAssetIndex } = await import("../src/engine/imgtagfix.js");
+  const { assetList } = await import("../src/engine/innerthought.js");
+  assert.equal(parseThoughts('<dusk-thought name="A" emo="기쁨" img="Hoshino_smile">x</dusk-thought>')[0].img, "Hoshino_smile");
+  const list = assetList(buildAssetIndex(["Hoshino_smile", "Hoshino_cry", "Shiroko_blush"]));
+  assert.match(list, /Hoshino: Hoshino_smile, Hoshino_cry/); assert.match(list, /Shiroko: Shiroko_blush/);
+  const h = hintText(normSettings({ on: true }), { assets: list });
+  assert.match(h, /img="이미지 이름"/); assert.match(h, /Shiroko_blush/); assert.match(h, /행동이나 대사 바로 뒤/);
+  assert.ok(!hintText(normSettings({ on: true, image: false }), { assets: list }).includes("img="));
 });
 
 test("감정 이미지 고르기: 이름+감정, 동의어, 다른 인물 이미지는 피함", () => {
@@ -42,6 +53,7 @@ test("감정 이미지 고르기: 이름+감정, 동의어, 다른 인물 이미
 test("출력 방식대로 태그", () => {
   assert.equal(detectStyle(['<img="a_b">']), "imgeq");
   assert.equal(detectStyle(["{{asset::x}}"]), "asset");
+  assert.equal(detectStyle(["그냥 글"]), "imgeq");
   assert.equal(imageTag({ kind: "asset", name: "a" }, "imgeq"), '<img="a">');
   assert.equal(imageTag({ kind: "asset", name: "a" }, "img"), "{{img::a}}");
   assert.equal(imageTag({ kind: "emotion", name: "a" }, "imgeq"), "{{emotion::a}}");

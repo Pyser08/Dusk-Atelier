@@ -15,13 +15,29 @@ export function normSettings(raw) {
 export const summary = (s) => (s.on ? `켜짐 · 인물당 ${s.min === s.max ? s.max : `${s.min}~${s.max}`}번` : "꺼짐");
 
 // 모델에게 주는 안내(요청 사본에만, 응답마다). emos: 쓸 수 있는 감정 이름(봇 감정 이미지에서 뽑음)
-export function hintText(s, { emos = [], user = "" } = {}) {
+// assets: [{ char, kws:[…], names:[…] }] — 이 봇·켜진 모듈의 실제 이미지(인물별). 있으면 모델이 img=에 그대로 골라 쓴다
+export function assetList(idx, { maxPer = 40, maxAll = 2400 } = {}) {
+  if (!idx?.chars?.size) return "";
+  const lines = []; let len = 0;
+  for (const c of idx.chars.values()) {
+    const names = [...new Set(c.entries.map((e) => e.name))].slice(0, maxPer);
+    if (!names.length) continue;
+    const line = `- ${c.name || "(이름 없음)"}: ${names.join(", ")}`;
+    if (len + line.length > maxAll) break;
+    lines.push(line); len += line.length;
+  }
+  return lines.join("\n");
+}
+export function hintText(s, { emos = [], user = "", assets = "" } = {}) {
   if (!s.on || s.max < 1) return "";
   const list = (emos.length ? emos : GENERIC_EMOS).slice(0, 30).join(", ");
   const times = s.min === s.max ? `정확히 ${s.max}번` : s.min > 0 ? `${s.min}~${s.max}번` : `0~${s.max}번(어울릴 때만)`;
-  return `${HINT_MARK} 이번 응답 본문 사이 알맞은 곳에, 장면에 나온 인물${user ? `(${user} 제외)` : "({{user}} 제외)"}의 속마음을 인물마다 ${times} 넣어요.\n`
-    + `형식: <${TAG} name="인물 이름" emo="감정">겉으로 말하지 않은 솔직한 생각 1~2문장</${TAG}>\n`
-    + `emo는 다음 중 하나: ${list}\n이 태그 밖 본문은 평소대로 쓰고, 태그 안 글을 본문에 다시 쓰지 않아요.`;
+  const img = s.image && assets ? ` img="이미지 이름"` : "";
+  return `${HINT_MARK} 이번 응답에서 장면에 나온 인물${user ? `(${user} 제외)` : "({{user}} 제외)"}의 속마음을 인물마다 ${times} 넣어요.\n`
+    + `그 인물의 행동이나 대사 바로 뒤(같은 줄 끝)에 붙여요: <${TAG} name="인물 이름" emo="감정"${img}>겉으로 말하지 않은 솔직한 생각 1~2문장</${TAG}>\n`
+    + `emo는 다음 중 하나: ${list}\n`
+    + (img ? `img는 아래 목록에서 그 인물·그 감정에 맞는 이미지 이름을 글자 그대로 골라요(그 인물 이미지가 없으면 img를 빼요):\n${assets}\n` : "")
+    + `이 태그 밖 본문은 평소대로 쓰고, 태그 안 글을 본문에 다시 쓰지 않아요.`;
 }
 
 const RE = new RegExp(`<${TAG}\\b([^>]*)>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi");
@@ -30,7 +46,7 @@ export function parseThoughts(text) {
   const out = [];
   for (const m of String(text ?? "").matchAll(RE)) {
     const name = attrOf(m[1], "name").trim(), body = m[2].replace(/<[^>]+>/g, "").trim();
-    if (name && body) out.push({ name: name.slice(0, 40), emo: attrOf(m[1], "emo").trim().slice(0, 30), text: body.slice(0, 400) });
+    if (name && body) { const t = { name: name.slice(0, 40), emo: attrOf(m[1], "emo").trim().slice(0, 30), text: body.slice(0, 400) }; const img = attrOf(m[1], "img").trim(); if (img) t.img = img.slice(0, 120); out.push(t); }
   }
   return out;
 }
@@ -63,7 +79,8 @@ export function detectStyle(texts = []) {
   if (/<img\s*=\s*["']?[^>]+>/i.test(all)) return "imgeq";
   if (/\{\{asset::/i.test(all)) return "asset";
   if (/\{\{image::/i.test(all)) return "image";
-  return "img";
+  if (/\{\{img::/i.test(all)) return "img";
+  return "imgeq";   // 리스 기본 에셋 태그(모듈 이미지도 찾음)
 }
 export function imageTag(pick, style = "img") {
   if (!pick) return "";
@@ -84,23 +101,22 @@ export function bubbleHtml(t, img = "") {
 }
 // 화면 글: 본문의 속마음 태그는 빼고, 본문 끝 옆에 생각 풍선 아이콘(💭)을 붙인다. 누르면 그 응답의 속마음 풍선들이 펼쳐진다
 // (<details> — 스크립트 없이 리스 소독기를 지나도 열고 닫힘). 스트리밍 중 아직 안 닫힌 태그는 숨긴다(날글이 보이지 않게)
-const ICON = "list-style:none;display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:3px 10px;border-radius:999px;font-size:13px;line-height:1.4;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);user-select:none";
-export function thoughtsBox(items, imgFor = () => "") {
-  if (!items.length) return "";
-  const bubbles = items.map((t) => { let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; } return bubbleHtml(t, img); }).join("");
-  return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:block;margin:6px 0 2px"><summary aria-label="속마음 보기" title="속마음 보기" style="${ICON}">💭<small style="font-size:11px;opacity:.75">${items.length}</small></summary>`
-    + `<span style="display:block;margin-top:8px">${bubbles}</span></details>`;
-}
+const ICON = "list-style:none;display:inline-flex;align-items:center;gap:4px;cursor:pointer;padding:1px 7px;vertical-align:baseline;border-radius:999px;font-size:13px;line-height:1.4;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);user-select:none";
+// 태그가 있던 자리(그 인물의 행동·대사 끝)에 💭 아이콘 하나. 누르면 그 속마음 풍선이 펼쳐진다
 export function renderThoughts(text, imgFor = () => "") {
-  if (typeof text !== "string" || !text.toLowerCase().includes(`<${TAG}`) || text.includes('x-dusk="thoughts"')) return text;
-  const items = [];
-  let out = text.replace(RE, (all, attrs, body) => {
-    const t = { name: attrOf(attrs, "name").trim(), emo: attrOf(attrs, "emo").trim(), text: body.replace(/<[^>]+>/g, "").trim() };
-    if (t.name && t.text) items.push(t);
-    return "";
+  if (typeof text !== "string" || !text.toLowerCase().includes(`<${TAG}`)) return text;
+  let out = text.replace(new RegExp(`[ \\t]*\\n?[ \\t]*<${TAG}\\b([^>]*)>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi"), (all, attrs, body) => {
+    const t = { name: attrOf(attrs, "name").trim(), emo: attrOf(attrs, "emo").trim(), img: attrOf(attrs, "img").trim(), text: body.replace(/<[^>]+>/g, "").trim() };
+    if (!t.name || !t.text) return "";
+    return " " + thoughtIcon(t, imgFor);
   });
-  out = out.replace(new RegExp(`<${TAG}\\b[^>]*>?[\\s\\S]*$`, "i"), "").replace(/\n{3,}/g, "\n\n").replace(/\s+$/, "");
-  return items.length ? `${out}\n${thoughtsBox(items, imgFor)}` : out;
+  out = out.replace(new RegExp(`\\s*<${TAG}\\b[^>]*>?[\\s\\S]*$`, "i"), "");
+  return out;
+}
+export function thoughtIcon(t, imgFor = () => "") {
+  let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; }
+  return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:inline;margin:0"><summary aria-label="${esc(t.name)} 속마음 보기" title="${esc(t.name)} 속마음" style="${ICON}">💭</summary>`
+    + `<span style="display:block">${bubbleHtml(t, img)}</span></details>`;
 }
 
 // 상태창 ‘속마음’ 탭: 채팅 글 전체에서 그 인물의 속마음을 모은다(최근 것이 위)

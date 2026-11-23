@@ -4,7 +4,8 @@
 //  · 화면(display): 태그 → 반투명 생각 풍선 + 그 감정의 이미지(봇이 이미지를 내보내는 방식대로: 감정 이미지 {{emotion::}}, 에셋은 <img=""> / {{img::}} …)
 //  · 장기기억 애드온의 캐릭터 상태창(이름 누르기)에 ‘속마음’ 탭: ext svc "innerthought".tabFor(이름들)
 // 설정은 이 애드온 저장소(dusk.storage "settings").
-import { normSettings, summary, hintText, stripThoughts, renderThoughts, pickImage, imageTag, detectStyle, collectFromMessages, thoughtsFor, cardTabHtml, emotionWords, HINT_MARK, TAG } from "../../src/engine/innerthought.js";
+import { buildAssetIndex, resolveTag } from "../../src/engine/imgtagfix.js";
+import { normSettings, summary, hintText, assetList, stripThoughts, renderThoughts, pickImage, imageTag, detectStyle, collectFromMessages, thoughtsFor, cardTabHtml, emotionWords, HINT_MARK, TAG } from "../../src/engine/innerthought.js";
 import { insertHint } from "../../src/engine/imghint.js";
 import { readChar, readChat } from "../../src/data/apiread.js";
 import { loadPrimaryUserName } from "../../src/data/usernames.js";
@@ -32,14 +33,29 @@ export async function activate(api, ctx) {
         if (view?.key === key) { at = Date.now(); return view; }
         const emotions = (ch?.emotionImages ?? []).map((a) => a?.[0]).filter(Boolean).map(String);
         const assets = (ch?.additionalAssets ?? []).map((a) => a?.[0]).filter(Boolean).map(String);
+        // 켜진 모듈 이미지까지(봇·채팅에 고정한 모듈 + 전역 켜짐) — 이미지 태그 교정과 같은 범위
+        const groups = [[...assets, ...emotions]];
+        try {
+          const db = await api.getDatabase?.(["modules", "enabledModules"]);
+          const on = new Set([...(db?.enabledModules ?? []), ...(ch?.modules ?? []), ...(chat?.modules ?? [])]);
+          for (const m of db?.modules ?? []) { if (!on.has(m?.id)) continue; const l = (m?.assets ?? []).map((a) => a?.[0]).filter(Boolean).map(String); if (l.length) groups.push(l); }
+        } catch { /* 봇 이미지만 */ }
+        const idx = buildAssetIndex(groups);
         const recent = msgs.filter((m) => m?.role !== "user").slice(-12).map((m) => String(m?.data ?? ""));
-        view = { key, botName: ch?.name ?? "", emotions, assets, style: detectStyle(recent), by: collectFromMessages(msgs), emos: emotionWords([...emotions, ...assets], [ch?.name ?? ""]) };
+        view = { key, botName: ch?.name ?? "", emotions, assets, idx, list: assetList(idx), style: detectStyle(recent), by: collectFromMessages(msgs), emos: emotionWords([...emotions, ...assets], [ch?.name ?? ""]) };
         at = Date.now(); rev++;
         return view;
       } catch (e) { log("읽기 실패", e?.message ?? e); return view; } finally { loading = null; }
     })());
   }
-  const imgFor = (v) => (t) => (st.image && v ? imageTag(pickImage(v, t.name, t.emo, { botName: v.botName }), v.style) : "");
+  // 모델이 고른 img= 이름을 이 봇·모듈의 실제 이미지로 맞춘다(이미지 태그 교정과 같은 해석). 없으면 감정 낱말로 짐작
+  const imgFor = (v) => (t) => {
+    if (!st.image || !v) return "";
+    let pick = null;
+    if (t.img && v.idx?.size) { const r = resolveTag(v.idx, t.img, null); if (r?.name) pick = { kind: v.emotions.includes(r.name) && !v.assets.includes(r.name) ? "emotion" : "asset", name: r.name }; }
+    pick ??= pickImage(v, t.name, t.emo, { botName: v.botName });
+    return imageTag(pick, v.style);
+  };
 
   async function beforeRequest(messages, type) {
     try {
@@ -48,7 +64,7 @@ export async function activate(api, ctx) {
       const user = await loadPrimaryUserName(api).catch(() => "");
       const list = messages.filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(HINT_MARK)))
         .map((m) => (typeof m?.content === "string" && m.content.includes(`<${TAG}`) ? { ...m, content: stripThoughts(m.content) } : m));
-      return insertHint(list, hintText(st, { emos: v?.emos ?? [], user }));
+      return insertHint(list, hintText(st, { emos: v?.emos ?? [], user, assets: v?.list ?? "" }));
     } catch (e) { log("요청 안내 실패", e?.message ?? e); return messages; }
   }
   async function onDisplay(text) {
