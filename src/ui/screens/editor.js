@@ -24,6 +24,8 @@ import { segments, summarize } from '../../engine/regexview.js';
 import { parseVars, serializeVars, duplicateKeys } from '../../engine/vars.js';
 import { openLoreDusk } from './loredusk.js';
 import { referenceText } from '../../engine/loredusk.js';
+import { syncLoreTrigger, findLoreTrigger, isLoreTrigger, unsupportedRules } from '../../engine/lorelua.js';
+import { loadLoreSettings } from '../../data/lorerules.js';
 import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, VAR_OP_LABEL, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
 import { FOLDER_SWATCHES, folderTint } from '../theme.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
@@ -394,6 +396,14 @@ export async function openEditorCore(ctx, cfg) {
   const body = h("div", { class: "rb-split" });
   // 우측 하단 버튼 하나: 누르면 [AI 창 · 규칙 시험] 두 개가 펼쳐진다 (AI 창은 봇 편집에서만, 모듈은 규칙 시험만)
   const isBot = cfg.idKey === "chaId";
+  // 플러그인 없이 동작(로어북 규칙 Lua): 트리거가 있으면 저장할 때마다 지금 규칙으로 다시 만든다. 이름 경계·다시 생성 설정은 내 설정을 따른다
+  let loreOpts = { boundary: "short", reroll: "new" };
+  loadLoreSettings(ctx.api).then((v) => { loreOpts = { boundary: v.boundary, reroll: v.reroll }; }).catch(() => {});
+  const syncLoreLua = () => {
+    if (!findLoreTrigger(draft.trigger)) return;
+    const r = syncLoreTrigger(draft.trigger, draft.lorebook, loreOpts);
+    if (r.changed) draft.trigger = r.triggers;
+  };
   // AI 창·룰렛·AI로 제작 탭: 'AI로 봇·페르소나 만들기' 애드온이 있을 때만(2.0.0). ai = { load(), openAiPopup, loadPopupGeom, renderAiTab }
   const ai = ctx.ext?.get("svc", "aibuild") ?? null;
   const hasAi = !!ai;
@@ -909,6 +919,25 @@ export async function openEditorCore(ctx, cfg) {
       es.loreTab = v;
       render();
     }, "로어북 보기")) : null;
+    // 플러그인 없이 동작: 로어북 규칙을 Lua 트리거로 봇·모듈에 같이 넣는다
+    const luaOn = isLore && !!findLoreTrigger(draft.trigger);
+    const luaToggle = isLore && (luaOn || list.some((x) => ruleOf(x) && ruleOf(x).on !== false)) ? btn(luaOn ? "플러그인 없이 동작: 켜짐" : "플러그인 없이 동작: 꺼짐", { size: "sm", icon: luaOn ? "check" : null, title: "켜면 Dusk 규칙을 Lua 트리거로 같이 넣어서, Dusk가 없는 사람도 규칙대로 로어북이 켜져요. 규칙을 고쳐 저장하면 자동으로 다시 만들어져요.", onClick: () => {
+      if (luaOn) {
+        draft.trigger = (draft.trigger ?? []).filter((t2) => !isLoreTrigger(t2));
+        changed();
+        render();
+        ctx.toast("Lua 트리거를 뺐어요. 저장하면 반영돼요");
+        return;
+      }
+      syncRuleContent(list);
+      const r = syncLoreTrigger(draft.trigger ?? [], draft.lorebook, loreOpts);
+      if (r.state === "none") { ctx.toast("Dusk 규칙이 켜진 항목이 없어요"); return; }
+      draft.trigger = r.triggers;
+      changed();
+      render();
+      const bad = unsupportedRules(draft.lorebook);
+      ctx.toast(bad.length ? `Lua 트리거를 넣었어요. 정규식 ${bad.length}곳(${[...new Set(bad.map((x) => x.name))].slice(0, 3).join(", ")}…)은 Dusk가 없으면 안 맞는 것으로 봐요` : "Lua 트리거를 넣었어요. 저장하면 Dusk 없이도 규칙대로 동작해요", { seconds: bad.length ? 8 : 4 });
+    } }) : null;
     // 여러 개 고르기 도구줄
     const bulkBar = selecting ? (() => {
       const picked = () => list.filter((x) => es.multi.has(x));
@@ -1277,7 +1306,7 @@ export async function openEditorCore(ctx, cfg) {
       es.mItem = true;
       render();
     } }, "📦 초기 변수", h("small", null, String(parseVars(draft.defaultVariables).length)))) : null;
-    replace(body, h("div", { class: "side" }, h("div", { class: "rb-treehead" }, loreTabs, filterSeg, searchBox), pinned, bulkBar, items, toneLegend(kind)), pane);
+    replace(body, h("div", { class: "side" }, h("div", { class: "rb-treehead" }, loreTabs, luaToggle, filterSeg, searchBox), pinned, bulkBar, items, toneLegend(kind)), pane);
     es.shown = { kind, items, pane, item: cur };
     restoreView(kind, items, pane, cur);
   }
@@ -2388,6 +2417,7 @@ export async function openEditorCore(ctx, cfg) {
     fIn.focus();
   }
   async function commit() {
+    syncLoreLua();
     await cfg.save(draft, original);
     Object.assign(original, structuredClone(draft));
     for (const k of Object.keys(original)) if (!(k in draft)) delete original[k];
