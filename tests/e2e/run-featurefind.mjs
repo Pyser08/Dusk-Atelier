@@ -12,7 +12,7 @@ const r = await build(opts);
 const browser = await chromium.launch();
 const tabs = TABS.filter((t) => t.id !== "home" && !t.mobileOnly).map((t) => ({ t: t.label, tab: t.id, isTab: true }));
 const RUNS = [
-  [{ memory: true, story: true, erosync: true, provider: true, stealth: true }, (f) => f.tab !== "home"],
+  [{ memory: true, story: true, erosync: true, provider: true, stealth: true, easylore: true }, (f) => f.tab !== "home"],
   [{ addons: true }, (f) => f.tab === "home"]
 ];
 let fails = 0;

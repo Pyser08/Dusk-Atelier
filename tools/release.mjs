@@ -1,4 +1,4 @@
-// 한 번에 배포·릴리스: npm run release   (미리 보기만: npm run release -- --dry)
+// 한 번에 배포·릴리스: npm run release   (미리 보기만: npm run release -- --dry, 본체만: -- --no-addons)
 // 1) 지금 브랜치가 깨끗하고 origin과 같은지, package.json 버전 = CHANGELOG 맨 위 "## v<버전>"인지 확인
 // 2) npm test · 본체 빌드 확인(--check) · 애드온 빌드 확인(--check) — 하나라도 실패하면 멈춤
 // 3) 지금 브랜치를 main에 합침(git worktree로, 지금 브랜치는 그대로). HandOff/README.md가 부딪히면 main 쪽을 남김
@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dry = process.argv.includes("--dry");
+const noAddons = process.argv.includes("--no-addons");   // 본체만 릴리스(애드온 배포 건너뜀)
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { cwd: root, stdio: "inherit", ...opts });
 const git = (args, cwd = root) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const step = (t) => console.log(`\n▶ ${t}`);
@@ -79,7 +80,7 @@ if (remoteTag) {
   }
 }
 
-step("애드온 배포");
-run("node", ["tools/publish-addons.mjs", ...(dry ? ["--dry"] : [])]);
+if (noAddons) console.log("\n(애드온 배포는 건너뛰었어요 — --no-addons)");
+else { step("애드온 배포"); run("node", ["tools/publish-addons.mjs", ...(dry ? ["--dry"] : [])]); }
 
 console.log(`\n✔ ${dry ? "미리 보기 끝 — 실제로는 아무것도 올리지 않았어요." : `${tag} 배포 끝. 릴리스: https://github.com/Pyser08/Dusk-Atelier/releases/tag/${tag}`}`);

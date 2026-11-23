@@ -11,6 +11,8 @@ import { activate as protlinkAddon } from "../../addons/protlink/index.js";
 import { activate as providerAddon } from "../../addons/provider/index.js";
 import { activate as stealthAddon } from "../../addons/stealth/index.js";
 import { activate as modcompatAddon } from "../../addons/modcompat/index.js";
+import { activate as easyloreAddon } from "../../addons/easylore/index.js";
+import { activate as innerthoughtAddon } from "../../addons/innerthought/index.js";
 import { createAddonSdk } from "../../src/data/addonsdk.js";
 import { hunterBot, hunterExtra, selfModule } from "../fixtures/modcompat.js";
 import { renderProvider as _rpv } from "../../src/ui/screens/provider.js";
@@ -218,6 +220,29 @@ window.bootApp = async (seed, opts = {}) => {
     api.addRisuReplacer = async (n, f) => { hooks[n] = f; };
     const { sdk } = createAddonSdk(api, { app: app.ctx, ext: app.ctx.ext, openDusk: async (t) => app.ctx.go(t) }, { id: "modcompat", name: "모듈 호환", version: "0.1.0" });
     await modcompatAddon(api, { ext: app.ctx.ext, app: app.ctx, dusk: sdk, toast: () => {}, openDusk: async () => {} });
+  }
+  // 쉬운 로어북 애드온: 시로코 봇에 '마리'·'히마리' 항목, 폴더 하나
+  if (opts.easylore) {
+    const db = await api.getDatabase();
+    const c = db.characters;
+    c[0].desc = "키보토스 아비도스 학생들";
+    c[0].globalLore = [{ key: "마리", comment: "마리", content: "이오치 마리. 16살. 성격: 상냥한 트리니티 수녀.", mode: "normal", extentions: {} }, { key: "히마리", comment: "히마리", content: "밀레니엄 부장.", mode: "normal", extentions: {} }, { key: "유리", comment: "유리", content: "강유리. 17살 여성. 검도부.", mode: "normal", extentions: {} }, { key: "성당", comment: "대성당", content: "위치: 트리니티 구역의 건물. 장소.", mode: "normal", extentions: {} }, { key: "하늘", comment: "하늘정원", content: "위치: 옥상 장소.", mode: "normal", extentions: {} }];
+    c[0].chats = [{ message: Array.from({ length: 10 }, (_, i) => ({ role: i % 2 ? "user" : "char", data: i < 8 ? "대성당 앞에서 기다렸다" : "집으로 갔다" })), lastDate: 2 }];
+    c[1].desc = "마법 왕국의 엘프";
+    db.characterOrder = [{ id: "fA", name: "내 폴더", color: "default", data: ["c2"] }, "c1"];
+    window.__elDb = db;
+    api.getDatabase = async () => structuredClone(db);
+    api.setDatabaseLite = async (p) => { Object.assign(db, structuredClone(p)); };
+    window.__elReads = 0;
+    api.getCharacterFromIndex = async (i) => { window.__elReads++; return structuredClone(c[i] ?? null); };
+    api.setCharacterToIndex = async (i, v) => { c[i] = structuredClone(v); };
+    const { sdk } = createAddonSdk(api, { app: app.ctx, ext: app.ctx.ext, openDusk: async (t) => app.ctx.go(t) }, { id: "easylore", name: "폴더 관리/쉬운 로어북", version: "0.1.0" });
+    await easyloreAddon(api, { ext: app.ctx.ext, app: app.ctx, dusk: sdk, toast: () => {}, openDusk: async () => {} });
+  }
+  if (opts.innerthought) {   // 11-23 속마음 보기 애드온(훅은 opts.host의 __host로 흘려 본다)
+    const { sdk } = createAddonSdk(api, { app: app.ctx, ext: app.ctx.ext, openDusk: async (t) => app.ctx.go(t) }, { id: "innerthought", name: "인물 속마음 보기", version: "0.1.0" });
+    window.__itSdk = sdk;
+    await innerthoughtAddon(api, { ext: app.ctx.ext, app: app.ctx, dusk: sdk, toast: () => {}, openDusk: async () => {} });
   }
   app.ctx.aiStop = createAiStopButton(api, { getCtx: () => app.ctx });   // main.js와 같게
   window.__trackedRunLLM = trackedRunLLM;

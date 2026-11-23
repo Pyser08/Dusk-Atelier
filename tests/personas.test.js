@@ -55,3 +55,13 @@ test("옛 페르소나로 돌아오면 그 기록이 다시 나로 합쳐진다"
   assert.ok(personaNames(f).includes("세라"));
   assert.ok(f.people["{{user}}"].records.length >= 1);
 });
+
+test("관계도 노드에 성별(g)이 실린다 — 색 나누기용", () => {
+  const f = mk();
+  const d = Object.values(f.wiki.documents)[0];
+  f.wiki.documents.h = { id: "h", type: "Character", title: "하나", aliases: [], sections: [] };
+  f.gender = { h: { g: "f" } };
+  const m = buildRelMap(f);
+  assert.equal(m.nodes.find((n) => n.name === "하나").g, "f");
+  void d;
+});

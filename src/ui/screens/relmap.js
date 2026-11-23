@@ -15,7 +15,7 @@ import { mem } from "./memory/common.js";
 import { createRelMapCanvas } from "./relmap/canvas.js";
 
 const sigOf = (m) => `${m.nowAt}|${m.nodes.map((n) => `${n.id}:${n.aff}:${n.imp}:${n.records}`).join(",")}|${m.edges.map((e) => `${e.id}:${e.w}:${e.items.length}`).join(",")}`;
-const HELP = [["가운데", "{{user}}"], ["거리", "호감도가 높을수록 가까이 (이성적 감정 관계도에서는 나에게 끌릴수록)"], ["오른쪽 단추", "호감도 ↔ 이성적 감정 관계도 바꾸기"], ["아래 막대", "끌어서 지난 응답 시점의 관계도 보기"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 파랗게"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
+const HELP = [["가운데", "{{user}}"], ["점 색", "호박색 = 페르소나(나·옛 페르소나), 분홍 = 여성, 파랑 = 남성. 성별을 모르면 소속·호감 색이에요(이성적 감정 관계도에서는 끌림 색)"], ["거리", "호감도가 높을수록 가까이 (이성적 감정 관계도에서는 나에게 끌릴수록)"], ["오른쪽 단추", "호감도 ↔ 이성적 감정 관계도 바꾸기"], ["아래 막대", "끌어서 지난 응답 시점의 관계도 보기"], ["높이", "지금 대화에서 중요할수록 위로"], ["방향", "같은 소속끼리 한쪽으로 (소속이 없으면 고르게)"], ["선 색", "따뜻한 관계는 붉게, 차가운 관계는 파랗게"], ["굵기", "관계의 강도"], ["점선", "풀리지 않은 갈등·오해가 있는 관계"], ["빛남", "최근에 바뀐 관계"], ["모양", "점선 빈 원은 실종, ?는 정체 불명"], ["조작", "누르면 확대, 두 번 누르면 위키로, 끌면 회전, 휠·두 손가락으로 확대·축소"]];
 
 export async function renderRelMap(ctx) {
   const M = ctx.memory, st = (ctx.state.relmap ??= {});
@@ -64,7 +64,8 @@ function buildView(ctx, win, cur, key, data, uname, folder0 = null) {
   const ctrlsEl = h("div", { class: "rb-rm-ctrls" });
   const legendEl = h("div", { class: "rb-rm-legend" },
     h("span", null, h("i", { style: "border-color:var(--rb-rose)" }), "따뜻한 관계"), h("span", null, h("i", { style: "border-color:var(--rb-blue)" }), "차가운 관계"),
-    h("span", null, h("i", { style: "border-color:var(--rb-acc);border-top-style:dashed" }), "풀리지 않은 갈등"), h("span", null, "굵기 = 강도"));
+    h("span", null, h("i", { style: "border-color:var(--rb-acc);border-top-style:dashed" }), "풀리지 않은 갈등"), h("span", null, "굵기 = 강도"),
+    h("span", null, h("b", { style: "display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffc24d" }), "페르소나"), h("span", null, h("b", { style: "display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff6fae" }), "여성"), h("span", null, h("b", { style: "display:inline-block;width:10px;height:10px;border-radius:50%;background:#4f8dff" }), "남성"));   // 11-23 점 색
   const tipEl = h("div", { class: "rb-rm-tip", hidden: true }), toastEl = h("div", { class: "rb-rm-toast", hidden: true });
   const helpPop = h("div", { class: "rb-rm-pop", role: "dialog", "aria-label": "관계도 읽는 법", hidden: true }, h("h3", null, "관계도 읽는 법"), h("ul", null, ...HELP.map(([a, b]) => h("li", null, h("b", null, a), b))));
   const helpBtn = h("button", { type: "button", class: "rb-rm-help", "aria-label": "관계도 읽는 법", "aria-expanded": "false", onClick: (e) => { e.stopPropagation(); setHelp(helpPop.hidden); } }, "?");

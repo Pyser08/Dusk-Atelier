@@ -12,11 +12,14 @@ import { userNameList, primaryUserName } from "./usernames.js";
 import { withoutPast } from "../engine/pastpersona.js";
 
 // 지금 페르소나 이름·설명(유저 칸 성인 프로필·성별 짐작에 씀)
-export async function personaInfo(api) {
+// 채팅에 묶인 페르소나(chat.bindedPersona)가 있으면 그쪽이 먼저(기본 페르소나를 가져오던 문제)
+export async function personaInfo(api, chat = null) {
   let db = null; try { db = api ? await dbRead(api, ["username", "personas", "selectedPersona"]) : null; } catch { db = null; }
   if (db) setUserNsfwNames(withoutPast(userNameList(db)));
-  const p = (Array.isArray(db?.personas) ? db.personas : [])[db?.selectedPersona ?? 0];
-  return { name: primaryUserName(db), desc: String(p?.personaPrompt ?? "").trim().slice(0, 2500) };
+  const list = Array.isArray(db?.personas) ? db.personas : [];
+  const bound = chat?.bindedPersona ? list.find((x) => x?.id === chat.bindedPersona) : null;
+  const p = bound ?? list[db?.selectedPersona ?? 0];
+  return { name: primaryUserName(db, chat), desc: String(p?.personaPrompt ?? "").trim().slice(0, 2500) };
 }
 // 유저 칸: 위키 문서·기본 성격이 없으니 페르소나 설명으로 성인 프로필을 만든다(3번 실패하면 이번 세션엔 그만)
 export async function userNsfwNeed(api, have) {

@@ -35,7 +35,7 @@ export function createCssMount(api) {
   return { ensureDoc, ready: () => state === "done" };
 }
 
-export function createNameLinks(memory, api = null) {
+export function createNameLinks(memory, api = null, { thoughts = null } = {}) {   // thoughts: 속마음 보기 애드온 { rev(), tabFor(names) }(없으면 탭 없음)
   const mount = createCssMount(api);
   let byId = new Map();
   // 2.2.28: 방식(화면 위/펼침)을 정하기 전에 응답을 그리면 펼침으로 남았다 → 권한 확인을 잠깐(최대 1.2초) 기다린다
@@ -62,7 +62,7 @@ export function createNameLinks(memory, api = null) {
     if ((!links && !scene) || idx?.settings?.backend === "off") { cache = { off: true }; checked = Date.now(); return; }
     const cur = await memory?.switches?.currentChat?.().catch?.(() => null); if (!cur) { cache = { off: true }; checked = Date.now(); return; }
     // 같은 채팅·같은 기억 폴더(저장 시각)·같은 설정이면 만든 것을 그대로 쓴다(시간이 지나도). 바뀌었을 때만 폴더를 다시 읽는다
-    const key = `${cur.chaId}|${cur.chatId}|${idx?.folders?.[folderIdOf(cur.chaId, cur.chatId)]?.updatedAt ?? 0}|${links}|${scene}|${inj.status !== false}`;
+    const key = `${cur.chaId}|${cur.chatId}|${idx?.folders?.[folderIdOf(cur.chaId, cur.chatId)]?.updatedAt ?? 0}|${links}|${scene}|${inj.status !== false}|${thoughts?.()?.rev?.() ?? 0}`;
     if (cache && !cache.off && cache.key === key) { checked = Date.now(); return; }
     const f = await memory.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
     if (!f) { cache = { off: true }; checked = Date.now(); return; }
@@ -71,7 +71,7 @@ export function createNameLinks(memory, api = null) {
     const docs = Object.values(f.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && !/\{\{user\}\}/i.test(d.title ?? ""));
     const imgs = new Map();
     if (api && character) await Promise.all(docs.map(async (d) => { const u = await charThumb(api, character, [d.title, ...(d.aliases ?? [])]).catch(() => null); if (u) imgs.set(d.id, u); }));
-    const htmls = new Map(), cardOf = (d) => { if (!htmls.has(d.id)) htmls.set(d.id, statusCardHtml(f, d, { when, status: inj.status !== false, img: imgs.get(d.id) ?? null })); return htmls.get(d.id); };
+    const htmls = new Map(), cardOf = (d) => { if (!htmls.has(d.id)) htmls.set(d.id, statusCardHtml(f, d, { when, status: inj.status !== false, img: imgs.get(d.id) ?? null, thoughts: (() => { try { return thoughts?.()?.tabFor?.([d.title, ...(d.aliases ?? [])]) ?? ""; } catch { return ""; } })() })); return htmls.get(d.id); };
     byId = new Map(docs.map((d) => [d.id, d]));
     const people = docs.map((d) => ({ id: d.id, names: [d.title, ...(d.aliases ?? [])].filter((n) => String(n ?? "").trim().length >= 2), get html() { return cardOf(d); } }));
     cache = { key, links, scene, people, folder: f, cardOf, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, character?.desc].filter(Boolean).join(" ") };

@@ -46,3 +46,14 @@ test("유저 위키 문서가 있어도 성인·몸 칸은 유저 칸(actor:user
   assert.deepEqual(npcDocs(f).map((d) => d.id), ["b"]);
   setUserNsfwNames([]);
 });
+
+test("나 위키: 채팅에 묶인 페르소나가 있으면 기본 페르소나 대신 그걸 쓴다", async () => {
+  const { syncMeDoc } = await import("../src/data/medoc.js");
+  const db = { username: "User", selectedPersona: 0, personas: [{ id: "p0", name: "기본이", personaPrompt: "기본 설명" }, { id: "p1", name: "묶인이", personaPrompt: "묶인 설명" }] };
+  const api = { getDatabase: async () => db, getChatFromIndex: async () => ({ bindedPersona: "p1" }) };
+  let folder = { people: {} };
+  const memory = { store: { getIndex: async () => ({ settings: { inject: { meDoc: true } } }), getFolder: async () => folder, updateFolder: async (_a, _b, fn) => { fn(folder); } },
+    switches: { currentChat: async () => ({ ci: 0, ti: 0, chaId: "c", chatId: "t" }) } };
+  await syncMeDoc(memory, api);
+  assert.deepEqual([folder.meDoc.name, folder.meDoc.desc], ["묶인이", "묶인 설명"]);
+});

@@ -25,6 +25,8 @@ export var HOMEGRID_CSS = `
   background:var(--rb-glass-bg,var(--rb-surf));border:1px solid var(--rb-glass-line,var(--rb-line2));box-shadow:var(--rb-glass-shadow,var(--rb-shadow-card)),var(--rb-glass-hi,0 0 0 transparent);
   transition:left .18s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),top .18s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),width .18s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1)),height .18s var(--rb-ease-out,cubic-bezier(.2,.8,.2,1));scrollbar-width:thin}
 .rb-calm .rb-hw{transition:none}
+/* 11-23 빠른 설정: 위젯과 카드 두 겹으로 스크롤되던 것 → 위젯은 안 넘치고 카드 하나만 스크롤 */
+.rb-hw[data-w=qs]{overflow:hidden}.rb-hw[data-w=qs] .rb-hqs{flex:1;min-height:0;display:flex;flex-direction:column}.rb-hw[data-w=qs] .rb-qs-wrap{flex:1;min-height:0}.rb-hw[data-w=qs] .rb-qs-scroll{flex:1;min-height:0;max-height:none}
 .rb-hgrid2.editing .rb-hw{cursor:grab;touch-action:none;outline:1px dashed var(--rb-line3);outline-offset:-5px;user-select:none}
 .rb-hgrid2.editing .rb-hw:focus-visible{outline:3px solid var(--rb-focus)}
 .rb-hw.drag{transition:none;z-index:5;opacity:.92;cursor:grabbing;box-shadow:0 18px 40px rgba(0,0,0,.4),0 0 0 2px var(--rb-acc)}

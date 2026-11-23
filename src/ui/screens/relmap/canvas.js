@@ -52,7 +52,9 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
 
   const PINK = "#ff4f9a";
   let romance = false, ringLabel = "호감";
-  const nodeColor = (n) => (romance ? mix(TH.cool, PINK, n.aff / 100) : n.faction && facAng[n.faction] != null ? TH.pal[facAng[n.faction] % TH.pal.length] : mix(TH.cool, TH.warm, n.aff / 100));
+  // 11-23 페르소나(나·옛 페르소나)는 호박색, 다른 인물은 성별로 분홍·파랑(모르면 예전처럼 소속·호감 색)
+  const PERSONA = ["#ffc24d", "#f08a24"], PERSONA_OLD = ["#ffd98a", "#e0a040"], FEMALE = "#ff6fae", MALE = "#4f8dff";
+  const nodeColor = (n) => n.persona ? PERSONA_OLD[1] : !romance && n.g === "f" ? FEMALE : !romance && n.g === "m" ? MALE : (romance ? mix(TH.cool, PINK, n.aff / 100) : n.faction && facAng[n.faction] != null ? TH.pal[facAng[n.faction] % TH.pal.length] : mix(TH.cool, TH.warm, n.aff / 100));
   const facColor = (f) => TH.pal[(facAng[f] ?? 0) % TH.pal.length];
   const warmth = (w, e) => (e?.lover ? PINK : romance ? mix(TH.cool, PINK, Math.min(1, (w + 1) / 2)) : mix(TH.cool, TH.warm, (w + 1) / 2));
   const visibleN = (n) => n.user || !st.faction || n.faction === st.faction;
@@ -273,15 +275,16 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     }
     // 노드(먼 것부터)
     all.slice().sort((a, b) => screen[a.id].d - screen[b.id].d).forEach((n) => {
-      const s = screen[n.id], c = n.user ? TH.acc : nodeColor(n);
+      const s = screen[n.id], c = n.user ? PERSONA[1] : nodeColor(n);
       let al = n.user ? 1 : si.none ? (st.hl && !curTS[n.id] && Object.keys(curTS).length ? (TH.dark ? 0.2 : 0.34) : 1) : (si.set[n.id] ? 1 : (TH.dark ? 0.25 : 0.34));
       if (pathRes) al = n.user || pathRes.n[n.id] ? 1 : 0.15;
       if (!visibleN(n)) al = 0.06;
       ctx.globalAlpha = al;
       if (n.user || n.persona) {
-        const g = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, s.r * 2.6); g.addColorStop(0, rgba(TH.acc, 0.35)); g.addColorStop(1, rgba(TH.acc, 0));
+        const [pa, pb] = n.user ? PERSONA : PERSONA_OLD;
+        const g = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, s.r * 2.6); g.addColorStop(0, rgba(pa, 0.35)); g.addColorStop(1, rgba(pa, 0));
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 2.6, 0, TAU); ctx.fill();
-        const gg = ctx.createLinearGradient(s.x - s.r, s.y - s.r, s.x + s.r, s.y + s.r); gg.addColorStop(0, TH.acc); gg.addColorStop(1, TH.accb); ctx.fillStyle = gg;
+        const gg = ctx.createLinearGradient(s.x - s.r, s.y - s.r, s.x + s.r, s.y + s.r); gg.addColorStop(0, pa); gg.addColorStop(1, pb); ctx.fillStyle = gg;
       } else {
         const hg = ctx.createRadialGradient(s.x, s.y, s.r * 0.5, s.x, s.y, s.r * 2.5); hg.addColorStop(0, rgba(c, 0.12)); hg.addColorStop(1, rgba(c, 0));
         ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 2.5, 0, TAU); ctx.fill(); ctx.fillStyle = c;

@@ -28,6 +28,7 @@ export async function renderWorld(env, host) {
   m.worldSec ??= "docs";
   const draw = () => replace(host,
     h("p", { class: "rb-muted" }, "응답에 나온 장소·물건·세력, 인물이 이루려는 목표, 누가 누구에게 무엇을 들었는지 모아요. 지금 장면에 나온 것만 요청에 넣어요(AI 호출은 늘지 않아요)."),
+    env.idx?.settings?.inject?.world === true ? null : h("p", { class: "rb-muted rb-world-off" }, "장소·물건·세력·목표·소문 기록이 꺼져 있어요. 장기기억 설정 › 기억 옵션 › ‘세계 탭’을 켜면 응답마다 모아요. 캘린더는 꺼져 있어도 보여요."),
     segmented(WORLD_SECS, m.worldSec, (v) => { m.worldSec = v; draw(); }, "세계 구역"),
     m.worldSec === "goals" ? goals() : m.worldSec === "rumors" ? rumors() : m.worldSec === "cal" ? cal() : docs());
 
