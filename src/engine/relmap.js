@@ -4,6 +4,7 @@
 import { pairView, nowOf, intimacyOf } from "./memoryhuman.js";
 import { TIE_BY_ID, tiesBetween } from "./ties.js";
 import { USER } from "./memoryuser.js";
+import { genderOf } from "./gender.js";
 import { liveTies } from "./memoryplus.js";
 import { isLoverKind, strayRisk } from "./lover.js";
 import { unrequited, triangles, exPairs, isSecret, timeline, eventText } from "./romance.js";
@@ -51,6 +52,9 @@ export function buildRelMap(folder, { max = RM.MAX_NODES, mode = "affinity" } = 
   for (const x of Object.values(folder?.rels ?? {})) { add(x?.from); add(x?.to); }
   for (const x of Object.values(folder?.emo ?? {})) { if (key(x?.to) === uk) add(x?.from); else if (key(x?.from) === uk) add(x?.to); }
   // 11-23 채팅 도중 바뀐 옛 페르소나: 늘 관계도에 넣고(가운데서 나와 함께 돈다) 표시
+  // 11-23 성별(위키 문서 기준: 직접 고름·이야기·성적 지향) → 관계도 색(여 분홍·남 파랑)
+  const charDocs = Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character");
+  const genderByKey = (k) => { const d = charDocs.find((x) => [x.title, ...(x.aliases ?? [])].some((n) => key(n) === k)); return d ? genderOf(folder, d) : null; };
   const pastP = new Set((folder?.personas ?? []).map((p) => key(p.name)).filter(Boolean));
   for (const p of folder?.personas ?? []) add(p.name);
   // 2) 값싼 중요도로 먼저 상위 max명만 고른다. 비싼 계산(pairView)은 이 사람들에게만 한다.
@@ -69,7 +73,7 @@ export function buildRelMap(folder, { max = RM.MAX_NODES, mode = "affinity" } = 
     const sorted = recs.slice().sort((a, b) => (b.at ?? -1) - (a.at ?? -1));
     const lastAt = recs.reduce((m, r) => Math.max(m, r.at ?? -1), -1);
     nodes.push({
-      id: k, name: shownName(name), ...(pastP.has(k) ? { persona: true } : {}), faction: String(p?.faction ?? "").trim(), status: STATUS_LABEL[p?.status] ? p.status : "",
+      id: k, name: shownName(name), ...(pastP.has(k) ? { persona: true } : {}), g: genderByKey(k), faction: String(p?.faction ?? "").trim(), status: STATUS_LABEL[p?.status] ? p.status : "",
       aff, imp, thisTurn, records: recs.length,
       sum: cut(pv.bonds.at(-1)?.moment || sorted[0]?.act || "", 90),
       rec: sorted.slice(0, 3).map((r) => [r.at != null ? `#${r.at + 1}` : "", cut(r.act, 70)]),
