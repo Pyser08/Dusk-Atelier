@@ -17,12 +17,17 @@ ok("켜면 버튼 설정이 off로 저장", (await page.evaluate(() => __api.sto
 await sw.click(); await page.waitForTimeout(200);
 ok("끄면 on으로 저장", (await page.evaluate(() => __api.store["dusk.ui.memoryButton"])) === "on");
 const card = page.locator(".rb-qs-scroll");
+ok("스크롤은 한 겹(위젯은 안 넘치고 카드만)", ...await page.evaluate(() => { const w = document.querySelector(".rb-hw[data-w=qs]"); if (!w) return [true, "격자 아님"]; const c = w.querySelector(".rb-qs-scroll"); const wsc = getComputedStyle(w).overflowY; return [wsc === "hidden" && w.scrollHeight <= w.clientHeight + 1 && c.clientHeight > 40, JSON.stringify([wsc, w.scrollHeight, w.clientHeight, c.clientHeight, c.scrollHeight])]; }));
 await card.evaluate((el) => { el.style.maxHeight = "120px"; el.dispatchEvent(new Event("scroll")); });
 await page.waitForTimeout(150);
+ok("넘치면 ‘아래에 설정이 더 있어요’ 버튼이 보임", await page.evaluate(() => { const b = document.querySelector(".rb-qs-hint"); return !!b && !b.hidden && b.getBoundingClientRect().height > 10; }));
+ok("버튼을 누르면 아래로 내려감", await page.evaluate(async () => { const c = document.querySelector(".rb-qs-scroll"); c.style.scrollBehavior = "auto"; const t0 = c.scrollTop; document.querySelector(".rb-qs-hint").click(); await new Promise((r) => setTimeout(r, 600)); return c.scrollTop > t0; }));
+await card.evaluate((el) => { el.scrollTop = 0; el.dispatchEvent(new Event("scroll")); }); await page.waitForTimeout(150);
 ok("넘치면 아래 흐림 표시", ...await card.evaluate((el) => { const cs = getComputedStyle(el), m = cs.maskImage || cs.webkitMaskImage; return [el.classList.contains("rb-qs-more") && el.scrollHeight > el.clientHeight && /linear-gradient/.test(m), JSON.stringify([el.className, el.scrollHeight, el.clientHeight, m])]; }));
 await card.evaluate((el) => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event("scroll")); });
 await page.waitForTimeout(150);
 ok("끝까지 내리면 흐림 사라짐", await card.evaluate((el) => !el.classList.contains("rb-qs-more")));
+ok("끝이면 ‘더 있어요’ 버튼 숨김", await page.evaluate(() => document.querySelector(".rb-qs-hint").hidden === true));
 await card.evaluate((el) => { el.scrollTop = 0; el.dispatchEvent(new Event("scroll")); }); await page.waitForTimeout(250);
 await card.screenshot({ path: process.env.SHOT || "/tmp/qs.png" });
 ok("페이지 오류 없음", !errs.length, errs.join(" | "));

@@ -33,6 +33,9 @@ for (const [tag, vp] of [["PC", { width: 1280, height: 900 }], ["모바일", { w
     });
   });
   ok(`[${tag}] 세계 탭은 기본 꺼짐`, await page.evaluate(async () => (await __app.ctx.memory.store.getIndex()).settings?.inject?.world !== true));
+  await page.evaluate(() => { Object.assign(__app.ctx.state.mem ??= {}, { botId: "c1", chatIndex: 0, personKey: "", tab: "world", page: "detail", worldSec: "docs" }); __app.ctx.go("memory"); });
+  await page.waitForTimeout(1500);
+  ok(`[${tag}] 설정이 꺼져 있어도 ‘세계’ 탭은 보이고 켜는 안내가 나옴`, await page.evaluate(() => [...document.querySelectorAll(".rb-mem-sectab")].some((b) => b.dataset.sec === "world") && !!document.querySelector(".rb-world-off")));
   await page.evaluate(async () => { await __app.ctx.memory.store.updateIndex((idx) => { idx.settings.inject ??= {}; idx.settings.inject.world = true; }); });
   await page.evaluate(() => { Object.assign(__app.ctx.state.mem ??= {}, { botId: "c1", chatIndex: 0, personKey: "", tab: "world", page: "detail", worldSec: "docs" }); __app.ctx.go("memory"); });
   await page.waitForTimeout(1500);

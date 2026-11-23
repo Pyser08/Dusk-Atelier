@@ -68,7 +68,7 @@ async function settingsCards(ctx, M, idx, redraw, cur = null, sw = null) {
   // 2.2.4 기억 토큰 절약: 칸별 예산을 줄여 기억 블록 약 4,100 → 2,900토큰(LoCoMo 정답률 약 1~2점 손해)
   memOptions.append(orow("나 위키 문서 자동 만들기", "모든 채팅의 인물 위키에 ‘나’(페르소나) 문서를 자동으로 만들어요. 켜면 기록 AI가 다른 인물처럼 나의 기본 성격·수치·감정·개요도 채워요(대화에서 드러난 것만, 내 행동·말은 지어내지 않아요). 페르소나 이름·설명은 ‘나’ 칸에 보이고 바뀌면 따라 고쳐요.", inj.meDoc === true, (o, v) => { o.meDoc = v; if (v) setTimeout(() => ctx.memory?.meDoc?.sync?.({ force: true }).catch?.(() => {}), 300); }, "meDoc"));
   memOptions.append(orow("바꾼 페르소나를 로어북에", "채팅 도중 페르소나를 바꾸면 옛 페르소나 설명을 이 봇의 로어북에 그 이름의 인물 항목으로 넣어요(이름이 나올 때 켜짐). 설명 안의 {{user}}는 옛 페르소나 이름으로 바꿔요. 같은 페르소나는 다시 바꿔도 그 항목만 고쳐요.", inj.personaLore === true, (o, v) => { o.personaLore = v; }, "personaLore"));
-  memOptions.append(orow("세계 탭 (장소·물건·세력·목표·소문)", "기록 보기에 ‘세계’ 탭이 생기고, 응답에 나온 장소·물건·세력, 인물 목표, 누가 누구에게 무엇을 들었는지 기록해 장면에 맞는 것만 넣어요.", inj.world === true, (o, v) => { o.world = v; }, "world", true));
+  memOptions.append(orow("세계 탭 (장소·물건·세력·목표·소문)", "응답에 나온 장소·물건·세력, 인물 목표, 누가 누구에게 무엇을 들었는지 기록해 ‘세계’ 탭에 모으고 장면에 맞는 것만 넣어요.", inj.world === true, (o, v) => { o.world = v; }, "world", true));
   memOptions.append(guidesRow(ctx, idx, save));
   memOptions.append(orow("상태이상", "취함·부상·감기·최음제·수면 부족처럼 인물에게 생긴 상태를 기록하고, 나을 때까지(또는 정한 날만큼) 행동에 반영해요. 인물 위키와 이름 상태창에 보여요.", inj.status !== false, (o, v) => { o.status = v; }, "status"));
   memOptions.append(orow("옷차림·액세서리", "인물이 부위별로 입은 옷과 액세서리를 기록해요(간단히 + 삽화용 상세). 장면에 넣고 캐릭터 상태창·인물 위키에서 봐요.", inj.outfit !== false, (o, v) => { o.outfit = v; }, "outfit"));

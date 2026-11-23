@@ -3,6 +3,8 @@
 // 사진(data URL)도 응답 안에선 리스가 이미지 주소를 바꿔 깨졌다. 여기서는 createElement로 직접 만들어 소독기를 거치지 않는다.
 // 응답 안에는 이름만 <span data-dusk="nm" data-pid="…">로 두고, 그 요소들을 찾아 클릭을 단다(리스가 메시지를 다시 그리면 다시 찾는다).
 
+import { pidKey } from "../engine/namecard.js";
+
 // 상태창 상자(가운데). 리스 테마 색을 그대로 쓴다
 const BOX = "position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 28px));max-height:min(80vh,680px);overflow:auto;overscroll-behavior:contain;padding:14px 14px 10px;border-radius:20px;background:var(--risu-theme-bgcolor,#1b1a24);color:var(--risu-theme-textcolor,#eee);border:1px solid rgba(139,111,224,.32);box-shadow:0 24px 60px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;line-height:1.5;text-align:left;box-sizing:border-box";
 
@@ -110,13 +112,16 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
     try {
       const d = await ensureDoc(); if (!d) return 0;
       for (const pid of pids()) {
-        const safe = String(pid).replace(/[^\w-]/g, ""); if (!safe) continue;
-        const list = await d.querySelectorAll(`[data-pid="${safe}"]:not([data-hk]):not([x-dusk-hk]), .dusk-pid-${safe}:not([data-hk]):not([x-dusk-hk]), .x-risu-dusk-pid-${safe}:not([data-hk]):not([x-dusk-hk])`);
+        const safe = pidKey(pid); if (!safe) continue;
+        const q = String(pid).replace(/["\\]/g, "\\$&");
+        const list = await d.querySelectorAll(`[data-pid="${q}"]:not([data-hk]):not([x-dusk-hk]), .dusk-pid-${safe}:not([data-hk]):not([x-dusk-hk]), .x-risu-dusk-pid-${safe}:not([data-hk]):not([x-dusk-hk])`);
         const len = typeof list?.length === "function" ? await list.length() : list?.length ?? 0;
         for (let i = 0; i < len; i++) {
           const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; if (!el) continue;
           await attr(el, "x-dusk-hk", "1"); await attr(el, "data-hk", "1");
-          await el.addEventListener("click", () => { show(pid).then((ok) => { if (!ok) { log("상태창을 열지 못했어요", pid); onFail(); } }).catch((e) => { log("상태창 열기 실패", e?.message ?? e); onFail(); }); });
+          // 11-23: 판에 따라 click이 안 오고 pointerup만 오기도 한다 → 둘 다 받고 0.5초 안 두 번은 한 번으로
+          let last = 0; const fire = () => { const t = Date.now(); if (t - last < 500) return; last = t; show(pid).then((ok) => { if (!ok) { log("상태창을 열지 못했어요", pid); onFail(); } }).catch((e) => { log("상태창 열기 실패", e?.message ?? e); onFail(); }); };
+          await el.addEventListener("click", fire); try { await el.addEventListener("pointerup", fire); } catch { /* click만 */ }
           n++; total++;
         }
       }

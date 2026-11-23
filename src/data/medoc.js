@@ -6,7 +6,9 @@ export async function syncMeDoc(memory, api, { force = false } = {}) {
   const idx = await memory?.store?.getIndex?.().catch?.(() => null);
   if (!force && idx?.settings?.inject?.meDoc !== true) return false;
   const cur = await memory?.switches?.currentChat?.().catch?.(() => null); if (!cur) return false;
-  const p = await personaInfo(api).catch(() => null); if (!p) return false;
+  let chat = null;
+  try { if (Number.isInteger(cur.ci) && Number.isInteger(cur.ti)) chat = await api.getChatFromIndex(cur.ci, cur.ti); } catch { chat = null; }
+  const p = await personaInfo(api, chat).catch(() => null); if (!p) return false;
   let changed = false;
   const f = await memory.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
   if (f && f.meDoc?.name === (p.name ?? "").trim().slice(0, 80) && f.meDoc?.desc === (p.desc ?? "").trim().slice(0, 4000) && f.people?.["{{user}}"] && (!f.wiki?.documents || findMeWikiDoc(f.wiki, [p.name].filter(Boolean)))) return false;   // 그대로면 쓰지 않음

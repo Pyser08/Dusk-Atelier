@@ -84,11 +84,14 @@ export async function quickSettingsCard(ctx) {
     try { const fab = ctx.memoryButton; const ok = fab?.set ? await fab.set(!hide) : (await ctx.api.pluginStorage.setItem(MEMORY_BUTTON_KEY, hide ? "off" : "on"), true); ctx.toast(hide ? (ok === false ? "저장했어요. 다음 실행부터 버튼이 안 보여요." : "떠 있는 버튼을 없앴어요.") : "떠 있는 버튼을 다시 보여줘요."); } catch (e) { failStory(e); }
   };
   // 11-22: 설정이 길어 스크롤되면 아래쪽을 살짝 흐리게 해 더 있다는 걸 보여준다(끝까지 내리면 사라짐)
+  // 11-23: 흐림만으론 스크롤되는 줄 모른다 → 아래에 ‘아래에 더 있어요’ 버튼(누르면 내려감)과 늘 보이는 얇은 스크롤 막대
   const fade = (card) => {
-    const upd = () => card.classList.toggle("rb-qs-more", card.scrollHeight - card.scrollTop - card.clientHeight > 4);
+    const more = h("button", { type: "button", class: "rb-qs-hint", "aria-label": "아래 설정 더 보기", onClick: () => card.scrollBy({ top: Math.max(120, card.clientHeight * 0.7), behavior: "smooth" }) }, "아래에 설정이 더 있어요 ⌄");
+    const upd = () => { const m = card.scrollHeight - card.scrollTop - card.clientHeight > 4; card.classList.toggle("rb-qs-more", m); more.hidden = !m; };
     card.addEventListener("scroll", upd, { passive: true });
     try { new (card.ownerDocument.defaultView?.ResizeObserver ?? ResizeObserver)(upd).observe(card); } catch { /* 없으면 스크롤 때만 */ }
-    setTimeout(upd, 0); return card;
+    setTimeout(upd, 0);
+    return h("div", { class: "rb-qs-wrap" }, card, more);
   };
   return fade(h("section", { class: "rb-card bordered rb-story-helper rb-qs-scroll" },
     (() => { const row = storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair); fairSw = row.querySelector("[role=switch]"); return row; })(),
