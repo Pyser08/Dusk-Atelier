@@ -10,6 +10,7 @@
 // 발동 기록은 채팅 변수 da_state에 둔다 (채팅 복사·분기에 따라감, 현재 턴 이상 기록은 무시하므로 되돌리기에도 맞다).
 import { STATE_VAR, MAX_HIST, affOf, applySets, collectManaged, evaluate, gateValues, setTargets, setBoundaryMode } from '../engine/lorerules.js';
 import { noteStreamChunk, recentlyStreamed } from './genstate.js';
+import { luaCoveredRids, syncLoreTrigger, fixRegexKeys } from '../engine/lorelua.js';
 
 const sv = (k) => "$" + k;
 
@@ -33,6 +34,23 @@ export async function saveLoreSettings(api, v) {
   await api.pluginStorage.setItem(LORE_SETTINGS_KEY, JSON.stringify({ ...LORE_DEFAULTS, ...v }));
 }
 
+// 플러그인 없이 동작(로어북 규칙 Lua): 끈 봇·모듈 id 목록 (편집기와 같은 저장소)
+export const LUA_OFF_KEY = "dusk-lore-lua-off";
+// 내보내기 직전: 규칙에 맞는 Lua 트리거를 넣은 사본을 돌려준다(원본은 그대로). kind: 'module' | 'character'
+export async function withFreshLoreLua(api, obj, kind) {
+  if (!obj || typeof obj !== "object") return obj;
+  const f = kind === "character" ? { lore: "globalLore", trig: "triggerscript", id: "chaId" } : { lore: "lorebook", trig: "trigger", id: "id" };
+  try {
+    const off = JSON.parse(String(await api.pluginStorage.getItem(LUA_OFF_KEY) ?? "[]"));
+    if (Array.isArray(off) && off.includes(`${f.id}:${obj[f.id] ?? ""}`)) return obj;
+  } catch { /* 목록이 없으면 켜짐 */ }
+  const st = await loadLoreSettings(api);
+  const fx = fixRegexKeys(obj[f.lore] ?? []);
+  const r = syncLoreTrigger(obj[f.trig] ?? [], fx.entries, { boundary: st.boundary, reroll: st.reroll });
+  if (!r.changed && !fx.fixed) return obj;
+  return { ...obj, [f.lore]: fx.entries, [f.trig]: r.triggers };
+}
+
 export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규칙]", ...a) } = {}) {
   let lastFired = [];
   let prepTimer = null;
@@ -53,7 +71,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       return { ch, lore: [...(ch?.globalLore ?? []), ...(ch?.chats?.[chatIdx]?.localLore ?? [])] };
     }
   }
-  async function loreEntries(charIdx, chatIdx) {
+  async function loreEntriesAll(charIdx, chatIdx) {
     if (typeof api.getCurrentLorebookEntries === "function") {
       try {
         const r = await api.getCurrentLorebookEntries();
@@ -62,6 +80,38 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       }
     }
     return (await moduleLore(charIdx, chatIdx)).lore;
+  }
+  // 봇·켜진 모듈에 들어 있는 로어북 규칙 Lua 트리거가 맡은 항목 (짧게 기억해 입력마다 캐릭터를 통째로 읽지 않는다)
+  let covCache = { key: "", at: 0, set: new Set() };
+  async function luaCovered(charIdx, chatIdx) {
+    const key = `${charIdx}:${chatIdx}`;
+    if (covCache.key === key && Date.now() - covCache.at < 15e3) return covCache.set;
+    let set = new Set();
+    try {
+      const ch = await api.getCharacterFromIndex(charIdx);
+      // 그룹 채팅에서는 리스가 Lua 입력 트리거를 돌리지 않으므로 Dusk가 계속 계산한다
+      if (ch?.type === "group") throw new Error("group");
+      const chat = ch?.chats?.[chatIdx];
+      let mods = [];
+      try {
+        const db = await api.getDatabase(["modules", "enabledModules"]);
+        const ids = new Set([...(db?.enabledModules ?? []), ...(ch?.modules ?? []), ...(chat?.modules ?? [])]);
+        mods = (db?.modules ?? []).filter((m) => ids.has(m.id));
+      } catch {
+      }
+      set = luaCoveredRids([...(ch?.triggerscript ?? []), ...mods.flatMap((m) => m.trigger ?? [])]);
+    } catch {
+    }
+    covCache = { key, at: Date.now(), set };
+    return set;
+  }
+  // Lua가 맡은 항목은 빼고 돌려준다
+  async function loreEntries(charIdx, chatIdx) {
+    const all = await loreEntriesAll(charIdx, chatIdx);
+    if (!all.some((e) => e?.extentions?.da_rule)) return all;
+    const cov = await luaCovered(charIdx, chatIdx);
+    if (!cov.size) return all;
+    return all.filter((e) => !cov.has(e?.extentions?.da_rid || `name:${e?.comment ?? ""}`));
   }
   const readState = (ss) => {
     try {
@@ -80,6 +130,14 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
     return !!a && (a.max !== "" || a.def < 100 || Object.values(a.prob).some((p) => p !== "" && Number(p) < 100));
   });
 
+  // 발동 기록 합치기: 이 계산이 맡은 항목만 바꾸고, 다른 쪽(봇·모듈의 Lua 엔진)이 맡은 항목 기록은 그대로 둔다
+  const mergeHist = (orig, next, items) => {
+    const own = new Set(items.map((it) => it.rid));
+    const o = {};
+    for (const [rid, v] of Object.entries(orig ?? {})) if (!own.has(rid)) o[rid] = v;
+    for (const [rid, v] of Object.entries(next ?? {})) if (own.has(rid)) o[rid] = v;
+    return o;
+  };
   // 변수 값 읽기·쓰기 보조 (scriptstate 키는 '$이름')
   const finalVars = (base, targets, out) => {
     const v = { ...base };
@@ -128,7 +186,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       if (nv !== void 0 && String(nv) !== String(ss[sv(n)] ?? "")) patch[sv(n)] = String(nv);
     }
     const b = targets.length ? { turn, base: Object.fromEntries(targets.map((n) => [n, vars[sv(n)] ?? null])), out: Object.fromEntries(targets.map((n) => [n, String(after[sv(n)] ?? "")])) } : void 0;
-    patch[sv(STATE_VAR)] = JSON.stringify({ ...res.state, ...b ? { b } : {} });
+    patch[sv(STATE_VAR)] = JSON.stringify({ f: mergeHist(st.f, res.state.f, items), t: mergeHist(st.t, res.state.t, items), ...b ? { b } : {} });
     return { patch, fired: res.fired, turn, trace: res.trace, sets: out };
   }
 

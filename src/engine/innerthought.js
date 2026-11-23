@@ -15,13 +15,29 @@ export function normSettings(raw) {
 export const summary = (s) => (s.on ? `켜짐 · 인물당 ${s.min === s.max ? s.max : `${s.min}~${s.max}`}번` : "꺼짐");
 
 // 모델에게 주는 안내(요청 사본에만, 응답마다). emos: 쓸 수 있는 감정 이름(봇 감정 이미지에서 뽑음)
-export function hintText(s, { emos = [], user = "" } = {}) {
+// assets: [{ char, kws:[…], names:[…] }] — 이 봇·켜진 모듈의 실제 이미지(인물별). 있으면 모델이 img=에 그대로 골라 쓴다
+export function assetList(idx, { maxPer = 40, maxAll = 2400 } = {}) {
+  if (!idx?.chars?.size) return "";
+  const lines = []; let len = 0;
+  for (const c of idx.chars.values()) {
+    const names = [...new Set(c.entries.map((e) => e.name))].slice(0, maxPer);
+    if (!names.length) continue;
+    const line = `- ${c.name || "(이름 없음)"}: ${names.join(", ")}`;
+    if (len + line.length > maxAll) break;
+    lines.push(line); len += line.length;
+  }
+  return lines.join("\n");
+}
+export function hintText(s, { emos = [], user = "", assets = "" } = {}) {
   if (!s.on || s.max < 1) return "";
   const list = (emos.length ? emos : GENERIC_EMOS).slice(0, 30).join(", ");
   const times = s.min === s.max ? `정확히 ${s.max}번` : s.min > 0 ? `${s.min}~${s.max}번` : `0~${s.max}번(어울릴 때만)`;
-  return `${HINT_MARK} 이번 응답 본문 사이 알맞은 곳에, 장면에 나온 인물${user ? `(${user} 제외)` : "({{user}} 제외)"}의 속마음을 인물마다 ${times} 넣어요.\n`
-    + `형식: <${TAG} name="인물 이름" emo="감정">겉으로 말하지 않은 솔직한 생각 1~2문장</${TAG}>\n`
-    + `emo는 다음 중 하나: ${list}\n이 태그 밖 본문은 평소대로 쓰고, 태그 안 글을 본문에 다시 쓰지 않아요.`;
+  const img = s.image && assets ? ` img="이미지 이름"` : "";
+  return `${HINT_MARK} 이번 응답에서 장면에 나온 인물${user ? `(${user} 제외)` : "({{user}} 제외)"}의 속마음을 인물마다 ${times} 넣어요.\n`
+    + `그 인물의 행동이나 대사 바로 뒤(같은 줄 끝)에 붙여요: <${TAG} name="인물 이름" emo="감정"${img}>겉으로 말하지 않은 솔직한 생각 1~2문장</${TAG}>\n`
+    + `emo는 다음 중 하나: ${list}\n`
+    + (img ? `img는 아래 목록에서 그 인물·그 감정에 맞는 이미지 이름을 글자 그대로 골라요(그 인물 이미지가 없으면 img를 빼요):\n${assets}\n` : "")
+    + `이 태그 밖 본문은 평소대로 쓰고, 태그 안 글을 본문에 다시 쓰지 않아요.`;
 }
 
 const RE = new RegExp(`<${TAG}\\b([^>]*)>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi");
@@ -30,7 +46,7 @@ export function parseThoughts(text) {
   const out = [];
   for (const m of String(text ?? "").matchAll(RE)) {
     const name = attrOf(m[1], "name").trim(), body = m[2].replace(/<[^>]+>/g, "").trim();
-    if (name && body) out.push({ name: name.slice(0, 40), emo: attrOf(m[1], "emo").trim().slice(0, 30), text: body.slice(0, 400) });
+    if (name && body) { const t = { name: name.slice(0, 40), emo: attrOf(m[1], "emo").trim().slice(0, 30), text: body.slice(0, 400) }; const img = attrOf(m[1], "img").trim(); if (img) t.img = img.slice(0, 120); out.push(t); }
   }
   return out;
 }
@@ -63,7 +79,8 @@ export function detectStyle(texts = []) {
   if (/<img\s*=\s*["']?[^>]+>/i.test(all)) return "imgeq";
   if (/\{\{asset::/i.test(all)) return "asset";
   if (/\{\{image::/i.test(all)) return "image";
-  return "img";
+  if (/\{\{img::/i.test(all)) return "img";
+  return "imgeq";   // 리스 기본 에셋 태그(모듈 이미지도 찾음)
 }
 export function imageTag(pick, style = "img") {
   if (!pick) return "";
@@ -75,24 +92,34 @@ export function imageTag(pick, style = "img") {
 // 반투명 생각 풍선(스크립트 없음, 인라인 스타일만 — 리스 소독기를 지나도 모양 유지)
 const BUBBLE = "display:flex;gap:12px;align-items:center;margin:10px 0 18px;padding:12px 16px;border-radius:24px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);box-shadow:0 8px 24px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);position:relative;max-width:min(560px,100%);box-sizing:border-box";
 const DOT = (l, b, s) => `<span style="position:absolute;left:${l}px;bottom:${b}px;width:${s}px;height:${s}px;border-radius:50%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22)"></span>`;
-export function bubbleHtml(t, img = "") {
-  return `<span x-dusk="thought" data-dusk="thought" style="${BUBBLE}">`
+// side=true: 본문 옆(같은 줄)에 붙는 풍선 — 꼬리가 왼쪽(본문 쪽)
+export function bubbleHtml(t, img = "", side = false) {
+  return `<span x-dusk="thought" data-dusk="thought" style="${side ? BUBBLE.replace("display:flex", "display:inline-flex").replace("margin:10px 0 18px", "margin:4px 0;text-align:left") : BUBBLE}">`
     + (img ? `<span style="flex:none;width:72px;max-height:96px;overflow:hidden;border-radius:16px;line-height:0;opacity:.95">${img}</span>` : "")
     + `<span style="display:block;min-width:0"><b style="display:block;font-size:11.5px;letter-spacing:.04em;opacity:.7;margin-bottom:2px">💭 ${esc(t.name)}${t.emo ? ` · ${esc(t.emo)}` : ""}</b>`
     + `<i style="display:block;font-size:13.5px;line-height:1.6;opacity:.92">${esc(t.text)}</i></span>`
-    + DOT(26, -9, 10) + DOT(14, -18, 6) + `</span>`;
+    + (side ? DOT(-9, 10, 8) + DOT(-16, 4, 5) : DOT(26, -9, 10) + DOT(14, -18, 6)) + `</span>`;
 }
-// 화면 글: 태그 → 풍선. 스트리밍 중 아직 안 닫힌 태그는 ‘생각 중’ 풍선으로(날글이 보이지 않게)
+// 화면 글: 본문의 속마음 태그는 빼고, 본문 옆에 생각풍선 모양 아이콘(💭+꼬리 점)을 붙인다. 누르면 속마음 풍선이 본문 옆(같은 줄)에 펼쳐진다
+// (<details> — 스크립트 없이 리스 소독기를 지나도 열고 닫힘). 스트리밍 중 아직 안 닫힌 태그는 숨긴다(날글이 보이지 않게)
+const ICON = "list-style:none;display:inline-block;position:relative;cursor:pointer;margin:0 2px 0 12px;padding:2px 9px;vertical-align:middle;border-radius:14px 14px 14px 14px/12px 12px 12px 12px;font-size:12px;line-height:1.3;letter-spacing:1px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);user-select:none";
+// 생각풍선 꼬리(본문 쪽 왼쪽 아래로 작은 동그라미 둘)
+const TAILDOT = (l, b, s) => `<span style="position:absolute;left:${l}px;bottom:${b}px;width:${s}px;height:${s}px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28)"></span>`;
+// 태그가 있던 자리(그 인물의 행동·대사 끝)에 💭 아이콘 하나. 누르면 그 속마음 풍선이 펼쳐진다
 export function renderThoughts(text, imgFor = () => "") {
   if (typeof text !== "string" || !text.toLowerCase().includes(`<${TAG}`)) return text;
-  let out = text.replace(RE, (all, attrs, body) => {
-    const t = { name: attrOf(attrs, "name").trim(), emo: attrOf(attrs, "emo").trim(), text: body.replace(/<[^>]+>/g, "").trim() };
+  let out = text.replace(new RegExp(`[ \\t]*\\n?[ \\t]*<${TAG}\\b([^>]*)>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi"), (all, attrs, body) => {
+    const t = { name: attrOf(attrs, "name").trim(), emo: attrOf(attrs, "emo").trim(), img: attrOf(attrs, "img").trim(), text: body.replace(/<[^>]+>/g, "").trim() };
     if (!t.name || !t.text) return "";
-    let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; }
-    return bubbleHtml(t, img);
+    return " " + thoughtIcon(t, imgFor);
   });
-  out = out.replace(new RegExp(`<${TAG}\\b[^>]*>?[\\s\\S]*$`, "i"), (m) => bubbleHtml({ name: attrOf(m, "name") || "…", emo: "", text: "…" }));
+  out = out.replace(new RegExp(`\\s*<${TAG}\\b[^>]*>?[\\s\\S]*$`, "i"), "");
   return out;
+}
+export function thoughtIcon(t, imgFor = () => "") {
+  let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; }
+  return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:inline-flex;align-items:center;flex-wrap:wrap;vertical-align:middle;max-width:100%;margin:0"><summary aria-label="${esc(t.name)} 속마음 보기" title="${esc(t.name)} 속마음" style="${ICON}">💭${TAILDOT(-6, 1, 6)}${TAILDOT(-11, -2, 3)}</summary>`
+    + `<span style="display:inline-block;vertical-align:middle;margin-left:10px">${bubbleHtml(t, img, true)}</span></details>`;
 }
 
 // 상태창 ‘속마음’ 탭: 채팅 글 전체에서 그 인물의 속마음을 모은다(최근 것이 위)

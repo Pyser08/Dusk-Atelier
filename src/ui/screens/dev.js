@@ -1,3 +1,4 @@
+import { withFreshLoreLua } from '../../data/lorerules.js';
 import { validateModule } from './editor.js';
 import { openCharEditor } from './chareditor.js';
 import { newCharacterBase, uniqueDisplayName } from '../../engine/character.js';
@@ -318,7 +319,7 @@ function actions(ctx, all, p, obj) {
     const tt = ctx.toast(".risum 만드는 중…", { seconds: 120 });
     try {
       const m = await fullOf(ctx, all, p);
-      const bytes = await buildRisum(m, (path) => ctx.assets.read(path));
+      const bytes = await buildRisum(await withFreshLoreLua(ctx.api, m, "module"), (path) => ctx.assets.read(path));
       tt.close();
       download(`${safeFileName(m.name)}${p.version ? `_v${safeFileName(p.version)}` : ""}.risum`, bytes, "application/octet-stream");
       ctx.toast(`전체 파일을 만들었어요 (${fmtBytes(bytes.size)})`);
@@ -398,7 +399,7 @@ function actions(ctx, all, p, obj) {
     const tt = ctx.toast(".charx 만드는 중…", { seconds: 300 });
     try {
       const c = await fullOf(ctx, all, p);
-      const bytes = await buildCharx(c, (path) => ctx.assets.read(path));
+      const bytes = await buildCharx(await withFreshLoreLua(ctx.api, c, "character"), (path) => ctx.assets.read(path));
       tt.close();
       download(`${safeFileName(c.name)}${p.version ? `_v${safeFileName(p.version)}` : ""}.charx`, bytes, "application/octet-stream");
       ctx.toast(`봇 카드를 만들었어요 (${fmtBytes(bytes.size)})`);

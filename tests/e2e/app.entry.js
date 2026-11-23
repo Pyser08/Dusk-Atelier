@@ -1,4 +1,5 @@
 import { LIB as ADDON_LIB } from "../../src/addonlib.gen.js";
+import { openCharEditor } from "../../src/ui/screens/chareditor.js";
 globalThis.__duskLib = ADDON_LIB;   // 배포용 애드온 파일(addons/dist) 시험용
 import { activate as chatthemeAddon } from "../../addons/chattheme/index.js";
 import { activate as aibuildAddon } from "../../addons/aibuild/index.js";
@@ -85,6 +86,12 @@ window.bootApp = async (seed, opts = {}) => {
   if (!opts.onboard) { const ui = JSON.parse(seed["rbm:ui:v1"] ?? "{}"); ui.onboardDone ??= true; ui.onboardVer ??= 99; seed = { ...seed, "rbm:ui:v1": JSON.stringify(ui) }; }
   const api = fakeApi(seed, !!opts.story, !!opts.mods);
   delete api.store.__bard;
+  // opts.loreLua: 첫 봇 로어북에 Dusk 규칙 항목(플러그인 없이 동작 시험·사진)
+  if (opts.loreLua) {
+    const get0 = api.getCharacterFromIndex;
+    api.getCharacterFromIndex = async (i) => { const c = await get0(i); if (i === 0 && c) c.globalLore = structuredClone(opts.loreLua); return c; };
+  }
+  window.__openCharEditor = (i, id, o) => openCharEditor(window.__app.ctx, i, id, o);
   if (opts.noChat) { api.getCurrentCharacterIndex = async () => -1; api.getCurrentChatIndex = async () => -1; }   // 열린 채팅 없음(미리보기·시험)
   const errors = (window.__errors = []);
   window.addEventListener("error", (e) => errors.push(e.message));

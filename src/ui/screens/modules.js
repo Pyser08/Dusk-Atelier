@@ -1,3 +1,4 @@
+import { withFreshLoreLua } from '../../data/lorerules.js';
 import { dbRead } from '../../data/dbcache.js';
 import { createMulti } from '../multiselect.js';
 import { dragBadge, gripDrag, placeIds } from '../sortable.js';
@@ -683,7 +684,7 @@ async function removeModule(ctx, m) {
 async function exportRisum(ctx, m) {
   const t = ctx.toast(`'${m.name}' 내보내는 중…`, { seconds: 60 });
   try {
-    const blob = await buildRisum(m, (p) => ctx.assets.read(p));
+    const blob = await buildRisum(await withFreshLoreLua(ctx.api, m, "module"), (p) => ctx.assets.read(p));
     download(`${safeFileName(m.name)}.risum`, blob);
     t.close();
     ctx.toast("내보냈어요");
