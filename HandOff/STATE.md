@@ -1,3 +1,6 @@
+## feat/report-chat · 11-24 신고별 채팅 → v2.2.57 + 허브 0.4.0
+- 롱폴링(/api/chat), reportchat.js, 나가기·다시 채팅. 모바일 종이 안 보이는 원인은 못 찾음.
+
 ## fix/report-7 · 11-24 신고 #7 → v2.2.56
 - 상태 칩(turninfo.js): setInnerHTML이 x-dusk를 지워 빈 칩이 쌓이던 문제. 요소를 직접 만들고 차례로 그린다.
 

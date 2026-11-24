@@ -3,6 +3,7 @@
 // 위젯 안 요소의 클래스·id(rb-htile·rb-hnum·rb-hrecent·rb-hcont·rb-home-*)는 예전 그대로(둘러보기·e2e가 씀).
 import { renderFeatureFind } from "./featurefind.js";
 import { openBugReport } from './bugreport.js';
+import { openReports } from './reportbell.js';
 import { insertBelow } from '../homegrid.js';
 // 2.2.49: 예전에 홈 배치를 저장한 사람에게도 버그 신고 상자를 바로가기 4칸 아래에 한 번 넣는다
 const withBugTile = (g) => { const out = { ...g }; for (const c of Object.keys(out)) out[c] = insertBelow(out[c], "bug", ["imp", "mem", "man", "wrk"], Number(c)); return out; };
@@ -58,13 +59,22 @@ export async function renderHome(ctx) {
   { const pb = provBtn(); if (pb) contEl.append(pb); }   // 프로바이더 애드온(실험)이 켜져 있을 때만
   const discEl = h("div", { class: "rb-discover-slot" });
   const addEl = addonBox(ctx);
+  // 버그 신고 상자: 이 기기에서 보낸 신고가 있으면 반으로 나눠 ‘개발자에게 채팅’을 함께 보여 준다(2.2.57)
+  const bugBtn = h("button", { type: "button", class: "rb-htile tone-5 rb-hbug", id: "rb-home-bug", onClick: () => openBugReport(ctx) },
+      h("span", { class: "ico" }, icon("bug", 22)), h("span", { class: "t" }, h("b", null, "버그 신고"), h("small", null, "문제가 생기면 바로 알려 주세요 · 보낼 내용은 먼저 보여 드려요")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16)));
+  const chatDot = h("i", { class: "rb-hchat-dot", hidden: true, "aria-hidden": "true" });
+  const chatBtn = h("button", { type: "button", class: "rb-htile tone-2 rb-hbug", id: "rb-home-chat", hidden: true, onClick: () => openReports(ctx) },
+    h("span", { class: "ico" }, icon("message", 22), chatDot), h("span", { class: "t" }, h("b", null, "개발자에게 채팅"), h("small", null, "보낸 신고로 바로 이야기해요")));
+  const bugEl = h("div", { class: "rb-hbugs" }, bugBtn, chatBtn);
+  const paintChat = async () => { try { const r = await ctx.hub?.myReports?.(); const on = !!r?.list?.length; chatBtn.hidden = !on; bugEl.classList.toggle("two", on); chatDot.hidden = !r?.unseen; chatBtn.setAttribute("aria-label", r?.unseen ? "개발자에게 채팅 · 새 소식 있음" : "개발자에게 채팅"); } catch { /* 신고 버튼만 */ } };
+  paintChat();
+  { let tries = 0; const hook = () => { if (ctx.hub?.onReports) { const off = ctx.hub.onReports(() => { if (bugEl.isConnected) paintChat(); else off(); }); paintChat(); ctx.hub.checkReports?.().catch?.(() => {}); } else if (tries++ < 10) setTimeout(hook, 500); }; setTimeout(hook, 0); }
   const widgets = {
     imp: { name: "가져오기", el: tile("upload", "가져오기", "봇·모듈·파일 가져오기", () => ctx.legacy.open(), "rb-home-import", 1) },
     mem: { name: "기억", el: tile("brain", "기억", "장기 기억·기억 카드·코코아", () => ctx.go("memory-home"), "rb-home-memory", 2) },
     man: { name: "관리", el: tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage", 3) },
     wrk: { name: "작업실", el: tile("tools", "작업실", "프로바이더·AI 봇 제작·도구", () => ctx.go("work-home"), "rb-home-work", 4) },
-    bug: { name: "버그 신고", el: h("button", { type: "button", class: "rb-htile tone-5 rb-hbug", id: "rb-home-bug", onClick: () => openBugReport(ctx) },
-      h("span", { class: "ico" }, icon("bug", 22)), h("span", { class: "t" }, h("b", null, "버그 신고"), h("small", null, "문제가 생기면 바로 알려 주세요 · 보낼 내용은 먼저 보여 드려요")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))) },
+    bug: { name: "버그 신고", el: bugEl },
     n1: { name: "저장된 기억", el: nums.n1.el }, n2: { name: "이번에 넣음", el: nums.n2.el }, n3: { name: "인물", el: nums.n3.el }, n4: { name: "확인할 것", el: nums.n4.el },
     rec: { name: "최근 기록", el: recentEl },
     qs: { name: "빠른 설정", el: qsEl },
