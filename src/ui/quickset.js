@@ -1,6 +1,7 @@
 // 빠른 설정 묶음 (1.8.3): 홈 '빠른 설정' 카드. 채팅 입력창 옆 메뉴의 토글은 data/chatmenu.js가 따로 맡는다.
 import { h } from './dom.js';
-import { switchEl, setSwitch } from './kit.js';
+import { switchEl, setSwitch, modal, btn, segmented } from './kit.js';
+import { loadFabLook, saveFabLook, FAB_SIZES, FAB_LOOK_DEFAULT } from '../data/floatbtn.js';
 import { loadFairOn, loadDiceOn, DICE_KEY } from '../data/fairplay.js';
 import { loadStoryTimeOn } from '../data/storytime.js';
 import { diceRow } from './dicedetail.js';
@@ -93,7 +94,40 @@ export async function quickSettingsCard(ctx) {
     setTimeout(upd, 0);
     return h("div", { class: "rb-qs-wrap" }, card, more);
   };
+  // 2.2.50: 플로팅 버튼 설정(맨 위) — 켜기·끄기, 크기, 투명도를 한 창에서
+  let fabCur = !!fabOn;
+  const fabVal = h("span", { class: "val" }, fabCur ? "켜짐" : "꺼짐");
+  const openFab = async () => {
+    let look = await loadFabLook(ctx.api);
+    const apply = async (next) => { look = await saveFabLook(ctx.api, { ...look, ...next }); await ctx.memoryButton?.setLook?.(look)?.catch?.(() => {}); draw(); };
+    const prev = h("span", { "aria-hidden": "true", style: "display:grid;place-items:center;border-radius:50%;color:#fff;border:1px solid rgba(255,255,255,.3);background:radial-gradient(circle at 32% 24%,rgba(255,255,255,.42),rgba(255,255,255,0) 58%),color-mix(in srgb,var(--rb-acc,#7c5cf0) 60%,transparent);box-shadow:0 4px 12px rgba(0,0,0,.25);transition:all .15s" }, "◎");
+    const opIn = h("input", { type: "range", min: "20", max: "100", step: "5", style: "flex:1", "aria-label": "투명도" });
+    const opVal = h("b", { style: "min-width:44px;text-align:right" });
+    const sizeHost = h("div");
+    const sw = switchEl(fabCur, { label: "플로팅 버튼 보이기", onChange: async (v, el) => { el.setAttribute("aria-checked", v ? "true" : "false"); fabCur = v; fabVal.textContent = v ? "켜짐" : "꺼짐"; await setNoFab(!v); } });
+    function draw() {
+      Object.assign(prev.style, { width: `${look.size}px`, height: `${look.size}px`, opacity: String(look.opacity), fontSize: `${Math.round(look.size * 0.42)}px` });
+      opIn.value = String(Math.round(look.opacity * 100)); opVal.textContent = `${Math.round(look.opacity * 100)}%`;
+      sizeHost.replaceChildren(segmented(FAB_SIZES.map(([n, l]) => [String(n), l]), String(FAB_SIZES.some(([n]) => n === look.size) ? look.size : FAB_LOOK_DEFAULT.size), (v) => apply({ size: Number(v) }), "버튼 크기"));
+    }
+    let opT = null;
+    opIn.addEventListener("input", () => { look = { ...look, opacity: Number(opIn.value) / 100 }; draw(); clearTimeout(opT); opT = setTimeout(() => apply({ opacity: look.opacity }), 150); });
+    draw();
+    const row = (title, sub, ...right) => h("div", { style: "display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--rb-line,rgba(127,127,127,.15))" }, h("div", { style: "flex:1;min-width:0" }, h("b", null, title), sub ? h("div", { class: "rb-muted", style: "font-size:12px" }, sub) : null), ...right);
+    return modal(ctx.win, (done) => h("div", { class: "rb-dialog", role: "dialog", "aria-label": "플로팅 버튼 설정", style: "max-width:440px" },
+      h("h3", { class: "rb-h3" }, "플로팅 버튼 설정"),
+      h("p", { class: "rb-muted", style: "margin:0 0 6px" }, "채팅 위에 떠 있는 동그란 인물 관계도 버튼이에요. 끌어서 옮기고, 길게 누르면 가장자리로 자리를 바꿔요."),
+      h("div", { style: "display:grid;place-items:center;height:92px;margin:6px 0 4px;border-radius:14px;background:rgba(127,127,127,.12)" }, prev),
+      row("보이기", "끄면 채팅 위 버튼이 사라져요. 관계도는 채팅 메뉴에서도 열 수 있어요.", sw),
+      h("div", { style: "padding:12px 0;border-top:1px solid var(--rb-line,rgba(127,127,127,.15))" }, h("b", null, "크기"), h("div", { style: "margin-top:8px" }, sizeHost)),
+      h("div", { style: "padding:12px 0;border-top:1px solid var(--rb-line,rgba(127,127,127,.15))" }, h("b", null, "투명도"), h("div", { class: "rb-muted", style: "font-size:12px" }, "평소 보이는 정도예요. 누르거나 마우스를 올리면 또렷해져요."), h("div", { style: "display:flex;gap:10px;align-items:center;margin-top:8px" }, opIn, opVal)),
+      h("div", { class: "btns" }, btn("기본값으로", { onClick: () => apply({ ...FAB_LOOK_DEFAULT }) }), btn("닫기", { kind: "primary", onClick: () => done(null) }))));
+  };
+  const fabRow = h("button", { type: "button", class: "rb-srow", id: "rb-qs-fab", onClick: () => openFab().catch(failStory) },
+    h("span", { class: "t" }, "플로팅 버튼 설정", h("small", null, "채팅 위 동그란 관계도 버튼 · 켜기·크기·투명도")), fabVal, h("span", { class: "go", "aria-hidden": "true" }, "›"));
+
   return fade(h("section", { class: "rb-card bordered rb-story-helper rb-qs-scroll" },
+    fabRow,
     (() => { const row = storyRow("공정한 전개", "내 뜻대로만 흐르지 않게 해요.", fairOn, setFair); fairSw = row.querySelector("[role=switch]"); return row; })(),
     diceRow(ctx, { on: diceOn, setOn: setDice, fail: failStory }),
     storyRow("주사위 결과 표시", "응답 아래에 굴린 값과 판정을 보여줘요.", diceShowOn, setDiceShow),
@@ -101,7 +135,6 @@ export async function quickSettingsCard(ctx) {
     storyRow("이야기 시간 자동 삽입", "이야기 속 시각을 AI에게 알려줘요.", stOn, setStory),
     ctx.imgFix ? storyRow("이미지 태그 자동 교정", "AI가 틀리게 쓴 에셋 이미지 태그를 이 봇의 실제 에셋 이름으로 고쳐요.", ctx.imgFix.isOn(), setImgFix) : null,
     ctx.imgFix ? storyRow("이미지 태그 상황 알림", "직전 옷·동작과 쓸 수 있는 태그를 AI에게 다시 알려줘요.", ctx.imgFix.isHintOn(), setImgHint) : null,
-    storyRow("떠 있는 버튼 없애기", "채팅 위 동그란 인물 관계도 버튼을 숨겨요.", !fabOn, setNoFab),
     ...(ctx.ext?.render?.("slot", "home.quick", ctx) ?? [])   // 2.2.21 애드온이 빠른 설정 줄을 더하는 자리(예: 장기기억의 캐릭터·장면 상태창)
   ));
 }

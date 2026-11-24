@@ -1,4 +1,4 @@
-// 홈 빠른 설정: 떠 있는 버튼 없애기 토글 저장, 길면 스크롤·아래 흐림 표시 (11-22)
+// 홈 빠른 설정: 플로팅 버튼 설정(켜기·크기·투명도) 저장, 길면 스크롤·아래 흐림 표시 (11-22)
 import { createRequire } from "node:module";
 import { build } from "/opt/npm-tools/node_modules/esbuild/lib/main.js";
 const { chromium } = createRequire("/opt/npm-tools/node_modules/")("playwright");
@@ -10,12 +10,22 @@ const errs = []; page.on("pageerror", (e) => errs.push(e.message));
 await page.setContent("<!doctype html><body style='margin:0'></body>"); await page.addScriptTag({ content: r.outputFiles[0].text });
 await page.evaluate(() => window.bootApp({ "rbm:seenVersion:v1": "9.9.9", "rbm:ui:v1": JSON.stringify({ promptIntroDone: true, tourDone: true, tourVer: 99 }) }, { host: true }));
 await page.waitForTimeout(300);
-const sw = page.locator(".rb-story-helper [role=switch][aria-label='떠 있는 버튼 없애기']");
-ok("토글이 있고 처음엔 꺼짐", (await sw.getAttribute("aria-checked")) === "false");
+// 2.2.50: 맨 위 '플로팅 버튼 설정' 줄 → 창에서 켜기·크기·투명도
+ok("플로팅 버튼 설정이 빠른 설정 맨 위", await page.evaluate(() => document.querySelector(".rb-qs-scroll")?.firstElementChild?.id === "rb-qs-fab"));
+await page.click("#rb-qs-fab"); await page.waitForTimeout(250);
+const dlg = page.locator("[role=dialog][aria-label='플로팅 버튼 설정']");
+const sw = dlg.locator("[role=switch]");
+ok("창이 열리고 보이기 스위치는 켜짐", (await sw.getAttribute("aria-checked")) === "true");
 await sw.click(); await page.waitForTimeout(200);
-ok("켜면 버튼 설정이 off로 저장", (await page.evaluate(() => __api.store["dusk.ui.memoryButton"])) === "off");
+ok("끄면 버튼 설정이 off로 저장", (await page.evaluate(() => __api.store["dusk.ui.memoryButton"])) === "off");
 await sw.click(); await page.waitForTimeout(200);
-ok("끄면 on으로 저장", (await page.evaluate(() => __api.store["dusk.ui.memoryButton"])) === "on");
+ok("켜면 on으로 저장", (await page.evaluate(() => __api.store["dusk.ui.memoryButton"])) === "on");
+await dlg.locator(".rb-seg button", { hasText: "크게" }).first().click(); await page.waitForTimeout(200);
+await dlg.locator("input[type=range]").evaluate((el) => { el.value = "30"; el.dispatchEvent(new Event("input")); }); await page.waitForTimeout(400);
+const look = await page.evaluate(() => JSON.parse(__api.store["dusk.ui.fabLook"] ?? "{}"));
+ok("크기·투명도 저장", look.size === 52 && look.opacity === 0.3, JSON.stringify(look));
+await dlg.screenshot({ path: (process.env.SHOT || "/tmp/qs.png").replace(".png", "-fab.png") });
+await dlg.locator("button", { hasText: "닫기" }).click(); await page.waitForTimeout(150);
 const card = page.locator(".rb-qs-scroll");
 ok("스크롤은 한 겹(위젯은 안 넘치고 카드만)", ...await page.evaluate(() => { const w = document.querySelector(".rb-hw[data-w=qs]"); if (!w) return [true, "격자 아님"]; const c = w.querySelector(".rb-qs-scroll"); const wsc = getComputedStyle(w).overflowY; return [wsc === "hidden" && w.scrollHeight <= w.clientHeight + 1 && c.clientHeight > 40, JSON.stringify([wsc, w.scrollHeight, w.clientHeight, c.clientHeight, c.scrollHeight])]; }));
 await card.evaluate((el) => { el.style.maxHeight = "120px"; el.dispatchEvent(new Event("scroll")); });

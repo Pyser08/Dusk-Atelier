@@ -42,6 +42,8 @@ export function createMemoryButton(api, { name, icon, open, log, ensureDoc = nul
     async start() {
       if (await loadMemoryButtonOn(api)) await show();
     },
-    hide   // 애드온을 끌 때 버튼만 내린다(설정값은 그대로)
+    hide,   // 애드온을 끌 때 버튼만 내린다(설정값은 그대로)
+    // 2.2.50: 크기·투명도 바로 반영(Dusk가 그린 동그란 버튼일 때만. 리스 버튼이면 false)
+    setLook: async (look) => (fab?.isOn() ? fab.setLook(look) : false)
   };
 }
