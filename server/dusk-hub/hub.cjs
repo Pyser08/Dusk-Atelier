@@ -772,6 +772,10 @@ if (require.main === module) {
       .catch((e) => { console.error("[hub]", e.message); process.exit(1); });
     return;
   }
+  // 예시 파일의 자리글을 그대로 두면 공개된 값이 비밀번호가 된다 → 켜지 않는다
+  const PLACEHOLDER = /여기에|내도메인|웹후크용|긴-비밀글|change-me/;
+  if (PLACEHOLDER.test(cfg.adminToken) || PLACEHOLDER.test(cfg.webhookSecret)) { console.error("[hub] hub.config.json에 예시 자리글이 그대로 있어요. ADMIN_TOKEN·GITHUB_WEBHOOK_SECRET을 openssl rand -hex 24 로 만든 값으로 바꾸고 저장해 주세요."); process.exit(1); }
+  if (PLACEHOLDER.test(cfg.publicUrl)) console.error("[hub] PUBLIC_URL이 예시 그대로예요(https://hub.내도메인.com). 실제 주소로 바꿔 주세요.");
   if (!cfg.adminToken || cfg.adminToken.length < 16) { console.error("[hub] ADMIN_TOKEN을 16자 이상으로 정해 주세요 (환경 변수 또는 hub.config.json)."); process.exit(1); }
   if (process.argv.includes("--check")) { console.log("[hub] 설정 확인", { ...cfg, adminToken: "***", githubToken: cfg.githubToken ? "***" : "", webhookSecret: cfg.webhookSecret ? "***" : "", discordWebhook: cfg.discordWebhook ? "***" : "" }); process.exit(0); }
   const hub = createHub(cfg);
