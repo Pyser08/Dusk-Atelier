@@ -279,6 +279,13 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       const charIdx = await api.getCurrentCharacterIndex();
       const chatIdx = await api.getCurrentChatIndex();
       if (!(charIdx >= 0) || !(chatIdx >= 0)) return;
+      // 신고 #5: 관리 규칙이 없으면 채팅을 통째로 읽지 않는다. 로어북만 주는 api가 있을 때만(없으면 캐릭터를 통째로 읽어야 해 더 느리다)
+      if (typeof api.getCurrentLorebookEntries === "function") {
+        const was = newOut; newOut = false;
+        let all = null; try { all = await api.getCurrentLorebookEntries(); } catch { /* 예전 길로 */ }
+        if (Array.isArray(all) && !collectManaged(all).length) { lastPos = `${charIdx}:${chatIdx}`; return; }
+        newOut = newOut || was;
+      }
       const first = await api.getChatFromIndex(charIdx, chatIdx);
       if (!first || streaming(first)) return;
       lastPos = `${charIdx}:${chatIdx}`; newOut = false;   // 읽었으니 다음 새 출력·채팅 변경까지 다시 읽지 않음
@@ -305,12 +312,18 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   }
   // 11-24 성능: 표시 훅은 스크롤·다시 그리기에도 불린다 → 새 출력이 나왔거나(출력 훅) 열린 채팅이 바뀌었을 때만 채팅을 읽는다
   let outHook = false, newOut = true, lastPos = "";
+  // 신고 #5: 줄마다 위치를 묻지 않고 한 번으로 모은다. 묻는 사이 또 불리면 끝난 뒤 한 번 더(채팅을 막 바꾼 때를 놓치지 않게)
+  let posBusy = false, posAgain = false;
+  const checkPos = () => {
+    if (posBusy) { posAgain = true; return; }
+    posBusy = true;
+    Promise.all([api.getCurrentCharacterIndex(), api.getCurrentChatIndex()]).then(([a, b]) => {
+      if (`${a}:${b}` !== lastPos) { newOut = true; posAgain = false; onDisplay(""); }
+    }).catch(() => {}).then(() => { posBusy = false; if (posAgain) { posAgain = false; checkPos(); } });
+  };
   const onDisplay = (text) => {
     if (outHook && !newOut) {
-      Promise.all([api.getCurrentCharacterIndex(), api.getCurrentChatIndex()]).then(([a, b]) => {
-        const pos = `${a}:${b}`; if (pos === lastPos) return;
-        newOut = true; onDisplay(text);
-      }).catch(() => {});
+      checkPos();
       return text;
     }
     clearTimeout(prepTimer);

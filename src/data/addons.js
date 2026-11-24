@@ -169,13 +169,15 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     return code;
   }
   // 시작: 저장해 둔 코드로 바로 켠다(네트워크 기다리지 않음). 실패하면 전 버전으로.
-  async function boot() {
+  // onSettled(id, ok): 켜 둔 애드온이 켜졌거나 실패했을 때, onIndex(ids): 켤 목록을 알았을 때
+  async function boot({ onIndex, onSettled } = {}) {
     const idx = await getIndex();
     // 다시 시작했으니 저장된(새) 버전으로 켜진다 → '새로고침하면 적용' 표시를 지운다
     if (Object.values(idx).some((v) => v?.pendingRestart)) { for (const v of Object.values(idx)) if (v) delete v.pendingRestart; await setIndex(idx); }
     // 동시에 켠다: 저장된 코드는 한꺼번에 읽고, 각 애드온은 자기 필요 애드온(requires)이 켜지기만 기다린다.
     // (예전: 전부 차례로 → 애드온이 늘수록 늦게 켜져서 장기기억 훅이 첫 요청을 놓칠 수 있었다)
     const ids = Object.entries(idx).filter(([, v]) => v.on !== false).map(([id]) => id);
+    onIndex?.(ids);
     const codes = new Map(await Promise.all(ids.map(async (id) => [id, await store.getItem(CODE(id)).catch(() => null)])));
     const started = new Map();
     const launch = (id, stack = new Set()) => {
@@ -194,6 +196,7 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
         }
       })();
       started.set(id, p);
+      if (onSettled) p.then((ok) => onSettled(id, ok), () => onSettled(id, false));
       return p;
     };
     await Promise.all(ids.map((id) => launch(id)));

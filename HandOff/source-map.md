@@ -19,20 +19,20 @@
 
 ## 파일 목록
 ### src/
-- `addonlib.gen.js` (590줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
-- `main.js` (339줄) 
+- `addonlib.gen.js` (592줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
+- `main.js` (341줄) 
 
 ### src/cellar/
 - `node-entry.js` (11줄) Dusk Cellar(서버)에서 장기 기억 분석을 돌리는 Node용 진입점 (v1.9.3, Cella… — ENGINE_VERSION, createMemoryRunner, createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX
 
 ### src/data/
 - `addcharacter.js` (46줄) 새 봇을 DB에 추가하는 공용 흐름 (legacy.js의 '캐릭터 추가'에서 추출, 동작 동일). — insertCharacter, createBotDraft
-- `addons.js` (502줄) 애드온 로더(2.0.0 시험): 우리 저장소 목록(addons.json)의 애드온 ESM을 nativ… — ADDON_MANIFEST_URL, ADDON_URL_KEY, ADOPT_KEY, ADOPT_ID_PREFIX, LEGACY_ADOPTED
+- `addons.js` (505줄) 애드온 로더(2.0.0 시험): 우리 저장소 목록(addons.json)의 애드온 ESM을 nativ… — ADDON_MANIFEST_URL, ADDON_URL_KEY, ADOPT_KEY, ADOPT_ID_PREFIX, LEGACY_ADOPTED
 - `addonscope.js` (52줄) 애드온마다 따로 쓰는 api: 애드온이 호스트에 단 훅(요청·스크립트·채팅 리스너)을 기록해 두었다가… — BASE, baseApi, createProviderRelay, scopeApi
 - `addonsdk.js` (134줄) 애드온 SDK(2.1.0): 모든 애드온의 activate(api, ctx)에 ctx.dusk로 넘겨… — SDK_VERSION, createAddonSdk
 - `adultseed.js` (86줄) 2.2.6 ‘처음 등장 때 성인 항목 무작위로’ 옵션(pluginStorage) + 장기기억 위키 후… — readSeedOpt, saveSeedOpt, seedWikiNow, seedErosyncNow, syncOrientNow
 - `affhud.js` (181줄) 호감도 HUD 프리셋 런타임: 응답이 끝나면 호감도를 채팅 변수($aff…)에 써 둔다. — createAffHud
-- `apiread.js` (24줄) 2.2.23 성능: 캐릭터(getCharacterFromIndex — 딸린 채팅 전부라 큰 채팅은 수… — readChar, readChat, dropReads
+- `apiread.js` (26줄) 2.2.23 성능: 캐릭터(getCharacterFromIndex — 딸린 채팅 전부라 큰 채팅은 수… — readChar, readChat, dropReads
 - `assetfix.js` (93줄) v1.8.2 에셋 태그 고치기(도구 탭, 사용자가 누를 때만): 지금 열린 채팅 읽기 · 고친 응답 … — UNDO_KEY, loadRange, applyFix, lastUndo, undoFix
 - `assetfolders.js` (65줄) — foldersOf, childFolders, folderPath, createFolder, renameFolder
 - `cachelayout.js` (34줄) 캐시용 프롬프트 배치 런타임 (2.2.6): 설정(dusk.cachelayout)과 지금 채팅의 하이… — LAYOUT_KEY, LAYOUT_DEFAULT, createCacheLayout
@@ -79,7 +79,7 @@
 - `interopSnippet.js` (4줄) DA Interop v1 스니펫 원본: https://github.com/Pyser08/dusk-at…
 - `jev.js` (73줄) 2.2.4 Jev 재정렬(선택, 기본 꺼짐): 원문 회상 후보를 고르기 모델(typesafe/jev-… — DEFAULT_JEV, JEV_PROVIDERS, normCfg, jevScore, jevBody
 - `lorelog.js` (206줄) 로어북 로그 런타임 — LORE_LOG_KEY, loadLoreLog, clearLoreLog, createLoreLog
-- `lorerules.js` (333줄) 로어북 규칙 런타임 — LORE_SETTINGS_KEY, LORE_DEFAULTS, loadLoreSettings, saveLoreSettings, LUA_OFF_KEY
+- `lorerules.js` (346줄) 로어북 규칙 런타임 — LORE_SETTINGS_KEY, LORE_DEFAULTS, loadLoreSettings, saveLoreSettings, LUA_OFF_KEY
 - `medoc.js` (19줄) ‘나’ 위키 문서 자동 만들기(설정 inject.meDoc, 기본 꺼짐): 지금 채팅 기억 폴더에 나… — syncMeDoc
 - `memlog.js` (107줄) 2.2.4 실패 기록: 장기 기억·위키·원문 회상·Jev·분기 이어받기 등에서 실패한 것만 모아 둔다… — redact, explain, createMemLog, createEventLog, logEvent
 - `memory-default-prompts.js` (52줄) 장기기억 기본 프롬프트 2개 — MEMORY_DEFAULT_PROMPT_1, MEMORY_DEFAULT_PROMPT_2, DEFAULT_PROMPT_BLOCKS
@@ -129,6 +129,7 @@
 - `sizemeter.js` (120줄) 용량 측정 수집 (v1.9.2): 읽기 전용. 봇은 하나씩 읽어 크기만 남기고 바로 버려서(큰 채팅이… — measureAllCharacters, addModuleAssetBytes, scanSizes
 - `skillguide.js` (3줄) cocoA(gent!) SKILL_GUIDE.md 원문(스킬 형식 규격). AI 스킬 만들기 대화의 … — SKILL_GUIDE
 - `skillstore.js` (70줄) 스킬 저장소·가져오기·주입 공급자 (v1.8.1). 추가 AI 호출 없음. 실패해도 기억 흐름을 막지… — SKILL_LIB_KEY, COCOA_PRESETS_KEY, COCOA_LIB_KEY, createSkillStore
+- `startgate.js` (9줄) 시작 직후 화면 표시가 애드온 준비보다 먼저 지나가지 않게 잠깐 기다리는 문(신고 #5). — createStartGate
 - `stealth-apply.js` (163줄) 더스크 스텔스 적용: 만든 테마를 기존 테마 목록(themes.js)에 넣고, 리스 설정(커스텀 CS… — loadStealth, reapplyIfUpdated, saveStealth, enableStealth, disableStealth
 - `stealth-fold.js` (44줄) 더스크 스텔스: 답변 속 이미지를 '명령어 N개 실행함 ▸' 접힘 안에 넣는다(리스 display 훅… — setFoldOn, foldCount, foldImages
 - `stealth-shell.js` (514줄) 더스크 스텔스 '껍데기': 클로드·클로드 코드 모양의 왼쪽 사이드바와 위쪽 제목 줄을 플러그인이 리스… — parseToggles, collectToggles, toggleValue, chatRows, safeIconUrl
@@ -708,7 +709,7 @@
 - `style.js` (4줄) 주의: :host에 overflow:hidden/auto나 overscroll-behavior를 주면… — WH_CSS
 
 ## Risu 플러그인 API (우리 코드가 쓰는 호출, 횟수순)
-`getCharacterFromIndex`(85), `getDatabase`(56), `getChatFromIndex`(36), `getCurrentCharacterIndex`(32), `getCurrentChatIndex`(29), `setCharacterToIndex`(24), `setDatabaseLite`(18), `nativeFetch`(17), `addRisuScriptHandler`(15), `setChatToIndex`(11), `addRisuReplacer`(8), `saveAsset`(8), `getRootDocument`(7), `requestPluginPermission`(6), `readImage`(6), `hideContainer`(6), `registerButton`(5), `getLocalPluginStorage`(5), `toggle`(5), `showContainer`(4), `risuFetch`(3), `addProvider`(2), `getDatabaseCached`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2), `getColorScheme`(2)
+`getCharacterFromIndex`(85), `getDatabase`(56), `getChatFromIndex`(36), `getCurrentCharacterIndex`(32), `getCurrentChatIndex`(29), `setCharacterToIndex`(24), `setDatabaseLite`(18), `nativeFetch`(17), `addRisuScriptHandler`(15), `setChatToIndex`(11), `addRisuReplacer`(8), `saveAsset`(8), `getRootDocument`(7), `requestPluginPermission`(6), `readImage`(6), `hideContainer`(6), `registerButton`(5), `getLocalPluginStorage`(5), `toggle`(5), `showContainer`(4), `risuFetch`(3), `addProvider`(2), `getDatabaseCached`(2), `getCurrentLorebookEntries`(2), `unregisterUIPart`(2), `removeRisuReplacer`(2), `checkCharOrder`(2), `registerSetting`(2), `removeRisuScriptHandler`(2), `initPublicLinkSession`(2)
 
 ## RisuAI 본체 구조 (kwaroran/RisuAI, 2026.10.220 기준)
 읽기 전용 클론: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kwaroran/risuai` (add_repo로 읽기만 가능, 쓰기 불가). 전체를 읽지 말고 아래 위치만 grep한다.
