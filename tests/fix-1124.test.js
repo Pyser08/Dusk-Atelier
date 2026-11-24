@@ -50,3 +50,8 @@ test("성인 기록 11-24 보강: 흔한 낱말은 성적인 장면으로 안 �
   const r = nsfwFrom("act|미오|민호|sex|2", [{ name: "미오" }]);
   assert.equal(r[0].times, 2); assert.deepEqual(r[0].labels, []);
 });
+
+test("성인 기록 11-24 보강2: 허리 움직임·문장 넘은 '하나가 되었다'는 여전히 성적인 장면", () => {
+  for (const t of ["그는 허리를 흔들었다", "둘은 하나가 되었다. 침대가 삐걱였다", "하나가 되어 몸을 겹쳤다"]) assert.ok(isHotText(t), t);
+  assert.equal(isHotText("모두가 하나가 되었다. 함성이 울렸다"), false);
+});
