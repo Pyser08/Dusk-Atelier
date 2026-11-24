@@ -8,7 +8,7 @@ export const FEATURES = [
   // 애드온(2.1.0, 홈)
   { t: "애드온 받기·켜고 끄기", k: "addon 확장 기능 받기 업데이트 카테고리", path: "홈 › 애드온", tab: "home", find: "애드온" },
   { t: "커스텀 애드온 불러오기·만들기", k: "커스텀 addon 직접 만들기 AI로 만들기 파일 불러오기 내보내기 공유 SDK", path: "홈 › 애드온 › 불러오기·만들기", tab: "home", find: "애드온" },
-  { t: "떠 있는 버튼 없애기", k: "플로팅 버튼 떠 있는 버튼 동그란 버튼 관계도 버튼 숨기기 없애기 fab", path: "홈 › 빠른 설정", tab: "home", find: "떠 있는 버튼 없애기", addon: "memory" },
+  { t: "플로팅 버튼 설정", k: "플로팅 버튼 떠 있는 버튼 동그란 버튼 관계도 버튼 숨기기 없애기 크기 투명도 fab", path: "홈 › 빠른 설정", tab: "home", find: "플로팅 버튼 설정", addon: "memory" },
   // 장기 기억 — 무엇을 기억할까요
   { t: "추적 수준 (가볍게·기본·전부)", k: "기억 수준 프리셋 무엇을 기억 호출 비용", path: `${P} › 무엇을 기억할까요?`, tab: "memory", mem: POT, find: "무엇을 기억할까요?", addon: "memory" },
   { t: "호감 점수", k: "호감도 affinity 좋아하는 정도 숫자 표시 증가 승수 감소 승수", path: `${P} › 무엇을 기억할까요? › 호감`, tab: "memory", mem: POT, find: "호감", addon: "memory" },

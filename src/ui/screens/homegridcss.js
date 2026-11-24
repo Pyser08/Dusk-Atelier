@@ -46,7 +46,7 @@ export var HOMEGRID_CSS = `
 .rb-hw .rb-htile .t{display:flex;flex-direction:column;min-width:0}
 .rb-hw .rb-htile small{color:var(--rb-mute);font-size:12px}
 .rb-skin-glass .rb-htile .ico{color:#fff}
-.rb-htile.tone-5{--k:#ff6b81}.rb-hw .rb-hbug{justify-content:flex-start}.rb-hw .rb-hbug .go{margin-left:auto;opacity:.6;display:flex}.rb-hw[data-size] .rb-hbug{flex-direction:row!important;align-items:center!important;text-align:left!important;justify-content:flex-start!important}.rb-hw[data-size] .rb-hbug small{display:block!important}
+.rb-htile.tone-5{--k:#ff6b81}.rb-hw .rb-hbug{justify-content:flex-start}.rb-hw .rb-hbug .go{margin-left:auto;opacity:.6;display:flex}.rb-hw[data-size] .rb-hbug{flex-direction:row!important;align-items:center!important;text-align:left!important;justify-content:flex-start!important}.rb-hw[data-size] .rb-hbug small{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal!important;overflow:hidden;text-align:left}.rb-hw .rb-hbug .t{flex:1 1 auto;min-width:0;align-items:flex-start!important;text-align:left}.rb-hw .rb-hbug .ico{flex:none}.rb-hw .rb-hbug{gap:12px!important;padding:12px 14px!important;min-height:0!important}
 .rb-htile.tone-1{--k:#ff8a5c}.rb-htile.tone-2{--k:#e98bd6}.rb-htile.tone-3{--k:#6f9dff}.rb-htile.tone-4{--k:#3fcfa6}
 /* 2.2.0 바로가기 아이콘: 네온 선(속 옅게 + 기능 색 테두리·아이콘 빛) */
 .rb-hw .rb-htile[class*=tone-] .ico{background:linear-gradient(135deg,color-mix(in srgb,var(--k) 60%,transparent),color-mix(in srgb,var(--k) 30%,transparent))!important;border:1px solid color-mix(in srgb,var(--k) 60%,transparent);color:color-mix(in srgb,var(--k) 25%,#fff)!important;box-shadow:0 0 10px color-mix(in srgb,var(--k) 35%,transparent)}

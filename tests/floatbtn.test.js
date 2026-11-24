@@ -14,10 +14,10 @@ function fakeDoc() {
 }
 const store = () => { const m = new Map(); return { getItem: async (k) => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); }, m }; };
 
-test("떠 있는 버튼: 동그랗고 반투명, 리스 테마 색 변수", () => {
+test("떠 있는 버튼: 작고(42px) 동그랗고 반투명(.55), 리스 테마 색 변수", () => {
   const s = FAB_STYLE(10, 20);
-  assert.match(s, /border-radius:50%/); assert.match(s, /opacity:\.8\d/); assert.match(s, /var\(--risu-theme-selected/); assert.match(s, /touch-action:none/);
-  assert.deepEqual(clampPos(-50, 9999, 400, 800), [12, 800 - 54 - 12]);
+  assert.match(s, /border-radius:50%/); assert.match(s, /opacity:0\.55/); assert.match(FAB_STYLE(0, 0, { size: 60, opacity: 0.3 }), /width:60px.*opacity:0\.3/s); assert.match(s, /width:42px/); assert.match(s, /var\(--risu-theme-selected/); assert.match(s, /touch-action:none/);
+  assert.deepEqual(clampPos(-50, 9999, 400, 800), [12, 800 - 42 - 12]);
   assert.equal(presetSpots(400, 800).length, 6);
 });
 
