@@ -146,6 +146,25 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
   const FONT = "system-ui, sans-serif";
   function halo(text, x, y) { ctx.lineJoin = "round"; ctx.lineWidth = 3.5; ctx.strokeStyle = rgba(TH.surf, 0.9); ctx.strokeText(text, x, y); ctx.fillText(text, x, y); }
 
+  // 신고 #11: 이름표 폭은 글꼴·글자별로, 버튼줄·범례 자리는 잠깐씩 기억한다(프레임마다 다시 재지 않게)
+  const widths = new Map();
+  function textW(x) { const k = ctx.font + "|" + x; let w = widths.get(k); if (w === undefined) { if (widths.size > 600) widths.clear(); w = ctx.measureText(x).width; widths.set(k, w); } return w; }
+  let rects = null, rectsAt = -1e9;
+  function edgeRects() { const now = performance.now(); if (!rects || now - rectsAt > 500) { rects = { sr: stage.getBoundingClientRect(), cr: ctrlsEl?.getBoundingClientRect(), lr: legendEl?.getBoundingClientRect() }; rectsAt = now; } return rects; }
+  // 다음 프레임이 필요한가: "move" 움직이는 중 · "pulse" 은은한 깜빡임만(초당 약 15번) · "idle" 멈춤(1초에 한 번만 크기·테마 확인)
+  function activity() {
+    const now = performance.now(), off = (a, b, e = 0.05) => Math.abs(a - b) > e;
+    if (now < wakeUntil || st.springUntil || wave || st.drag || pinch) return "move";
+    if (st.flat !== st.flatT) return "move";
+    if (!st.flat && (st.vyaw || st.vp || (st.sel ? !reduce : st.spin))) return "move";
+    if (!reduce && nodes.some((n) => n.persona)) return "move";
+    if (nodes.some((n) => off(n.x, n.tx) || off(n.y, n.ty) || off(n.z, n.tz) || (n.pop ?? 1) < 1)) return "move";
+    if (off(cam.x, tgt.x) || off(cam.y, tgt.y) || off(cam.z, tgt.z) || off(cam.zm, tgt.zm, 0.002)) return "move";
+    return !reduce && (edges.some((e) => e.rc && e._al > 0.01) || (st.hl && Object.keys(curTS).length)) ? "pulse" : "idle";
+  }
+  let tgt = { x: 0, y: 0, z: 0, zm: 1 }, wakeUntil = 0, sleepT = null;
+  const wait = (fn, ms) => (win.setTimeout ?? setTimeout)(fn, ms), unwait = (x) => (win.clearTimeout ?? clearTimeout)(x);
+  function wake(ms = 300) { wakeUntil = Math.max(wakeUntil, performance.now() + ms); if (sleepT !== null && running && !destroyed) { unwait(sleepT); sleepT = null; win.requestAnimationFrame(loop); } }
   function draw(t) {
     if ((frameN++ % 30) === 0) readTH();
     const r0 = stage.getBoundingClientRect();
@@ -192,6 +211,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
       const te = edgeById(sl.id);
       if (te) tg = { x: (te.a.x + te.b.x) / 2, y: (te.a.y + te.b.y) / 2, z: (te.a.z + te.b.z) / 2, zm: te.user ? 1.5 : 1.7 };
     }
+    tgt = tg;
     const ez = reduce ? 1 : 0.11;
     cam.x += (tg.x - cam.x) * ez; cam.y += (tg.y - cam.y) * ez; cam.z += (tg.z - cam.z) * ez; cam.zm += (tg.zm - cam.zm) * ez;
     const S = lerp(S3, S2, f) * cam.zm * st.uz;
@@ -308,7 +328,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     for (const q of labelQ) {
       const s = q.s, n = q.n;
       ctx.font = `${q.ap ? "700 14px" : "600 13px"} ${FONT}`;
-      const nm = dispName(n), w = ctx.measureText(nm).width + 4, h = 16;
+      const nm = dispName(n), w = textW(nm) + 4, h = 16;
       const cands = [[s.x - w / 2, s.y + s.r + 3], [s.x - w / 2, s.y - s.r - 3 - h], [s.x + s.r + 4, s.y - h / 2], [s.x - s.r - 4 - w, s.y - h / 2]];
       let pos = null;
       for (const c of cands) { if (c[0] >= 4 && c[0] + w <= W - 4 && !boxes.some((b) => c[0] < b.x + b.w && c[0] + w > b.x && c[1] < b.y + b.h && c[1] + h > b.y)) { pos = c; break; } }
@@ -322,14 +342,14 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     for (const e of edges) {
       if (!(e._al >= 0.9) || (e.user && si.none)) continue;
       const A = screen[e.a.id], B = screen[e.b.id], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2;
-      ctx.font = `600 13px ${FONT}`; const tw = ctx.measureText(e.label).width + 14;
+      ctx.font = `600 13px ${FONT}`; const tw = textW(e.label) + 14;
       ctx.fillStyle = TH.surf; ctx.strokeStyle = warmth(e.w, e); ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(mx - tw / 2, my - 11, tw, 22, 11); ctx.fill(); ctx.stroke();
       ctx.fillStyle = TH.text; ctx.textAlign = "center"; ctx.fillText(e.label, mx, my + 4);
     }
     // 중요 / 덜 중요: 맨 위에 그리되 버튼줄·범례 영역 밖으로 민다
     if (f < 0.95) {
       const q0 = proj({ x: 0, y: -HH * 1.15, z: 0 }, f, S, yaw, pitch), q1 = proj({ x: 0, y: HH * 1.15, z: 0 }, f, S, yaw, pitch);
-      const sr = stage.getBoundingClientRect(), cr = ctrlsEl?.getBoundingClientRect(), lr = legendEl?.getBoundingClientRect();
+      const { sr, cr, lr } = edgeRects();
       const yMin = cr ? cr.bottom - sr.top + 16 : 40, yMax = lr ? lr.top - sr.top - 10 : H - 20;
       const ty = clampN(q1.y - 8, yMin, yMax - 20), by = clampN(q0.y + 16, ty + 22, yMax);
       ctx.font = `700 11px ${FONT}`; ctx.textAlign = "center"; ctx.globalAlpha = 1 - f; ctx.fillStyle = TH.acc;
@@ -339,7 +359,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
     if (st.sel && st.sel.type === "node" && st.sel.id !== "u" && byId[st.sel.id]) {
       const cn = byId[st.sel.id], csn = screen[cn.id], chip = `호감 ${cn.aff} · 중요 ${cn.imp}`;
       ctx.font = `700 12px ${FONT}`; ctx.textAlign = "center"; ctx.globalAlpha = 1;
-      const cw = ctx.measureText(chip).width + 20, cx = csn.x - cw / 2, cy = csn.y + csn.r + 22;
+      const cw = textW(chip) + 20, cx = csn.x - cw / 2, cy = csn.y + csn.r + 22;
       ctx.shadowColor = rgba(TH.text, 0.25); ctx.shadowBlur = 8; ctx.shadowOffsetY = 2; ctx.fillStyle = TH.surf; ctx.beginPath(); ctx.roundRect(cx, cy, cw, 24, 12); ctx.fill();
       ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.strokeStyle = nodeColor(cn); ctx.lineWidth = 1.5; ctx.stroke();
       ctx.fillStyle = TH.text; ctx.fillText(chip, csn.x, cy + 16);
@@ -349,9 +369,11 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
   function loop(t) {
     if (destroyed || !stage.isConnected) { running = false; return; }   // 화면에서 떨어지면 멈춘다(start()로 재개)
     try { if (!win.document.hidden) draw(t); } catch (e) { onToast?.("관계도를 그리다 문제가 생겼어요."); running = false; return; }
-    win.requestAnimationFrame(loop);
+    const a = win.document.hidden ? "idle" : activity();
+    if (a === "move") { win.requestAnimationFrame(loop); return; }
+    sleepT = wait(() => { sleepT = null; if (running && !destroyed) win.requestAnimationFrame(loop); }, a === "pulse" ? 66 : 1000);
   }
-  function start() { if (running || destroyed) return; running = true; resize(); win.requestAnimationFrame(loop); }
+  function start() { if (destroyed) return; if (running) return wake(); running = true; wakeUntil = performance.now() + 300; resize(); win.requestAnimationFrame(loop); }
 
   // ── 선택 판정·조작 ──
   function hit(px, py) {
@@ -402,7 +424,7 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
   // 모바일은 평면(flat)으로 시작하는데 클래스가 안 붙어 touch-action:none이 그대로라 화면 스크롤이 막혔다.
   canvas.classList.toggle("flat", !!st.flat);
   const local = (ev) => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
-  const on = (type, fn, opts) => { canvas.addEventListener(type, fn, opts); return () => canvas.removeEventListener(type, fn, opts); };
+  const on = (type, fn0, opts) => { const fn = (ev) => { wake(); return fn0(ev); }; canvas.addEventListener(type, fn, opts); return () => canvas.removeEventListener(type, fn, opts); };
   const offs = [
     on("pointerdown", (ev) => {
       down = { x: ev.clientX, y: ev.clientY, moved: false };
@@ -450,15 +472,17 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
   ];
 
   return {
-    setData, start, resize, hideTip,
-    destroy() { destroyed = true; offs.forEach((f) => f()); },
-    select: (sel) => choose(sel, { silent: true }),
-    showPath,
-    setFlat(v) { if (v && !st.flat) st.yaw = ((st.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; st.flat = v ? 1 : 0; canvas.classList.toggle("flat", !!v); },
-    setSpin(v) { st.spin = !!v; },
-    setHighlight(v) { st.hl = !!v; },
-    setMinStrength(v) { st.minS = v; },
-    setFaction(f) { st.faction = f; if (st.sel?.type === "node" && byId[st.sel.id] && !visibleN(byId[st.sel.id])) choose(null); },
+    start, hideTip,
+    setData(...a) { const r = setData(...a); wake(); return r; },
+    resize() { rects = null; resize(); wake(); },
+    destroy() { destroyed = true; if (sleepT !== null) { unwait(sleepT); sleepT = null; } offs.forEach((f) => f()); },
+    select: (sel) => { wake(); return choose(sel, { silent: true }); },
+    showPath(...a) { wake(); return showPath(...a); },
+    setFlat(v) { wake(); if (v && !st.flat) st.yaw = ((st.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; st.flat = v ? 1 : 0; canvas.classList.toggle("flat", !!v); },
+    setSpin(v) { wake(); st.spin = !!v; },
+    setHighlight(v) { wake(); st.hl = !!v; },
+    setMinStrength(v) { wake(); st.minS = v; },
+    setFaction(f) { wake(); st.faction = f; if (st.sel?.type === "node" && byId[st.sel.id] && !visibleN(byId[st.sel.id])) choose(null); },
     get flat() { return !!st.flat; },
     get factions() { return factions; },
     nodeColor: (n) => nodeColor(typeof n === "string" ? byId[n] : n),

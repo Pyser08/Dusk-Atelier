@@ -53,11 +53,10 @@ export function createDiaryDisplay(memory) {
   let cache = null, key = "", loading = null, checked = 0;
   const load = async () => {
     if (cache && Date.now() - checked < 3000) return;   // 메시지마다 불리므로 3초에 한 번만 지금 채팅을 다시 본다
-    checked = Date.now();
-    const cur = await memory?.switches?.currentChat?.().catch?.(() => null); if (!cur) { cache = []; key = ""; return; }
-    const k = `${cur.chaId}|${cur.chatId}`; if (k === key && cache) return;
+    const cur = await memory?.switches?.currentChat?.().catch?.(() => null); if (!cur) { cache = []; key = ""; checked = Date.now(); return; }
+    const k = `${cur.chaId}|${cur.chatId}`; if (k === key && cache) { checked = Date.now(); return; }
     const f = await memory.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
-    cache = extraOf(f).diary; key = k;
+    cache = extraOf(f).diary; key = k; checked = Date.now();   // 신고 #11: 시각은 다 읽은 뒤에
   };
   return {
     invalidate() { cache = null; key = ""; checked = 0; },

@@ -27,13 +27,17 @@ export async function renderRelMap(ctx) {
   const cur = await (M.switches.peekCurrent ? M.switches.peekCurrent({ onChange: () => { if (ctx.state.tab === "relmap") { st.view = null; redraw(); } } }) : M.switches.currentChat());
   if (!cur) return replace(ctx.main, h("div", { class: "rb-rm" }, pageHead("인물 관계도"), emptyState({ icon: "users", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅의 인물 관계를 보여 줘요." })));
   // 가운데 이름(페르소나)도 화면 키에 넣는다 — 페르소나가 바뀌면 만든 화면을 버리고 다시 그린다(버그 3).
+  // 신고 #11: 같은 채팅이면 전체 채팅을 읽기 전에 만든 화면부터 붙인다(페르소나가 바뀌었으면 아래에서 새로 만든다)
+  const early = !!st.view?.key?.startsWith(`${cur.chaId}:${cur.chatId}:${ctx.prefs.advanced ? 1 : 0}:`);
+  if (early) { replace(ctx.main, st.view.root); st.view.ctrl.start(); st.view.ctrl.resize(); }
   let liveChat = null; try { liveChat = await ctx.api.getChatFromIndex(cur.ci, cur.ti); } catch { liveChat = null; }
   const uname = await loadUserName(ctx, { fresh: true, chat: liveChat });
   const key = `${cur.chaId}:${cur.chatId}:${ctx.prefs.advanced ? 1 : 0}:${uname}`;
 
+  if (early && ctx.state.tab !== "relmap") return;
   // 같은 채팅이면 만든 화면을 그대로 붙이고, 뒤에서 새 데이터만 확인
   if (st.view?.key === key) {
-    replace(ctx.main, st.view.root); st.view.ctrl.start(); st.view.ctrl.resize();
+    if (!early || !st.view.root.isConnected) { replace(ctx.main, st.view.root); st.view.ctrl.start(); st.view.ctrl.resize(); }
     M.store.getFolder(cur.chaId, cur.chatId).catch(() => null).then((f) => { const v = st.view; if (v?.key === key && ctx.state.tab === "relmap") v.update(buildRelMap(f), f); });
     return;
   }

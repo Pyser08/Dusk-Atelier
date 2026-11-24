@@ -34,7 +34,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
   const prep = createRegexPrep(api, { store, log });
   const hypa = createHypaImporter(api, { store });
   const injector = createMemoryInjector(api, { store, prep, storyNow, log, embedder, rerank: (x) => jev.rerank(x), onRequest: () => runner?.confirmNext() });
-  const gauge = createGaugeService(api, { store, log });
+  const gauge = createGaugeService(api, { store, log, current: () => switches?.currentChat?.() ?? null });
   const link = {};  // 턴 흐름이 켜지면 채워진다(리수폿 Writer와 기록 호출을 합칠 때 러너가 쓴다)
   runner = createMemoryRunner(api, { store, prep, log, notify, gauge, server: createServerAnalysis(api, { cellar, remote }), prompts: async () => (await flow?.settings?.())?.rawSnapshot?.() ?? null, link, afterAnalyze: async (ci, ti) => { if (injector.mode() === "lore") await injector.syncLore(ci, ti); } });
   const bardwiki = createBardWikiBackend(api, { store, log });
@@ -78,7 +78,7 @@ export function createMemory(api, { storyNow = null, notify = () => {}, log = (.
       await runner.start();
       if (flow) await flow.start().catch((e) => log("턴 흐름 시작 실패", e?.message ?? e));
     } else {
-      await store.updateIndex((i) => { i.status.hook = sel.id === "bardwiki" ? "bardwiki" : "off"; });
+      if (idx.status?.hook !== (sel.id === "bardwiki" ? "bardwiki" : "off")) await store.updateIndex((i) => { i.status.hook = sel.id === "bardwiki" ? "bardwiki" : "off"; });
       // 리수폿 기능이 켜져 있고 장기기억(턴 흐름)을 켜 둔 경우엔 BardWiki와 함께 돌린다 (사용자가 직접 켠 경우만)
       if ((sel.id === "bardwiki" || sel.id === "off") && flow && idx.settings.potMode !== false && idx.settings.flow?.on === true) await flow.start().catch((e) => log("턴 흐름 시작 실패", e?.message ?? e));
     }

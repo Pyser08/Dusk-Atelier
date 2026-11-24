@@ -1,3 +1,7 @@
+## fix/report-11 · 11-24 신고 #11(성능 2차) → v2.2.58 + 장기기억 0.3.63
+- baseApi 등록표(addonscope) · 게이지 첫 표시(gauge firstView) · prefs.noteUi/flushUi · 기록·기능 찾기 입력 칸 유지 · 관계도 유휴 정지(canvas activity/wake) · 설정 병렬 읽기 · relmap 선표시 · 시작 상태 무변경 저장 생략 · hub 본문 제한 · 일기 시각. 테스트 tests/fix-report11.test.js.
+- 남음(P2): affhud 캐릭터 공유, main-wiki-hook 가드, peekIndex, cardoverlay keydown·속성, mdetail 직렬, 훅 순서·테마 DOM·Cellar, watch 요약, personv2 지연 생성, scenes 묶기, settings redraw·글꼴·bridge, 메타 조회, 관계도 gradient. Android Firefox 2번째 글자 증상은 재현 못 함.
+
 ## fix/report-10 · 11-24 신고 #10 → 장기기억 0.3.62
 - recorder.js plainLines: 1단계 답이 JSON {"lines":[…]}이면 nsfwFrom·humanFrom·extraFrom·driveFrom·women 선언이 0줄이던 것(parseLines·cycleFrom만 풀어 읽었음). nsfwturn applyLifeTurn: cursor가 없으면 life.turn·0으로 반영. 테스트 tests/fix-report10.test.js.
 

@@ -12,7 +12,7 @@ const DESIGN_RULES = [
   "Keep the user's name and description. Pick a range that fits (small integer scale 0-10 or 0-100). The gauge applies to individual people; no formulas that reference other gauges. Design the look yourself so it is original, vivid and fits the meaning (mood, element, season...). `card`/`fill`/`track` are semicolon-separated CSS declarations only (allowed: background, border, border-radius, box-shadow, text-shadow, filter, opacity, outline, clip-path polygon, padding); no url(), var(), or comments. Use dark translucent cards so text stays readable."
 ].join("\n");
 
-export function createGaugeService(api, { store, log = () => {}, call = null } = {}) {
+export function createGaugeService(api, { store, log = () => {}, call = null, current = null } = {}) {
   const run = call ?? ((msgs, pick, signal) => runAITask("인물 게이지", api, msgs, pick, signal));
   const gx = (idx, chaId) => idx.gauges?.[chaId] ?? { defs: [], sug: G.newSuggestState(), chats: {} };
   const ensure = (idx, chaId) => { idx.gauges ??= {}; const g = (idx.gauges[chaId] ??= { defs: [], sug: G.newSuggestState(), chats: {} }); g.sug ??= G.newSuggestState(); g.chats ??= {}; return g; };
@@ -113,6 +113,7 @@ export function createGaugeService(api, { store, log = () => {}, call = null } =
       const idx = await store.getIndex(), entries = [], defs = [];
       const read = (a, b) => (store.peekFolder ? store.peekFolder(a, b) : store.getFolder(a, b));
       for (const [chaId, g] of Object.entries(idx.gauges ?? {})) {
+        if (!g.defs?.length) continue;   // 신고 #11: 게이지가 없는 봇의 폴더는 읽지 않는다
         defs.push(...g.defs);
         const fs = await Promise.all(Object.keys(g.chats ?? {}).map((chatId) => read(chaId, chatId).catch(() => null)));
         for (const f of fs) for (const b of f?.gauge?.log ?? []) if (b.head && b.snap?.length) entries.push({ head: b.head, tail: b.tail, snap: b.snap, items: b.items });
@@ -123,10 +124,31 @@ export function createGaugeService(api, { store, log = () => {}, call = null } =
     })().finally(() => { if (viewP === p) viewP = null; });
     return viewP = p;
   }
-  const invalidate = () => { view = null; viewP = null; viewGen++; };
+  // 신고 #11: 전체 보기가 준비되기 전에는 지금 채팅 폴더만 읽어 먼저 그린다(나머지는 뒤에서). 지금 채팅을 모르면 null → 전체를 기다린다
+  let firstP = null, firstKey = "";
+  async function firstView() {
+    const cur = await Promise.resolve(current()).catch(() => null); if (!cur?.chaId || !cur.chatId) return null;
+    const k = `${cur.chaId}|${cur.chatId}`;
+    if (k !== firstKey || !firstP) {
+      firstKey = k;
+      firstP = (async () => {
+        const idx = await store.getIndex(), g = idx.gauges?.[cur.chaId];
+        if (!g?.defs?.length || !g.chats?.[cur.chatId]) return { defs: [], entries: [] };
+        const f = await (store.peekFolder ? store.peekFolder(cur.chaId, cur.chatId) : store.getFolder(cur.chaId, cur.chatId));
+        return { defs: g.defs, entries: (f?.gauge?.log ?? []).filter((b) => b.head && b.snap?.length).map((b) => ({ head: b.head, tail: b.tail, snap: b.snap, items: b.items })) };
+      })().catch(() => { firstP = null; return null; });
+    }
+    return firstP;
+  }
+  const invalidate = () => { view = null; viewP = null; viewGen++; firstP = null; };
   async function onDisplay(text) {
     try {
       if (typeof text !== "string" || text.includes('x-dusk="gauge"')) return text;
+      if (!view && current) {
+        const full = ensureView(); full.catch(() => {});
+        const fv = await firstView();
+        if (fv && !view) { const hit = fv.entries.length ? matchRecord(fv.entries, text) : null; return hit ? text + gaugeBoxHtml(hit, fv.defs) : text; }
+      }
       const v = await ensureView();   // 메시지마다 불리므로 저장소는 처음 한 번만 읽는다(캐시). 게이지가 없으면 바로 돌려준다
       if (!v.defs.length) return text;
       const r = matchRecord(v.entries, text);

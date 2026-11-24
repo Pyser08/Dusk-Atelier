@@ -20,13 +20,15 @@ export var UI_MODES = ["simple", "advanced"];
 export var normalizeUiMode = (ui) => UI_MODES.includes(ui?.uiMode) ? ui.uiMode : ui?.devMode ? "advanced" : "simple";
 export function createPrefs(api) {
   let ui = null, meta = null;
-  const save = async () => writeJson(api, KEYS.ui, ui);
+  let uiDirty = false;
+  const save = async () => { uiDirty = false; try { await writeJson(api, KEYS.ui, ui); } catch (e) { uiDirty = true; throw e; } };
   return {
     async load() {
+      const metaP = readJson(api, KEYS.meta, defaultsMeta());   // 신고 #11: 설정과 메타를 같이 읽는다
       ui = await readJson(api, KEYS.ui, {});
       ui.theme = normalizeTheme(ui.theme);
       ui.uiMode = normalizeUiMode(ui);
-      meta = await readJson(api, KEYS.meta, defaultsMeta());
+      meta = await metaP;
       for (const [k, d] of Object.entries(defaultsMeta())) if (!(k in meta) || typeof meta[k] !== typeof d || Array.isArray(meta[k]) !== Array.isArray(d)) meta[k] = d;
       return { ui, meta };
     },
@@ -48,6 +50,9 @@ export function createPrefs(api) {
       await save();
       return ui;
     },
+    // 신고 #11: 열기 횟수·최근 탭·방문 같은 통계는 메모리에만 모은다(저장하면 호스트가 모든 행의 표시 캐시를 버린다). 닫을 때 flushUi로 한 번에
+    noteUi(patch) { ui = { ...ui, ...patch }; uiDirty = true; return ui; },
+    async flushUi() { if (uiDirty) await save(); },
     // 간단으로 돌아가면 개발자 모드도 함께 끈다(개발자 모드는 고급 모드에서만 쓸 수 있다)
     async setUiMode(mode) {
       const m = mode === "advanced" ? "advanced" : "simple";

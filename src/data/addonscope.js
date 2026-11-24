@@ -5,7 +5,15 @@ const PAIRS = [["addRisuReplacer", "removeRisuReplacer"], ["addRisuScriptHandler
 
 // 애드온 api 사본의 원본: api를 열쇠로 쓰는 표(저장 잠금·모델 설정 캐시)가 코어와 애드온에서 같은 칸을 쓰게
 export const BASE = Symbol.for("dusk.baseApi");
-export const baseApi = (api) => api?.[BASE] ?? api;
+// 신고 #11: 호스트 SDK가 Proxy면 모르는 Symbol에도 매번 새 함수를 돌려준다 → 원본은 등록표(번들끼리 globalThis로 공유)로만 찾는다.
+// 등록표에 없는 예전 코어의 사본만 Symbol로 보되, 두 번 물어 같은 값일 때만 믿는다.
+const BASES = (globalThis[Symbol.for("dusk.apiBases")] ??= new WeakMap());
+export function baseApi(api) {
+  if (!api || (typeof api !== "object" && typeof api !== "function")) return api;
+  const hit = BASES.get(api); if (hit) return hit;
+  try { const a = api[BASE]; if (a && typeof a === "object" && a === api[BASE]) return a; } catch { /* 호스트가 막음 */ }
+  return api;
+}
 
 export function createProviderRelay(api) {
   const current = new Map(), hosted = new Map();   // 이름 → 지금 처리기 / 호스트 등록 약속
@@ -39,10 +47,11 @@ export function scopeApi(api, relay) {
   }
   if (relay) wrapped.addProvider = async (name, fn, opts) => { await relay.add(name, fn, opts); provs.push([name, fn]); };
   const scoped = new Proxy(api, {
-    get: (t, k) => (k === BASE ? (t[BASE] ?? t) : typeof k === "string" && k in wrapped && typeof t[k] === "function" ? wrapped[k] : Reflect.get(t, k)),
+    get: (t, k) => (k === BASE ? baseApi(t) : typeof k === "string" && k in wrapped && typeof t[k] === "function" ? wrapped[k] : Reflect.get(t, k)),
     set: (t, k, v) => Reflect.set(t, k, v),   // 스텔스처럼 api 함수를 감싸 바꾸는 건 모두가 쓰는 원본에 그대로
     has: (t, k) => Reflect.has(t, k)
   });
+  BASES.set(scoped, baseApi(api));
   async function cleanup() {
     for (const [rem, a] of live.splice(0).reverse()) { try { await api[rem]?.(...a); } catch { /* 이미 떨어짐 */ } }
     for (const [name, fn] of provs.splice(0)) relay?.drop(name, fn);

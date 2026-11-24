@@ -34,6 +34,15 @@ var recentOf = (folder, n = 3) => {
 const bar = (w, hgt = 14) => h("i", { class: "rb-skel", style: `display:block;height:${hgt}px;width:${w}`, "aria-hidden": "true" });
 
 export async function renderHome(ctx) {
+  // 신고 #11: 찾는 중이면 검색 칸(입력 노드)은 그대로 두고 결과만 바꾼다
+  const keep = ctx.main.querySelector?.(":scope > .rb-home > #rb-home-find.rb-hfind-top");
+  if (keep?.querySelector("input") && String(ctx.state.search ?? "").trim()) {
+    const box = keep.parentNode, next = h("div", { class: "rb-home rb-home4 rb-scroll" });
+    renderFeatureFind(ctx, next, ctx.state.search);
+    for (const n of [...box.childNodes]) if (n !== keep) n.remove();
+    box.append(...next.childNodes);
+    return;
+  }
   const host = h("div", { class: "rb-home rb-home4 rb-scroll" });
   replace(ctx.main, host);
   // 기능 찾기: 위 검색창에 낱말을 적으면 홈 대신 찾은 기능 목록을 보여 준다(지우면 홈으로).

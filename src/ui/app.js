@@ -63,17 +63,17 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   const runSearch = (q) => {
     // 다른 탭에서 기능 찾기로 홈에 왔다가 칸을 비우면 원래 탭으로 돌아간다
     if (!q.trim() && state.tab === "home" && state.findFrom) { const f = state.findFrom; state.findFrom = null; state.search = ""; go(f.tab, f.sub); return; }
-    // 기능 찾기 칸(목록 검색이 없는 탭)에서 적으면 홈의 기능 찾기 목록으로 간다
-    if (state.findMode && state.tab !== "home" && q.trim()) { const from = { tab: state.tab, sub: state.sub }; go("home"); state.findFrom = from; state.search = q; searchInput.value = q; if (doc.activeElement !== searchInput) searchInput.focus(); }
     state.search = q;
     clearTimeout(searchTimer);
     // 2.2.4: 목록 탭(캐릭터·모듈·플러그인)은 다시 그리기가 무거워, 음절 사이에 그리면 모바일 키보드(천지인 등)의 조합이 끊겨 'ㅇㅣㅁ'처럼 갈라졌다
     //   → 입력이 멈춘 뒤에만 그린다(홈 기능 찾기는 가벼워 그대로 빠르게)
-    const wait = state.tab === "home" ? 120 : 380;
+    const wait = state.tab === "home" && main.querySelector(".rb-hfind-top") ? 120 : 380;   // 칸을 옮겨 붙이는 첫 전환은 입력이 멈춘 뒤에
     const fire = () => {
       if (composing) return;
       const left = wait - (Date.now() - lastTyped);
       if (left > 20) { searchTimer = setTimeout(fire, left); return; }
+      // 기능 찾기 칸(목록 검색이 없는 탭)에서 적으면 홈의 기능 찾기 목록으로 간다. 신고 #11: 입력이 멈춘 뒤에 옮기고, 검색어를 들고 가서 칸을 비웠다 채우지 않는다
+      if (state.findMode && state.tab !== "home" && searchInput.value.trim()) { const from = { tab: state.tab, sub: state.sub }; state.searchNext = searchInput.value; go("home"); state.findFrom = from; if (doc.activeElement !== searchInput) searchInput.focus(); return; }
       ctx.refresh();
     };
     searchTimer = setTimeout(fire, wait);
@@ -455,7 +455,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     if (leaving) stashPane();
     if (tab !== state.tab || (sub === "history") !== (state.sub === "history") || (tab === "home" && state.search)) {   // 홈 기능 찾기에서 홈 안 기능(애드온)으로 갈 때도 검색을 비운다
       state.search = state.searchNext ?? "";   // 2.2.0: 관리 개요 통합 검색 결과는 검색어를 들고 넘어간다
-      searchInput.value = state.search;
+      if (searchInput.value !== state.search) searchInput.value = state.search;
     }
     state.searchNext = null;
     if (tab === "characters" && Date.now() - (state.charsAt ?? 0) > 3e4) state.charsBg = true;
@@ -517,15 +517,12 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   }
   let renderToken = 0;
   // 기능 맛보기용: 가 본 화면(탭, 장기 기억은 'memory:페이지')을 모아 둔다. 잠깐 뒤 한 번에 저장.
-  let visitTimer = null;
-  let recentTimer = null;
   function noteVisit() {
     const key = state.tab === "memory" ? `memory:${state.mem?.page || "home"}` : state.tab;
-    if (prefs.ui && TABS.find((t) => t.id === state.tab)?.section === "work") { prefs.ui.recentTabs = pushRecent(prefs.ui.recentTabs, state.tab); clearTimeout(recentTimer); recentTimer = setTimeout(() => { prefs.saveUi?.({ recentTabs: prefs.ui.recentTabs }).catch?.(() => {}); }, 800); }
+    if (prefs.ui && TABS.find((t) => t.id === state.tab)?.section === "work") { prefs.noteUi({ recentTabs: pushRecent(prefs.ui.recentTabs, state.tab) }); }
     const have = prefs.ui?.visited ?? [];
     if (!key || have.includes(key)) return;
-    if (prefs.ui) prefs.ui.visited = [...have, key].slice(-60);
-    clearTimeout(visitTimer); visitTimer = setTimeout(() => { prefs.saveUi?.({ visited: prefs.ui?.visited ?? [] }).catch?.(() => {}); }, 800);
+    if (prefs.ui) prefs.noteUi({ visited: [...have, key].slice(-60) });
   }
   function render({ reuse = false } = {}) {
     const token = ++renderToken;   // 낡은 화면의 늦은 그리기를 막는 번호표(staleguard.js)
@@ -600,14 +597,15 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   }
   async function open(opts) {
     api.invalidateDbCache?.({ soft: true, maxAge: 15000 });   // 리스 쪽에서 바뀐 것을 반영하되, 방금(15초 안) 읽은 건 남겨 통째 복사를 되풀이하지 않는다
+    const prefsP = prefs.ui ? prefs.reloadMeta() : prefs.load();   // 신고 #11: 테마·설정을 같이 읽는다
+    prefsP.catch(() => {});
     try {
       const cs = await api.getColorScheme();
       state.risuScheme = cs?.scheme?.type === "light" ? "light" : "dark";
     } catch {
       state.risuScheme = "dark";
     }
-    if (!prefs.ui) await prefs.load();
-    else await prefs.reloadMeta();
+    await prefsP;
     // 첫 화면: 홈 카드 방식이면 홈, 메뉴(왼쪽·위쪽) 방식이면 모듈 (창을 연 뒤 다시 열 땐 보던 곳 그대로)
     if (!state.opened) {
       state.tab = "home";
@@ -615,7 +613,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     }
     if (opts?.tab) { state.tab = opts.tab; state.sub = null; }
     // 기능 맛보기용: 연 횟수(창을 열 때마다 1)
-    prefs.saveUi?.({ opens: (prefs.ui?.opens ?? 0) + 1 }).catch?.(() => {});
+    prefs.noteUi?.({ opens: (prefs.ui?.opens ?? 0) + 1 });
     state.modDirty = true;
     state.charOrderStale = true;
     if (state.chars) state.charsBg = true;
@@ -653,6 +651,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       root.hidden = true;
       for (const a of [...win.getAnimations(), ...root.getAnimations()]) a.cancel();
     } finally { closing = false; }
+    prefs.flushUi?.().catch?.(() => {});   // 닫기가 어차피 표시를 새로 하므로 통계 저장을 여기에 겹친다
     await api.hideContainer();
     try { await ctx.onClosed?.(); } catch { /* 닫힌 뒤 알림은 실패해도 무시 */ }
   }
