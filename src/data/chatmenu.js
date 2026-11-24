@@ -2,7 +2,8 @@
 // 누르면 켜고/끄고, 같은 id로 다시 등록해 그 자리에서 이름(켜짐/꺼짐)을 바꾼다(registerButton id 교체).
 // 버튼 API가 없는 호스트에선 조용히 넘어간다. 설정에서 숨길 수 있다(기본 보임).
 export const CHAT_MENU_KEY = "dusk.ui.chatQuick";
-const ICON = { memory: "🧠", regress: "⏳", fair: "⚖️", dice: "🎲", show: "📊" };
+const ICON = { memory: "🧠", regress: "⏳", fair: "⚖️", dice: "🎲", show: "📊", dusk: "🌙", diary: "📔" };
+// 2.2.51: 표에 없는 바로가기(애드온이 붙인 dusk·diary)는 아이콘이 비어 리스가 거절했다("icon must be a string") → 항목 icon → 표 → 기본값
 export function createChatMenu(api, { fairPlay, turnInfo, openMemory, openRegress, onChange = () => {}, log = (...a) => console.log("[Dusk 채팅 메뉴]", ...a) } = {}) {
   let shown = false;
   // 2.2.22: 등록·떼기·바로가기 추가가 겹치면 서로 버튼을 지웠다 → 모든 작업을 한 줄로 세운다
@@ -19,7 +20,7 @@ export function createChatMenu(api, { fairPlay, turnInfo, openMemory, openRegres
   ].filter((x) => (x.link ? true : x.key === "show" ? turnInfo && turnInfo.supported?.() !== false : fairPlay));   // 응답 아래 표시를 못 쓰는 호스트(RisuBard)는 '주사위 결과 표시'를 뺀다
   const nameOf = (x) => (x.link ? x.title : `${x.title} · ${x.get() ? "켜짐" : "꺼짐"}`);
   async function put(x, location = "chat") {
-    await api.registerButton({ name: nameOf(x), icon: ICON[x.key], iconType: "html", location, id: x.id }, () => (x.link ? openLink(x) : toggle(x)));
+    await api.registerButton({ name: nameOf(x), icon: String(x.icon ?? ICON[x.key] ?? "✨"), iconType: "html", location, id: x.id }, () => (x.link ? openLink(x) : toggle(x)));
     live.add(x.id);
   }
   async function drop(x) { try { await api.unregisterUIPart?.(x.id); } catch { /* 이미 없음 */ } live.delete(x.id); }

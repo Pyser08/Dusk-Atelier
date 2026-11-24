@@ -21,9 +21,11 @@ export function redactSecrets(text) {
 
 // 최근 오류 기록(메모리에만). 콘솔의 오류·경고와 Dusk 실패 로그, 잡히지 않은 오류를 모은다.
 const logs = [];
+// 원인 찾기에 쓸모없는 브라우저 소음(동작에 문제없음)은 모으지 않는다
+const NOISE = /ResizeObserver loop|Script error\.?$|Non-Error promise rejection captured/;
 export function pushLog(kind, msg) {
   const text = redactSecrets(String(msg ?? "")).slice(0, 1500);
-  if (!text) return;
+  if (!text || NOISE.test(text)) return;
   const last = logs[logs.length - 1];
   if (last && last.text === text) { last.n = (last.n ?? 1) + 1; return; }
   logs.push({ t: Date.now(), kind, text });
@@ -83,6 +85,9 @@ export async function deviceFingerprint(win = globalThis) {
   } catch { return ""; }
 }
 
+// 리스 통로가 막혀도 오래 기다리지 않게(2.2.51)
+const withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(msg)), ms))]);
+
 const uuid = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 
 export function createHub(api, { version, addons, risuVersion } = {}) {
@@ -105,7 +110,7 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     if (!force && fresh(c)) return (remote = c).url;
     let u = c?.url ?? "";
     try {
-      const res = typeof api.nativeFetch === "function" ? await api.nativeFetch(`${HUB_CONFIG_URL}?t=${Math.floor(Date.now() / 6e4)}`, { method: "GET" }) : null;
+      const res = typeof api.nativeFetch === "function" ? await withTimeout(api.nativeFetch(`${HUB_CONFIG_URL}?t=${Math.floor(Date.now() / 6e4)}`, { method: "GET" }), 5000, "timeout") : null;
       if (res?.ok) { const t = await res.text(); u = okUrl(JSON.parse(t)?.url); }
     } catch { /* 못 읽으면 지난 값 */ }
     remote = { at: Date.now(), url: u };
@@ -130,9 +135,9 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     if (!base) throw new Error("버그 신고 서버가 아직 정해지지 않았어요.");
     const init = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
     let res = null;
-    if (typeof api.nativeFetch === "function") res = await api.nativeFetch(base + path, init).catch(() => null);
+    if (typeof api.nativeFetch === "function") res = await withTimeout(api.nativeFetch(base + path, init), 10000, "timeout").catch(() => null);
     if (!res && typeof api.risuFetch === "function") {
-      const r = await api.risuFetch(base + path, { method: "POST", headers: init.headers, body, rawResponse: false }).catch(() => null);
+      const r = await withTimeout(api.risuFetch(base + path, { method: "POST", headers: init.headers, body, rawResponse: false }), 10000, "timeout").catch(() => null);
       if (r) return { ok: !!r.ok, data: typeof r.data === "string" ? (() => { try { return JSON.parse(r.data); } catch { return {}; } })() : r.data ?? {} };
     }
     if (!res) throw new Error("서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.");
@@ -170,5 +175,5 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     };
   }
   async function sendReport(report) { const r = await post("/api/report", report); return r.data?.no ?? null; }
-  return { url, installId, statsOn, setStats, pingSoon, buildReport, sendReport, configured: async () => !!(await url(true)) };
+  return { url, installId, statsOn, setStats, pingSoon, buildReport, sendReport, configured: async () => !!(await url()) || !!(await url(true)) };
 }
