@@ -35,6 +35,7 @@ import { r64Opts } from './data/risu64link.js';
 import { createDuskBridge } from './data/duskbridge.js';
 import { createAiStopButton } from './ui/aistopbtn.js';
 import { restoreActiveTheme } from './data/themes.js';
+import { createStartGate } from './data/startgate.js';
 import { createHub, startLogCapture } from './data/hub.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
@@ -178,7 +179,8 @@ async function start() {
   const loreRuntime = createLoreRuntime(api);
   loreRuntime.start().catch((e) => console.log(`[${TITLE}] 로어북 규칙 시작 실패: ${e?.message ?? e}`));
   // 로어북 로그: 응답마다 들어간 로어북을 남기고, 응답 아래에 버튼을 붙인다
-  const loreLog = createLoreLog(api, { loreRuntime, above: (t) => mem()?.gauge?.onDisplay?.(t) ?? t });
+  const memGate = createStartGate(3000);   // 신고 #5: 새로고침 직후 장기기억 애드온이 켜지기 전에 그려진 줄은 기억 표시가 빠졌다 → 최대 3초 기다린다
+  const loreLog = createLoreLog(api, { loreRuntime, above: async (t) => { const w = memGate.wait(); if (w) await w; return mem()?.gauge?.onDisplay?.(t) ?? t; } });
   loreLog.start().catch((e) => console.log(`[${TITLE}] 로어북 로그 시작 실패: ${e?.message ?? e}`));
   const turnInfo = createTurnInfo(api, { layout: () => app?.ctx?.ext?.get?.("svc", "cachelayout") ?? null,   // 하이파 분리·이어붙이기는 프로바이더 애드온이 단다
  watchReplacers: replacerWatch?.onAdded ?? null, diceSource: () => fairPlay.lastDice(), loreFor: (t) => loreLog.recordFor(t), loreLast: () => loreLog.last() });   // 주사위 결과·모델 호출 표시 (1.8.3)
@@ -293,7 +295,7 @@ async function start() {
     // ProtLink+: 연결해 둔 링크가 있으면
     ["protlink", async () => { const v = await rawOf("dusk.protlink.links.v1"); try { const d = typeof v === "string" ? JSON.parse(v) : v; return (Array.isArray(d) ? d : d?.links ?? []).length > 0; } catch { return false; } }]
   ];
-  addons.boot().then(() => addons.adopt(ADOPT)).then((r) => { if (r?.got?.length) console.log(`[${TITLE}] 쓰던 기능 애드온을 받았어요: ${r.got.join(", ")}`); })
+  addons.boot({ onIndex: (ids) => { if (!ids.includes("memory")) memGate.open(); }, onSettled: (id) => { if (id === "memory") memGate.open(); } }).finally(() => memGate.open()).then(() => addons.adopt(ADOPT)).then((r) => { if (r?.got?.length) console.log(`[${TITLE}] 쓰던 기능 애드온을 받았어요: ${r.got.join(", ")}`); })
     .catch((e) => console.log(`[${TITLE}] 애드온 시작 실패 ${e?.message ?? e}`));
   // Cellar 연결: 장기기억 애드온이 있으면 그쪽에서 찾은 것을, 없으면 화면이 직접 만든다(plugins·settingstab의 createCellar)
   Object.defineProperty(app.ctx, "cellar", { configurable: true, get: () => app.ctx._cellar ?? mem()?.cellar ?? null, set: (v) => { app.ctx._cellar = v; } });

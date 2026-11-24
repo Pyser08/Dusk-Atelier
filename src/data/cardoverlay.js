@@ -80,8 +80,10 @@ export function xifyCss(css) {
 // 2.2.30: 리스는 x- 로 시작하는 속성만 setAttribute를 허락한다(다른 건 예외) → 실패해도 넘어간다
 const attr = async (el, n, v) => { try { await el.setAttribute(n, v); } catch { /* 막힌 속성 */ } };
 // cardOf(pid) → 상태창 안쪽 HTML(없으면 ""). ensureDoc() → 리스 화면 문서(권한 없으면 null)
+const HK = ":not([data-hk]):not([x-dusk-hk])";
+const ANY_NAME = `[data-pid]${HK}, [class*="dusk-pid-"]${HK}`;
 export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {}, onFail = () => {} }) {
-  let open = null, hooking = false, timers = [], keyHooked = false, loop = null, total = 0;
+  let open = null, hooking = false, timers = [], keyHooked = false, loop = null, gap = 2500, total = 0;
   const close = async () => { const w = open; open = null; if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } } };
   async function show(pid) {
     const d = await ensureDoc(); if (!d) return false;
@@ -111,6 +113,9 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
     if (hooking) return 0; hooking = true; let n = 0;
     try {
       const d = await ensureDoc(); if (!d) return 0;
+      // 신고 #5: 아직 클릭을 안 단 이름이 하나도 없으면 인물마다 찾지 않는다(34명이면 68번 → 2번)
+      const any = await d.querySelectorAll(ANY_NAME), anyN = typeof any?.length === "function" ? await any.length() : any?.length ?? 0;
+      if (!anyN) return 0;
       for (const pid of pids()) {
         const safe = pidKey(pid); if (!safe) continue;
         const q = String(pid).replace(/["\\]/g, "\\$&");
@@ -132,7 +137,11 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
   // 2.2.28: 리스가 메시지를 다시 그리면 클릭이 사라진다 → 몇 초마다 새 이름을 찾는다(응답 표시 직후엔 빨리)
   function soon() {
     for (const t of timers) clearTimeout(t); timers = [300, 1200, 3500].map((ms) => setTimeout(() => { hook().catch(() => {}); }, ms));
-    loop ??= setInterval(() => { hook().catch(() => {}); }, 2500);
+    gap = 2500; arm();
   }
-  return { show, close, hook, soon, total: () => total, stop: () => { if (loop) clearInterval(loop); loop = null; } };
+  // 새 이름이 없으면 간격을 조금씩 늘린다(2.5초 → 최대 5초). 응답이 다시 표시되면(soon) 처음 간격으로
+  function arm() {
+    clearTimeout(loop); loop = setTimeout(async () => { const n = await hook().catch(() => 0); if (!loop) return; gap = n ? 2500 : Math.min(5000, gap * 1.4); arm(); }, gap);
+  }
+  return { show, close, hook, soon, total: () => total, stop: () => { clearTimeout(loop); loop = null; for (const t of timers) clearTimeout(t); timers = []; } };
 }

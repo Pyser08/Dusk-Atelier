@@ -1,3 +1,11 @@
+## fix/report-5-p3 · 11-24 신고 #5 2·3차 → v2.2.54 + 장기기억 0.3.61
+- settlescope.js: settle 뒤 주기·호감도 동기화는 위키 런타임 범위로 폴더 1번만 읽음(캐릭터·채팅 통째 읽기 4번 제거, 쓰기 전 same() 확인) · namelinks/charimg: 썸네일은 화면 위 방식이면 상태창 열 때(0.7초 상한), 펼침 방식은 그대로 · cardoverlay: 통합 사전 검색 + 2.5→5초 간격.
+- 테스트 tests/report5-phase3.test.js · memoryturn.test.js settle 4건(옛 코드는 채팅을 바꾸면 다른 채팅 감정이 섞였음). 위키 가드·인덱스 파싱은 안 바꿈.
+
+## fix/report-5 · 11-24 신고 #5 성능 2차(미배포 · 1차는 v2.2.53 + 장기기억 0.3.60)
+- lorerules prepareReroll: getCurrentLorebookEntries가 있으면 규칙부터 보고 없으면 채팅을 읽지 않음, 표시 때 위치 묻기는 합침 · apiread: baseApi로 원본·애드온 api가 읽기를 공유 · startgate.js + addons.boot({onIndex,onSettled}): 장기기억이 켜질 때까지 표시를 통틀어 최대 3초 기다림(넘기면 원문, 다시 그리기는 없음).
+- 테스트 tests/report5-phase2.test.js. 배포할 때 버전·CHANGELOG를 올릴 것.
+
 ## fix/report-4 · 11-24 신고 #5 성능 1차(미배포)
 - memoryrunner recentCheck: next면 채팅 읽기 전 종료 · memorystore3 raw 캐시: TTL은 완료부터, 읽는 중 공유(60초 상한) · addons/memory watchPersona·autoMergeSame: peekFolder로 먼저 보고 바뀔 때만 updateFolder(personas.js personaNeedsNote) · affhud tick: 켠 HUD가 없으면 통째 읽기 생략(settle은 호감도·주기 동기화 때문에 유지) · floatbtn(코어): 이동 리스너는 누르는 동안만, hide에서 모두 해제.
 - 테스트 tests/report5-perf.test.js. 배포: 코어 2.2.53(floatbtn·종) + 장기기억. 운영 허브는 0.3.0으로 교체함(AUTO_UPDATE=0 — main에 0.3.0이 들어간 뒤 다시 켤 것, 안 그러면 0.2.0으로 되돌아감).

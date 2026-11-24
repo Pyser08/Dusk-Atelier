@@ -4,14 +4,16 @@
 // · Dusk의 쓰기 계열 호출이 있으면(cacheGen이 바뀌면) 버린다.
 // 받은 값은 여럿이 같이 쓰므로 고치면 안 된다(고쳐서 다시 저장하는 곳은 api를 직접 부를 것).
 import { cacheGen } from "./dbcache.js";
+import { baseApi } from "./addonscope.js";
 
 const TTL = 3000, MAX = 8;
 const memo = new Map();   // key → { api, g, done, t, p }
 // fresh: 다 읽은 값은 쓰지 않지만, 지금 읽는 중인 같은 요청이 있으면 그것을 같이 기다린다(11-24: 홈 한 번에 캐릭터 통째 읽기 최대 4회 → 1회)
 function read(api, key, fn, ttl = TTL, fresh = false) {
+  const base = baseApi(api);   // 신고 #5: 애드온용 api 사본도 원본과 같은 칸을 쓴다
   const g = cacheGen(), hit = memo.get(key);
-  if (hit && hit.api === api && hit.g === g && (!hit.done || (!fresh && Date.now() - hit.t < ttl))) return hit.p;
-  const ent = { api, g, done: false, t: 0, p: null };
+  if (hit && hit.api === base && hit.g === g && (!hit.done || (!fresh && Date.now() - hit.t < ttl))) return hit.p;
+  const ent = { api: base, g, done: false, t: 0, p: null };
   ent.p = Promise.resolve().then(fn).then((v) => { ent.done = true; ent.t = Date.now(); return v; }, (e) => { if (memo.get(key) === ent) memo.delete(key); throw e; });
   memo.delete(key); memo.set(key, ent);
   while (memo.size > MAX) memo.delete(memo.keys().next().value);
