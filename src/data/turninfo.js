@@ -51,22 +51,39 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
   // ── 화면 구석 상태 칩 (리스 화면 문서에 직접. 실패해도 응답 아래 블록은 그대로 동작) ──
   const ui = { doc: null, tick: null, hide: null, started: false };
   async function doc() { if (!chip) return null; try { return ui.doc ??= await api.getRootDocument?.(); } catch { return null; } }
-  async function chipSet(text, bodyHtml) {
-    try {
-      const d = await doc(); if (!d) return;
-      let t = await d.querySelector('[x-dusk="callchip-t"]');
-      if (!t) {
-        const css = await d.createElement("style"); await css.setAttribute("x-dusk", "turn-css"); await css.setInnerText(KEYFRAMES);
-        const head = await d.querySelector("head") ?? await d.querySelector("body"); if (head && !(await d.querySelector('[x-dusk="turn-css"]'))) await head.appendChild(css);
-        const box = await d.createElement("div"); await box.setAttribute("x-dusk", "callchip"); await box.setStyleAttribute(CHIP_CSS);
-        await box.setInnerHTML('<details><summary style="cursor:pointer;list-style:none"><span x-dusk="callchip-t"></span></summary><div x-dusk="callchip-b" style="padding:2px 0 4px;max-height:40vh;overflow:auto"></div></details>');
-        await (await d.querySelector("body")).appendChild(box); t = await d.querySelector('[x-dusk="callchip-t"]');
-      }
-      await t?.setInnerText(text);
-      if (bodyHtml != null) { const b = await d.querySelector('[x-dusk="callchip-b"]'); await b?.setInnerHTML(bodyHtml); }
-    } catch (e) { log("상태 칩 실패", e?.message ?? e); }
+  // 신고 #7: 리스의 setInnerHTML은 x-* 속성을 지운다 → 글자 칸을 다시 찾지 못해 빈 칩이 계속 쌓였다.
+  // 그래서 요소를 하나씩 만들어 손잡이를 들고 쓴다. 만들기·고치기·치우기는 차례로(겹쳐서 두 개 생기지 않게).
+  let chipUi = null, chipQ = Promise.resolve();
+  const chipJob = (fn) => (chipQ = chipQ.then(fn).catch((e) => log("상태 칩 실패", e?.message ?? e)));
+  async function chipClear(d) {
+    const old = chipUi; chipUi = null;
+    if (old) try { await old.box.remove(); } catch { /* 이미 없음 */ }
+    for (let n = 0; n < 50; n++) { const el = await d.querySelector('[x-dusk="callchip"]'); if (!el) break; try { await el.remove(); } catch { break; } }
   }
-  async function chipRemove() { try { const d = await doc(); const el = d && await d.querySelector('[x-dusk="callchip"]'); if (el) await el.remove(); } catch { /* 없으면 그대로 */ } }
+  async function chipBuild(d) {
+    await chipClear(d);
+    if (!(await d.querySelector('[x-dusk="turn-css"]'))) {
+      const css = await d.createElement("style"); await css.setAttribute("x-dusk", "turn-css"); await css.setInnerText(KEYFRAMES);
+      const head = await d.querySelector("head") ?? await d.querySelector("body"); if (head) await head.appendChild(css);
+    }
+    const [box, det, sum, t, b] = await Promise.all(["div", "details", "summary", "span", "div"].map((x) => d.createElement(x)));
+    await sum.setStyleAttribute("cursor:pointer;list-style:none"); await b.setStyleAttribute("padding:2px 0 4px;max-height:40vh;overflow:auto");
+    await sum.appendChild(t); await det.appendChild(sum); await det.appendChild(b); await box.appendChild(det);
+    await box.setAttribute("x-dusk", "callchip"); await box.setStyleAttribute(CHIP_CSS);
+    return { box, t, b };
+  }
+  function chipSet(text, bodyHtml) {
+    return chipJob(async () => {
+      const d = await doc(); if (!d) return;
+      let u = chipUi; const fresh = !u || !(await d.querySelector('[x-dusk="callchip"]'));
+      if (fresh) u = await chipBuild(d);
+      // 글을 먼저 채우고 붙인다(빈 칩이 보이지 않게)
+      await u.t.setInnerText(text);
+      if (bodyHtml != null) await u.b.setInnerHTML(bodyHtml);
+      if (fresh) { await (await d.querySelector("body")).appendChild(u.box); chipUi = u; }
+    });
+  }
+  function chipRemove() { return chipJob(async () => { const d = await doc(); if (d) await chipClear(d); }); }
   const stopTick = () => { clearInterval(ui.tick); ui.tick = null; };
   function chipRun(rec) {
     if (!chip || !callShow) return;
@@ -74,7 +91,8 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
     const label = () => { const el = now() - rec.startAt; return `${rec.aux ? "보조" : "메인"} · ${rec.model || "모델"} · ${rec.firstAt ? "출력 중" : "추론 중"} ${fmtSec(el)}`; };
     chipSet(label(), "");
     // 응답이 안 오면(실패·중단) 5분 뒤 멈추고 칩을 치운다. 끄면 바로 멈춘다.
-    ui.tick = setInterval(() => { if (rec.done || !callShow) return stopTick(); if (now() - rec.startAt > TICK_MAX) { stopTick(); chipRemove(); return; } chipSet(label()); }, 700);
+    let drawing = false;
+    ui.tick = setInterval(() => { if (rec.done || !callShow) return stopTick(); if (now() - rec.startAt > TICK_MAX) { stopTick(); chipRemove(); return; } if (drawing) return; drawing = true; chipSet(label()).finally(() => { drawing = false; }); }, 700);
   }
   function chipDone(rec) {
     if (!chip || !callShow) return;
