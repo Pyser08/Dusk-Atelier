@@ -86,3 +86,23 @@ test("hub.json에 주소가 있으면 그 주소로 보낸다", async () => {
   assert.equal(await createClient(api, { version: "t" }).pingSoon(), true);
   assert.deepEqual(sent, ["https://hub.duckdns.org/api/ping"]);
 });
+
+test("비밀번호로 들어가고, 기기 세션은 서버를 다시 켜도 남으며, 나가면 끊긴다", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "hubpw-"));
+  const cfg = { port: 0, host: "127.0.0.1", adminToken: "test-token-1234567890", dataDir: dir, repo: "o/r", githubToken: "", webhookSecret: "", discordWebhook: "", publicUrl: "", trustProxy: false, pollMinutes: 0 };
+  const start = async () => { const hub = createHub(cfg); const srv = http.createServer((q, s) => hub.handle(q, s)); await new Promise((r) => srv.listen(0, "127.0.0.1", r)); return { hub, srv, base: `http://127.0.0.1:${srv.address().port}` }; };
+  let a = await start();
+  const salt = crypto.randomBytes(16);
+  a.hub.store.data.auth = { pw: `scrypt$${salt.toString("hex")}$${crypto.scryptSync("my-password", salt, 32).toString("hex")}` };
+  const login = (base, pw) => fetch(base + "/login", { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "token=" + encodeURIComponent(pw) });
+  assert.equal((await login(a.base, "wrong-pass")).headers.get("set-cookie"), null);
+  const set = (await login(a.base, "my-password")).headers.get("set-cookie");
+  assert.match(set, /Max-Age=34560000/);
+  const cookie = set.split(";")[0];
+  a.srv.close(); a.hub.store.touch("auth"); a.hub.store.flush();
+  a = await start();
+  assert.equal((await fetch(a.base + "/api/admin/summary", { headers: { cookie } })).status, 200);
+  await fetch(a.base + "/logout", { method: "POST", redirect: "manual", headers: { cookie } });
+  assert.equal((await fetch(a.base + "/api/admin/summary", { headers: { cookie } })).status, 401);
+  a.srv.close(); a.hub.store.flush();
+});

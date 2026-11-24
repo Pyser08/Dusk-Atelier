@@ -7,6 +7,15 @@
 - GitHub 이슈·PR: 웹후크로 바로 받고, 10분마다 API로도 읽어서 놓치지 않습니다. 새 활동은 표시됩니다.
 - 디스코드 알림(선택): 새 신고·새 이슈·새 댓글
 
+## 관리 화면 비밀번호
+
+```bash
+cd ~/dusk-hub && node hub.cjs --set-password && pm2 restart dusk-hub
+```
+- 비밀번호는 해시로만 `hub-data/auth.json`에 저장됩니다. 다시 실행하면 비밀번호가 바뀌고, 로그인해 있던 기기는 모두 나가집니다.
+- 한 번 들어간 기기는 400일 동안 다시 묻지 않습니다(쓸 때마다 늘어남). 관리 화면 오른쪽 위 "로그인한 기기"에서 모르는 기기를 내보낼 수 있습니다.
+- `ADMIN_TOKEN`도 비밀번호 자리에 넣으면 들어가집니다(비상용).
+
 ## DuckDNS 주소 쓰기
 
 1. https://www.duckdns.org 에 로그인해 하위 도메인(예: `duskhub`)을 만들고, current ip에 오라클 서버 공인 IP를 넣습니다. 주소는 `duskhub.duckdns.org`가 됩니다.
