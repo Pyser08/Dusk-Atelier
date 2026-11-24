@@ -196,11 +196,12 @@ export function tickLife(f, { turn, present = [], events = [], date = "", gauge 
       const pk = nk(e.partner);
       for (const lab of e.labels ?? []) { const l = String(lab).trim().slice(0, 40); if (l) L.uses[l] = (L.uses[l] ?? 0) + 1; }
       if (e.act === "sex") {
-        L.sex.n += 1; L.sex.last = turn; L.sex.first ??= { turn, date, with: e.partner || "" };
-        if (pk) { const b = L.sex.by[pk] ?? { name: e.partner, n: 0, first: { turn, date } }; b.n += 1; L.sex.by[pk] = b; }
+        const times = Math.max(1, Math.min(20, Math.round(Number(e.times) || 1)));   // 11-24: 한 응답에 여러 번(“3번 했다”)
+        L.sex.n += times; L.sex.last = turn; L.sex.first ??= { turn, date, with: e.partner || "" };
+        if (pk) { const b = L.sex.by[pk] ?? { name: e.partner, n: 0, first: { turn, date } }; b.n += times; L.sex.by[pk] = b; }
         L.fat = r1(clamp(L.fat + 25 * g.up));
       }
-      if (e.act === "sex" || e.act === "climax") { const before = L.lust; L.lust = r1(clamp(L.lust - 60 * g.down)); L.refr = turn + REFRACTORY; changed.push(`${d.title} 해소 ${Math.round(before)}→${Math.round(L.lust)}`); tr(`${e.act === "sex" ? "관계" : "절정"} ${r1(L.lust - before)}${e.partner ? ` · ${e.partner}` : ""}`); }
+      if (e.act === "sex" || e.act === "climax") { const before = L.lust; L.lust = r1(clamp(L.lust - 60 * g.down)); L.refr = turn + REFRACTORY; changed.push(`${d.title} 해소 ${Math.round(before)}→${Math.round(L.lust)}${e.act === "sex" ? ` · 관계 +${Math.max(1, Math.min(20, Math.round(Number(e.times) || 1)))}번(모두 ${L.sex.n}번)` : ""}`); tr(`${e.act === "sex" ? "관계" : "절정"} ${r1(L.lust - before)}${e.partner ? ` · ${e.partner}` : ""}`); }
       else if (e.act === "kiss" || e.act === "touch") { const before = L.lust; L.lust = r1(clamp(L.lust + (e.act === "kiss" ? 6 : 10) * g.up)); tr(`${e.act === "kiss" ? "키스" : "스킨십"} +${r1(L.lust - before)}`); }
     }
   }

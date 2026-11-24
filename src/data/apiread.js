@@ -7,9 +7,10 @@ import { cacheGen } from "./dbcache.js";
 
 const TTL = 3000, MAX = 8;
 const memo = new Map();   // key → { api, g, done, t, p }
-function read(api, key, fn, ttl = TTL) {
+// fresh: 다 읽은 값은 쓰지 않지만, 지금 읽는 중인 같은 요청이 있으면 그것을 같이 기다린다(11-24: 홈 한 번에 캐릭터 통째 읽기 최대 4회 → 1회)
+function read(api, key, fn, ttl = TTL, fresh = false) {
   const g = cacheGen(), hit = memo.get(key);
-  if (hit && hit.api === api && hit.g === g && (!hit.done || Date.now() - hit.t < ttl)) return hit.p;
+  if (hit && hit.api === api && hit.g === g && (!hit.done || (!fresh && Date.now() - hit.t < ttl))) return hit.p;
   const ent = { api, g, done: false, t: 0, p: null };
   ent.p = Promise.resolve().then(fn).then((v) => { ent.done = true; ent.t = Date.now(); return v; }, (e) => { if (memo.get(key) === ent) memo.delete(key); throw e; });
   memo.delete(key); memo.set(key, ent);
@@ -17,6 +18,6 @@ function read(api, key, fn, ttl = TTL) {
   return ent.p;
 }
 // tag: 열린 채팅 위치 등 — 채팅을 바꾸면(새 채팅을 만들었을 수도 있으니) 다시 읽게 키에 넣는다
-export const readChar = (api, ci, tag = "") => read(api, `c:${ci}:${tag}`, () => api.getCharacterFromIndex(ci));
-export const readChat = (api, ci, ti) => read(api, `t:${ci}:${ti}`, () => api.getChatFromIndex(ci, ti));
+export const readChar = (api, ci, tag = "", { fresh = false } = {}) => read(api, `c:${ci}:${tag}`, () => api.getCharacterFromIndex(ci), TTL, fresh);
+export const readChat = (api, ci, ti, { fresh = false } = {}) => read(api, `t:${ci}:${ti}`, () => api.getChatFromIndex(ci, ti), TTL, fresh);
 export const dropReads = () => memo.clear();

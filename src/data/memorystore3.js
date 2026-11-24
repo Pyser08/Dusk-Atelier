@@ -41,9 +41,18 @@ export function createMemoryStoreV3(api, { storage } = {}) {
     return ent.p;
   };
   const get = async (k) => parse(await rawGet(k));
+  // 11-24 성능: 읽기 전용 공유 파싱(같은 원문이면 다시 파싱하지 않음). 받은 값은 여럿이 같이 쓰므로 고치면 안 된다
+  const parsed = new Map();   // key → { raw, v }
+  const peek = async (k) => {
+    const raw = await rawGet(k), hit = parsed.get(k);
+    if (hit && hit.raw === raw) return hit.v;
+    const v = parse(raw); parsed.delete(k); if (typeof raw === "string") parsed.set(k, { raw, v });
+    while (parsed.size > RAW_MAX) parsed.delete(parsed.keys().next().value);
+    return v;
+  };
   const sizeMB = (str) => (str.length * 2 / 1048576).toFixed(2);  // 브라우저 저장소 기준(UTF-16) 대략값
   const set = async (k, v) => {
-    raws.delete(k);
+    raws.delete(k); parsed.delete(k);
     // 일부 호스트는 실패를 throw 대신 false로 알린다 → 저장 실패로 처리(버그 1: 실패를 성공으로 보고 계속 진행하던 문제)
     // 실패하면 어떤 키가 얼마나 컸는지 같이 알린다(장편에서 용량 한도 제보를 바로 판단하려고).
     const body = JSON.stringify(v);
@@ -54,7 +63,7 @@ export function createMemoryStoreV3(api, { storage } = {}) {
       return r;
     } finally { raws.delete(k); }
   };
-  const rm = (k) => { raws.delete(k); return ps.removeItem(k); };
+  const rm = (k) => { raws.delete(k); parsed.delete(k); return ps.removeItem(k); };
 
   // 직접 바꾸지 않은 기억 넣기 토큰은 기본값을 따라간다(settings.edited = 직접 바꾼 키)
   const withFollow = (idx) => { idx.settings.edited = followDefaults(idx.settings, DEFAULT_SETTINGS, idx.settings.edited, DUSK_FOLLOW); return idx; };
@@ -82,10 +91,11 @@ export function createMemoryStoreV3(api, { storage } = {}) {
   return {
     serial,
     // 원문 캐시 비우기(저장 위치가 바뀌었을 때)
-    dropCache: () => raws.clear(),
+    dropCache: () => { raws.clear(); parsed.clear(); },
     getIndex: () => readIndex(),
     updateIndex: (fn) => serial(async () => { const idx = await readIndex(); const r = await fn(idx); await set(INDEX_KEY, idx); return r; }),
     getFolder: readFolder,
+    peekFolder: async (chaId, chatId) => { const f = await peek(FOLDER_PREFIX + folderIdOf(chaId, chatId)); return f?.v === V3 ? f : null; },   // 읽기 전용(고치지 말 것)
     onWikiWritten: (fn) => { wikiListeners.add(fn); return () => wikiListeners.delete(fn); },
     // 임계구역 안에서 읽고-수정-쓰기. LLM 호출은 이 밖에서 할 것. opts.fromRuntime: 런타임이 자기 사본을 저장하는 쓰기(알리지 않음)
     updateFolder: (chaId, chatId, fn, init = {}, opts = {}) => serial(async () => {

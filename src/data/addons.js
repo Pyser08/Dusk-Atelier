@@ -13,6 +13,10 @@ import { createAddonSdk } from "./addonsdk.js";
 export const ADDON_MANIFEST_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/addons.json";
 export const ADDON_URL_KEY = "dusk.addon.manifestUrl";
 export const ADOPT_KEY = "dusk.addon.adopted.v2";
+// 11-24: 기능마다 따로 이전 표시(나중에 애드온으로 옮기는 기능은 기존 사용자에게도 자동 설치 검사가 돈다).
+// 옛 전체 표시(ADOPT_KEY)가 있으면 그때 목록에 있던 기능만 끝난 것으로 본다.
+export const ADOPT_ID_PREFIX = "dusk.addon.adopted.v2.";
+export const LEGACY_ADOPTED = ["manage", "memory", "cards", "widgets", "provider", "protlink"];
 export const NOTES_KEY = "dusk.addon.notes.v1";   // 2.2.10 업데이트된 애드온의 아직 안 보여 준 패치노트
 export const SEEN_KEY = "dusk.addon.seen.v1";   // 목록에서 본 적 있는 애드온 id(새로 생긴 애드온 알림용)
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
@@ -401,15 +405,19 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
   // 2.0.0 첫 실행: 코어에서 빠진 기능 중 쓰던 것(켜 두었거나 데이터가 있는 것)의 애드온을 자동으로 받는다.
   // probes: [[id, async () => bool], …]. 다 받으면 표시를 남겨 다시 하지 않고, 하나라도 실패하면 다음 시작에 다시 시도한다.
   async function adopt(probes) {
-    try { if (await store.getItem(ADOPT_KEY)) return { done: true, got: [] }; } catch { /* 처음 */ }
+    let legacy = false; try { legacy = !!(await store.getItem(ADOPT_KEY)); } catch { /* 처음 */ }
     const idx = await getIndex(), got = [], failed = [];
+    const done = async (id) => { try { return !!(await store.getItem(ADOPT_ID_PREFIX + id)); } catch { return false; } };
+    const mark = async (id) => { try { await store.setItem(ADOPT_ID_PREFIX + id, "1"); } catch { /* 다음 시작에 다시 검사 */ } };
     for (const [id, probe] of probes) {
-      if (idx[id]) continue;
+      if (legacy && LEGACY_ADOPTED.includes(id)) continue;
+      if (await done(id)) continue;
+      if (idx[id]) { await mark(id); continue; }
       let used = false; try { used = !!(await probe()); } catch { used = false; }
-      if (!used) continue;
-      try { await install(id); got.push(id); } catch (e) { failed.push(id); log(`${id} 자동 받기 실패 ${e?.message ?? e}`); }
+      if (!used) { await mark(id); continue; }
+      try { await install(id); got.push(id); await mark(id); } catch (e) { failed.push(id); log(`${id} 자동 받기 실패 ${e?.message ?? e}`); }
     }
-    if (!failed.length) await store.setItem(ADOPT_KEY, "1");
+    if (!failed.length && !legacy) { try { await store.setItem(ADOPT_KEY, "1"); } catch { /* 무시 */ } }
     return { done: !failed.length, got, failed };
   }
 

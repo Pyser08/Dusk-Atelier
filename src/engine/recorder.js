@@ -162,7 +162,7 @@ import { EXTRA_STAGE1, MARK_STAGE1, CUM_STAGE1, STATUS_STAGE1, OUTFIT_STAGE1, WE
 import { RACE_STAGE1 } from "./races.js";   // 0.3.22 소문·목표·세계 문서·몸 흔적
 // addon-rebuild: 채팅별 성인 프로필(체위·장소·성적 수치) 변화 — 성인 항목이 켜졌을 때만 1단계에 줄 두 개를 더 받는다. 대부분의 턴엔 아무 줄도 없다.
 // 2.2.30: 성적인 장면인지(성인 줄을 다 물을지) — 글에 성적 행위·노출·애무 낱말이 있으면. 놓치면 그 턴 체위·약점 기록만 빠지고 욕구·피로는 늘 묻는다
-const HOT_RE = /섹스|성관계|관계를 (?:가졌|맺)|삽입|사정|절정|오르가즘|애무|신음|젖꼭지|유두|가슴을 (?:만|주무|움켜|핥|빨)|알몸|나체|벗(?:기|겼|었|은|어)|속옷|팬티|브라|허벅지 ?안|사타구니|성기|음경|자지|보지|클리|질 ?안|항문|엉덩이를 (?:만|주무|움켜)|핥|빨(?:았|아|고)|펠라|커닐|자위|발정|흥분(?:해|한|된)|야하|음란|키스|입맞|입을 맞|자국을 남|키스 ?마크|목덜미|혀를 (?:섞|넣)|쓰다듬|끌어안|껴안|\b(?:sex|fuck|cum|orgasm|moan|naked|nude|nipple|penis|cock|pussy|clit|blowjob|lick|kiss|aroused|horny)/i;
+const HOT_RE = /섹스|성관계|정사|교미|몸을 (?:섞|겹|허락|맡기)|살을 섞|하나가 (?:되|됐)|밤을 (?:보내|보냈|함께)|잠자리|동침|질내|안에 (?:싸|쌌|사정)|정액|애액|체위|정상위|후배위|기승위|허리를 (?:흔|움직|쳐)|박(?:아|았|히|혀)|쑤시|조여|가버|가 버|\d+ ?(?:번|회|차례) ?(?:했|하고|더|째|이나|연속)|관계를 (?:가졌|맺)|삽입|사정|절정|오르가즘|애무|신음|젖꼭지|유두|가슴을 (?:만|주무|움켜|핥|빨)|알몸|나체|벗(?:기|겼|었|은|어)|속옷|팬티|브라|허벅지 ?안|사타구니|성기|음경|자지|보지|클리|질 ?안|항문|엉덩이를 (?:만|주무|움켜)|핥|빨(?:았|아|고)|펠라|커닐|자위|발정|흥분(?:해|한|된)|야하|음란|키스|입맞|입을 맞|자국을 남|키스 ?마크|목덜미|혀를 (?:섞|넣)|쓰다듬|끌어안|껴안|\b(?:sex|fuck|cum|orgasm|moan|naked|nude|nipple|penis|cock|pussy|clit|blowjob|lick|kiss|aroused|horny)/i;
 export const isHotText = (t) => HOT_RE.test(String(t ?? ""));
 // 원문에서 성적인 낱말이 든 첫 문장(그대로 인용, 120자까지) — 없으면 ""
 export function hotQuote(t) { const s = String(t ?? "").split(/(?<=[.!?。…\n])/).map((x) => x.trim()).find((x) => HOT_RE.test(x)); return s ? s.slice(0, 120) : ""; }
@@ -176,6 +176,8 @@ export const NSFW_LITE_STAGE1 = [
   "sleep|Name",
   // 11-22 버그리포트: 과거 경험·체내 정액량이 하나도 안 쌓였다 — 둘 다 성적인 낱말이 있는 응답에서만 물었다(2.2.30). 과거 경험은 평범한 대화에서 나온다
   "past|Name|partner|count|stated or estimated      they had sex before the story (newest, user message or lorebook); estimate the count when none is given",
+  // 11-24 버그리포트: 성적인 낱말이 없는(완곡한) 응답이면 act 줄을 아예 묻지 않아 관계 횟수가 하나도 안 쌓였다
+  "act|Name|partner|sex or climax|Korean positions/plays used, comma separated or none|times      ONLY when newest or the user message shows they actually had sex / climaxed (also when clearly implied); times = how many times in this reply (use the number written, e.g. 3번 → 3; default 1)",
 ].join("\n") + CUM_STAGE1;
 export const NSFW_STAGE1 = [
   "",
@@ -183,7 +185,7 @@ export const NSFW_STAGE1 = [
   "Sexual profile tracking is on — ALSO write these lines only when newest clearly shows it (most replies have none):",
   "taste|Name|like or dislike|position, place or play|its plain Korean name|exact quote      a character newly shows liking or disliking a specific sex position, place to have sex or kind of play",
   "sexval|Name|eroticInterest, sexualSpontaneity, sexualOpenness or sexualMomentum|+1..+10 or -1..-10|exact quote      a clear change in that sexual trait shown in newest",
-  "act|Name|partner|sex, climax, kiss or touch|Korean positions/plays used, comma separated      one per character and partner",
+  "act|Name|partner|sex, climax, kiss or touch|Korean positions/plays used, comma separated or none|times      one per character and partner; times = how many times in this reply (use the number written in newest or the user message, e.g. 세 번·3회 → 3; default 1)",
   "sleep|Name",
   "gauge|Name|lust or fatigue|+n or -n (max 30)|exact quote      arousal never rises on its own — YOU decide it: write lust when newest actually moves this character's arousal (flirting, sexual tension, touch, their own desire or kink being touched, aphrodisiac → up; awkwardness, upset, fear, interruption, cold shower → down). Size it to what happened (small hint +2..5, clear tease +6..12, strong +13..30). Nothing sexual happened → no lust line. fatigue: exhaustion or rest",
   "past|Name|partner|count|stated or estimated      they had sex before the story (newest, user message or lorebook); estimate the count when none is given",
@@ -218,6 +220,13 @@ export function humanFrom(raw, known = [], allow = null) {
 }
 const EXT_TRAITS = new Set(["first", "fantasy", "voice", "after", "yes", "no", "contra"]);
 const HUMAN_TRAITS = new Set(["speech", "habit", "trigger", "dream", "secret", "love", "anger", "sad"]);
+// 11-24: act 줄 횟수(없거나 이상하면 1, 1~20). "3", "3번", "세 번", "x3" 모두 읽는다
+const KO_NUM = { 한: 1, 하나: 1, 두: 2, 둘: 2, 세: 3, 셋: 3, 네: 4, 넷: 4, 다섯: 5, 여섯: 6, 일곱: 7, 여덟: 8, 아홉: 9, 열: 10 };
+export function actTimes(v) {
+  const t = String(v ?? "").trim(); if (!t) return 1;
+  const d = t.match(/\d+/); if (d) return Math.max(1, Math.min(20, Number(d[0]) || 1));
+  const k = t.match(/^(한|하나|두|둘|세|셋|네|넷|다섯|여섯|일곱|여덟|아홉|열)/); return k ? KO_NUM[k[1]] : 1;
+}
 export function nsfwFrom(raw, known = []) {
   const out = [];
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
@@ -227,7 +236,7 @@ export function nsfwFrom(raw, known = []) {
       out.push({ kind: "taste", posKind: k, name, preference: /dislike|싫/i.test(f[2] ?? "") ? "disliked" : "preferred", label: lab.slice(0, 60), quote: (q ?? "").slice(0, 160) }); }
     else if (tag === "sexval" && f[2] && f[3]) out.push({ kind: "sexval", name, key: f[2], delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });
     else if (tag === "act" && f[3]) { const a = String(f[3]).toLowerCase(), act = /sex|관계|섹스/.test(a) ? "sex" : /climax|절정|사정|오르가/.test(a) ? "climax" : /kiss|키스/.test(a) ? "kiss" : "touch";
-      out.push({ kind: "act", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), act, labels: String(f[4] ?? "").split(/[,，、·]/).map((x) => x.trim()).filter((x) => x && !/^(none|없음|-)$/i.test(x)).slice(0, 4) }); }
+      out.push({ kind: "act", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), act, labels: String(f[4] ?? "").split(/[,，、·]/).map((x) => x.trim()).filter((x) => x && !/^(none|없음|-)$/i.test(x)).slice(0, 4), times: actTimes(f[5]) }); }
     else if (tag === "sleep") out.push({ kind: "sleep", name });
     else if (tag === "sex" && f[2] && /^(m|f|male|female|남|여|남자|여자|남성|여성)$/i.test(f[2])) out.push({ kind: "sex", name, g: /^(m|male|남)/i.test(f[2]) ? "m" : "f", quote: (f[3] ?? "").slice(0, 160) });   // 이야기에서 몸의 성별이 바뀜
     else if (tag === "touch" && f[2]) out.push({ kind: "touch", name, parts: String(f[2]).split(/[,，、·]/).map((x) => x.trim()).filter(Boolean).slice(0, 4) });

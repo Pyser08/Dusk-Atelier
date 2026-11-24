@@ -258,3 +258,10 @@ test("응답마다 다른 키면 턴 번호가 같아도 반영, 같은 키(같�
   tickLife(f, { turn: 10, present: ["유나"], evKey: "r1", events: [{ kind: "act", name: "유나", partner: "민호", act: "sex" }] }, () => 80);
   assert.equal(L.sex.n, 1, "같은 응답이 다시 와도 한 번만");
 });
+
+test("11-24 관계 횟수: act 줄 times만큼 센다", () => {
+  const f = folder();
+  tickLife(f, { turn: 10, present: ["유나"], events: [{ kind: "act", name: "유나", partner: "민호", act: "sex", labels: [], times: 3 }] }, () => 80);
+  assert.equal(f.life.p.a.sex.n, 3);
+  assert.equal(f.life.p.a.sex.by["민호"]?.n ?? Object.values(f.life.p.a.sex.by)[0].n, 3);
+});

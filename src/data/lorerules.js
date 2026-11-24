@@ -235,6 +235,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   }
 
   async function onInput(text) {
+    newOut = true;
     clearTimeout(prepTimer);
     try {
       busy = true;
@@ -280,6 +281,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       if (!(charIdx >= 0) || !(chatIdx >= 0)) return;
       const first = await api.getChatFromIndex(charIdx, chatIdx);
       if (!first || streaming(first)) return;
+      lastPos = `${charIdx}:${chatIdx}`; newOut = false;   // 읽었으니 다음 새 출력·채팅 변경까지 다시 읽지 않음
       const key = `${charIdx}:${chatIdx}:${sig(first)}`;
       if (key === prepKey) return;
       // 화면이 2.5초 넘게 잠잠했으므로 응답 뒤 처리도 끝난 것으로 보고 같은 사본을 쓴다(채팅 통째 복사 1회로 줄임)
@@ -301,7 +303,16 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
       log("다시 생성 대비 실패", e?.message ?? e);
     }
   }
+  // 11-24 성능: 표시 훅은 스크롤·다시 그리기에도 불린다 → 새 출력이 나왔거나(출력 훅) 열린 채팅이 바뀌었을 때만 채팅을 읽는다
+  let outHook = false, newOut = true, lastPos = "";
   const onDisplay = (text) => {
+    if (outHook && !newOut) {
+      Promise.all([api.getCurrentCharacterIndex(), api.getCurrentChatIndex()]).then(([a, b]) => {
+        const pos = `${a}:${b}`; if (pos === lastPos) return;
+        newOut = true; onDisplay(text);
+      }).catch(() => {});
+      return text;
+    }
     clearTimeout(prepTimer);
     prepTimer = setTimeout(() => prepareReroll(), 2500);
     return text;
@@ -310,7 +321,7 @@ export function createLoreRuntime(api, { log = (...a) => console.log("[Dusk 규�
   async function start() {
     await api.addRisuScriptHandler("input", onInput);
     await api.addRisuScriptHandler("display", onDisplay);
-    try { await api.addRisuScriptHandler("output", (text) => { noteStreamChunk(); return text; }); } catch { /* 출력 훅이 없는 환경: 예전처럼 채팅의 스트리밍 표시로 판단 */ }
+    try { await api.addRisuScriptHandler("output", (text) => { noteStreamChunk(); newOut = true; return text; }); outHook = true; } catch { /* 출력 훅이 없는 환경: 예전처럼 채팅의 스트리밍 표시로 판단 */ }
   }
 
   return { setSettings(v) {
