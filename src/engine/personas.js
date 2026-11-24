@@ -11,6 +11,11 @@ const isUserName = (n) => /^\{\{user\}\}$/i.test(String(n ?? "").trim());
 export const personaNames = (folder) => (folder?.personas ?? []).map((p) => p.name).filter(Boolean);
 export const isPastPersona = (folder, name) => personaNames(folder).some((n) => key(n) === key(name));
 
+// notePersona가 폴더를 고칠지(읽기만)
+export function personaNeedsNote(folder, name) {
+  const n = String(name ?? "").trim().slice(0, 80);
+  return !!folder && !!n && !isUserName(n) && key(folder.persona?.name) !== key(n);
+}
 // 지금 페르소나 이름(name)을 본다. 처음이면 기억만 하고, 바뀌었으면 옛 페르소나로 떼어 낸다.
 // 반환: { changed, from, to } — changed면 from(옛 이름)으로 기록을 옮겼다
 export function notePersona(folder, name, { turn = null, now = new Date().toISOString() } = {}) {

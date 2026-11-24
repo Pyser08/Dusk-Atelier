@@ -291,6 +291,8 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     return text;
   };
   async function recentCheck() {
+    // 신고 #5: next(기본)에서는 출력 일정이 어차피 잡히지 않는다 → 채팅을 통째로 읽기 전에 끝낸다
+    if (confirmOf(await store.getIndex()) !== "now") return;
     const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
     if (!(ci >= 0) || !(ti >= 0)) return;
     const chat = await api.getChatFromIndex(ci, ti), i = aiIndexes(chat?.message ?? []).at(-1) ?? -1;

@@ -22,7 +22,7 @@ import { createNameLinks } from "../../src/data/namelinks.js";
 import { quickRows } from "../../src/ui/screens/memory/quickrows.js";
 import { duplicateGroups, mergeExactDuplicates } from "../../src/engine/peopledupe.js";
 import { logEvent } from "../../src/data/memlog.js";
-import { notePersona, personaNames } from "../../src/engine/personas.js";
+import { notePersona, personaNames, personaNeedsNote } from "../../src/engine/personas.js";
 import { createMemoryApi } from "../../src/data/memoryapi.js";
 import { personaLoreEntry } from "../../src/engine/personalore.js";
 import { upsertWikiLore } from "../../src/engine/wikilore.js";
@@ -60,7 +60,10 @@ export async function activate(api, ctx) {
     let chat = null; try { const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(); chat = await api.getChatFromIndex(ci, ti); } catch { chat = null; }
     const name = await loadPrimaryUserName(api, { fresh: true, chat }); if (!name) return;
     let res = { changed: false }, past = [];
-    await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { res = notePersona(f, name, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : null }); past = personaNames(f); });
+    // 신고 #5: 바뀔 것이 있을 때만 저장(저장 큐 안에서 다시 확인). 폴더가 아직 없으면 예전처럼 만든다
+    const seen = await memory.store.peekFolder(cur.chaId, cur.chatId);
+    if (seen && !personaNeedsNote(seen, name)) past = personaNames(seen);
+    else await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { res = notePersona(f, name, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : null }); past = personaNames(f); });
     setPastPersonas(past);
     if (res.changed) await personaToLore(res.from).catch((e) => log(`옛 페르소나 로어북 등록 실패 ${e?.message ?? e}`));
     if (res.changed) { logEvent({ area: "페르소나", title: `페르소나가 ‘${res.from}’ → ‘${res.to}’로 바뀌었어요 · 지금까지의 기록은 ‘${res.from}’ 인물로 남겼어요` }); toast(`페르소나가 바뀌었어요. 지금까지의 기록은 ‘${res.from}’(으)로 남기고 관계도 가운데에 함께 보여 드려요.`); }
@@ -68,6 +71,8 @@ export async function activate(api, ctx) {
   const autoMergeSame = async () => {
     const cur = await memory.switches?.currentChat?.().catch?.(() => null); if (!cur) return;
     const slots = (() => { try { return JSON.parse(memory.lib.base.slots).slots; } catch { return []; } })();
+    const seen = await memory.store.peekFolder(cur.chaId, cur.chatId);
+    if (!seen || !duplicateGroups(seen, { exact: true }).length) return;   // 신고 #5: 합칠 것이 없으면 저장하지 않는다
     let res = { merged: 0, skipped: [] };
     await memory.store.updateFolder(cur.chaId, cur.chatId, (f) => { if (duplicateGroups(f, { exact: true }).length) res = mergeExactDuplicates(f, { slotDefinitions: slots }); });
     if (res.merged) logEvent({ area: "인물 합치기", title: `이름이 같은 인물 ${res.merged}명을 하나로 합쳤어요` });

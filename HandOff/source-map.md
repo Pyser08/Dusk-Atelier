@@ -31,7 +31,7 @@
 - `addonscope.js` (52줄) 애드온마다 따로 쓰는 api: 애드온이 호스트에 단 훅(요청·스크립트·채팅 리스너)을 기록해 두었다가… — BASE, baseApi, createProviderRelay, scopeApi
 - `addonsdk.js` (134줄) 애드온 SDK(2.1.0): 모든 애드온의 activate(api, ctx)에 ctx.dusk로 넘겨… — SDK_VERSION, createAddonSdk
 - `adultseed.js` (86줄) 2.2.6 ‘처음 등장 때 성인 항목 무작위로’ 옵션(pluginStorage) + 장기기억 위키 후… — readSeedOpt, saveSeedOpt, seedWikiNow, seedErosyncNow, syncOrientNow
-- `affhud.js` (178줄) 호감도 HUD 프리셋 런타임: 응답이 끝나면 호감도를 채팅 변수($aff…)에 써 둔다. — createAffHud
+- `affhud.js` (181줄) 호감도 HUD 프리셋 런타임: 응답이 끝나면 호감도를 채팅 변수($aff…)에 써 둔다. — createAffHud
 - `apiread.js` (24줄) 2.2.23 성능: 캐릭터(getCharacterFromIndex — 딸린 채팅 전부라 큰 채팅은 수… — readChar, readChat, dropReads
 - `assetfix.js` (93줄) v1.8.2 에셋 태그 고치기(도구 탭, 사용자가 누를 때만): 지금 열린 채팅 읽기 · 고친 응답 … — UNDO_KEY, loadRange, applyFix, lastUndo, undoFix
 - `assetfolders.js` (65줄) — foldersOf, childFolders, folderPath, createFolder, renameFolder
@@ -66,7 +66,7 @@
 - `erosyncturn.js` (158줄) Dusk 2.2.0: Erosync 매 턴 계산(HandOff/EROSYNC-TURN.md). 장기기… — TURN_KEY, AUTO_KEY, TURN_DEFAULT, normalizeTurnSettings, seedBatch
 - `fairplay.js` (88줄) 공정한 전개 훅 (v1.6.8). 장기기억과 무관하게 설정에서 켜고 끈다. 기본 꺼짐. — FAIR_KEY, DICE_KEY, DICE_MODE_KEY, DICE_LEVEL_KEY, DICE_CUTS_KEY
 - `featurefill.js` (54줄) 2.2.25 장기기억: 새 기능 빈칸 채우기. 기능이 생기기 전에 기록한 채팅은 종족·기후·옷차림 같… — FILL_FEATURES, featureGaps, fillPrompt, fillFeatures
-- `floatbtn.js` (83줄) 2.2.25: 채팅 위 떠 있는 버튼(인물 관계도)을 Dusk가 리스 화면에 직접 그린다 — 동그랗고… — FAB_POS_KEY, FAB_LOOK_KEY, FAB_LOOK_DEFAULT, FAB_SIZES, cleanLook
+- `floatbtn.js` (96줄) 2.2.25: 채팅 위 떠 있는 버튼(인물 관계도)을 Dusk가 리스 화면에 직접 그린다 — 동그랗고… — FAB_POS_KEY, FAB_LOOK_KEY, FAB_LOOK_DEFAULT, FAB_SIZES, cleanLook
 - `gauge.js` (149줄) 게이지 서비스: 정의(idx.gauges[chaId]) · 값/이력(folder.gauge) 저장, … — createGaugeService
 - `gaugemult.js` (19줄) 게이지 배수 저장(pluginStorage 한 키). 장기 기억 기록기·위키 기록기·Erosync 매… — readGauge, saveGauge, peekGauge
 - `genstate.js` (9줄) 응답 스트리밍 신호. output 훅이 불릴 때마다 시각을 남겨, 생성 중인지 알아보려고 캐릭터·채팅… — noteStreamChunk, recentlyStreamed, resetStreamSignal
@@ -95,7 +95,7 @@
 - `memoryload.js` (48줄) v1.6.5 읽기 경로 대조: 폴더를 읽어 메모리 사본에서만 앵커 정합성(reconcile)을 맞춘다… — hasMemory, findForkParent, inheritFromParent, loadReconciled
 - `memoryremote.js` (267줄) 장기기억을 Dusk Cellar에 저장 (1.8.3) — FLAG_KEY, QUEUE_KEY, REMOTE_PREFIX, mergeFolder, createMemoryRemote
 - `memoryrewind.js` (58줄) 저장된 기억으로 새 채팅 만들기. 원본 채팅·봇 데이터는 수정하지 않고 새 채팅만 추가한다. — sliceFolder, sceneAt, draftFirstMessage, createRewindChat
-- `memoryrunner.js` (447줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — followHubPick, hubPickOf, createMemoryRunner
+- `memoryrunner.js` (449줄) 장기기억 러너: output 훅 → 디바운스 → 마지막 AI 응답 분석 → 폴더 반영. 훅 안에서는 … — followHubPick, hubPickOf, createMemoryRunner
 - `memorystore.js` (121줄) 장기기억 v2 저장소: 인덱스 + 폴더별 키 분할, 직렬 쓰기 큐, v1 마이그레이션. — INDEX_KEY, FOLDER_PREFIX, EXT_PREFIX, LEGACY_KEY, DEFAULT_SETTINGS
 - `memorystore3.js` (211줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
 - `memoryswitches.js` (80줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
@@ -308,7 +308,7 @@
 - `peoplegroup.js` (27줄) 인물 목록 폴더(리수폿 people-folders-ui 대응, 순수 함수). 폴더 배치는 위키 범위의… — UNASSIGNED, layoutOf, hasFolders, newFolderId, groupPeople
 - `peoplemerge.js` (111줄) 인물 합치기 순수 로직. 합치기 대상은 'Dusk 인물'이 아니라 '목록에 보이는 항목'이다: — mergeEntries, duskMerge, renameDoc, alignDocTitles, planEntryMerge
 - `personalore.js` (17줄) 11-23 장기기억(설정 inject.personaLore, 기본 꺼짐): 채팅 도중 페르소나를 바꾸… — stripUserTag, personaLoreEntry
-- `personas.js` (70줄) 11-23 장기기억: 채팅 도중 페르소나가 바뀌면(순수) 그때까지 {{user}} 앞으로 쌓인 기록을… — personaNames, isPastPersona, notePersona, detachPersona
+- `personas.js` (75줄) 11-23 장기기억: 채팅 도중 페르소나가 바뀌면(순수) 그때까지 {{user}} 앞으로 쌓인 기록을… — personaNames, isPastPersona, personaNeedsNote, notePersona, detachPersona
 - `personedit.js` (44줄) 인물 페이지에서 바로 고치는 순수 함수(v1.6.4 ③): ✎ 직접 수정 · 📌 고정 · ⏸ 이 인… — normItem, scopeKeyOf, editSectionText, editMetricValue, setPin
 - `personrecords.js` (72줄) 인물 항목 직접 추가·편집·삭제(리수폿 people-records-ui · npc-emotion-ui… — RECORD_GROUPS, groupInfo, EMOTION_HINT, recordGroupOf, listRecords
 - `personview.js` (80줄) 인물 페이지용 순수 로직: 위키 문서 찾기 → '지금 상태' 카드, Dusk 기록·위키 변화·관계·약… — TL_FILTERS, findDoc, stateOf, timelineOf, countsOf

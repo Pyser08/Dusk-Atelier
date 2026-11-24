@@ -26,7 +26,7 @@ export function presetSpots(w, h, size = SIZE) {
 export const clampPos = (x, y, w, h, size = SIZE) => [Math.max(MARGIN, Math.min(w - size - MARGIN, x)), Math.max(MARGIN, Math.min(h - size - MARGIN, y))];
 
 export function createFloatButton(api, { ensureDoc, icon, title, open, log = () => {} }) {
-  let el = null, pos = null, view = { w: 390, h: 800 }, look = { ...FAB_LOOK_DEFAULT };
+  let release = null, el = null, pos = null, view = { w: 390, h: 800 }, look = { ...FAB_LOOK_DEFAULT };
   const save = () => { try { api.pluginStorage?.setItem?.(FAB_POS_KEY, JSON.stringify(pos)); } catch { /* 위치만 못 기억 */ } };
   const load = async () => { try { const v = JSON.parse((await api.pluginStorage?.getItem?.(FAB_POS_KEY)) ?? "null"); return Array.isArray(v) && v.every(Number.isFinite) ? v : null; } catch { return null; } };
   const place = async () => { if (el) await el.setStyleAttribute(FAB_STYLE(pos[0], pos[1], look)); };
@@ -49,10 +49,23 @@ export function createFloatButton(api, { ensureDoc, icon, title, open, log = () 
     const xy = (ev) => { const t = ev?.touches?.[0] ?? ev?.changedTouches?.[0] ?? ev; return Number.isFinite(t?.clientX) && Number.isFinite(t?.clientY) ? [t.clientX, t.clientY] : null; };
     let t0 = 0, drag = null, moved = false, handled = false, longT = null, lastStart = 0;
     const cycleSpot = () => { const spots = presetSpots(view.w, view.h, look.size), i = spots.findIndex(([x, y]) => Math.abs(x - pos[0]) < 8 && Math.abs(y - pos[1]) < 8); pos = spots[(i + 1) % spots.length]; place().catch(() => {}); save(); };
+    // 신고 #5: 이동 이벤트는 누르는 동안만 받는다(안 누를 때 화면의 모든 이동이 넘어오던 것). 숨기면 모두 뗀다.
+    // 떼지 못하는 판(removeEventListener 없음·실패)에서는 한 번만 달고 그대로 쓴다.
+    const MOVES = ["pointermove", "touchmove", "mousemove"];
+    let armed = null, sticky = false, gone = false;
+    const bind = (types, fn) => types.map((t) => { try { return Promise.resolve(d.addEventListener(t, fn)).then((id) => (id == null ? null : [t, id]), () => null); } catch { return null; } });
+    const unbind = async (list) => { for (const p of list) { const r = await p; if (!r) continue; try { await d.removeEventListener(r[0], r[1]); } catch { sticky = true; } } };
+    const arm = () => { if (!armed && !gone) armed = bind(MOVES, move); };
+    const disarm = () => {
+      if (!armed || sticky) return;
+      const list = armed; armed = null;
+      if (typeof d.removeEventListener !== "function") { armed = list; sticky = true; return; }
+      unbind(list).then(() => { if (sticky && !armed) armed = list; });
+    };
     const start = (ev) => {
       const now = Date.now(); if (now - lastStart < 350) return; lastStart = now;   // 한 번 누름에 포인터·터치·마우스가 같이 와도 한 번만
-      t0 = now; moved = false; handled = false; const p = xy(ev); drag = p ? { sx: p[0], sy: p[1], ox: pos[0], oy: pos[1] } : null;
-      clearTimeout(longT); longT = setTimeout(() => { if (t0 && !moved) { handled = true; t0 = 0; drag = null; cycleSpot(); } }, LONG);   // 손 뗀 이벤트가 안 와도 길게 누르면 자리 이동
+      arm(); t0 = now; moved = false; handled = false; const p = xy(ev); drag = p ? { sx: p[0], sy: p[1], ox: pos[0], oy: pos[1] } : null;
+      clearTimeout(longT); longT = setTimeout(() => { if (t0 && !moved) { handled = true; t0 = 0; drag = null; disarm(); cycleSpot(); } }, LONG);   // 손 뗀 이벤트가 안 와도 길게 누르면 자리 이동
     };
     const move = (ev) => {
       if (!t0 || !drag) return; const p = xy(ev); if (!p) return;
@@ -61,21 +74,21 @@ export function createFloatButton(api, { ensureDoc, icon, title, open, log = () 
       moved = true; clearTimeout(longT); pos = clampPos(drag.ox + dx, drag.oy + dy, view.w, view.h, look.size); place().catch(() => {});
     };
     const end = () => {
-      if (!t0) return; const held = Date.now() - t0; t0 = 0; clearTimeout(longT);
+      disarm(); if (!t0) return; const held = Date.now() - t0; t0 = 0; clearTimeout(longT);
       if (moved) { handled = true; drag = null; save(); return; }
       drag = null;
       if (held >= LONG) { handled = true; cycleSpot(); return; }
       handled = true; Promise.resolve().then(open).catch((e) => log("버튼 열기 실패", e?.message ?? e));
     };
     for (const t of ["pointerdown", "touchstart", "mousedown"]) { try { await el.addEventListener(t, start); } catch { /* 그 이벤트가 없는 판 */ } }
-    for (const t of ["pointermove", "touchmove", "mousemove"]) { try { await d.addEventListener(t, move); } catch { /* 없음 */ } }
-    for (const t of ["pointerup", "touchend", "mouseup", "pointercancel", "touchcancel"]) { try { await d.addEventListener(t, end); } catch { /* 없음 */ } }
+    const ends = bind(["pointerup", "touchend", "mouseup", "pointercancel", "touchcancel"], end); await Promise.all(ends);
+    release = async () => { gone = true; t0 = 0; clearTimeout(longT); const list = [...ends, ...(armed ?? [])]; armed = null; if (typeof d.removeEventListener === "function") await unbind(list); };
     // 누르기 이벤트가 하나도 안 오는 판: click만 와도 열린다
     await el.addEventListener("click", () => { setTimeout(() => { if (!handled && !t0) Promise.resolve().then(open).catch(() => {}); handled = false; }, 60); });
     await (await d.querySelector("body")).appendChild(el);
     return true;
   }
-  async function hide() { const e = el; el = null; if (e) { try { await e.remove(); } catch { /* 이미 없음 */ } } }
+  async function hide() { const e = el, off = release; el = null; release = null; if (off) await off().catch(() => {}); if (e) { try { await e.remove(); } catch { /* 이미 없음 */ } } }
   // 크기·투명도를 바로 바꾼다(저장은 부른 쪽이 saveFabLook으로)
   async function setLook(next) { look = cleanLook(next); if (el && pos) { pos = clampPos(pos[0], pos[1], view.w, view.h, look.size); await place(); } return true; }
   return { show, hide, setLook, isOn: () => !!el };

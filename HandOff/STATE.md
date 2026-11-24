@@ -1,3 +1,7 @@
+## fix/report-4 · 11-24 신고 #5 성능 1차(미배포)
+- memoryrunner recentCheck: next면 채팅 읽기 전 종료 · memorystore3 raw 캐시: TTL은 완료부터, 읽는 중 공유(60초 상한) · addons/memory watchPersona·autoMergeSame: peekFolder로 먼저 보고 바뀔 때만 updateFolder(personas.js personaNeedsNote) · affhud tick: 켠 HUD가 없으면 통째 읽기 생략(settle은 호감도·주기 동기화 때문에 유지) · floatbtn(코어): 이동 리스너는 누르는 동안만, hide에서 모두 해제.
+- 테스트 tests/report5-perf.test.js. 배포: 코어 2.2.53(floatbtn·종) + 장기기억. 운영 허브는 0.3.0으로 교체함(AUTO_UPDATE=0 — main에 0.3.0이 들어간 뒤 다시 켤 것, 안 그러면 0.2.0으로 되돌아감).
+
 ## fix/report-4 · 11-24 허브 신고 상태 알림(미배포 · 허브 0.3.0)
 - 허브 server/dusk-hub/hub.cjs: onReport가 확인 키(r.key, 12바이트 base64url)·changedAt·reply 저장 → {no,key,changedAt}. `POST /api/report-status {keys}` → [{key,no,status,reply,changedAt}](내용 없음, safeEq 비교, IP당 30/시간). 관리 PATCH reply(한 줄 300자)·상태 바뀔 때 changedAt. 관리 목록·PATCH 응답에서 key 빼고 hasKey만. 관리 화면 신고 상세에 ‘답장’ 칸. VERSION 0.3.0(0.2.0부터만 자동 업데이트 — 운영 허브가 0.1.0이면 한 번 직접 교체).
 - 플러그인 src/data/hub.js: REPORT_STATUS·hasUnseen(순수), sendReport가 기기 저장소 dusk.hub.mine에 {no,key,at,title} 30개까지, checkReports({force})(하루 1회 dusk.hub.mineChecked, 신고 없으면 안 보냄)·myReports·markSeen·onReports. src/ui/screens/reportbell.js: 헤더 종(app.js rb-spacer 뒤) — 신고 없으면 숨김, 시작 30초 뒤 확인, 새 소식 점, 누르면 강제 확인 후 목록·답장 → markSeen. 아이콘 bell(icons.js), CSS styles.js .rb-bell*.
