@@ -1,3 +1,6 @@
+## fix/report-6 · 11-24 신고 #6 → v2.2.55
+- 업데이트 비교 화면: safeDiff 상한, 표시 20만 자, 사본 업데이트 다시 그릴 때 봇 재사용. OOM은 재현 못 함(신고자 확인 대기).
+
 ## fix/report-5-p3 · 11-24 신고 #5 2·3차 → v2.2.54 + 장기기억 0.3.61
 - settlescope.js: settle 뒤 주기·호감도 동기화는 위키 런타임 범위로 폴더 1번만 읽음(캐릭터·채팅 통째 읽기 4번 제거, 쓰기 전 same() 확인) · namelinks/charimg: 썸네일은 화면 위 방식이면 상태창 열 때(0.7초 상한), 펼침 방식은 그대로 · cardoverlay: 통합 사전 검색 + 2.5→5초 간격.
 - 테스트 tests/report5-phase3.test.js · memoryturn.test.js settle 4건(옛 코드는 채팅을 바꾸면 다른 채팅 감정이 섞였음). 위키 가드·인덱스 파싱은 안 바꿈.

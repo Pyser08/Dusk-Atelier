@@ -1,4 +1,4 @@
-# Dusk Atelier 소스 구조 지도 (v2.2.54 기준, tools/source-map.mjs로 자동 생성)
+# Dusk Atelier 소스 구조 지도 (v2.2.55 기준, tools/source-map.mjs로 자동 생성)
 
 > **다른 AI/새 세션 인계:** 먼저 `HandOff/README.md` → `HandOff/STATE.md` → `HandOff/TASK-MAP.md` 순서로 읽는다.
 
@@ -346,7 +346,7 @@
 - `storycal.js` (105줄) 장기기억 애드온: 이야기 달력(순수) — 생일 · 연인 기념일 · 공휴일 · 특별한 날 · 약속. (… — CAL_STAGE1, calFrom, CAL_KINDS, emptyCal, calOf
 - `storydate.js` (21줄) 이야기 날짜 공유(v1.6.4): 응답 글에서 날짜를 프로그램이 한 번만 뽑고, 월경·임신 계산과 세… — latestStoryIso, storyDateOf, mergeWhen
 - `storytime.js` (69줄) 이야기 시간 (v1.6.8, 순수). 메인 AI가 응답 맨 위에 적는 상태 줄 `[YYYY-MM-DD… — TIME_MARK, emptyState, timeFromText, parseStatus, latestStoryState
-- `tideplan.js` (188줄) RisuTide 판단 로직(src/tide/)을 Dusk 업데이트 흐름에 잇는 곳. — charFields, modFields, fieldsToMod, makePlan, regexAutoNote
+- `tideplan.js` (209줄) RisuTide 판단 로직(src/tide/)을 Dusk 업데이트 흐름에 잇는 곳. — charFields, modFields, fieldsToMod, makePlan, regexAutoNote
 - `tidestore.js` (146줄) RisuTide가 남긴 기록을 읽는다 (읽기 전용). — localStore, tideBase, listTideBackups, loadTideBackup, loadProvenance
 - `ties.js` (115줄) 2.2.30 장기기억: 관계 종류(가족·파티·동료·직장 동료·주종·사제 …). 관계 진도(처음 봄→아… — TIE_GROUPS, TIE_KINDS, TIE_BY_ID, tieKind, TIE_STAGE1
 - `tokens.js` (16줄) 코어 화면이 기억 엔진 전체를 끌어오지 않게 작은 도우미만 따로 둔다(2.2.4 — 기억 엔진은 애드… — estimateTokens, injectReasonText, DEFAULT_EMBED
@@ -478,7 +478,7 @@
 - `hostupdate.js` (96줄) 리스를 켤 때 새 버전이 있으면 메인 화면 오른쪽 위에 작은 알림을 잠깐 띄운다(설정 → 업데이트 설…
 - `icons.js` (76줄) 
 - `kit.js` (627줄) 
-- `legacy.js` (1880줄) 
+- `legacy.js` (1892줄) 
 - `lookparts.js` (131줄) 꾸미기 화면과 시작 안내(2단계)가 함께 쓰는 선택 부품: 테마 묶음 · 강조 색 · 그라데이션 · …
 - `lorereq-css.js` (16줄) v1.6.8 AI 창: 이번 요청에 포함할 로어북 목록 (모바일: 세로 한 줄씩, 겹침 없이, 목록 …
 - `mascot-data.js` (17줄) 마스코트 루네 그림 (1.8.3). 사용자가 준 캐릭터 시트에서 잘라 webp로 줄인 것(자동 생성,…

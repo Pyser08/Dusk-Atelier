@@ -185,3 +185,24 @@ export function textOf(it, v) {
     return String(v);
   }
 }
+
+// 화면용 글자 비교(신고 #6): 같은 앞뒤를 먼저 걷어 내고, 계산량이 크면 단어 비교 없이 통째로 지움·추가로 보여 준다
+export var VIEW_MAX = 200000;
+var DIFF_MAX = 20000, CTX = 2000;
+export function safeDiff(a, b) {
+  const x = String(a ?? ""), y = String(b ?? "");
+  const min = Math.min(x.length, y.length);
+  let s = 0, e = 0;
+  while (s < min && x[s] === y[s]) s++;
+  while (e < min - s && x[x.length - 1 - e] === y[y.length - 1 - e]) e++;
+  // 낱말 중간에서 자르지 않게 앞뒤로 조금 남긴다
+  const from = Math.max(0, s - CTX), back = Math.max(0, e - CTX);
+  const mx = x.slice(from, x.length - back), my = y.slice(from, y.length - back);
+  if (mx.length <= DIFF_MAX && my.length <= DIFF_MAX) return { parts: wordDiff(mx, my), cut: from > 0 || back > 0 };
+  const parts = [], dx = x.slice(s, x.length - e), dy = y.slice(s, y.length - e);
+  if (s > from) parts.push({ op: "same", text: x.slice(from, s) });
+  if (dx) parts.push({ op: "del", text: dx.slice(0, DIFF_MAX) });
+  if (dy) parts.push({ op: "add", text: dy.slice(0, DIFF_MAX) });
+  if (e > back) parts.push({ op: "same", text: x.slice(x.length - e, x.length - back) });
+  return { parts, cut: from > 0 || back > 0 || dx.length > DIFF_MAX || dy.length > DIFF_MAX };
+}
