@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__github__actions_run_trigger",
+      "mcp__github__actions_list",
+      "mcp__github__actions_get",
+      "mcp__github__get_job_logs",
+      "Bash(npm run release -- --dry)",
+      "Bash(npm test*)",
+      "Bash(npm run build*)",
+      "Bash(npm run check*)",
+      "Bash(node tools/build-addons.mjs*)"
+    ]
+  }
+}

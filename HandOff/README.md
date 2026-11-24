@@ -62,6 +62,7 @@ npm ci            # 막히면: esbuild·acorn·eslint-scope를 /opt/npm-tools/no
 6. 구조(파일 추가/삭제/역할 변경)가 바뀌면 `node tools/source-map.mjs > docs/source-map.md && cp docs/source-map.md HandOff/source-map.md`로 재생성(두 파일 동일 유지) 후 커밋.
 6-1. **기능 설명이 바뀌거나 새 기능이 생기면 안내서 사이트(`docs/site/guide/*.html`)도 같이 고친다**(사용자 지시). 내용은 CHANGELOG·코드 문구 기준. 아카 글(`docs/arca/v*.html`)은 사용자가 요청할 때만.
 7. 작업을 마칠 때 **`HandOff/STATE.md`의 "남은 일"과 변경 요약을 최신으로 고친다**(다음 AI가 이어받는 기준. 끝낸 항목은 `[x]`, 새로 발견한 문제는 추가).
+7-1. **배포(사용자 상시 허락, 11-24)**: 클라우드 세션은 태그·addons 브랜치 push가 막힌다 → 작업 브랜치를 push한 뒤 GitHub 도구 `actions_run_trigger`로 `deploy.yml`(inputs: branch=작업 브랜치, addons=true)을 실행하고 결과를 확인한다. 로컬이면 `npm run release`. 버전 올림·CHANGELOG도 배포 요청이 있으면 함께 한다.
 8. 참고: main에 push(머지)되면 `release.yml`이 package.json 버전으로 GitHub 릴리스를 자동 생성한다 → 그래서 main은 사용자 지시 없이는 건드리지 않는다.
 
 ## 6. 반드시 지킬 규칙
