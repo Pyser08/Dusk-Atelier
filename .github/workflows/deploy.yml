@@ -41,7 +41,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: release.mjs
-        run: node tools/release.mjs ${{ inputs.addons && '' || '--no-addons' }}
+        run: node tools/release.mjs ${{ format('{0}', inputs.addons) == 'false' && '--no-addons' || '' }}
       - name: GitHub 릴리스
         run: |
           TAG="v$(node -p "require('./package.json').version")"
