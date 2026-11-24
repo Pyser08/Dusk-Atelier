@@ -58,7 +58,7 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
       if (!t) {
         const css = await d.createElement("style"); await css.setAttribute("x-dusk", "turn-css"); await css.setInnerText(KEYFRAMES);
         const head = await d.querySelector("head") ?? await d.querySelector("body"); if (head && !(await d.querySelector('[x-dusk="turn-css"]'))) await head.appendChild(css);
-        const box = await d.createElement("div"); await box.setAttribute("x-dusk", "callchip"); await box.setAttribute("style", CHIP_CSS);
+        const box = await d.createElement("div"); await box.setAttribute("x-dusk", "callchip"); await box.setStyleAttribute(CHIP_CSS);
         await box.setInnerHTML('<details><summary style="cursor:pointer;list-style:none"><span x-dusk="callchip-t"></span></summary><div x-dusk="callchip-b" style="padding:2px 0 4px;max-height:40vh;overflow:auto"></div></details>');
         await (await d.querySelector("body")).appendChild(box); t = await d.querySelector('[x-dusk="callchip-t"]');
       }

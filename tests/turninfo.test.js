@@ -70,3 +70,15 @@ test("캐시 배치(하이파 분리·이어붙이기)는 Gemini·Dusk 메인 �
   assert.deepEqual(await run("Dusk 자동"), { called: 1, n: 2 }); assert.deepEqual(await run("gemini-2.5-pro"), { called: 1, n: 2 });
   assert.deepEqual(await run("gpt-5"), { called: 0, n: 1 }); assert.deepEqual(await run("Dusk 자동", "submodel"), { called: 0, n: 1 });
 });
+
+test("신고 #3 로그: 상태 칩은 x- 아닌 속성을 setAttribute로 넣지 않는다(호스트가 거절)", async () => {
+  const logs = [], bad = []; let styled = "";
+  const el = () => ({ setAttribute: async (n) => { if (!n.startsWith("x-")) { bad.push(n); throw new Error("Can only set attributes starting with 'x-'"); } }, setStyleAttribute: async (v) => { styled = v; }, setInnerText: async () => {}, setInnerHTML: async () => {}, appendChild: async () => {}, remove: async () => {} });
+  const root = { querySelector: async (q) => (q === "body" || q === "head" ? el() : null), createElement: async () => el() };
+  const { api } = mem({ getRootDocument: async () => root });
+  const t = createTurnInfo(api, { log: (...a) => logs.push(a) }); await t.start(); await t.setCallShow(true);
+  await t.beforeRequest([{ role: "user", content: "안녕" }], "submodel");
+  await new Promise((r) => setTimeout(r, 30));
+  assert.deepEqual(bad, []); assert.ok(styled.includes("position:fixed")); assert.ok(!logs.some((l) => String(l[0]).includes("상태 칩")));
+  await t.setCallShow(false);
+});
