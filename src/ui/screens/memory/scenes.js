@@ -15,7 +15,10 @@ export async function renderScenes(env, host) {
     caps.analyze ? btn("지난 대화 분석하기", { size: "sm", kind: "primary", id: "rb-mem-scenes-analyze", onClick: () => { m.page = "home"; env.redraw(); } }) : null);
   const latest = scenes.at(-1)?.id;
   const ordered = m.sceneDesc ? [...scenes].reverse() : scenes;
-  const recsOf = (s) => Object.values(folder.people).flatMap((p) => visibleRecords(p).filter((r) => r.sit === s.id));
+  // 신고 #11: 장면마다 모든 기록을 훑지 않고 한 번에 묶는다(순서는 예전과 같음: 인물 순 → 기록 순)
+  const bySit = new Map();
+  for (const p of Object.values(folder.people)) for (const r of visibleRecords(p)) { const l = bySit.get(r.sit); if (l) l.push(r); else bySit.set(r.sit, [r]); }
+  const recsOf = (s) => bySit.get(s.id) ?? [];
   const goPerson = (name) => { const k = Object.keys(folder.people).find((x) => folder.people[x].name === name); if (k) { m.personKey = k; m.tab = "people"; env.redraw(); } };
   const cards = ordered.map((s) => {
     const rs = recsOf(s), top = rs.reduce((b, r) => GRADES.indexOf(r.g) > GRADES.indexOf(b) ? r.g : b, "");

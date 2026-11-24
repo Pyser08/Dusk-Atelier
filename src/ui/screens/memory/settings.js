@@ -18,16 +18,16 @@ const Q = new WeakMap();   // store → 모아 둔 스위치 저장
 export function builders(ctx, idx, redraw, kind = "all") {
   const M = ctx.memory, S = idx.settings;
   const save = (fn) => M.store.updateIndex((i) => { const before = structuredClone(i.settings); fn(i.settings, i); i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); }).then(() => redraw()).catch(fail(ctx));
-  const num = (label, get, set, { min = 0, max = 99999, step = 1, def } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label, defHint(def)), h("input", { class: "rb-input", type: "number", min, max, step, value: get(), onChange: (e) => { const v = Math.min(max, Math.max(min, Number(e.target.value) || 0)); save((s) => set(s, v)); } }));
+  const num = (label, get, set, { min = 0, max = 99999, step = 1, def } = {}) => h("label", { class: "rb-mem-field" }, h("span", null, label, defHint(def)), h("input", { class: "rb-input", type: "number", min, max, step, value: get(), onChange: (e) => { const v = Math.min(max, Math.max(min, Number(e.target.value) || 0)), el = e.target, was = el.dataset.was ?? String(get()); el.value = String(v); el.dataset.was = String(v); saveQuiet((s) => set(s, v), el, v, () => { el.value = was; el.dataset.was = was; }); } }));   // 신고 #11: 숫자도 누른 칸만(화면 전체를 다시 그리지 않음)
   // 2.2.22: 스위치는 누른 줄만 바꾸고 화면 전체를 다시 그리지 않는다(누를 때마다 설정 카드가 ‘불러오는 중’으로 깜빡였다). 실패하면 되돌리고 알린다
   // 2.2.23: 연달아 누른 스위치는 0.25초 동안 모아 index를 한 번만 읽고 쓴다(누른 순서대로 반영). 실패하면 모은 스위치를 모두 되돌린다
-  const saveQuiet = (fn, el, v) => {
+  const saveQuiet = (fn, el, v, undo = null) => {
     const b = (Q.get(M.store) ?? Q.set(M.store, { list: [], timer: null }).get(M.store));
-    b.list.push({ fn, el, v }); clearTimeout(b.timer);
+    b.list.push({ fn, el, v, undo }); clearTimeout(b.timer);
     b.timer = setTimeout(() => {
       const list = b.list.splice(0);
       M.store.updateIndex((i) => { const before = structuredClone(i.settings); for (const x of list) x.fn(i.settings, i); i.settings.edited = noteEdits(before, i.settings, i.settings.edited, DUSK_FOLLOW); i.settingsHistory = pushHist(i.settingsHistory, "dusk", before, i.settings); })
-        .catch((e) => { for (const x of list) if (x.el) setSwitch(x.el, !x.v); fail(ctx)(e); });
+        .catch((e) => { for (const x of list.reverse()) { if (x.undo) x.undo(); else if (x.el) setSwitch(x.el, !x.v); } fail(ctx)(e); });
     }, 250);
   };
   const sw = (label, on, set) => h("div", { class: "rb-mem-field row" }, h("span", null, label), switchEl(on, { label, onChange: (v, el) => { setSwitch(el, v); saveQuiet((s) => set(s, v), el, v); } }));

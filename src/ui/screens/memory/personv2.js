@@ -357,9 +357,10 @@ export function personTabs(env, parts) {
     const list = kids.filter(Boolean);
     if (!list.length) return null;
     if (sub === "2") return h("section", { class: "rb-wk2-acc panel", "data-acc": id }, h("div", { class: "rb-wk2-acch" }, h("b", null, title), ...chips.filter(Boolean).map((c) => h("small", { class: "rb-wk2-chip" }, c))), h("div", { class: "rb-wk2-accb" }, list));
-    return h("details", { class: "rb-wk2-acc", open: !!accOpen[id], "data-acc": id, onToggle: (e) => { accOpen[id] = e.target.open; } },
+    const body = h("div", { class: "rb-wk2-accb" }, accOpen[id] ? list : null);   // 신고 #11: 닫힌 묶음은 열 때 붙인다
+    return h("details", { class: "rb-wk2-acc", open: !!accOpen[id], "data-acc": id, onToggle: (e) => { accOpen[id] = e.target.open; if (e.target.open && !body.firstChild) replace(body, list); } },
       h("summary", null, h("b", null, title), ...chips.filter(Boolean).map((c) => h("small", { class: "rb-wk2-chip" }, c)), h("span", { style: "flex:1" }), h("i", { class: "arr", "aria-hidden": "true" })),
-      h("div", { class: "rb-wk2-accb" }, list));
+      body);
   };
   const miniBars = (other) => { const v = pairView(f, selfNames, other, now); return h("span", { class: "rb-wk2-mini", "aria-hidden": "true" }, h("i", { class: "e-attraction", style: { width: feelOf(v, false, "attraction") * 6 + "px" } }), h("i", { class: "e-affection", style: { width: feelOf(v, false, "affection") * 6 + "px" } }), h("i", { class: "e-intim", style: { width: intimacyOf(f, me, other, now).v * 6 + "px" } })); };
   const layoutB = () => {

@@ -110,7 +110,7 @@ export function createGaugeService(api, { store, log = () => {}, call = null, cu
     if (viewP) return viewP;
     const gen = viewGen;
     const p = (async () => {
-      const idx = await store.getIndex(), entries = [], defs = [];
+      const idx = await (store.peekIndex ?? store.getIndex)(), entries = [], defs = [];
       const read = (a, b) => (store.peekFolder ? store.peekFolder(a, b) : store.getFolder(a, b));
       for (const [chaId, g] of Object.entries(idx.gauges ?? {})) {
         if (!g.defs?.length) continue;   // 신고 #11: 게이지가 없는 봇의 폴더는 읽지 않는다
@@ -132,7 +132,7 @@ export function createGaugeService(api, { store, log = () => {}, call = null, cu
     if (k !== firstKey || !firstP) {
       firstKey = k;
       firstP = (async () => {
-        const idx = await store.getIndex(), g = idx.gauges?.[cur.chaId];
+        const idx = await (store.peekIndex ?? store.getIndex)(), g = idx.gauges?.[cur.chaId];
         if (!g?.defs?.length || !g.chats?.[cur.chatId]) return { defs: [], entries: [] };
         const f = await (store.peekFolder ? store.peekFolder(cur.chaId, cur.chatId) : store.getFolder(cur.chaId, cur.chatId));
         return { defs: g.defs, entries: (f?.gauge?.log ?? []).filter((b) => b.head && b.snap?.length).map((b) => ({ head: b.head, tail: b.tail, snap: b.snap, items: b.items })) };

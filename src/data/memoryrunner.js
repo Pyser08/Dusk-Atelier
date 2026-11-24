@@ -89,7 +89,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   async function bump(chaId, fn) { return store.updateIndex((idx) => { const b = idx.bots[chaId] ??= { on: true, ignore: [], fails: 0 }; return fn(b, idx); }); }
   async function status(patch) { 
     // 신고 #11: 이미 같은 상태면 쓰지 않는다(시작할 때마다 저장돼 표시 캐시가 무효화됐다)
-    try { const cur = (await store.getIndex()).status ?? {}; if (Object.entries(patch).every(([k, v]) => JSON.stringify(cur[k]) === JSON.stringify(v))) return; } catch { /* 못 읽으면 쓴다 */ }
+    try { const cur = (await (store.peekIndex ?? store.getIndex)()).status ?? {}; if (Object.entries(patch).every(([k, v]) => JSON.stringify(cur[k]) === JSON.stringify(v))) return; } catch { /* 못 읽으면 쓴다 */ }
     return store.updateIndex((idx) => { Object.assign(idx.status, patch); }).catch(() => {}); }
 
   // 분석 대상 한 묶음의 공통 자료(채팅·앵커·설정). 모델 호출 없음.
@@ -295,7 +295,7 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   };
   async function recentCheck() {
     // 신고 #5: next(기본)에서는 출력 일정이 어차피 잡히지 않는다 → 채팅을 통째로 읽기 전에 끝낸다
-    if (confirmOf(await store.getIndex()) !== "now") return;
+    if (confirmOf(await (store.peekIndex ?? store.getIndex)()) !== "now") return;
     const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
     if (!(ci >= 0) || !(ti >= 0)) return;
     const chat = await api.getChatFromIndex(ci, ti), i = aiIndexes(chat?.message ?? []).at(-1) ?? -1;

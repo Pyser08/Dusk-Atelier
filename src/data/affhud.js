@@ -117,8 +117,8 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
   const lastAi = (msgs) => { for (let i = msgs.length - 1; i >= 0; i--) if (!isUserMessage(msgs[i]) && extractMessageText(msgs[i])) return i; return -1; };
 
   // 한 번 맞춘다. 반환: "off" | "same" | "pot" | "own" | "parse-fail" | "noai"
-  async function syncAt(ci, ti) {
-    const character = await api.getCharacterFromIndex(ci), chaId = String(character.chaId);
+  async function syncAt(ci, ti, known = null) {
+    const character = known ?? await api.getCharacterFromIndex(ci), chaId = String(character.chaId);
     const chat = await api.getChatFromIndex(ci, ti), msgs = chat?.message ?? [];
     const owner = await ownerOf(character, chat);
     if (!owner) return "off";
@@ -157,14 +157,15 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
       const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
       if (!(ci >= 0) || !(ti >= 0)) return;
       // 신고 #5: 켜 둔 HUD가 하나도 없으면 캐릭터·채팅을 통째로 읽지 않는다. settle은 호감도·주기 동기화도 하므로 그대로 부른다
-      const anyOn = Object.values((await store.getIndex()).affhud ?? {}).some((c) => c?.on);
+      const anyOn = Object.values((await (store.peekIndex ?? store.getIndex)()).affhud ?? {}).some((c) => c?.on);
       if (!anyOn && !link?.settle) return;
-      if (anyOn ? isGenerating(await api.getCharacterFromIndex(ci)) : recentlyStreamed()) {
+      const seen = anyOn ? await api.getCharacterFromIndex(ci) : null, seenAt = Date.now();
+      if (anyOn ? isGenerating(seen) : recentlyStreamed()) {
         if (Date.now() - since < WAIT_MS) { running = false; timer = setTimeout(() => tick(since), retryMs); }
         return;
       }
       if (link?.settle) await link.settle(ci, ti).catch(() => {});  // 리스폿 Writer가 끝날 때까지 기다린다
-      if (anyOn) await syncAt(ci, ti);
+      if (anyOn) await syncAt(ci, ti, Date.now() - seenAt < 3000 ? seen : null);   // 신고 #11: 방금 읽은 캐릭터를 다시 읽지 않는다(오래 기다렸으면 새로). 채팅은 늘 새로 읽는다
     } catch (e) { log("동기화 실패", e?.message ?? e); }
     finally { if (running) running = false; if (dirty) schedule(); }
   }

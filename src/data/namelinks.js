@@ -58,7 +58,7 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
   };
   const load = async () => {
     if (cache && Date.now() - checked < 3000) return;
-    const idx = await memory?.store?.getIndex?.().catch?.(() => null);
+    const idx = await (memory?.store?.peekIndex ?? memory?.store?.getIndex)?.().catch?.(() => null);
     const inj = idx?.settings?.inject ?? {};
     const links = inj.nameLinks !== false, scene = inj.scenePanel !== false;
     if ((!links && !scene) || idx?.settings?.backend === "off") { cache = { off: true }; checked = Date.now(); return; }

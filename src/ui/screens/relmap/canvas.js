@@ -149,6 +149,13 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
   // 신고 #11: 이름표 폭은 글꼴·글자별로, 버튼줄·범례 자리는 잠깐씩 기억한다(프레임마다 다시 재지 않게)
   const widths = new Map();
   function textW(x) { const k = ctx.font + "|" + x; let w = widths.get(k); if (w === undefined) { if (widths.size > 600) widths.clear(); w = ctx.measureText(x).width; widths.set(k, w); } return w; }
+  // 은은한 빛: 반지름 1짜리 그라데이션을 색마다 한 번 만들어 옮기고 키워 쓴다
+  const glows = new Map();
+  function glow(s, col, a, k, inner) {
+    const key = `${col}|${a}|${inner}`; let g = glows.get(key);
+    if (!g) { if (glows.size > 120) glows.clear(); g = ctx.createRadialGradient(0, 0, inner, 0, 0, 1); g.addColorStop(0, rgba(col, a)); g.addColorStop(1, rgba(col, 0)); glows.set(key, g); }
+    ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.r * k, s.r * k); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 1, 0, TAU); ctx.fill(); ctx.restore();
+  }
   let rects = null, rectsAt = -1e9;
   function edgeRects() { const now = performance.now(); if (!rects || now - rectsAt > 500) { rects = { sr: stage.getBoundingClientRect(), cr: ctrlsEl?.getBoundingClientRect(), lr: legendEl?.getBoundingClientRect() }; rectsAt = now; } return rects; }
   // 다음 프레임이 필요한가: "move" 움직이는 중 · "pulse" 은은한 깜빡임만(초당 약 15번) · "idle" 멈춤(1초에 한 번만 크기·테마 확인)
@@ -302,12 +309,10 @@ export function createRelMapCanvas({ stage, canvas, ctrlsEl, legendEl, tipEl, wi
       ctx.globalAlpha = al;
       if (n.user || n.persona) {
         const [pa, pb] = n.user ? PERSONA : PERSONA_OLD;
-        const g = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, s.r * 2.6); g.addColorStop(0, rgba(pa, 0.35)); g.addColorStop(1, rgba(pa, 0));
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 2.6, 0, TAU); ctx.fill();
+        glow(s, pa, 0.35, 2.6, 0.05);
         const gg = ctx.createLinearGradient(s.x - s.r, s.y - s.r, s.x + s.r, s.y + s.r); gg.addColorStop(0, pa); gg.addColorStop(1, pb); ctx.fillStyle = gg;
       } else {
-        const hg = ctx.createRadialGradient(s.x, s.y, s.r * 0.5, s.x, s.y, s.r * 2.5); hg.addColorStop(0, rgba(c, 0.12)); hg.addColorStop(1, rgba(c, 0));
-        ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 2.5, 0, TAU); ctx.fill(); ctx.fillStyle = c;
+        glow(s, c, 0.12, 2.5, 0.2); ctx.fillStyle = c;
       }
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU);
       if (n.status === "missing") { ctx.fillStyle = TH.surf; ctx.fill(); ctx.setLineDash([3, 3]); ctx.lineWidth = 2; ctx.strokeStyle = c; ctx.stroke(); ctx.setLineDash([]); } else ctx.fill();

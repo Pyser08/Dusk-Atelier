@@ -67,8 +67,9 @@ export function createMemoryStoreV3(api, { storage } = {}) {
 
   // 직접 바꾸지 않은 기억 넣기 토큰은 기본값을 따라간다(settings.edited = 직접 바꾼 키)
   const withFollow = (idx) => { idx.settings.edited = followDefaults(idx.settings, DEFAULT_SETTINGS, idx.settings.edited, DUSK_FOLLOW); return idx; };
-  const readIndex = async () => {
-    const raw = await get(INDEX_KEY);
+  let idxPeek = null;
+  const readIndex = async () => indexOf(await get(INDEX_KEY));
+  const indexOf = (raw) => {
     if (!raw || raw.v !== V3) return withFollow(migrateIndex(newIndex()));
     const base = newIndex();
     // v3.1(rev 1): 리수폿 설정·봇별/인물별 끄기 칸을 채운다. 켜져 있던 것은 그대로다(memoryswitch.js)
@@ -91,8 +92,10 @@ export function createMemoryStoreV3(api, { storage } = {}) {
   return {
     serial,
     // 원문 캐시 비우기(저장 위치가 바뀌었을 때)
-    dropCache: () => { raws.clear(); parsed.clear(); },
+    dropCache: () => { raws.clear(); parsed.clear(); idxPeek = null; },
     getIndex: () => readIndex(),
+    // 신고 #11: 읽기 전용 인덱스(같은 원문이면 해석·변환을 다시 하지 않음). 받은 값을 고치면 안 된다
+    peekIndex: async () => { const raw = await rawGet(INDEX_KEY); if (typeof raw !== "string") return readIndex(); if (idxPeek?.raw !== raw) idxPeek = { raw, v: indexOf(parse(raw)) }; return idxPeek.v; },
     updateIndex: (fn) => serial(async () => { const idx = await readIndex(); const r = await fn(idx); await set(INDEX_KEY, idx); return r; }),
     getFolder: readFolder,
     peekFolder: async (chaId, chatId) => { const f = await peek(FOLDER_PREFIX + folderIdOf(chaId, chatId)); return f?.v === V3 ? f : null; },   // 읽기 전용(고치지 말 것)

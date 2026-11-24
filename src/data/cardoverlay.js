@@ -83,8 +83,8 @@ const attr = async (el, n, v) => { try { await el.setAttribute(n, v); } catch { 
 const HK = ":not([data-hk]):not([x-dusk-hk])";
 const ANY_NAME = `[data-pid]${HK}, [class*="dusk-pid-"]${HK}`;
 export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {}, onFail = () => {} }) {
-  let open = null, hooking = false, timers = [], keyHooked = false, loop = null, gap = 2500, total = 0;
-  const close = async () => { const w = open; open = null; if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } } };
+  let open = null, hooking = false, timers = [], keyHooked = false, keyOff = null, loop = null, gap = 2500, total = 0;
+  const close = async () => { const w = open; open = null; const off = keyOff; keyOff = null; if (off) { keyHooked = false; await off(); } if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } } };
   async function show(pid) {
     const d = await ensureDoc(); if (!d) return false;
     await close();
@@ -104,7 +104,9 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
     await x.setInnerText("×"); await x.addEventListener("click", () => { close().catch(() => {}); }); await box.appendChild(x);
     await wrap.appendChild(bg); await wrap.appendChild(box); await body.appendChild(wrap);
     open = wrap;
-    if (!keyHooked) { keyHooked = true; try { await d.addEventListener("keydown", (ev) => { if (open && (ev?.key === "Escape" || ev?.key === "Esc")) close().catch(() => {}); }); } catch { /* 키를 못 받아도 닫기 버튼 */ } }
+    if (!keyHooked) { keyHooked = true; try { const kid = await d.addEventListener("keydown", (ev) => { if (open && (ev?.key === "Escape" || ev?.key === "Esc")) close().catch(() => {}); });
+      // 신고 #11: 등록 번호를 주는 호스트면 닫을 때 뗀다(번호가 없으면 예전처럼 하나만 남겨 다시 쓴다)
+      if (kid != null && typeof d.removeEventListener === "function") keyOff = async () => { try { await d.removeEventListener("keydown", kid); } catch { /* 이미 없음 */ } }; } catch { /* 키를 못 받아도 닫기 버튼 */ } }
     return true;
   }
   // 응답 안 이름(data-dusk="nm")에 클릭을 단다. 이미 단 것은 data-hk로 건너뛴다
