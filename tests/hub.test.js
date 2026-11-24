@@ -176,3 +176,8 @@ test("하루가 안 지나도 본체나 애드온 버전이 바뀌면 바로 다
   assert.equal(await mk("2.2.50").pingSoon(), true);
   assert.equal(sent, 3);
 });
+
+test("버전이 없는 항목(v·recs 같은 다른 칸)은 애드온으로 세지 않는다", () => withServer(async ({ hub }) => {
+  hub.onPing({ id: "mixed-install-1", v: "2.2.51", addons: [{ id: "memory", v: "0.3.57", on: true }, { id: "v", v: "", on: true }, { id: "recs", v: "", on: true }] });
+  assert.deepEqual(hub.summary().addons.filter((a) => a.installed).map((a) => a.id), ["memory"]);
+}));
