@@ -30,19 +30,32 @@ export function pushLog(kind, msg) {
   if (logs.length > LOG_MAX) logs.splice(0, logs.length - LOG_MAX);
 }
 export const recentLogs = () => logs.slice();
-const fmt = (a) => a.map((x) => x instanceof Error ? `${x.name}: ${x.message}\n${x.stack ?? ""}` : typeof x === "string" ? x : (() => { try { return JSON.stringify(x); } catch { return String(x); } })()).join(" ");
+// 가볍게(2.2.47): 객체는 통째로 JSON으로 바꾸지 않는다(큰 채팅·DB 객체가 찍혀도 비용이 없게). 글자는 앞부분만 쓴다.
+const brief = (x) => {
+  if (x instanceof Error) return `${x.name}: ${x.message}\n${String(x.stack ?? "").slice(0, 1200)}`;
+  if (typeof x === "string") return x.length > 600 ? x.slice(0, 600) + "…" : x;
+  if (x == null || typeof x !== "object") return String(x);
+  if (Array.isArray(x)) return `[배열 ${x.length}]`;
+  const msg = typeof x.message === "string" ? `: ${x.message.slice(0, 300)}` : "";
+  return `[${x.constructor?.name ?? "객체"}${msg}]`;
+};
+const fmt = (a) => a.slice(0, 6).map(brief).join(" ");
+// 같은 오류가 폭주해도 1초에 5줄까지만 모은다
+let budget = 5, budgetAt = 0;
+const allow = () => { const t = Date.now(); if (t - budgetAt > 1000) { budgetAt = t; budget = 5; } return budget-- > 0; };
 let captured = false;
 export function startLogCapture(win = globalThis) {
   if (captured) return; captured = true;
   const c = win.console;
   if (c) {
-    for (const k of ["error", "warn"]) { const o = c[k]?.bind(c); if (o) c[k] = (...a) => { try { pushLog(k, fmt(a)); } catch { /* 기록 실패는 무시 */ } o(...a); }; }
+    for (const k of ["error", "warn"]) { const o = c[k]?.bind(c); if (o) c[k] = (...a) => { try { if (allow()) pushLog(k, fmt(a)); } catch { /* 기록 실패는 무시 */ } o(...a); }; }
     const ol = c.log?.bind(c);
-    if (ol) c.log = (...a) => { try { const s = fmt(a); if (/^\[Dusk|\[Dusk Atelier\]/.test(s) && /실패|오류|error|Error/.test(s)) pushLog("log", s); } catch { /* 무시 */ } ol(...a); };
+    // log는 첫 인자가 "[Dusk…" 글자이고 실패·오류 낱말이 있을 때만 본다(그 밖에는 글자 검사 하나만 하고 지나감)
+    if (ol) c.log = (...a) => { try { const h = a[0]; if (typeof h === "string" && h.startsWith("[Dusk") && /실패|오류|error/i.test(h + (typeof a[1] === "string" ? a[1] : "")) && allow()) pushLog("log", fmt(a)); } catch { /* 무시 */ } ol(...a); };
   }
   try {
-    win.addEventListener?.("error", (e) => pushLog("uncaught", e?.error ? fmt([e.error]) : `${e?.message ?? ""} @${e?.filename ?? ""}:${e?.lineno ?? ""}`));
-    win.addEventListener?.("unhandledrejection", (e) => pushLog("rejection", fmt([e?.reason])));
+    win.addEventListener?.("error", (e) => allow() && pushLog("uncaught", e?.error ? fmt([e.error]) : `${e?.message ?? ""} @${e?.filename ?? ""}:${e?.lineno ?? ""}`));
+    win.addEventListener?.("unhandledrejection", (e) => allow() && pushLog("rejection", fmt([e?.reason])));
   } catch { /* 이벤트를 못 다는 환경 */ }
 }
 
