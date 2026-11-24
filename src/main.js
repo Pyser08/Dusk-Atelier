@@ -275,6 +275,7 @@ async function start() {
   // Dusk 허브(2.2.46): 익명 사용 통계(하루 한 번, 끌 수 있음)와 버그 신고. 서버 주소는 data/hub.js의 HUB_URL
   const hub = createHub(api, { version: VERSION, addons });
   app.ctx.hub = hub;
+  app.ctx.reportBell?.attach(hub);
   setTimeout(() => { hub.pingSoon().catch(() => {}); }, 20e3);
   // 애드온을 설치·업데이트·끄면 30초 뒤 한 번 확인(버전이 실제로 바뀐 경우에만 보냄)
   { let t = null; try { addons.subscribe?.(() => { clearTimeout(t); t = setTimeout(() => { hub.pingSoon().catch(() => {}); }, 30e3); }); } catch { /* 구독 없음 */ } }

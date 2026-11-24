@@ -8,6 +8,7 @@ import { pickForStage } from "./modelhub.js";
 import { readDb, entriesOf, ops as moduleOps } from "./modules.js";
 import { AFF_DEFAULTS, buildAffMessages, clampAff, designMessages, designRetry, extractHud, hasHud, hudHtml, installHud, installHudModule, uninstallHudModule, parseDelta, readPotAffinity, uninstallHud, validateHud } from "../engine/affhud.js";
 import { chatKeyOf } from "../engine/chatkey.js";
+import { recentlyStreamed } from "./genstate.js";
 
 const sv = (n) => "$" + n;
 const num = (v) => { const n = Number(v); return v !== "" && v != null && Number.isFinite(n) ? n : null; };
@@ -155,13 +156,15 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     try {
       const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
       if (!(ci >= 0) || !(ti >= 0)) return;
-      const character = await api.getCharacterFromIndex(ci);
-      if (isGenerating(character)) {
+      // 신고 #5: 켜 둔 HUD가 하나도 없으면 캐릭터·채팅을 통째로 읽지 않는다. settle은 호감도·주기 동기화도 하므로 그대로 부른다
+      const anyOn = Object.values((await store.getIndex()).affhud ?? {}).some((c) => c?.on);
+      if (!anyOn && !link?.settle) return;
+      if (anyOn ? isGenerating(await api.getCharacterFromIndex(ci)) : recentlyStreamed()) {
         if (Date.now() - since < WAIT_MS) { running = false; timer = setTimeout(() => tick(since), retryMs); }
         return;
       }
       if (link?.settle) await link.settle(ci, ti).catch(() => {});  // 리스폿 Writer가 끝날 때까지 기다린다
-      await syncAt(ci, ti);
+      if (anyOn) await syncAt(ci, ti);
     } catch (e) { log("동기화 실패", e?.message ?? e); }
     finally { if (running) running = false; if (dirty) schedule(); }
   }

@@ -82,7 +82,7 @@ export async function renderMemoryMe(ctx, host, { redraw }) {
     try {
       await M.store.updateFolder(cur.chaId, cur.chatId, (f) => {
         if (r.call && (r.call !== o.callsMe || r.tone !== o.toneToMe)) setTalk(f, o.name, USER, { call: r.call, tone: r.tone });
-        for (const t of EMO_TAGS) { const before = o.feel[t] ?? null; if (r.vals[t] !== before) setTag(f, o.name, USER, t, r.vals[t]); }
+        for (const t of EMO_TAGS) { const before = o.feel[t] ?? null; if (r.vals[t] !== before) setTag(f, o.name, USER, t, r.vals[t], Date.now(), o.feelKeys); }
       });
       ctx.toast("고쳤어요. 고친 값은 잠겨요.");
       redraw();
