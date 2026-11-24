@@ -99,7 +99,8 @@ function rateLimiter() {
   };
 }
 const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
-const cleanAddons = (list) => (Array.isArray(list) ? list : []).slice(0, 80).map((a) => ({ id: str(a?.id, 60), v: str(a?.v, 30), on: a?.on !== false })).filter((a) => a.id);
+// 버전이 없는 항목은 애드온이 아니다(예전 플러그인이 저장소의 다른 칸 v·recs를 섞어 보냈다)
+const cleanAddons = (list) => (Array.isArray(list) ? list : []).slice(0, 80).map((a) => ({ id: str(a?.id, 60), v: str(a?.v, 30), on: a?.on !== false })).filter((a) => /^[a-z0-9][a-z0-9_-]*$/i.test(a.id) && /^\d/.test(a.v));
 
 // 자기 업데이트: GitHub main의 hub.cjs가 지금 파일과 다르면 문법 검사 후 바꿔 끼우고, 다시 켜지게 끝낸다(pm2·systemd가 다시 켬).
 const sha = (buf) => crypto.createHash("sha256").update(buf).digest("hex");
@@ -235,7 +236,7 @@ function createHub(cfg) {
     const core = Object.entries(cv).sort((x, y) => vcmp(y[0], x[0])).map(([v, c]) => ({ v, c, latest: v === latestCore, old: latestCore && vcmp(v, latestCore) < 0 }));
     // 애드온: 사용자 수 많은 순, 버전은 새 버전부터
     const am = {};
-    for (const i of a7) for (const a of i.addons) { const x = (am[a.id] ??= { id: a.id, installed: 0, on: 0, versions: {} }); x.installed++; if (a.on) x.on++; x.versions[a.v] = (x.versions[a.v] ?? 0) + 1; }
+    for (const i of a7) for (const a of cleanAddons(i.addons)) { const x = (am[a.id] ??= { id: a.id, installed: 0, on: 0, versions: {} }); x.installed++; if (a.on) x.on++; x.versions[a.v] = (x.versions[a.v] ?? 0) + 1; }
     for (const id of Object.keys(catalog.addons)) am[id] ??= { id, installed: 0, on: 0, versions: {} };
     const addons = Object.values(am).map((x) => {
       const latest = catalog.addons[x.id]?.version || Object.keys(x.versions).sort(vcmp).pop() || "";

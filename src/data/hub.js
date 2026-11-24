@@ -128,7 +128,8 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
   let fpP = null;
   const fingerprint = () => (fpP ??= deviceFingerprint());
   async function addonList() {
-    try { const idx = await addons?.getIndex?.(); return Object.entries(idx ?? {}).map(([id, a]) => ({ id, v: String(a?.version ?? ""), on: a?.on !== false })).slice(0, 80); } catch { return []; }
+    try { const idx = await addons?.getIndex?.(); // 2.2.52: 애드온 기록(버전이 있는 객체)만 보낸다 — 저장소에 섞인 다른 값(v·recs 같은 칸)이 애드온처럼 세어졌다
+    return Object.entries(idx ?? {}).filter(([id, a]) => /^[a-z0-9][a-z0-9_-]{0,40}$/i.test(id) && a && typeof a === "object" && !Array.isArray(a) && typeof a.version === "string" && a.version).map(([id, a]) => ({ id, v: String(a.version), on: a.on !== false })).slice(0, 80); } catch { return []; }
   }
   async function post(path, body) {
     const base = await url();
