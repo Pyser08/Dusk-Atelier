@@ -195,11 +195,16 @@
       "id": "modcompat",
       "name": "모듈 호환",
       "category": "manage",
-      "version": "0.1.7",
+      "version": "0.1.8",
       "minCore": "2.2.3",
       "hooks": true,
       "desc": "봇이 어떻게 만들어졌든 켜 둔 모듈의 이미지가 그 봇 이미지와 같은 모양으로 나오게 해요. 봇 정규식이 모듈 이미지를 지우지 못하게 지키고, 모델에게 모듈 인물·표정 이름을 알려 줘요.",
       "notes": [
+        {
+          "v": "0.1.8",
+          "date": "",
+          "body": "- 열린 채팅이 없을 때(리스를 막 켰을 때) 나던 ‘문맥 실패’ 오류를 고쳤어요."
+        },
         {
           "v": "0.1.7",
           "date": "2026-11-19",
@@ -207,8 +212,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/modcompat.js",
-      "sha256": "d93bbea4e421c7fa7b6a07d46c6934d986781a50074b54c00c1ccbda7c8d21d7",
-      "size": 37478
+      "sha256": "2b1e0ed69a859f6caaa3b0d6b0789fc402d8ce7316d201c9da3a9d178b2c7391",
+      "size": 37562
     },
     {
       "id": "stealth",
@@ -265,11 +270,16 @@
       "id": "innerthought",
       "name": "인물 속마음 보기",
       "category": "memory",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "minCore": "2.2.42",
       "hooks": true,
       "desc": "메인 모델이 본문과 함께 인물의 속마음을 써요. 그 인물의 행동·대사 옆에 생각풍선 아이콘이 뜨고, 누르면 본문 옆에 반투명 생각 풍선과 그 감정의 봇 이미지가 펼쳐져요. 인물당 최소·최대 횟수를 정하고, 모은 속마음은 캐릭터 상태창(장기기억)의 ‘속마음’ 탭에서 봐요. AI 호출은 늘지 않아요.",
       "notes": [
+        {
+          "v": "0.1.2",
+          "date": "",
+          "body": "- 열린 채팅이 없을 때 나던 ‘읽기 실패’ 오류를 고쳤어요."
+        },
         {
           "v": "0.1.0",
           "date": "",
@@ -277,8 +287,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/innerthought.js",
-      "sha256": "3e1bdf6dce80adee070e5b82a209f47d8fad3a64e8dda936197e02fa5dcb2bb8",
-      "size": 15507
+      "sha256": "c0c1205e03363c174cbc247e262c466600796f79ebc8cccd724c178dede2f49b",
+      "size": 15591
     }
   ]
 }
