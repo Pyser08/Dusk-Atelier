@@ -11,7 +11,6 @@
 //   POST /api/ping     플러그인이 하루 한 번: {id, v, risu, addons:[{id,v,on}], mobile, host}
 //   POST /api/report   버그 신고: {id, v, text, contact, addons, env, logs}  → {no, key, changedAt}
 //   POST /api/report-status  {keys:[확인 키…]} → [{key, no, status, reply, changedAt}]  (신고 내용은 돌려주지 않는다)
-//   POST /api/chat     신고한 사람과의 대화: {key, op: open|join|leave|send|poll|peek, after, text, cid, v} (poll은 새 글이 올 때까지 최대 20초 기다린다)
 //   POST /api/github   GitHub 웹후크(issues · issue_comment · pull_request). 서명(X-Hub-Signature-256) 확인
 //   그 밖에 GitHub API를 10분마다 읽어 웹후크를 놓쳐도 이슈가 들어온다.
 // 관리 화면: GET /  (ADMIN_TOKEN으로 로그인)
@@ -23,7 +22,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const DIR = __dirname;
 
 // ── 설정 ───────────────────────────────────────────────
@@ -265,7 +264,7 @@ function createHub(cfg) {
       total: ins.length, d1: act(1).length, d7: a7.length, d30: a30.length,
       mobile7: a7.filter((i) => i.mobile).length,
       core, latestCore, addons, series, fresh,
-      reports: { open: D.reports.filter((r) => !["done", "dup"].includes(r.status)).length, new: D.reports.filter((r) => r.status === "new").length, total: D.reports.length, unread: D.reports.reduce((n, r) => n + unreadDev(r), 0) },
+      reports: { open: D.reports.filter((r) => !["done", "dup"].includes(r.status)).length, new: D.reports.filter((r) => r.status === "new").length, total: D.reports.length },
       issues: { open: issues.filter((x) => x.state === "open" && !x.pr).length, prs: issues.filter((x) => x.state === "open" && x.pr).length, unseen: issues.filter((x) => x.state === "open" && isUnseen(x)).length, syncedAt: D.meta.issuesSyncedAt },
       discord: { set: !!cfg.discordWebhook, last: discordLast },
       catalogAt: catalog.at, repo: cfg.repo, version: VERSION
@@ -293,91 +292,6 @@ function createHub(cfg) {
     const out = [];
     for (const k of keys) { const r = D.reports.find((x) => x.key && safeEq(x.key, k)); if (r) out.push({ key: k, no: r.no, status: r.status, reply: r.reply || "", changedAt: r.changedAt || r.at }); }
     return out;
-  }
-
-  // 대화(0.4.0) --------------------------------------------
-  // 신고마다 하나. 롱폴링: 새 글·들어옴·나감이 생기면 바로 깨운다. 나가면 양쪽 연결을 끊고, 다시 들어오면 이어진다.
-  // r.chat = { seq, msgs:[{id,from:"user"|"dev"|"sys",text,at,v,cid}], in:{user,dev}, left, read:{user,dev}, closed }
-  const CHAT = { wait: cfg.chatWaitMs ?? 20000, text: 1000, keep: 300, waiters: 200, perSide: 2, gone: 45000 };
-  const waiters = new Set(), seenAt = new Map(), notified = new Map();   // 메모리에만
-  const sideKey = (r, side) => `${r.no}:${side}`;
-  function chatOf(r) {
-    if (!r.chat) {
-      r.chat = { seq: 0, msgs: [], in: {}, left: null, read: { user: 0, dev: 0 }, closed: false };
-      if (r.reply) { pushMsg(r, "dev", r.reply, { at: r.changedAt, quiet: true }); r.chat.read.dev = r.chat.seq; }   // 예전 한 줄 답장을 첫 글로
-    }
-    return r.chat;
-  }
-  function pushMsg(r, from, text, { v = "", cid = "", at = Date.now(), quiet = false } = {}) {
-    const c = r.chat, m = { id: ++c.seq, from, text, at };
-    if (v) m.v = v; if (cid) m.cid = cid;
-    c.msgs.push(m); if (c.msgs.length > CHAT.keep) c.msgs.splice(0, c.msgs.length - CHAT.keep);
-    store.touch("reports"); if (!quiet) wake(r);
-    return m;
-  }
-  const online = (r, side) => !!r.chat?.in?.[side] && Date.now() - (seenAt.get(sideKey(r, side)) ?? 0) < CHAT.gone;
-  function chatView(r, side, after = 0) {
-    const c = chatOf(r), other = side === "user" ? "dev" : "user";
-    return { no: r.no, status: r.status, changedAt: r.changedAt || r.at, seq: c.seq, msgs: c.msgs.filter((m) => m.id > after).map(({ cid, ...m }) => m), in: !!c.in[side], otherIn: !!c.in[other], otherOnline: online(r, other), left: c.left, read: c.read[other] || 0, closed: !!c.closed };
-  }
-  const chatSig = (r, side) => { const x = chatView(r, side, Infinity); return [x.seq, x.in, x.otherIn, x.otherOnline, x.read, x.closed, x.status].join("|"); };
-  function wake(r) { for (const w of [...waiters]) if (w.r === r) w.done(); }
-  function chatWait(r, side, after, sig, res) {
-    const mine = [...waiters].filter((w) => w.r === r && w.side === side);
-    if (mine.length >= CHAT.perSide) mine[0].done();   // 같은 쪽 창이 여럿이면 오래된 것부터 놓아 준다
-    if (waiters.size >= CHAT.waiters) return Promise.resolve({ busy: true });
-    return new Promise((ok) => {
-      const w = { r, side, done: () => { if (!waiters.delete(w)) return; clearTimeout(t); ok(null); } };
-      // 상대 접속 상태는 시간이 지나 바뀌므로 깨어날 때마다 새로 계산해 준다
-      const t = setTimeout(() => w.done(), CHAT.wait);
-      waiters.add(w); res?.on?.("close", () => w.done());
-    });
-  }
-  const unreadDev = (r) => r.chat ? r.chat.msgs.filter((m) => m.from === "user" && m.id > (r.chat.read.dev || 0)).length : 0;
-  async function chatOp(r, side, b, res) {
-    const c = chatOf(r), other = side === "user" ? "dev" : "user", after = Math.max(0, Number(b.after) || 0);
-    const who = side === "user" ? "신고한 분" : "개발자";
-    const here = () => { const was = online(r, side); seenAt.set(sideKey(r, side), Date.now()); if (!was) wake(r); };
-    const readAll = () => { if ((c.read[side] || 0) < c.seq) { c.read[side] = c.seq; store.touch("reports"); wake(r); } };
-    const join = () => { if (c.in[side]) return; c.in[side] = true; c.left = null; seenAt.set(sideKey(r, side), Date.now()); pushMsg(r, "sys", `${who}${side === "user" ? "이" : "가"} 들어왔어요`); };
-    if (b.op === "peek") return chatView(r, side, after);
-    // 처음 여는 사용자는 바로 들어온다. 나간 적이 있으면 '다시 채팅하기'를 눌러야 들어온다
-    if (b.op === "open") { if (side === "user" && !c.left && !c.closed) join(); if (c.in[side]) here(); readAll(); return chatView(r, side, after); }
-    if (b.op === "join") { if (c.closed && side === "user") return { error: "개발자가 이 대화를 닫았어요" }; join(); here(); readAll(); return chatView(r, side, after); }
-    if (b.op === "leave") {
-      if (c.in.user || c.in.dev) {
-        c.in = {}; c.left = { by: side, at: Date.now() }; seenAt.delete(sideKey(r, "user")); seenAt.delete(sideKey(r, "dev"));
-        pushMsg(r, "sys", `${who}${side === "user" ? "이" : "가"} 채팅을 나갔어요`);
-        if (c.read[side] < c.seq) c.read[side] = c.seq;
-      }
-      return chatView(r, side, after);
-    }
-    if (b.op === "close" && side === "dev") { c.closed = !!b.closed; if (c.closed) { c.in = {}; c.left = { by: "dev", at: Date.now() }; } pushMsg(r, "sys", c.closed ? "개발자가 이 대화를 닫았어요" : "개발자가 대화를 다시 열었어요"); return chatView(r, side, after); }
-    if (b.op === "send") {
-      const text = str(b.text, CHAT.text).replace(/\r/g, "").trim(), cid = str(b.cid, 40);
-      if (!text) return { error: "내용이 비어 있어요" };
-      if (cid && c.msgs.some((m) => m.cid === cid && m.from === side)) return chatView(r, side, after);   // 다시 보낸 같은 글
-      if (c.closed && side === "user") return { error: "개발자가 이 대화를 닫았어요" };
-      if (!c.in[side]) return { error: "채팅을 나간 상태예요. ‘다시 채팅하기’를 눌러 주세요", left: true };
-      here();
-      pushMsg(r, side, text, { v: side === "user" ? str(b.v, 30) : "", cid });
-      c.read[side] = c.seq;
-      if (side === "dev") { r.reply = text.replace(/\s+/g, " ").slice(0, 300); r.changedAt = Date.now(); }   // 옛 플러그인의 종에도 보이게
-      else if (!online(r, "dev") && Date.now() - (notified.get(r.no) ?? 0) > 120e3) {
-        notified.set(r.no, Date.now());
-        notify(`💬 신고 #${r.no} 새 채팅${b.v ? ` · v${str(b.v, 30)}` : ""}\n${text.slice(0, 500)}${cfg.publicUrl ? `\n${cfg.publicUrl}/#report-${r.no}` : ""}`);
-      }
-      return chatView(r, side, after);
-    }
-    if (b.op === "poll") {
-      if (!c.in[side]) return chatView(r, side, after);   // 나간 상태면 기다리지 않는다
-      here();
-      if (c.seq <= after && (!b.sig || b.sig === chatSig(r, side)) && b.wait !== 0) { const x = await chatWait(r, side, after, b.sig, res); if (x?.busy) return { ...chatView(r, side, after), busy: true, sig: chatSig(r, side) }; }
-      if (res?.destroyed) return null;
-      if (c.in[side]) { here(); if (b.visible !== false) readAll(); }
-      return { ...chatView(r, side, after), sig: chatSig(r, side) };
-    }
-    return { error: "op" };
   }
 
   // GitHub 이슈 --------------------------------------------
@@ -498,20 +412,12 @@ function createHub(cfg) {
         const b = JSON.parse((await readBody(req, 256e3)).toString("utf8") || "{}");
         const r = onReport(b); return json(res, r.error ? 400 : 200, r, CORS);
       }
+      // 0.5.0: 채팅 기능을 없앴다(옛 플러그인에는 끝났다고 알린다)
+      if (m === "POST" && p === "/api/chat") return json(res, 410, { error: "채팅 기능은 종료됐어요", left: true }, CORS);
       if (m === "POST" && p === "/api/report-status") {
         if (!limit(`s:${ip}`, 30, 3600e3)) return json(res, 429, { error: "too many" }, CORS);
         const b = JSON.parse((await readBody(req, 8e3)).toString("utf8") || "{}");
         return json(res, 200, reportStatus(b), CORS);
-      }
-      if (m === "POST" && p === "/api/chat") {
-        const b = JSON.parse((await readBody(req, 8e3)).toString("utf8") || "{}");
-        const k = str(b.key, 40), r = k.length >= 12 ? D.reports.find((x) => x.key && safeEq(x.key, k)) : null;
-        if (!r) { return json(res, limit(`cx:${ip}`, 30, 600e3) ? 404 : 429, { error: "신고를 찾지 못했어요" }, CORS); }
-        // 리스 프록시를 거치면 여러 사람이 같은 IP라 신고별로 센다
-        if (!limit(`c:${r.no}`, 120, 60e3) || (b.op === "send" && !limit(`cs:${r.no}`, 20, 60e3)) || (/^(join|leave)$/.test(b.op) && !limit(`cj:${r.no}`, 10, 60e3))) return json(res, 429, { error: "너무 빨라요. 잠시 뒤에 다시 해 주세요" }, CORS);
-        const out = await chatOp(r, "user", b, res);
-        if (!out || res.destroyed) return;
-        return json(res, out.error ? 400 : 200, out, CORS);
       }
       if (m === "POST" && p === "/api/github") {
         const raw = await readBody(req, 2e6);
@@ -552,24 +458,17 @@ function createHub(cfg) {
         if (m === "POST" && rest[0] === "dedupe") return json(res, 200, { merged: dedupeLegacy() });
         if (m === "GET" && rest[0] === "rev") return json(res, 200, { rev: store.rev });
         if (m === "GET" && rest[0] === "summary") return json(res, 200, summary());
-        if (m === "GET" && rest[0] === "reports") return json(res, 200, D.reports.slice().reverse().map(({ key, chat, ...r }) => ({ ...r, hasKey: !!key, unread: unreadDev({ chat }), chatN: chat?.msgs.length ?? 0 })));
-        if (m === "POST" && rest[0] === "chat" && rest[1]) {
-          const r = D.reports.find((x) => x.no === Number(rest[1])); if (!r) return json(res, 404, { error: "없음" });
-          if (!r.key) return json(res, 400, { error: "옛 신고라 대화할 수 없어요" });
-          const out = await chatOp(r, "dev", JSON.parse((await readBody(req, 8e3)).toString("utf8") || "{}"), res);
-          if (!out || res.destroyed) return;
-          return json(res, out.error ? 400 : 200, out);
-        }
+        if (m === "GET" && rest[0] === "reports") return json(res, 200, D.reports.slice().reverse().map(({ key, chat, ...r }) => ({ ...r, hasKey: !!key })));
         if (m === "PATCH" && rest[0] === "reports" && rest[1]) {
           const r = D.reports.find((x) => x.no === Number(rest[1])); if (!r) return json(res, 404, { error: "없음" });
           const b = JSON.parse((await readBody(req, 16e3)).toString("utf8") || "{}");
           if (["new", "seen", "doing", "done", "dup"].includes(b.status) && b.status !== r.status) { r.status = b.status; r.changedAt = Date.now(); }
-          if (typeof b.reply === "string") { const t = b.reply.replace(/\s+/g, " ").trim().slice(0, 300); if (t !== (r.reply || "")) { r.changedAt = Date.now(); if (t && r.key) { chatOf(r); pushMsg(r, "dev", t); r.chat.read.dev = r.chat.seq; } r.reply = t; } }
+          if (typeof b.reply === "string") { const t = b.reply.replace(/\s+/g, " ").trim().slice(0, 300); if (t !== (r.reply || "")) { r.reply = t; r.changedAt = Date.now(); } }
           if (typeof b.memo === "string") r.memo = b.memo.slice(0, 4000);
           if (typeof b.issue === "number" || b.issue === null) r.issue = b.issue;
-          store.touch("reports"); if (r.chat) wake(r); const { key, chat, ...out } = r; return json(res, 200, { ...out, hasKey: !!key });
+          store.touch("reports"); const { key, chat, ...out } = r; return json(res, 200, { ...out, hasKey: !!key });
         }
-        if (m === "DELETE" && rest[0] === "reports" && rest[1]) { { const gone = D.reports.find((x) => x.no === Number(rest[1])); if (gone) wake(gone); } D.reports = D.reports.filter((x) => x.no !== Number(rest[1])); store.touch("reports"); return json(res, 200, { ok: true }); }
+        if (m === "DELETE" && rest[0] === "reports" && rest[1]) { D.reports = D.reports.filter((x) => x.no !== Number(rest[1])); store.touch("reports"); return json(res, 200, { ok: true }); }
         if (m === "GET" && rest[0] === "issues") return json(res, 200, Object.values(D.issues).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).map((x) => ({ ...x, unseen: isUnseen(x) })));
         if (m === "POST" && rest[0] === "issues" && rest[2] === "seen") { const x = D.issues[rest[1]]; if (x) { x.seenAt = Date.now(); store.touch("issues"); } return json(res, 200, { ok: true }); }
         if (m === "POST" && rest[0] === "issues" && rest[1] === "seen-all") { for (const x of Object.values(D.issues)) x.seenAt = Date.now(); store.touch("issues"); return json(res, 200, { ok: true }); }
@@ -627,7 +526,6 @@ background:radial-gradient(40% 45% at 12% 18%,var(--b1),transparent 70%),radial-
 a{color:var(--tint)}button,input,select,textarea{font:inherit;color:inherit}
 .btn{border:1px solid var(--gline);background:var(--glass2);border-radius:10px;padding:7px 13px;cursor:pointer;white-space:nowrap;transition:.15s}
 .btn:hover{background:var(--glass3)}.btn.primary{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 0 14px var(--glow)}
-.cbox{max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:8px 2px}.cm{max-width:82%;align-self:flex-start;background:var(--glass2);border:1px solid var(--gline);border-radius:12px;padding:8px 11px;white-space:pre-wrap;overflow-wrap:anywhere}.cm.me{align-self:flex-end;background:var(--glass3)}.cm small{opacity:.6;font-size:11px}.cs{text-align:center;font-size:12px;opacity:.65}.cin{display:flex;gap:8px;margin-bottom:8px}.cin textarea{flex:1;resize:vertical;min-width:0}[hidden]{display:none!important}
 .btn.ghost{border-style:dashed;background:none}.btn.danger{color:var(--err)}.btn:disabled{opacity:.5;cursor:default}
 input,select,textarea{background:rgba(0,0,0,.22);border:1px solid var(--gline);border-radius:10px;padding:8px 11px;outline:none}
 input:focus,textarea:focus{border-color:color-mix(in srgb,var(--acc) 70%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
@@ -744,8 +642,8 @@ let tab=localStorage.getItem("hub.tab")||"overview",S=null,R=[],I=[];
 const rf={q:"",st:"open",group:localStorage.getItem("hub.group")==="1",sel:null};
 const inf={q:"",st:"open",kind:"issue",sel:null};
 let addFilter=localStorage.getItem("hub.addf")||"installed";
-function pills(){const a=(S?.reports?.new||0)+(S?.reports?.unread||0),b=S?.issues?.unseen||0;$("#rp").hidden=!a;$("#rp").textContent=a;$("#ip").hidden=!b;$("#ip").textContent=b;document.title=(a+b?"("+(a+b)+") ":"")+"Dusk 허브"}
-function setTab(t){tab=t;if(t!=="reports")chatStop();localStorage.setItem("hub.tab",t);$$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));render()}
+function pills(){const a=S?.reports?.new||0,b=S?.issues?.unseen||0;$("#rp").hidden=!a;$("#rp").textContent=a;$("#ip").hidden=!b;$("#ip").textContent=b;document.title=(a+b?"("+(a+b)+") ":"")+"Dusk 허브"}
+function setTab(t){tab=t;localStorage.setItem("hub.tab",t);$$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));render()}
 
 /* ── 개요 ── */
 function pctCls(p){return p>=80?"good":p>=50?"mid":"bad"}
@@ -775,9 +673,9 @@ return '<div class="add'+(a.installed?"":" zero")+'"><div class="nm"><b title="'
 
 /* ── 버그 신고 ── */
 const sigOf=(r)=>{const e=r.logs.find(l=>!["warn","log"].includes(l.kind))||r.logs[0];return e?firstLine(e.text).replace(/\d+/g,"#").slice(0,120):""};
-function rFiltered(){const q=rf.q.toLowerCase();return R.filter(r=>(rf.st==="all"||(rf.st==="open"?(!["done","dup"].includes(r.status)||r.unread):r.status===rf.st))&&(!q||(r.text+" "+r.contact+" "+r.v+" "+r.logs.map(l=>l.text).join(" ")).toLowerCase().includes(q)))}
-const rItem=(r)=>{const e=sigOf(r);return '<div class="it'+(rf.sel===r.no?" sel":"")+'" data-r="'+r.no+'"><span class="ud'+(r.status==="new"?"":" no")+'"></span><div class="main"><div class="t">'+esc(firstLine(r.text).slice(0,160))+'</div><div class="m"><span class="chip '+ST[r.status][1]+'">'+ST[r.status][0]+'</span><span>#'+r.no+'</span><span>v'+esc(r.v)+'</span>'+(r.env.mobile?'<span>모바일</span>':'')+(r.unread?'<span class="chip bad">💬 '+r.unread+'</span>':r.chatN?'<span>💬</span>':'')+'<span>'+ago(r.at)+'</span></div>'+(e?'<div class="m"><span style="color:#ffb3bf;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e)+'</span></div>':'')+'</div></div>'};
-function reportsView(){const list=rFiltered();const cnt=(k)=>R.filter(r=>k==="all"||(k==="open"?(!["done","dup"].includes(r.status)||r.unread):r.status===k)).length;
+function rFiltered(){const q=rf.q.toLowerCase();return R.filter(r=>(rf.st==="all"||(rf.st==="open"?!["done","dup"].includes(r.status):r.status===rf.st))&&(!q||(r.text+" "+r.contact+" "+r.v+" "+r.logs.map(l=>l.text).join(" ")).toLowerCase().includes(q)))}
+const rItem=(r)=>{const e=sigOf(r);return '<div class="it'+(rf.sel===r.no?" sel":"")+'" data-r="'+r.no+'"><span class="ud'+(r.status==="new"?"":" no")+'"></span><div class="main"><div class="t">'+esc(firstLine(r.text).slice(0,160))+'</div><div class="m"><span class="chip '+ST[r.status][1]+'">'+ST[r.status][0]+'</span><span>#'+r.no+'</span><span>v'+esc(r.v)+'</span>'+(r.env.mobile?'<span>모바일</span>':'')+'<span>'+ago(r.at)+'</span></div>'+(e?'<div class="m"><span style="color:#ffb3bf;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e)+'</span></div>':'')+'</div></div>'};
+function reportsView(){const list=rFiltered();const cnt=(k)=>R.filter(r=>k==="all"||(k==="open"?!["done","dup"].includes(r.status):r.status===k)).length;
 let items;if(rf.group){const g={};for(const r of list){const k=sigOf(r)||"(오류 기록 없음)";(g[k]??=[]).push(r)}items=Object.entries(g).sort((a,b)=>b[1].length-a[1].length).map(([k,rs])=>'<div class="grp"><span class="chip '+(rs.length>1?"hot":"")+'">'+rs.length+'건</span><code title="'+esc(k)+'">'+esc(k)+'</code></div>'+rs.map(rItem).join("")).join("")}else items=list.map(rItem).join("");
 return '<div class="split"><aside class="glass listcol"><div class="tools"><input class="grow" id="rq" placeholder="내용·오류·버전 찾기" value="'+esc(rf.q)+'"></div><div class="tools"><span class="seg" id="rst">'+[["open","처리 전"],["new","새 신고"],["doing","고치는 중"],["done","해결"],["all","전체"]].map(([k,l])=>'<button data-v="'+k+'" class="'+(rf.st===k?"on":"")+'">'+l+'<span class="c">'+cnt(k)+'</span></button>').join("")+'</span><label class="kbd" style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="rgrp"'+(rf.group?" checked":"")+'>같은 오류 묶기</label></div><div class="items">'+(items||'<div class="empty">신고가 없어요</div>')+'</div><div class="kbd" style="margin-top:8px"><kbd>J</kbd>/<kbd>K</kbd> 이동 · <kbd>1</kbd>~<kbd>5</kbd> 상태</div></aside><section class="glass detail" id="det">'+reportDetail()+'</section></div>'}
 function reportDetail(){const r=R.find(x=>x.no===rf.sel);if(!r)return'<div class="empty" style="padding-top:90px">왼쪽에서 신고를 고르세요</div>';
@@ -790,37 +688,15 @@ return '<button class="btn back" id="dback">← 목록</button><div class="dh"><
 '<div class="sec"><b>내용</b><div class="box">'+esc(r.text)+'</div></div>'+
 '<div class="sec"><b>오류 기록 <span class="chip">'+r.logs.length+'</span></b>'+(r.logs.slice().reverse().map((l,i)=>'<details class="log" style="--k:'+logK(l.kind)+'"'+(i===0&&l.kind!=="warn"?" open":"")+'><summary><span class="chip">'+esc(l.kind)+'</span><span class="s">'+esc(firstLine(l.text))+'</span><span class="kbd">'+(l.n?l.n+"번 · ":"")+(l.t?new Date(l.t).toLocaleTimeString("ko-KR"):"")+'</span></summary><pre>'+esc(l.text)+'</pre></details>').join("")||'<div class="kbd">없음</div>')+'</div>'+
 '<div class="sec"><b>애드온 <span class="chip">'+r.addons.length+'</span></b><div class="facts">'+(r.addons.map(a=>{const L=cat[a.id];const st=!a.on?"old":L&&a.v!==L?"warn":"";return '<span class="chip '+st+'" title="'+(L?"최신 v"+esc(L):"")+'">'+esc(a.id)+' <b>'+esc(a.v)+'</b>'+(a.on?"":" 꺼짐")+(st==="warn"?" ↑":"")+'</span>'}).join("")||'<span class="kbd">없음</span>')+'</div></div>'+
-(r.hasKey?'<div class="sec" id="chatsec"></div>':'<div class="sec"><b>채팅</b><span class="kbd">옛 신고라 대화할 수 없어요</span></div>')+
+'<div class="sec"><b>답장 <span class="kbd" id="rok">'+(r.hasKey?"신고한 사람의 종 알림에 보여요":"옛 신고라 신고한 사람에게 보이지 않아요")+'</span></b><input id="reply" maxlength="300" style="width:100%" placeholder="한 줄 답장 (예: 2.2.53에서 고쳤어요) · Enter로 저장" value="'+esc(r.reply||"")+'"></div>'+
 '<div class="sec"><b>메모 <span class="kbd" id="mok"></span></b><textarea id="memo" rows="3" style="width:100%" placeholder="원인·고친 버전 등 (자동 저장)">'+esc(r.memo)+'</textarea></div>'+
 '<div class="acts"><button class="btn primary" id="rissue">GitHub 이슈로 만들기</button><button class="btn" id="rcopy">마크다운 복사</button><span class="sp"></span><button class="btn danger" id="rdel">지우기</button></div>'}
 function reportMd(r){return "**버그 신고 #"+r.no+"** · v"+r.v+(r.env.mobile?" · 모바일":"")+(r.risu?" · RisuAI "+r.risu:"")+"\n\n"+r.text+"\n\n**애드온**: "+(r.addons.map(a=>a.id+" "+a.v+(a.on?"":"(꺼짐)")).join(", ")||"없음")+"\n\n"+(r.logs.length?"<details><summary>오류 기록</summary>\n\n\x60\x60\x60\n"+r.logs.slice(-12).map(l=>"["+l.kind+"] "+l.text).join("\n\n").slice(0,5000)+"\n\x60\x60\x60\n</details>\n":"")}
 async function setStatus(r,v){r.status=v;await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({status:v})});S=await api("summary");pills();drawReports(true)}
-// 채팅: 화면을 다시 그려도 상태(C)는 그대로 두고 다시 붙인다
-let C=null;
-function chatStop(){if(C){C.dead=true;C.ac&&C.ac.abort();C=null}}
-const chatCall=(c,b,o)=>api("chat/"+c.no,{method:"POST",body:JSON.stringify(b),...(o||{})});
-function chatTake(c,x){for(const m of x.msgs||[])if(!c.msgs.some(y=>y.id===m.id))c.msgs.push(m);c.msgs.sort((a,b)=>a.id-b.id);c.st=x;c.seq=Math.max(c.seq,x.seq||0);if(x.sig)c.sig=x.sig;if(c===C)chatDraw()}
-function mountChat(r){if(!$("#chatsec"))return;if(!C||C.no!==r.no){chatStop();const c=C={no:r.no,msgs:[],seq:0,sig:"",st:null,draft:"",on:false,at:Date.now(),err:""};chatCall(c,{op:"peek"}).then(x=>{chatTake(c,x);if(x.in)chatLoop(c)}).catch(e=>{c.err=e.message;if(c===C)chatDraw()})}chatDraw(true)}
-async function chatLoop(c){if(c.on||c.dead)return;c.on=true;c.at=Date.now();let fail=0;
-while(!c.dead&&c.st&&c.st.in){if(document.visibilityState!=="visible"||Date.now()-c.at>3e5){c.idle=true;break}
-try{c.ac=new AbortController();const x=await chatCall(c,{op:"poll",after:c.seq,sig:c.sig},{signal:c.ac.signal});fail=0;c.err="";if(x.seq>c.seq)c.at=Date.now();chatTake(c,x);if(x.busy)await new Promise(z=>setTimeout(z,5000))}catch(e){if(c.dead)break;c.err="연결이 끊겨 다시 잇는 중이에요";if(c===C)chatDraw();await new Promise(z=>setTimeout(z,Math.min(3e4,1500*2**fail++)))}}
-c.on=false;if(c===C)chatDraw()}
-async function chatDo(b){const c=C;if(!c)return;try{const x=await chatCall(c,{after:c.seq,...b});c.idle=false;c.err="";chatTake(c,x);if(x.in)chatLoop(c);return true}catch(e){c.err=e.message;if(c===C)chatDraw();return false}}
-function chatDraw(force){const c=C,el=$("#chatsec");if(!c||!el)return;const s=c.st||{};
-if(force||!$("#cbox")){el.innerHTML='<b>채팅 <span class="kbd" id="cst"></span></b><div class="cbox" id="cbox"></div><div class="cin"><textarea id="ctext" rows="2" maxlength="1000" placeholder="Enter로 보내기 · Shift+Enter 줄바꿈"></textarea><button class="btn primary" id="csend">보내기</button></div><div class="acts"><button class="btn primary" id="cjoin"></button><button class="btn" id="cleave">채팅 나가기</button><span class="sp"></span><button class="btn danger" id="cclose"></button></div>';
-const t=$("#ctext");t.value=c.draft;t.oninput=()=>{c.draft=t.value;c.at=Date.now()};const send=async()=>{const text=t.value.trim();if(!text||c.sending)return;c.sending=true;c.cid=c.ctext===text&&c.cid||crypto.randomUUID();c.ctext=text;if(await chatDo({op:"send",text,cid:c.cid})){c.cid=c.ctext=null;c.draft="";const n=$("#ctext");if(n){n.value="";n.focus()}}c.sending=false};
-t.onkeydown=e=>{e.stopPropagation();if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();send()}};$("#csend").onclick=send;
-$("#cjoin").onclick=()=>{c.idle=false;chatDo({op:"join"})};$("#cleave").onclick=()=>chatDo({op:"leave"});$("#cclose").onclick=()=>chatDo({op:"close",closed:!(c.st&&c.st.closed)})}
-$("#cst").textContent=c.err||(!c.st?"불러오는 중…":s.closed?"닫은 대화":!s.in?(s.left?(s.left.by==="user"?"신고한 분이 나가서 연결을 끊었어요":"나간 상태"):"시작하지 않음")+(s.otherIn?" · 신고한 분이 들어와 있어요":""):c.idle||!c.on?"쉬는 중 (연결 안 함)":s.otherOnline?"● 신고한 분 접속 중":s.otherIn?"신고한 분 자리 비움":"신고한 분은 아직 없음");
-const b=$("#cbox"),stick=b.scrollHeight-b.scrollTop-b.clientHeight<60;
-const h=c.msgs.map(m=>m.from==="sys"?'<div class="cs">'+esc(m.text)+'</div>':'<div class="cm '+(m.from==="dev"?"me":"")+'"><div>'+esc(m.text)+'</div><small>'+new Date(m.at).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})+(m.v?" · v"+esc(m.v):"")+(m.from==="dev"&&m.id<=(s.read||0)?" · 읽음":"")+'</small></div>').join("")||'<div class="cs">아직 나눈 글이 없어요</div>';
-if(b._h!==h){b._h=h;b.innerHTML=h;if(stick||force)b.scrollTop=b.scrollHeight}
-const live=s.in&&!c.idle;$("#ctext").disabled=$("#csend").disabled=!live;$("#cjoin").hidden=!!live||!c.st;$("#cjoin").textContent=s.in?"다시 연결":s.left||c.msgs.length?"다시 채팅하기":"채팅 시작";$("#cleave").hidden=!s.in;$("#cclose").textContent=s.closed?"대화 다시 열기":"대화 닫기"}
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&C&&C.idle&&C.st&&C.st.in){C.idle=false;chatLoop(C)}});
 function bindReportDetail(){const r=R.find(x=>x.no===rf.sel);if(!r)return;const d=$("#det");
-$("#dback")&&($("#dback").onclick=()=>{chatStop();d.classList.remove("on");rf.sel=null;drawReports()});
+$("#dback")&&($("#dback").onclick=()=>{d.classList.remove("on");rf.sel=null;drawReports()});
 $("#rs").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v)setStatus(r,v)};
-mountChat(r);
+const sv=async()=>{const v=$("#reply").value.replace(/\s+/g," ").trim();if(v===(r.reply||""))return;const ok=$("#rok");try{const o=await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({reply:v})});if(o?.reply!==v)throw 0;r.reply=v;ok.textContent="저장됨"}catch{ok.textContent="저장하지 못했어요 · 다시 Enter"}};$("#reply").onkeydown=(e)=>{e.stopPropagation();if(e.key==="Enter"){e.preventDefault();sv()}};$("#reply").onchange=sv;
 let mt;$("#memo").oninput=(e)=>{clearTimeout(mt);$("#mok").textContent="…";mt=setTimeout(async()=>{r.memo=e.target.value;await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({memo:r.memo})});$("#mok").textContent="저장됨"},700)};
 $("#rcopy").onclick=async()=>{try{await navigator.clipboard.writeText(reportMd(r));toast("복사했어요")}catch{toast("복사하지 못했어요")}};
 $("#rissue").onclick=()=>{const u="https://github.com/"+S.repo+"/issues/new?title="+encodeURIComponent("[버그 신고 #"+r.no+"] "+firstLine(r.text).slice(0,80))+"&body="+encodeURIComponent(reportMd(r).slice(0,6000));window.open(u,"_blank","noopener")};
@@ -883,7 +759,7 @@ if(tab==="issues"){const l=iFiltered();const i=l.findIndex(x=>x.number===inf.sel
 (async()=>{await loadAll();const h=location.hash;if(h==="#tab-reports"||h==="#tab-issues")tab=h.slice(5);if(h.startsWith("#report-")){rf.sel=+h.slice(8);tab="reports"}else if(h.startsWith("#issue-")){inf.sel=+h.slice(7);tab="issues"}setTab(tab);if(tab==="issues"&&inf.sel)openIssue(inf.sel)})();
 // 실시간: 2초마다 바뀐 게 있는지만 묻고, 바뀌었으면 다시 읽어 그린다(입력 중이면 배지·목록 데이터만)
 let REV=-1,busy=false;
-setInterval(async()=>{if(busy||document.visibilityState!=="visible")return;busy=true;try{const {rev}=await api("rev");if(rev!==REV){const first=REV<0;REV=rev;if(first)return;await loadAll();if(C&&C.st&&!C.on){const c=C;chatCall(c,{op:"peek",after:c.seq}).then(x=>{chatTake(c,x);if(x.in&&!c.idle)chatLoop(c)}).catch(()=>{})}const typing=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"");if(!typing&&!$("#modal").classList.contains("on"))await render()}}catch{}finally{busy=false}},2e3);
+setInterval(async()=>{if(busy||document.visibilityState!=="visible")return;busy=true;try{const {rev}=await api("rev");if(rev!==REV){const first=REV<0;REV=rev;if(first)return;await loadAll();const typing=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"");if(!typing&&!$("#modal").classList.contains("on"))await render()}}catch{}finally{busy=false}},2e3);
 `;
 
 const ADMIN_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Dusk 허브</title>${APP_HEAD}<style>${BASE_CSS}${ADMIN_CSS}</style></head><body>

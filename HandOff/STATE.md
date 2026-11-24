@@ -1,3 +1,6 @@
+## remove/report-chat · 11-24 채팅 기능 제거 → v2.2.59 + 허브 0.5.0
+- 커뮤니티 규정 때문에 사용자가 제거 결정. 다시 만들지 말 것. /api/chat은 410. 옛 대화(reports.json의 chat)는 지우지 않고 어디에도 보여 주지 않는다.
+
 ## fix/report-11 · 11-24 신고 #11(성능 2차) → v2.2.58 + 장기기억 0.3.63
 - baseApi 등록표(addonscope) · 게이지 첫 표시(gauge firstView) · prefs.noteUi/flushUi · 기록·기능 찾기 입력 칸 유지 · 관계도 유휴 정지(canvas activity/wake) · 설정 병렬 읽기 · relmap 선표시 · 시작 상태 무변경 저장 생략 · hub 본문 제한 · 일기 시각. 테스트 tests/fix-report11.test.js.
 - 같은 릴리스: cyclegender.js(TS 월경), useradult.js(나의 욕망·이상성향 f.userAdult), DOM append null 3곳. 테스트 tests/adult-ts.test.js.

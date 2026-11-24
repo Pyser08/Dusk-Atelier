@@ -138,28 +138,6 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
   async function addonList() {
     try { const idx = await addons?.getIndex?.(); return Object.entries(idx ?? {}).map(([id, a]) => ({ id, v: String(a?.version ?? ""), on: a?.on !== false })).slice(0, 80); } catch { return []; }
   }
-  // 채팅(2.2.57): 신고 키로 대화. poll은 새 글이 올 때까지 서버가 잠깐 붙잡는다(롱폴링). 되풀이해 보내지 않게 risuFetch로 다시 시도하지 않는다.
-  async function chat(key, op, data = {}) {
-    const base = await url();
-    if (!base) throw new Error("서버 주소가 아직 정해지지 않았어요.");
-    const body = { key, op, ...data };
-    if (op === "send") { body.text = redactSecrets(body.text).slice(0, 1000); body.v = version; }
-    const ms = op === "poll" ? 30000 : 12000, init = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
-    let status = 0, out = null;
-    if (typeof api.nativeFetch === "function") { const res = await withTimeout(api.nativeFetch(base + "/api/chat", init), ms, "timeout"); status = res.status; out = await withTimeout(res.json(), ms, "timeout").catch(() => null); if (!res.ok) throw Object.assign(new Error(out?.error || (status === 404 ? "서버에서 이 신고를 찾지 못했어요" : `서버가 받지 못했어요 (HTTP ${status})`)), { status, left: !!out?.left }); }
-    else { const r = await withTimeout(api.risuFetch(base + "/api/chat", { method: "POST", headers: init.headers, body, rawResponse: false }), ms, "timeout"); out = typeof r.data === "string" ? JSON.parse(r.data || "null") : r.data; if (!r.ok) throw Object.assign(new Error(out?.error || "서버가 받지 못했어요"), { left: !!out?.left }); }
-    if (!out || !Array.isArray(out.msgs)) throw new Error("서버 답을 읽지 못했어요");
-    return out;
-  }
-  // 대화를 봤다고 적고 종·점을 지운다
-  async function chatSeen(key, x) {
-    await mineSerial(async () => {
-      const st = stCache ?? (await jget(MINE_KEY + ".st", {})) ?? {};
-      stCache = { ...st, [key]: { ...(st[key] ?? {}), no: x.no, status: x.status, reply: st[key]?.reply ?? "", changedAt: Number(x.changedAt) || 0 } };
-      await lset(MINE_KEY + ".st", JSON.stringify(stCache));
-    });
-    await markSeen([{ key, changedAt: x.changedAt }]);
-  }
   async function post(path, body) {
     const base = await url();
     if (!base) throw new Error("버그 신고 서버가 아직 정해지지 않았어요.");
@@ -216,14 +194,14 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
   // 저장 묶음은 차례대로(확인과 새 신고가 겹쳐 서로 덮지 않게)
   let mineChain = Promise.resolve();
   const mineSerial = (fn) => { const p = mineChain.then(fn, fn); mineChain = p.catch(() => {}); return p; };
-  const RETRY = 3600e3, CHECK = 10 * 60e3;   // 2.2.57: 하루 → 10분(Dusk를 열 때만)
-  // 10분에 한 번까지(force면 바로) 서버에 상태를 묻는다. 신고가 없으면 아무것도 보내지 않는다. 실패하면 한 시간 뒤부터 다시 묻고 failed를 알린다.
+  const RETRY = 3600e3;
+  // 하루 한 번(force면 바로) 서버에 상태를 묻는다. 신고가 없으면 아무것도 보내지 않는다. 실패하면 한 시간 뒤부터 다시 묻고 failed를 알린다.
   let tryAt = 0;
   async function checkReports({ force = false } = {}) {
     const mine = await jget(MINE_KEY, []);
     if (!mine.length) return myReports();
     const last = Number(await lget(MINE_LAST)) || 0;
-    if (!force && (Date.now() - last < CHECK || (tryAt && Date.now() - tryAt < RETRY))) return myReports();
+    if (!force && (Date.now() - last < DAY || (tryAt && Date.now() - tryAt < RETRY))) return myReports();
     tryAt = Date.now();
     const r = await post("/api/report-status", { keys: mine.map((m) => m.key) }).catch(() => null);
     if (!r?.ok || !Array.isArray(r.data)) return { ...(await myReports()), failed: true };
@@ -268,5 +246,5 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     return no;
   }
   const onReports = (f) => { subs.add(f); return () => subs.delete(f); };
-  return { url, installId, statsOn, setStats, pingSoon, buildReport, sendReport, myReports, checkReports, markSeen, onReports, chat, chatSeen, configured: async () => !!(await url()) || !!(await url(true)) };
+  return { url, installId, statsOn, setStats, pingSoon, buildReport, sendReport, myReports, checkReports, markSeen, onReports, configured: async () => !!(await url()) || !!(await url(true)) };
 }
