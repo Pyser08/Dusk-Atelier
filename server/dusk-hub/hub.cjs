@@ -67,7 +67,8 @@ function createStore(dir) {
   }
   return {
     data,
-    touch(k) { dirty.add(k); if (!timer) timer = setTimeout(flush, 1500); },
+    rev: 0,   // 무엇이든 바뀌면 올라간다 — 관리 화면이 몇 초마다 보고 바뀌었을 때만 다시 그린다
+    touch(k) { this.rev++; dirty.add(k); if (!timer) timer = setTimeout(flush, 1500); },
     flush
   };
 }
@@ -306,6 +307,7 @@ function createHub(cfg) {
         const rest = p.slice("/api/admin/".length).split("/");
         if (m === "GET" && rest[0] === "sessions") { const me = sidOf(req); return json(res, 200, Object.entries(D.sessions).map(([k, v]) => ({ id: k.slice(0, 12), me: k === me, ...v })).sort((a, b) => b.last - a.last)); }
         if (m === "DELETE" && rest[0] === "sessions" && rest[1]) { for (const k of Object.keys(D.sessions)) if (k.startsWith(rest[1]) && k !== sidOf(req)) delete D.sessions[k]; store.touch("sessions"); return json(res, 200, { ok: true }); }
+        if (m === "GET" && rest[0] === "rev") return json(res, 200, { rev: store.rev });
         if (m === "GET" && rest[0] === "summary") return json(res, 200, summary());
         if (m === "GET" && rest[0] === "reports") return json(res, 200, D.reports.slice().reverse());
         if (m === "PATCH" && rest[0] === "reports" && rest[1]) {
@@ -454,7 +456,9 @@ async function devices(){const l=await api("sessions");drawer('<h3>로그인한 
 $("#devbtn").onclick=devices;
 document.querySelector("nav").onclick=(e)=>{const b=e.target.closest("button");if(b){tab=b.dataset.tab;render()}};
 (async()=>{await load();const h=location.hash;if(h.startsWith("#report-")){tab="reports";await render();openReport(+h.slice(8))}else if(h.startsWith("#issue-")){tab="issues";await render();openIssue(+h.slice(7))}})();
-setInterval(()=>{if(!$("#drawer").classList.contains("on")&&document.visibilityState==="visible")api("summary").then(s=>{S=s;pills();if(tab==="overview")render()}).catch(()=>{})},60e3);
+// 실시간: 4초마다 바뀐 게 있는지만 묻고, 바뀌었으면 숫자·목록을 다시 그린다(입력 중이거나 상세 창이 열려 있으면 배지만)
+let REV=-1,busy=false;
+setInterval(async()=>{if(busy||document.visibilityState!=="visible")return;busy=true;try{const {rev}=await api("rev");if(rev!==REV){const first=REV<0;REV=rev;if(first)return;S=await api("summary");pills();const typing=document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName);if(!$("#drawer").classList.contains("on")&&!typing)await render();else if(tab==="reports")R=await api("reports");else if(tab==="issues")I=await api("issues")}}catch{}finally{busy=false}},4e3);
 </script></body></html>`;
 
 // ── 시작 ─────────────────────────────────────────────────
