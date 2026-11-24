@@ -181,3 +181,15 @@ test("버전이 없는 항목(v·recs 같은 다른 칸)은 애드온으로 세�
   hub.onPing({ id: "mixed-install-1", v: "2.2.51", addons: [{ id: "memory", v: "0.3.57", on: true }, { id: "v", v: "", on: true }, { id: "recs", v: "", on: true }] });
   assert.deepEqual(hub.summary().addons.filter((a) => a.installed).map((a) => a.id), ["memory"]);
 }));
+
+test("디스코드가 거절하면 이유를 남기고, 시험 버튼으로 확인할 수 있다", async () => {
+  const fake = http.createServer((q, r) => { r.writeHead(q.url.includes("good") ? 204 : 404); r.end(q.url.includes("good") ? "" : '{"message":"Unknown Webhook"}'); });
+  await new Promise((r) => fake.listen(0, "127.0.0.1", r));
+  const port = fake.address().port;
+  const mk = (p) => createHub({ adminToken: "test-token-1234567890", dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "dc-")), repo: "o/r", discordWebhook: `http://127.0.0.1:${port}${p}`, publicUrl: "" });
+  const bad = mk("/bad"); bad.onReport({ text: "시험 신고" }); await new Promise((r) => setTimeout(r, 300));
+  assert.equal(bad.summary().discord.last.ok, false); assert.match(bad.summary().discord.last.error, /웹후크 주소/);
+  const good = mk("/good"); good.onReport({ text: "시험 신고" }); await new Promise((r) => setTimeout(r, 300));
+  assert.equal(good.summary().discord.last.ok, true);
+  fake.close(); bad.store.flush(); good.store.flush();
+});

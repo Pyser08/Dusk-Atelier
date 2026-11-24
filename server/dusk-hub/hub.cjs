@@ -139,9 +139,23 @@ function createHub(cfg) {
   const vparts = (v) => String(v ?? "").split(/[.-]/).map((x) => (/^\d+$/.test(x) ? Number(x) : -1));
   const vcmp = (a, b) => { const x = vparts(a), y = vparts(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] ?? 0) - (y[i] ?? 0); if (d) return d; } return 0; };
 
-  function notify(text) {
-    if (!cfg.discordWebhook) return;
-    fetch(cfg.discordWebhook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: text.slice(0, 1900) }) }).catch((e) => console.error("[hub] 디스코드 알림 실패", e.message));
+  // 디스코드 알림. 거절(401·404·429 등)도 로그와 관리 화면에 남긴다 — 예전엔 연결 오류만 남아 왜 안 오는지 알 수 없었다
+  let discordLast = null;
+  async function notify(text) {
+    if (!cfg.discordWebhook) return { ok: false, error: "DISCORD_WEBHOOK이 비어 있어요" };
+    try {
+      const res = await fetch(cfg.discordWebhook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: text.slice(0, 1900), allowed_mentions: { parse: [] } }), signal: AbortSignal.timeout(10000) });
+      if (res.ok) { discordLast = { at: Date.now(), ok: true }; return { ok: true }; }
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      const why = res.status === 401 || res.status === 404 ? "웹후크 주소가 틀렸거나 지워졌어요" : res.status === 429 ? "너무 자주 보내서 디스코드가 잠깐 막았어요" : `디스코드가 거절했어요 (HTTP ${res.status})`;
+      discordLast = { at: Date.now(), ok: false, error: `${why} ${body}`.trim() };
+      console.error("[hub] 디스코드 알림 실패", res.status, body);
+      return { ok: false, error: discordLast.error };
+    } catch (e) {
+      discordLast = { at: Date.now(), ok: false, error: `디스코드에 연결하지 못했어요: ${e.message}` };
+      console.error("[hub] 디스코드 알림 실패", e.message);
+      return { ok: false, error: discordLast.error };
+    }
   }
 
   // 카탈로그: 애드온 이름·최신 버전, 본체 최신 버전(한 시간마다 GitHub에서 읽음) ----------
@@ -251,6 +265,7 @@ function createHub(cfg) {
       core, latestCore, addons, series, fresh,
       reports: { open: D.reports.filter((r) => !["done", "dup"].includes(r.status)).length, new: D.reports.filter((r) => r.status === "new").length, total: D.reports.length },
       issues: { open: issues.filter((x) => x.state === "open" && !x.pr).length, prs: issues.filter((x) => x.state === "open" && x.pr).length, unseen: issues.filter((x) => x.state === "open" && isUnseen(x)).length, syncedAt: D.meta.issuesSyncedAt },
+      discord: { set: !!cfg.discordWebhook, last: discordLast },
       catalogAt: catalog.at, repo: cfg.repo, version: VERSION
     };
   }
@@ -423,6 +438,7 @@ function createHub(cfg) {
           setTimeout(() => process.exit(0), 400);
           return;
         }
+        if (m === "POST" && rest[0] === "discord-test") return json(res, 200, await notify(`🔔 Dusk 허브 알림 시험이에요 · ${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`));
         if (m === "POST" && rest[0] === "dedupe") return json(res, 200, { merged: dedupeLegacy() });
         if (m === "GET" && rest[0] === "rev") return json(res, 200, { rev: store.rev });
         if (m === "GET" && rest[0] === "summary") return json(res, 200, summary());
@@ -628,7 +644,7 @@ h+='<div class="g row2" style="margin-top:14px"><section class="glass card lb" s
 '<section class="glass card lb" style="--k:var(--mint)"><h2>본체 버전 <small>주간</small></h2><p class="desc">'+(s.latestCore?'최신 v'+esc(s.latestCore)+' · <b class="'+pctCls(latestPct)+'">'+latestPct+'%</b>가 최신을 써요':'버전 정보를 기다리는 중')+'</p>'+
 (coreTotal?'<div class="stack">'+s.core.map((v,i)=>'<i style="width:'+(v.c/coreTotal*100)+'%;background:'+pal(i,v)+'" title="v'+esc(v.v)+' · '+v.c+'명"></i>').join("")+'</div><div class="leg">'+s.core.map((v,i)=>'<div><span class="sw" style="background:'+pal(i,v)+'"></span>v'+esc(v.v)+(v.latest?' <span class="chip latest">최신</span>':v.old?'':' <span class="chip">새 버전?</span>')+'<span class="c">'+v.c+'명 · '+Math.round(v.c/coreTotal*100)+'%</span></div>').join("")+'</div>':'<div class="empty">아직 없음</div>')+
 '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)"><b style="font-size:12px;color:var(--sub)">환경</b><div class="stack" style="margin-top:8px"><i style="width:'+(s.d7?s.mobile7/s.d7*100:0)+'%;background:var(--pink)"></i><i style="width:'+(s.d7?(s.d7-s.mobile7)/s.d7*100:0)+'%;background:var(--blue)"></i></div><div class="leg"><div><span class="sw" style="background:var(--pink)"></span>모바일<span class="c">'+s.mobile7+'명</span></div><div><span class="sw" style="background:var(--blue)"></span>PC<span class="c">'+(s.d7-s.mobile7)+'명</span></div></div></div></section></div>';
-h+='<p class="kbd" style="margin-top:16px">애드온 목록 '+(s.catalogAt?ago(s.catalogAt)+" 확인":"확인 전")+' · 이슈 '+ago(s.issues.syncedAt)+' 동기화 · 허브 v'+s.version+' <span id="upd"></span> · <button class="btn ghost" id="dedupe" style="padding:2px 9px;font-size:11.5px">겹친 사용자 정리</button></p>';
+h+='<p class="kbd" style="margin-top:16px">애드온 목록 '+(s.catalogAt?ago(s.catalogAt)+" 확인":"확인 전")+' · 이슈 '+ago(s.issues.syncedAt)+' 동기화 · 허브 v'+s.version+' <span id="upd"></span> · 디스코드 '+(s.discord?.set?(s.discord.last&&!s.discord.last.ok?'<span class="chip err" title="'+esc(s.discord.last.error)+'">실패: '+esc(s.discord.last.error.slice(0,40))+'</span>':'<span class="chip latest">설정됨</span>'):'<span class="chip">꺼짐</span>')+' <button class="btn ghost" id="dtest" style="padding:2px 9px;font-size:11.5px">알림 시험</button> · <button class="btn ghost" id="dedupe" style="padding:2px 9px;font-size:11.5px">겹친 사용자 정리</button></p>';
 return h}
 function addonRows(){let l=S.addons;if(addFilter==="installed")l=l.filter(a=>a.installed);if(addFilter==="old")l=l.filter(a=>a.versions.some(v=>v.old));
 if(!l.length)return'<div class="empty">'+(addFilter==="installed"?"아직 애드온을 쓰는 사람이 없어요":"해당하는 애드온이 없어요")+'</div>';
@@ -698,6 +714,7 @@ async function render(){const m=$("#main");
 if(tab==="overview"){m.innerHTML=overview();$("#addf").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v){addFilter=v;localStorage.setItem("hub.addf",v);render()}};
 $$("[data-go-r]").forEach(b=>b.onclick=()=>{setTab("reports");openReport(+b.dataset.goR)});$$("[data-go-i]").forEach(b=>b.onclick=()=>{setTab("issues");openIssue(+b.dataset.goI)});
 checkUpd();
+$("#dtest").onclick=async(e)=>{e.target.disabled=true;try{const r=await api("discord-test",{method:"POST"});toast(r.ok?"디스코드로 보냈어요. 채널을 확인하세요":r.error)}catch(err){toast(err.message)}S=await api("summary");render()};
 $("#dedupe").onclick=async()=>{const r=await api("dedupe",{method:"POST"});S=await api("summary");render();toast(r.merged?"겹친 사용자 "+r.merged+"명을 합쳤어요":"겹친 사용자가 없어요")}}
 if(tab==="reports")drawReports(true);if(tab==="issues")drawIssues(true)}
 async function checkUpd(){const el=$("#upd");if(!el)return;try{const u=await api("update");if(u.error){el.innerHTML='<span class="kbd">(업데이트 확인 실패)</span>';return}
