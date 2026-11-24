@@ -400,3 +400,50 @@ for (const mode of ["fast", "accurate"]) for (const variant of ["no-output", "pa
   await wait(1500);
   assert.equal(h.calls.length, n0, "이전 대화를 다시 정리하지 않는다");
 });
+
+// 신고 #5(3차): 응답 뒤 settle — 호감도·월경 주기 동기화가 캐릭터·채팅을 통째로 읽지 않고도 같은 채팅에만 적힌다
+async function settleSetup() {
+  const h = harness(); await turnOn(h);
+  await h.say("시작", "T1"); await h.say("계속", "T2");
+  const rt = h.mem.flow.runtime(), st = rt.wiki.requireStore();
+  await h.mem.store.updateFolder("ba", "t1", (f) => { f.emo = { k: { from: "하야세 유우카", to: "{{user}}", tags: { affection: 8, trust: 7, attraction: 5 }, log: [] } }; });
+  const aff = () => Object.values(rt.wiki.snapshot().documents).find((d) => d.title === "하야세 유우카").metrics.find((x) => x.slotId === "affinity.score").value;
+  const before = aff(); await wait(50); assert.equal(aff(), before);
+  return { h, rt, aff, st, before };
+}
+const countReads = (h) => { const n = { c: 0 }, a = h.api.getCharacterFromIndex, b = h.api.getChatFromIndex; h.api.getCharacterFromIndex = async (...x) => { n.c++; return a(...x); }; h.api.getChatFromIndex = async (...x) => { n.c++; return b(...x); }; return n; };
+
+test("settle: 호감도를 계산해 저장하고, 캐릭터·채팅을 통째로 읽지 않는다", async () => {
+  const { h, aff, before } = await settleSetup();
+  const n = countReads(h); assert.equal(await h.mem.link.settle(0, 0), true);
+  assert.ok(aff() > before + 50, `${before}→${aff()}`);
+  assert.equal(n.c, 0);
+  const saved = await h.folder(); assert.equal(Object.values(saved.wiki.documents).find((d) => d.title === "하야세 유우카").metrics.find((x) => x.slotId === "affinity.score").value, aff(), "저장까지 됨");
+});
+test("settle: 사용자가 다른 채팅을 열어도 그 채팅의 감정으로 앞 채팅 위키를 고치지 않는다", async () => {
+  const { h, aff, before } = await settleSetup();
+  // 다른 채팅 t2: 유우카를 아주 싫어하는 감정
+  const t2 = { id: "t2", name: "다른 채팅", message: [] };
+  await h.mem.store.updateFolder("ba", "t2", (f) => { f.emo = { k: { from: "하야세 유우카", to: "{{user}}", tags: { hostility: 10, fear: 10 }, log: [] } }; });
+  h.api.getCurrentChatIndex = async () => 1; h.api.getChatFromIndex = async (_c, i) => (i === 1 ? t2 : h.chat);
+  await h.mem.link.settle(0, 0);
+  assert.ok(aff() >= before, "t2의 적대감이 t1 위키에 섞이지 않음: " + aff());
+  const f2 = await h.mem.store.getFolder("ba", "t2"); assert.ok(!Object.keys(f2.wiki?.documents ?? {}).length, "t2 위키는 그대로");
+});
+test("settle: 폴더를 읽는 사이 위키 범위가 바뀌면 쓰지 않는다", async () => {
+  const { h, rt, aff, before } = await settleSetup(); const real = rt.wiki.snapshot.bind(rt.wiki); let moved = false;
+  const g = h.mem.store.getFolder; h.mem.store.getFolder = async (...a) => { const r = await g(...a); moved = true; return r; };
+  rt.wiki.snapshot = () => { const s = real(); return moved && s ? { ...s, scope: { ...s.scope, chatKey: "t9" } } : s; };
+  await h.mem.link.settle(0, 0); rt.wiki.snapshot = real; h.mem.store.getFolder = g;
+  assert.equal(moved, true); assert.equal(aff(), before);
+});
+test("settle: 동거 인물의 월경 주기 동기화 기록이 그 채팅 폴더에 남는다", async () => {
+  const { h, st } = await settleSetup(); const { formatCycleBody, CYCLE_HEADING, parseCycleBody } = await import("../src/engine/pot/cycle-tracking.js");
+  const body = (start) => formatCycleBody({ start, date: "2024-03-20", length: 28, conception: "", partner: "", known: false });
+  assert.equal(parseCycleBody(body("2024-03-02"))?.date, "2024-03-20");
+  st.replace((w) => { const docs = { ...w.documents }; let i = 0; for (const d of Object.values(docs)) if (["하야세 유우카", "타카나시 호시노"].includes(d.title)) docs[d.id] = { ...d, sections: [...d.sections, { ...d.sections[0], id: "cyc" + i, heading: CYCLE_HEADING, body: body(i++ ? "2024-03-12" : "2024-03-02") }] }; return { ...w, documents: docs, revision: w.revision + 1 }; });
+  await st.flush();
+  await h.mem.store.updateFolder("ba", "t1", (f) => { f.extra = { cohabit: [{ key: "yh", a: "하야세 유우카", b: "타카나시 호시노" }], cycleSync: {} }; });
+  await h.mem.link.settle(0, 0);
+  assert.equal((await h.folder()).extra.cycleSync.yh, "2024-03-20");
+});
