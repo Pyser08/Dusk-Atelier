@@ -43,3 +43,10 @@ test("성인 기록: act 줄 횟수를 읽고, 완곡한 응답에도 act 줄을
   assert.ok(isHotText("그날 밤 둘은 몸을 섞었다. 모두 세 번이었다."));
   assert.ok(isHotText("그렇게 5번 했다"));
 });
+
+test("성인 기록 11-24 보강: 흔한 낱말은 성적인 장면으로 안 보고, 체위 칸에 숫자만 오면 횟수로", () => {
+  for (const t of ["그는 떠나 버렸다", "못을 박았다", "머리가 쑤시다", "잠자리가 날았다", "신발끈을 조여 맸다", "2번 더 물었다", "밤을 함께 새웠다"]) assert.equal(isHotText(t), false, t);
+  assert.ok(isHotText("그녀와 세 번째로 정사를 나눴다")); assert.ok(isHotText("그렇게 3번 했다"));
+  const r = nsfwFrom("act|미오|민호|sex|2", [{ name: "미오" }]);
+  assert.equal(r[0].times, 2); assert.deepEqual(r[0].labels, []);
+});
