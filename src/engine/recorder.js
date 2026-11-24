@@ -227,6 +227,15 @@ export function actTimes(v) {
   const d = t.match(/\d+/); if (d) return Math.max(1, Math.min(20, Number(d[0]) || 1));
   const k = t.match(/^(한|하나|두|둘|세|셋|네|넷|다섯|여섯|일곱|여덟|아홉|열)/); return k ? KO_NUM[k[1]] : 1;
 }
+// 기록기 답을 줄 글로: JSON(코드펜스 포함)이면 안의 문자열을 줄로 편다. JSON이 아니거나 깨졌으면 원문 그대로
+export function plainLines(raw) {
+  const t = String(raw ?? "").replace(/```[a-z]*/gi, "").trim();
+  if (!/^[[{]/.test(t)) return String(raw ?? "");
+  try {
+    const acc = [], walk = (v) => { if (typeof v === "string") acc.push(...v.split(/\r?\n/)); else if (v && typeof v === "object") Object.values(v).forEach(walk); };
+    walk(JSON.parse(t)); return acc.join("\n");
+  } catch { return String(raw ?? ""); }
+}
 export function nsfwFrom(raw, known = []) {
   const out = [];
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
@@ -298,6 +307,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
     const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: tail(run.recent || (dusk?.recent ?? []).join("\n"), RECENT_MAX), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
     stage1 = await ask(call, [{ role: "system", content: LINES_STAGE1 + extra }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
       const lines = parseLines(raw); if (!lines.length) return null;
+      raw = plainLines(raw);   // 신고 #10: JSON {"lines":[…]} 답이면 성인·사람다움·세계·장면 판단 줄이 전부 버려졌다(parseLines·월경만 JSON을 풀어 읽었다)
       const got = fromStage1(lines, { known, source, openIds });
       // addon-rebuild: women| 줄이 있었는지 — 없으면 '모델이 월경 줄을 빠뜨림', 있으면 '여성이 없다고 보고'로 구분한다
       if (cycle) { got.cycle = cycleFrom(raw, known); got.cycleDeclared = /(^|\n)\s*(?:[-*•>]+\s*)?women\s*[|｜¦]/i.test(String(raw ?? "")) || got.cycle.length > 0; }

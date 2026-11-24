@@ -1,3 +1,6 @@
+## fix/report-10 · 11-24 신고 #10 → 장기기억 0.3.62
+- recorder.js plainLines: 1단계 답이 JSON {"lines":[…]}이면 nsfwFrom·humanFrom·extraFrom·driveFrom·women 선언이 0줄이던 것(parseLines·cycleFrom만 풀어 읽었음). nsfwturn applyLifeTurn: cursor가 없으면 life.turn·0으로 반영. 테스트 tests/fix-report10.test.js.
+
 ## feat/report-chat · 11-24 신고별 채팅 → v2.2.57 + 허브 0.4.0
 - 롱폴링(/api/chat), reportchat.js, 나가기·다시 채팅. 모바일 종이 안 보이는 원인은 못 찾음.
 
