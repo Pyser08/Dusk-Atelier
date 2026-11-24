@@ -1,3 +1,4 @@
+import { baseApi } from "../data/addonscope.js";
 import { sha256 } from './hash.js';
 import { newId } from './util.js';
 import { charFields, fingerprintCard, isFingerprintV1, modFields, modFingerprint } from './tideplan.js';
@@ -16,9 +17,9 @@ async function gunzip(bytes) {
 }
 var locks = /* @__PURE__ */ new WeakMap();
 function serial(api, fn) {
-  const prev = locks.get(api?.[Symbol.for("dusk.baseApi")] ?? api) ?? Promise.resolve();
+  const prev = locks.get(baseApi(api)) ?? Promise.resolve();
   const p = prev.then(fn, fn);
-  locks.set(api?.[Symbol.for("dusk.baseApi")] ?? api, p.catch(() => {
+  locks.set(baseApi(api), p.catch(() => {
   }));
   return p;
 }

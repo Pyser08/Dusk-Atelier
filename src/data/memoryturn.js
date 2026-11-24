@@ -7,7 +7,12 @@
 //    - 두 구획은 따로 검증한다. dusk 구획이 없거나 틀리면 기존 방식(따로 한 번 더 호출)으로 대신한다.
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
 import { settleTarget } from "./settlescope.js";
-import { cycleOnlyInScene } from "../engine/cyclescene.js";
+import { cycleOnlyInScene, scenePeople } from "../engine/cyclescene.js";
+import { readChar } from "./apiread.js";
+import { stepUserCycle, userFemale } from "../engine/usercycle.js";
+import { isUserNameLike } from "../engine/recorder.js";
+import { USER_NSFW_ID } from "../engine/usernsfw.js";
+import { cycleByGender } from "../engine/cyclegender.js";
 import { logFailure, logEvent } from "./memlog.js";
 import { applyCycleEvents, syncCycles } from "./cyclesync.js";
 import { extraOf } from "../engine/memextra.js";
@@ -165,6 +170,9 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     // 월경 보고는 한 턴(Writer 묶음 여러 개)에서 인물당 한 번만 붙인다 — 첫 묶음에서 비우고, 같은 묶음 재시도는 그 묶음 몫을 다시 붙인다
     const cycleDone = new Map();
     const cycleScope = (label) => { const m = /batch\s*(\d+)/i.exec(String(label ?? "")); if (!m || +m[1] <= 1) cycleDone.clear(); return { done: cycleDone, label: String(label ?? "") }; };
+    // 11-24 나의 월경: 지금 채팅 폴더(읽기 전용)와 위치
+    const userSpot = async () => { const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(), c = await readChar(api, ci, ti), chat = c?.chats?.[ti]; return chat ? { chaId: String(c.chaId), ck: chatKeyOf(chat, ti), n: chat.message?.length ?? null, folder: await store.peekFolder(String(c.chaId), chatKeyOf(chat, ti)) } : null; };
+    const userWomanNow = async () => { try { const f = (await userSpot())?.folder; return userFemale(f) || !!f?.userCycle?.state?.conception; } catch { return false; } };
     const recordWithDusk = async (a, k, preset, prompt, opts, cy = { done: cycleDone, label: "" }) => {
       const s0 = (await store.getIndex()).settings ?? {};
       const cyc = String(prompt).includes(CYCLE_BLOCK_MARK);   // 2.1.4: 월경·임신 기록도 기록기로(1단계에 줄 몇 개 더, 예전엔 늘 리수폿 Writer)
@@ -196,7 +204,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (rec) retryHits++;
       else {
         const cast = await castNow(s0);
-        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, world: s0.inject?.world === true, status: s0.inject?.status !== false, outfit: s0.inject?.outfit !== false, weather: s0.inject?.scenePanel !== false, race: s0.inject?.race !== false, cycle: cyc, nsfw: (() => { try { return settings.snapshot()?.sexualDesireEnabled === true || settings.rawSnapshot?.()?.sexualDesireEnabled === true; } catch { return false; } })()   /* 11-24: 화면은 전체 설정(rawSnapshot)만 보여 주고 바꾼다 — 봇별 공통 설정(commonByBot, 화면 없음·리수폿에서 가져온 값)이 꺼져 있으면 켜 둬도 성인 기록이 하나도 안 됐다 */, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
+        rec = await recordTurn(call, run, { dusk: prep?.input ?? null, light, beliefs, cache: recCache, auto: autoLight, cast, group: s0.groupPeople !== false, world: s0.inject?.world === true, status: s0.inject?.status !== false, outfit: s0.inject?.outfit !== false, weather: s0.inject?.scenePanel !== false, race: s0.inject?.race !== false, cycle: cyc, userWoman: cyc && await userWomanNow(), nsfw: (() => { try { return settings.snapshot()?.sexualDesireEnabled === true || settings.rawSnapshot?.()?.sexualDesireEnabled === true; } catch { return false; } })()   /* 11-24: 화면은 전체 설정(rawSnapshot)만 보여 주고 바꾼다 — 봇별 공통 설정(commonByBot, 화면 없음·리수폿에서 가져온 값)이 꺼져 있으면 켜 둬도 성인 기록이 하나도 안 됐다 */, onWarn: (n, e) => log(`기록기: ${n} 세부 실패(개요만)`, String(e?.message ?? e).slice(0, 120)) });
         if (!rec.people.some((p) => p.failed)) boundedSet(recDone, fullKey, rec, 4);
       }
       run.gauge = await readGauge(api);   // 2.2.6 게이지 배수(위키 호감도·성격 막대)
@@ -205,6 +213,30 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       if (cyc) { try {
         // addon-rebuild: 이번 턴 장면에 없는 여성의 성관계 보고는 버린다(가만히 있는 사람이 임신하던 문제)
         const cs = cycleOnlyInScene(rec.stage1?.cycle ?? [], rec.stage1, rec.people);
+        // 11-24: TS 등으로 성별이 바뀐 인물 — 이 채팅 성별로 여성 목록을 맞춘다
+        try {
+          const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(), cur = await readChar(api, ci, ti);
+          const fg = cur?.chats?.[ti] ? await store.peekFolder(String(cur.chaId), chatKeyOf(cur.chats[ti], ti)) : null;
+          const g = cycleByGender(cs.reports, { folder: fg, scene: scenePeople(rec.stage1, rec.people), changes: rec.stage1?.nsfw ?? [] });
+          cs.reports = g.reports;
+          if (g.added.length || g.removed.length) logEvent({ area: "월경·임신", title: [g.added.length && `성별이 여성이라 주기를 따라가요: ${g.added.join(", ")}`, g.removed.length && `지금 남성이라 뺐어요: ${g.removed.join(", ")}`].filter(Boolean).join(" · ") });
+        } catch (e) { log("기록기: 성별로 월경 맞추기 건너뜀", e?.message ?? e); }
+        // 11-24 나의 월경: 유저 보고를 떼어 이 채팅 폴더에서 따로 셈한다(위키 문서가 없음)
+        try {
+          const mineOf = (r) => r.name === "{{user}}" || isUserNameLike(r.name, run.userNames), mine = cs.reports.filter(mineOf);
+          cs.reports = cs.reports.filter((r) => !mineOf(r));
+          const at = await userSpot(), changes = rec.stage1?.nsfw ?? [];
+          if (at && (userFemale(at.folder, changes) || at.folder?.userCycle?.state)) {
+            const cums = (rec.stage1?.extra ?? []).filter((x) => x.kind === "cum" && x.where === "inside"), isU = (n) => n === "{{user}}" || isUserNameLike(n, run.userNames);
+            const did = cums.some((x) => isU(x.name)) || changes.some((x) => x.kind === "act" && (x.act === "sex" || x.act === "climax") && (isU(x.name) || isU(x.partner)));
+            let rep = mine.length ? { name: "{{user}}", sex: mine.flatMap((x) => x.sex ?? []), known: mine.some((x) => x.known), birth: mine.some((x) => x.birth), loss: mine.some((x) => x.loss), period: mine.some((x) => x.period) } : null;
+            if (rep?.sex.length && rec.stage1?.nsfw && !did) rep.sex = [];
+            if (rep?.sex.length) rep = gateReports([rep], () => ({ nsfw: at.folder?.nsfw?.[USER_NSFW_ID] ?? null, L: at.folder?.life?.p?.[USER_NSFW_ID] ?? null }), { turn: Number.isInteger(at.folder?.cursor?.at) ? at.folder.cursor.at : 0, cumOf: () => cums.find((x) => isU(x.name)) ?? null }).reports[0];
+            let done = [];
+            await store.updateFolder(at.chaId, at.ck, (f) => { done = stepUserCycle(f, { report: rep, text: run.rp, at: Date.now() < backfillUntil ? null : at.n, rate: Number(settings.snapshot()?.features?.openness?.cycleRate) || 1, changes }); });
+            if (done.length) logEvent({ area: "월경·임신", title: `나 · ${done.join(" · ")}` });
+          }
+        } catch (e) { log("기록기: 나의 월경 계산 건너뜀", e?.message ?? e); }
         if (cs.dropped.length) log(`기록기: 장면에 없는 인물의 성관계 보고를 뺐어요 — ${cs.dropped.join(", ")}`);
         { const R = cs.reports, n = (f) => R.filter(f).map((x) => x.name);
           const parts = [`여성 ${R.length}명${R.length ? `(${R.map((x) => x.name).join(", ")})` : ""}`, ...R.flatMap((x) => x.sex.map((y) => `관계 ${x.name}↔${y.partner}(${y.contraception === "used" ? "피임" : "피임 안 함"})`)),

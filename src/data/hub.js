@@ -119,7 +119,7 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     let u = c?.url ?? "";
     try {
       const res = typeof api.nativeFetch === "function" ? await withTimeout(api.nativeFetch(`${HUB_CONFIG_URL}?t=${Math.floor(Date.now() / 6e4)}`, { method: "GET" }), 5000, "timeout") : null;
-      if (res?.ok) { const t = await res.text(); u = okUrl(JSON.parse(t)?.url); }
+      if (res?.ok) { const t = await withTimeout(res.text(), 5000, "timeout"); u = okUrl(JSON.parse(t)?.url); }
     } catch { /* 못 읽으면 지난 값 */ }
     remote = { at: Date.now(), url: u };
     await set(CFG_KEY, JSON.stringify(remote));
@@ -146,7 +146,7 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     if (op === "send") { body.text = redactSecrets(body.text).slice(0, 1000); body.v = version; }
     const ms = op === "poll" ? 30000 : 12000, init = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
     let status = 0, out = null;
-    if (typeof api.nativeFetch === "function") { const res = await withTimeout(api.nativeFetch(base + "/api/chat", init), ms, "timeout"); status = res.status; out = await res.json().catch(() => null); if (!res.ok) throw Object.assign(new Error(out?.error || (status === 404 ? "서버에서 이 신고를 찾지 못했어요" : `서버가 받지 못했어요 (HTTP ${status})`)), { status, left: !!out?.left }); }
+    if (typeof api.nativeFetch === "function") { const res = await withTimeout(api.nativeFetch(base + "/api/chat", init), ms, "timeout"); status = res.status; out = await withTimeout(res.json(), ms, "timeout").catch(() => null); if (!res.ok) throw Object.assign(new Error(out?.error || (status === 404 ? "서버에서 이 신고를 찾지 못했어요" : `서버가 받지 못했어요 (HTTP ${status})`)), { status, left: !!out?.left }); }
     else { const r = await withTimeout(api.risuFetch(base + "/api/chat", { method: "POST", headers: init.headers, body, rawResponse: false }), ms, "timeout"); out = typeof r.data === "string" ? JSON.parse(r.data || "null") : r.data; if (!r.ok) throw Object.assign(new Error(out?.error || "서버가 받지 못했어요"), { left: !!out?.left }); }
     if (!out || !Array.isArray(out.msgs)) throw new Error("서버 답을 읽지 못했어요");
     return out;

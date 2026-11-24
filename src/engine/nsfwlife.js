@@ -4,6 +4,8 @@
 // 저장: folder.life = { turn, p: { [문서 id]: L } }
 //   L = { lust, refr, fat, seen, seenPrev, sex:{n,last,first,by:{k:{name,n,first}}}, uses:{label:n}, lover:{k:{name,turn,date}}, met:{k:{name,turn,date}}, temp:{k:{name,h:[]}} }
 import { effectiveTags } from "./memoryhuman.js";
+import { userCycleState } from "./usercycle.js";
+import { cyclePaused } from "./cyclegender.js";
 import { isLover } from "./lover.js";
 import { parseCycleBody } from "./pot/cycle-tracking.js";
 import { normalizeGauge } from "./gaugemult.js";
@@ -152,7 +154,7 @@ export function tickLife(f, { turn, present = [], events = [], date = "", gauge 
     const day = dayFactor(pr.when, text);
     let lustK = 1;
     if (dt > 0) {
-      const sinceSex = L.sex.last == null ? null : turn - L.sex.last, phase = phaseOf(cycleOf(d));
+      const sinceSex = L.sex.last == null ? null : turn - L.sex.last, cyc0 = d.id === "actor:user" ? userCycleState(f) : cycleOf(d), phase = cyclePaused(f, d, cyc0) ? null : phaseOf(cyc0);
       const satAdj = satFactor(L.sat);
       const rk = raceLustK(raceFor(f, names), date, { cal: f?.extra?.climate?.mdays ? f.extra.climate : null, hemi: f?.extra?.climate?.hemi ?? "N", seed: d.id });
       // 성욕은 저절로 오르지 않는다(AI가 장면을 보고 gauge 줄로 판단). 성향·주기·끌림은 AI가 올린 폭에만 곱한다
@@ -293,7 +295,7 @@ export function lifeView(f, doc, turn) {
   const by = [...byMap.values()].map((b) => ({ ...b, total: (b.n ?? 0) + (b.prior ?? 0) })).sort((a, b) => b.total - a.total);
   const uses = Object.entries(L.uses ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const mood = MOOD_KEYS.filter((k) => (L.mood?.[k] ?? 0) > 0).map((k) => ({ key: k, label: MOOD_LABEL[k], v: Math.round(L.mood[k]) })).sort((a, b) => b.v - a.v);
-  const cyc = cycleOf(doc), phase = phaseOf(cyc), ann = anniversaries(L, turn);
+  const cyc = doc.id === "actor:user" ? userCycleState(f) : cycleOf(doc), phase = cyclePaused(f, doc, cyc) ? null : phaseOf(cyc), ann = anniversaries(L, turn);
   const satAvg = (a) => (a?.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
   const v = {
     lust: Math.round(L.lust), lustStep: lustStep(L.lust), refractory: turn <= L.refr,

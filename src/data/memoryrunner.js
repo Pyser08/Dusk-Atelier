@@ -87,7 +87,10 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
   const nameOf = (c, chat, i) => ({ botName: String(c?.name ?? "").slice(0, 160), chatName: String(chat?.name ?? chat?.chatName ?? `채팅 ${i + 1}`).slice(0, 160) });
 
   async function bump(chaId, fn) { return store.updateIndex((idx) => { const b = idx.bots[chaId] ??= { on: true, ignore: [], fails: 0 }; return fn(b, idx); }); }
-  async function status(patch) { return store.updateIndex((idx) => { Object.assign(idx.status, patch); }).catch(() => {}); }
+  async function status(patch) { 
+    // 신고 #11: 이미 같은 상태면 쓰지 않는다(시작할 때마다 저장돼 표시 캐시가 무효화됐다)
+    try { const cur = (await store.getIndex()).status ?? {}; if (Object.entries(patch).every(([k, v]) => JSON.stringify(cur[k]) === JSON.stringify(v))) return; } catch { /* 못 읽으면 쓴다 */ }
+    return store.updateIndex((idx) => { Object.assign(idx.status, patch); }).catch(() => {}); }
 
   // 분석 대상 한 묶음의 공통 자료(채팅·앵커·설정). 모델 호출 없음.
   // shared: 일괄 분석이 한 번만 읽어 둔 {character, chat}. 묶음마다 캐릭터·채팅을 통째로 다시 복사하면 큰 봇에서 메모리가 폭증한다(아이폰 OOM).

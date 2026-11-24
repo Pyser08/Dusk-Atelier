@@ -1,3 +1,4 @@
+import { baseApi } from "./addonscope.js";
 // 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 5단계에서 연결.
 // 키는 리수폿 방식 그대로 플러그인 로컬 저장소에만 두고, 설정·백업·공유 코드에는 절대 넣지 않는다.
 import { LocalKeyStore } from "./pot/local-keys.js";
@@ -12,12 +13,12 @@ const state = new WeakMap(); // api → { keys, cfg, usage }
 const parse = (raw) => { try { return raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null; } catch { return null; } };
 
 async function hub(api) {
-  let s = state.get(api?.[Symbol.for("dusk.baseApi")] ?? api);
+  let s = state.get(baseApi(api));
   if (s) return s;
   s = { keys: new LocalKeyStore(api), cfg: normalizeCfg(parse(await api.pluginStorage.getItem(CFG_KEY))), usage: null, saveT: null };
   const u = parse(await api.pluginStorage.getItem(USAGE_KEY));
   s.usage = u?.total && u?.by ? u : emptyUsage();
-  state.set(api?.[Symbol.for("dusk.baseApi")] ?? api, s);
+  state.set(baseApi(api), s);
   return s;
 }
 

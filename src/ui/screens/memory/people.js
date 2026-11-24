@@ -159,9 +159,19 @@ export function personDetail(env, host, key, embedded = false) {
   // 관계도·나에 대한 기억·홈에서 바로 들어오면 grades·search가 아직 없어 화면이 비고 오류가 났다(인물 카드를 눌러 들어올 때만 채워졌음)
   if (!Array.isArray(m.grades)) m.grades = []; if (typeof m.search !== "string") m.search = "";
   const evOk = (x) => x.kind !== "event" || ((!m.grades.length || m.grades.includes(x.g)) && (!m.search || x.text.toLowerCase().includes(m.search.toLowerCase())));
+  const pick = () => {
   let recs = filterTimeline(tl, embedded ? "all" : m.sort === "grade" ? "event" : m.tlFilter).filter(evOk);
   recs = m.sort === "grade" ? recs.sort((a, b) => GRADES.indexOf(b.g ?? "") - GRADES.indexOf(a.g ?? "")) : recs;
-  const shown = recs.slice(0, m.spage * PAGE);
+  return { recs, shown: recs.slice(0, m.spage * PAGE) };
+  };
+  // 신고 #11: 검색 입력 칸은 그대로 두고 목록만 다시 그린다(통째로 다시 그리면 한글 조합과 포커스가 끊겨 첫 글자만 남았다)
+  const listHost = h("div", { class: "rb-mem-recbox" });
+  const paintList = () => {
+    const { recs, shown } = pick();
+    replace(listHost,
+      recs.length ? h("ul", { class: "rb-mem-reclist rb-mem-story" }, shown.map((x) => x.kind === "event" ? eventItem(x.rec) : storyItem(env, x))) : h("div", { class: "rb-empty" }, "조건에 맞는 이야기가 없어요."),
+      recs.length > shown.length ? btn(`더 보기 (${recs.length - shown.length})`, { onClick: () => { m.spage++; paintList(); } }) : null);
+  };
   const sceneOf = (r) => env.folder.scenes.find((s) => s.id === r.sit);
   const eventItem = (r) => h("li", { class: "rb-mem-rec" }, gradeBadge(r.g), h("div", { class: "txt", style: r.valid === false ? "opacity:.65" : "" }, h("div", null, r.act, r.pin ? " 📌" : ""),
     trustBadges(r).length ? h("div", { class: "rb-mem-edhead" }, trustBadges(r).map((b) => h("span", { class: ["rb-mem-tb", `k-${b.kind}`] }, b.text))) : null,
@@ -191,10 +201,10 @@ export function personDetail(env, host, key, embedded = false) {
     !embedded && env.advanced && doc && wikiEditable(env) ? wikiPanel(env, doc) : null,
     embedded ? null : h("div", { class: "rb-mem-chats rb-mem-tlchips", role: "tablist", "aria-label": "이야기 걸러 보기" }, TL_FILTERS.map(([id, label]) => chip(label, { pressed: m.tlFilter === id && m.sort !== "grade", count: id === "all" ? counts.all : counts[id] ?? 0, onClick: () => { m.tlFilter = id; m.sort = m.sort === "grade" ? "time" : m.sort; m.spage = 1; env.redraw(); } }))),
     h("div", { class: "rb-mem-tools" }, embedded || m.tlFilter === "all" || m.tlFilter === "event" ? h("div", { class: "rb-mem-chats" }, GRADES.map((g) => chip(g, { pressed: m.grades.includes(g), onClick: () => { m.grades = m.grades.includes(g) ? m.grades.filter((x) => x !== g) : [...m.grades, g]; m.spage = 1; refresh(); } }))) : null,
-      h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "기록 검색", value: m.search, "aria-label": "기록 검색", onInput: (e) => { m.search = e.target.value; m.spage = 1; env.redraw(); } })),
+      h("label", { class: "rb-search" }, icon("search", 16), h("input", { type: "search", placeholder: "기록 검색", value: m.search, "aria-label": "기록 검색", onInput: (e) => { m.search = e.target.value; m.spage = 1; paintList(); } })),
       h("select", { class: "rb-input", style: "width:auto;height:36px", "aria-label": "정렬", onChange: (e) => { m.sort = e.target.value; env.redraw(); } }, [["time", "시간순"], ["grade", "등급순"]].map(([v, l]) => h("option", { value: v, selected: m.sort === v }, l)))),
-    recs.length ? h("ul", { class: "rb-mem-reclist rb-mem-story" }, shown.map((x) => x.kind === "event" ? eventItem(x.rec) : storyItem(env, x))) : h("div", { class: "rb-empty" }, "조건에 맞는 이야기가 없어요."),
-    recs.length > shown.length ? btn(`더 보기 (${recs.length - shown.length})`, { onClick: () => { m.spage++; refresh(); } }) : null);
+    listHost);
+  paintList();
 }
 
 const KIND_LABEL = { rel: "관계", state: "상태", open: "약속" };

@@ -219,7 +219,7 @@ export async function openEditor(ctx, id) {
         vTrig.textContent = String((draft.trigger ?? []).length);
         vAs.textContent = String((draft.assets ?? []).length);
         nameEl.textContent = draft.name || "(이름 없음)";
-        tagsEl.replaceChildren(draft.namespace ? h("span", { class: "rb-chip", style: "height:24px;padding:0 10px;font-size:12px;cursor:default" }, draft.namespace) : null);
+        tagsEl.replaceChildren(...(draft.namespace ? [h("span", { class: "rb-chip", style: "height:24px;padding:0 10px;font-size:12px;cursor:default" }, draft.namespace)] : []));
       };
       const stat = (...a) => infoStat(goTab, ...a);
       const summary = h("div", { class: "rb-info-sum" },

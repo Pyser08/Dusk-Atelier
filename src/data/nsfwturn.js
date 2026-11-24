@@ -13,6 +13,7 @@ import { randomZones, sexZones } from "../engine/zonegen.js";
 import { characterDocs, setUserNsfwNames, USER_NSFW_ID } from "../engine/usernsfw.js";
 import { genderOf, setGender, guessGender } from "../engine/gender.js";
 import { BODY_PARTS } from "../engine/humanitems.js";
+import { userAdultText } from "../engine/useradult.js";
 import { personaInfo } from "./profileseed.js";
 
 const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
@@ -69,11 +70,12 @@ export function applyDriveQueue(f, list) {
 
 // 엔진 계산(성욕·피로·경험·기념일 등): 이번 턴 행위·잠 보고와 장면 인물로 folder.life를 한 턴 진행. 반환: 바뀐 글
 export function applyLifeTurn(f, { events = [], present = [], gauge = null, text = "", evKey = "" } = {}) {
-  const turn = Number.isInteger(f?.cursor?.at) ? f.cursor.at : null;
-  if (turn == null) return [];
+  if (!f) return [];
+  // 신고 #10: 기억 분석 전(첫 응답)이나 기억 분석을 끈 채팅은 cursor가 없어 행위·게이지 보고를 통째로 버렸다 → 마지막 번호(없으면 0)로 반영
+  const turn = Number.isInteger(f.cursor?.at) ? f.cursor.at : Number.isFinite(f.life?.turn) ? f.life.turn : 0;
   const actors = events.map((e) => e.name), who = [...new Set([...present, ...actors])];
   const when = [...(f?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
-  const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = f?.wiki?.people?.profiles?.[d.id];
+  const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = d.id === USER_NSFW_ID ? { sexualDesire: { text: userAdultText(f, "sexual_desire") }, paraphilia: { text: userAdultText(f, "paraphilia") } } : f?.wiki?.people?.profiles?.[d.id];
     return { interest: n?.sexual?.eroticInterest ?? 50, mult: n?.lustMult ?? 1, spont: n?.sexual?.sexualSpontaneity, initiative: n?.axes?.initiative, when, boost: [n?.boost?.desire !== false && pr?.sexualDesire?.text, n?.boost?.para !== false && pr?.paraphilia?.text].filter(Boolean) }; };
   const date = String(when).match(/\d{1,5}-\d{1,2}-\d{1,2}/)?.[0] ?? "";   // 2.2.22 이야기 날짜(종족 발정기·첫 관계 날짜)
   const changed = tickLife(f, { turn, present: who, events, gauge, text, date, evKey }, profOf);
