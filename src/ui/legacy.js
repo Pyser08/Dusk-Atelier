@@ -5,7 +5,7 @@ import { collectKnownKeys, planAssets } from '../engine/module.js';
 import { buildNewCharacter, characterAssetKeys, characterView, newCharacterBase, planCharacter, uniqueDisplayName, ensureCharacterInOrder } from '../engine/character.js';
 import { uploadAssets } from '../engine/upload.js';
 import { MOD_SPEC, applyView, charIncomingView, charSpec, modIncomingView, pickView } from '../engine/merge3.js';
-import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, regexAutoNote, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, wordDiff, writeCharFields } from '../engine/tideplan.js';
+import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, regexAutoNote, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, VIEW_MAX, safeDiff, writeCharFields } from '../engine/tideplan.js';
 import { createStore } from '../engine/store.js';
 import { iconMarkup } from './icons.js';
 import { persistentWrites, queueTrash, readUi, trashCopy, watchDefaults } from './watch.js';
@@ -561,6 +561,11 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
         <div class="rv-right" id="rv-pane"></div>
       </div>`;
   }
+  // 바뀐 곳 표시: 너무 큰 글은 잘라서, 많이 다른 글은 덩어리로 보여 준다(신고 #6)
+  const diffHtml = (a, b) => {
+    const { parts, cut } = safeDiff(a, b);
+    return parts.map((p) => p.op === "same" ? esc(p.text) : p.op === "add" ? `<ins>${esc(p.text)}</ins>` : `<del>${esc(p.text)}</del>`).join("") + (cut ? `<div class="muted">글이 길어 일부만 보여요.</div>` : "");
+  };
   function bindReview(plan, choices, keepExistingOnly, current, fieldLabel, onChange, rerender) {
     const ui = reviewState(choices);
     root.classList.toggle("wide", !!ui.open);
@@ -573,7 +578,10 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     if (!list) return;
     // 창이 넓어지는 애니메이션 도중에도 맞게, 창 크기가 아니라 화면 너비로 판단
     const narrow = () => (root.ownerDocument.defaultView?.innerWidth ?? 1e4) <= 760;
-    const full = (it, v) => esc(textOf(it, v)) || `<span class="muted">(없음)</span>`;
+    const full = (it, v) => {
+      const t = textOf(it, v);
+      return t.length > VIEW_MAX ? `${esc(t.slice(0, VIEW_MAX))}<div class="muted">…앞 ${VIEW_MAX.toLocaleString()}자만 보여요 (전체 ${t.length.toLocaleString()}자)</div>` : esc(t) || `<span class="muted">(없음)</span>`;
+    };
     const shown = () => {
       const q = ui.q.trim().toLowerCase();
       return plan.items.filter((it) => (ui.f === "all" || groupOf(it) === ui.f) && (!q || itemLabel(it, fieldLabel).toLowerCase().includes(q) || textOf(it, it.current).toLowerCase().includes(q) || textOf(it, it.incoming).toLowerCase().includes(q)));
@@ -583,7 +591,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       if (!it) return `<div class="rv-empty">${ic("split", 28)}<span>왼쪽에서 항목을 고르면 지금과 새 버전을 나란히 보여 드려요.</span></div>`;
       const keep = keepNow(), mine = keep.has(it.id), g = groupOf(it);
       const canDiff = it.current !== void 0 && it.incoming !== void 0 && (typeof it.current === "string" || typeof it.incoming === "string" || it.unit === "lore" || it.unit === "regex");
-      const diff = canDiff ? wordDiff(textOf(it, it.current), textOf(it, it.incoming)).map((p) => p.op === "same" ? esc(p.text) : p.op === "add" ? `<ins>${esc(p.text)}</ins>` : `<del>${esc(p.text)}</del>`).join("") : "";
+      const diff = canDiff ? diffHtml(textOf(it, it.current), textOf(it, it.incoming)) : "";
       return `<div class="rv-dh"><span class="ri big">${ic(it.id.startsWith("order:") ? "list" : UNIT_ICON[it.unit] ?? "text", 18)}</span>
           <div><b>${esc(itemLabel(it, fieldLabel))}</b><div class="rv-tags"><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : `<span class="tg">${CHANGE_KO[changeOf(it)]}</span>`}</div></div></div>
         <div class="rv-seg"><button data-pick="inc" class="${mine ? "" : "on"}">${ic("refresh", 15)} 새 버전 적용</button><button data-pick="cur" class="${mine ? "on" : ""}">${ic("shield", 15)} 내 것 유지</button></div>
@@ -956,12 +964,16 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       renderCopyPlan(it, t.chaId, true).catch((err) => renderResult(null, null, err?.message ?? String(err)));
     });
   }
-  async function renderCopyPlan(it, targetId, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base) {
-    renderProgress("비교 준비 중…", 100, "봇을 읽는 중");
-    const db = await loadDb(true);
-    const ti = db.characters.findIndex((c) => c?.chaId === targetId), ci = db.characters.findIndex((c) => c?.chaId === it.copyId);
-    if (ti < 0 || ci < 0) throw new Error("봇을 찾지 못했어요. 그 사이 지워졌을 수 있어요.");
-    const target = await api.getCharacterFromIndex(ti), copy = await api.getCharacterFromIndex(ci);
+  async function renderCopyPlan(it, targetId, keepExistingOnly, choices = /* @__PURE__ */ new Map(), base, loaded) {
+    if (!loaded) renderProgress("비교 준비 중…", 100, "봇을 읽는 중");
+    // 펼치기·고르기로 다시 그릴 때는 읽어 둔 봇을 쓴다(저장할 때는 새로 읽어 확인한다, 신고 #6)
+    if (!loaded) {
+      const db = await loadDb(true);
+      const ti = db.characters.findIndex((c) => c?.chaId === targetId), ci = db.characters.findIndex((c) => c?.chaId === it.copyId);
+      if (ti < 0 || ci < 0) throw new Error("봇을 찾지 못했어요. 그 사이 지워졌을 수 있어요.");
+      loaded = { ti, ci, target: await api.getCharacterFromIndex(ti), copy: await api.getCharacterFromIndex(ci) };
+    }
+    const { ti, ci, target, copy } = loaded;
     if (base === void 0) base = await store.getFingerprint("c", targetId);
     const spec = charSpec({ fields: {}, risuFields: {}, refs: {} });
     await yieldUi();
@@ -969,7 +981,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     const p = makePlan("c", curF, incF, base);
     const sumOf = (keep) => summarizeCharacterUpdate(target, applyPlan(curF, incF, p, keep), target.additionalAssets ?? []);
     const keep0 = keepSet(p, choices, keepExistingOnly);
-    const rerender = (keep = keepExistingOnly) => renderCopyPlan(it, targetId, keep, choices, base).catch((err) => renderResult(null, null, err?.message ?? String(err)));
+    const rerender = (keep = keepExistingOnly) => renderCopyPlan(it, targetId, keep, choices, base, loaded).catch((err) => renderResult(null, null, err?.message ?? String(err)));
     frame(`<div class="card">
           <div style="margin-bottom:8px">${kindTag("character")}<b>${esc(target.name)}</b> 업데이트 <span class="muted">← 새로 가져온 '${esc(copy.name)}'</span></div>
           ${reviewBox(p, choices, keepExistingOnly, keep0, sumOf(keep0), spec.label)}
@@ -1422,7 +1434,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       try {
         const out = await runAITask(isChar ? "봇 세계관 맞추기" : "로어 충돌 정리", api, isChar ? adaptCharacterPrompt({ targetWorld: world, character: original }) : conflictTidyPrompt({ a: world, b: original }), pick, ctrl.signal);
         if (ctrl.signal.aborted) return;
-        const parts = wordDiff(original, out).map((d) => d.op === "same" ? esc(d.text) : d.op === "add" ? `<ins>${esc(d.text)}</ins>` : `<del>${esc(d.text)}</del>`).join("");
+        const parts = diffHtml(original, out);
         box.innerHTML = `<div class="rv-cap">AI 제안 <span class="muted">— <del>원래 글</del> <ins>AI가 바꾼 글</ins></span></div><div class="rv-diffbox">${parts}</div>
           <div class="row" style="margin-top:6px"><button class="primary" data-use>AI 버전 쓰기</button><button data-tweak>고쳐서 쓰기</button><button data-keep>원래대로</button></div>`;
         box.querySelector("[data-use]").addEventListener("click", () => {
