@@ -7,6 +7,16 @@
 - GitHub 이슈·PR: 웹후크로 바로 받고, 10분마다 API로도 읽어서 놓치지 않습니다. 새 활동은 표시됩니다.
 - 디스코드 알림(선택): 새 신고·새 이슈·새 댓글
 
+## DuckDNS 주소 쓰기
+
+1. https://www.duckdns.org 에 로그인해 하위 도메인(예: `duskhub`)을 만들고, current ip에 오라클 서버 공인 IP를 넣습니다. 주소는 `duskhub.duckdns.org`가 됩니다.
+2. IP가 바뀌어도 따라가게 서버에 갱신 작업을 겁니다(오라클에서 예약 IP를 쓰면 생략해도 됩니다).
+   ```bash
+   mkdir -p ~/duckdns && echo 'curl -s "https://www.duckdns.org/update?domains=duskhub&token=내토큰&ip=" -o ~/duckdns/duck.log' > ~/duckdns/duck.sh && chmod 700 ~/duckdns/duck.sh
+   (crontab -l 2>/dev/null; echo "*/5 * * * * ~/duckdns/duck.sh >/dev/null 2>&1") | crontab -
+   ```
+3. 아래 설치 순서에서 `hub.내도메인.com` 자리에 `duskhub.duckdns.org`를 넣으면 됩니다. Caddy가 80번 포트로 인증서를 받으므로 80·443이 둘 다 열려 있어야 합니다.
+
 ## 오라클 클라우드에 설치
 
 1. 파일 올리기: `hub.cjs`, `hub.config.example.json`, `dusk-hub.service`, `Caddyfile` 파일을 서버의 `~/dusk-hub/`에 올립니다.
@@ -24,7 +34,7 @@
    - Content type: `application/json`
    - Secret: `GITHUB_WEBHOOK_SECRET`과 같은 값
    - 이벤트: Issues, Issue comments, Pull requests
-7. 플러그인 연결: `src/data/hub.js`의 `HUB_URL`에 `https://hub.내도메인.com`을 넣고 빌드합니다.
+7. 플러그인 연결: 저장소 main의 `hub.json`을 `{ "url": "https://hub.내도메인.com" }`으로 고칩니다(GitHub 웹에서 고쳐도 됩니다). 본체를 다시 낼 필요는 없고, 사용자 플러그인은 하루 안에 새 주소를 읽습니다.
 
 `GITHUB_TOKEN`은 비워도 됩니다(공개 저장소는 시간당 60회까지 읽을 수 있음). 넣는다면 권한은 Issues 읽기 전용(fine-grained)이면 충분합니다.
 

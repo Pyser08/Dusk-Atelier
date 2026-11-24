@@ -1,9 +1,11 @@
 // Dusk 허브(2.2.46): 개발자 서버로 익명 사용 통계(하루 한 번)와 버그 신고를 보낸다.
 // - 통계: 무작위 설치 ID·본체 버전·애드온 id/버전·환경만. 대화·봇·키는 보내지 않는다. 설정에서 끌 수 있다(dusk.hub.stats = "off").
 // - 버그 신고: 사용자가 미리보기를 보고 '보내기'를 눌렀을 때만. 최근 오류 기록은 키처럼 보이는 글을 가린 뒤 붙인다.
-// 서버 주소는 HUB_URL. 비워 두면 아무것도 보내지 않는다. 시험용으로 pluginStorage 'dusk.hub.url'이 있으면 그걸 쓴다.
+// 서버 주소: pluginStorage 'dusk.hub.url'(시험용) → HUB_URL → 저장소 main의 hub.json {"url": "..."}(하루 한 번 읽어 둠).
+// 주소를 바꿀 때 본체를 다시 내지 않아도 되게 hub.json에서 읽는다. 어디에도 없으면 아무것도 보내지 않는다.
 export const HUB_URL = "";
-const ID_KEY = "dusk.hub.id", STATS_KEY = "dusk.hub.stats", LAST_KEY = "dusk.hub.lastPing", URL_KEY = "dusk.hub.url";
+export const HUB_CONFIG_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/hub.json";
+const CFG_KEY = "dusk.hub.remote", ID_KEY = "dusk.hub.id", STATS_KEY = "dusk.hub.stats", LAST_KEY = "dusk.hub.lastPing", URL_KEY = "dusk.hub.url";
 const DAY = 24 * 3600e3, LOG_MAX = 60;
 
 // 키·토큰처럼 보이는 글을 가린다(순수)
@@ -62,7 +64,22 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
   const store = api.pluginStorage;
   const get = async (k) => { try { const v = await store.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };
   const set = (k, v) => store.setItem(k, v).catch?.(() => {});
-  const url = async () => String((await get(URL_KEY)) || HUB_URL || "").replace(/\/+$/, "");
+  const okUrl = (u) => /^https:\/\/[^\s"'<>]+$/.test(String(u ?? "")) ? String(u).replace(/\/+$/, "") : "";
+  let remote = null;
+  async function remoteUrl() {
+    if (remote && Date.now() - remote.at < DAY) return remote.url;
+    let c = null; try { c = JSON.parse((await get(CFG_KEY)) || "null"); } catch { /* 없음 */ }
+    if (c && Date.now() - c.at < DAY) return (remote = c).url;
+    let u = c?.url ?? "";
+    try {
+      const res = typeof api.nativeFetch === "function" ? await api.nativeFetch(`${HUB_CONFIG_URL}?t=${Math.floor(Date.now() / 36e5)}`, { method: "GET" }) : null;
+      if (res?.ok) u = okUrl((await res.json())?.url);
+    } catch { /* 못 읽으면 지난 값 */ }
+    remote = { at: Date.now(), url: u };
+    await set(CFG_KEY, JSON.stringify(remote));
+    return u;
+  }
+  const url = async () => okUrl(await get(URL_KEY)) || okUrl(HUB_URL) || await remoteUrl();
   async function installId() { let id = await get(ID_KEY); if (!id) { id = uuid(); await set(ID_KEY, id); } return String(id); }
   async function addonList() {
     try { const idx = await addons?.getIndex?.(); return Object.entries(idx ?? {}).map(([id, a]) => ({ id, v: String(a?.version ?? ""), on: a?.on !== false })).slice(0, 80); } catch { return []; }

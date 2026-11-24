@@ -26,9 +26,9 @@ test("같은 오류가 이어지면 한 줄로 묶어 센다", () => {
   assert.equal(last.text, "같은 오류"); assert.equal(last.n, 2);
 });
 
-test("서버 주소가 없으면 통계를 보내지 않는다", async () => {
+test("서버 주소가 어디에도 없으면(hub.json도 비면) 통계를 보내지 않는다", async () => {
   let calls = 0;
-  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} }, nativeFetch: async () => { calls++; return { ok: true, json: async () => ({}) }; } };
+  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} }, nativeFetch: async (u, o) => { if (o?.method === "POST") calls++; return { ok: true, json: async () => ({ url: "" }) }; } };
   const c = createClient(api, { version: "t" });
   assert.equal(await c.pingSoon(), false);
   assert.equal(calls, 0);
@@ -79,3 +79,10 @@ test("GitHub 웹후크는 서명이 맞을 때만 이슈를 넣는다", () => wi
   assert.equal(hub.summary().issues.open, 1);
   assert.equal(hub.summary().issues.unseen, 1);
 }));
+
+test("hub.json에 주소가 있으면 그 주소로 보낸다", async () => {
+  const sent = [];
+  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} }, nativeFetch: async (u, o) => { if (o?.method === "POST") { sent.push(u); return { ok: true, json: async () => ({}) }; } return { ok: true, json: async () => ({ url: "https://hub.duckdns.org/" }) }; } };
+  assert.equal(await createClient(api, { version: "t" }).pingSoon(), true);
+  assert.deepEqual(sent, ["https://hub.duckdns.org/api/ping"]);
+});
