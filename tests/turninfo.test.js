@@ -82,3 +82,20 @@ test("신고 #3 로그: 상태 칩은 x- 아닌 속성을 setAttribute로 넣지
   assert.deepEqual(bad, []); assert.ok(styled.includes("position:fixed")); assert.ok(!logs.some((l) => String(l[0]).includes("상태 칩")));
   await t.setCallShow(false);
 });
+
+test("신고 #7: setInnerHTML이 x- 속성을 지워도 칩은 하나뿐이고 글이 들어 있다", async () => {
+  const mk = (tag) => { const e = { tag, at: {}, kids: [], text: "", up: null,
+    setAttribute: async (n, v) => { e.at[n] = v; }, setStyleAttribute: async () => {}, setInnerText: async (v) => { await new Promise((r) => setTimeout(r, 2)); e.text = v; },
+    setInnerHTML: async (v) => { e.kids = []; e.html = v; }, appendChild: async (c) => { c.up = e; e.kids.push(c); }, remove: async () => { if (e.up) e.up.kids = e.up.kids.filter((x) => x !== e); e.up = null; } }; return e; };
+  const body = mk("body"), all = (e) => [e, ...e.kids.flatMap(all)];
+  const root = { createElement: async (t) => mk(t), querySelector: async (q) => q === "body" || q === "head" ? body : all(body).find((e) => q === `[x-dusk="${e.at["x-dusk"]}"]`) ?? null };
+  const chips = () => body.kids.filter((e) => e.at["x-dusk"] === "callchip");
+  const stale = mk("div"); stale.at["x-dusk"] = "callchip"; await body.appendChild(stale);
+  const { api } = mem({ getRootDocument: async () => root });
+  const t = createTurnInfo(api, { log: () => {} }); await t.start(); await t.setCallShow(true);
+  for (let i = 0; i < 6; i++) t.beforeRequest([{ role: "user", content: "안녕" + i }], "submodel");
+  await new Promise((r) => setTimeout(r, 150));
+  assert.equal(chips().length, 1); assert.ok(all(chips()[0]).some((e) => e.tag === "span" && e.text.startsWith("보조")));
+  await t.setCallShow(false); await new Promise((r) => setTimeout(r, 30));
+  assert.equal(chips().length, 0);
+});
