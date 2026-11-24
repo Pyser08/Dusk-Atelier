@@ -35,6 +35,7 @@ import { r64Opts } from './data/risu64link.js';
 import { createDuskBridge } from './data/duskbridge.js';
 import { createAiStopButton } from './ui/aistopbtn.js';
 import { restoreActiveTheme } from './data/themes.js';
+import { createHub, startLogCapture } from './data/hub.js';
 import { hasPersonaLinks, loadPersonaMap, resetPersonaSyncCache, syncPersonaModules } from './data/persona.js';
 
 var VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";
@@ -44,6 +45,7 @@ globalThis.__duskFrameMark = "dusk-atelier-plugin-frame";
 async function start() {
   const host = globalThis.risuai ?? globalThis.Risuai;
   if (!host) return;
+  startLogCapture();   // 버그 신고에 붙일 최근 오류 기록(메모리에만, 2.2.46)
   // 무거운 호스트 호출(데이터베이스·봇·채팅 읽기/쓰기)은 동시에 3개까지만 — 여러 기능이 몰려도 리스 화면이 멈추지 않게(2.0.1)
   const raw = createHostGate(host);
   const friendly = (fn) => async (...args) => {
@@ -270,6 +272,10 @@ async function start() {
   };
   const addons = createAddons(api, { core: VERSION, onPendingRestart: askRefresh, onNewAddons: newAddons, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
   app.ctx.addons = addons;
+  // Dusk 허브(2.2.46): 익명 사용 통계(하루 한 번, 끌 수 있음)와 버그 신고. 서버 주소는 data/hub.js의 HUB_URL
+  const hub = createHub(api, { version: VERSION, addons });
+  app.ctx.hub = hub;
+  setTimeout(() => { hub.pingSoon().catch(() => {}); }, 20e3);
   // 2.0.0으로 올라온 기존 사용자: 쓰던 기능(장기기억·기억카드·위젯)의 애드온을 자동으로 받아 그대로 쓰게 한다.
   const rawOf = async (k) => { try { const v = await api.pluginStorage.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };
   const on = (v) => v === true || v === "on" || v === "true";

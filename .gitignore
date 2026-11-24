@@ -4,3 +4,5 @@ node_modules
 dusk-data/
 test-addons/
 .preview/
+server/dusk-hub/hub.config.json
+server/dusk-hub/hub-data/

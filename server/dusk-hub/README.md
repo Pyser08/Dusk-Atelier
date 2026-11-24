@@ -1,0 +1,31 @@
+# Dusk 허브
+
+플러그인과 따로 도는 개발자 서버입니다. Node 22 이상만 있으면 되고 `npm install`은 필요 없습니다.
+
+- 익명 사용 통계: 일간·주간·월간 사용자, 애드온별 사용자, 버전 분포
+- 버그 신고: 플러그인 설정 → "버그 신고"에서 보낸 신고(버전·애드온·환경·최근 오류 기록 포함)
+- GitHub 이슈·PR: 웹후크로 바로 받고, 10분마다 API로도 읽어서 놓치지 않습니다. 새 활동은 표시됩니다.
+- 디스코드 알림(선택): 새 신고·새 이슈·새 댓글
+
+## 오라클 클라우드에 설치
+
+1. 파일 올리기: `hub.cjs`, `hub.config.example.json`, `dusk-hub.service`, `Caddyfile` 파일을 서버의 `~/dusk-hub/`에 올립니다.
+2. 설정: `cp hub.config.example.json hub.config.json` 후 값을 채웁니다. `ADMIN_TOKEN`은 `openssl rand -hex 24`로 만들면 됩니다.
+3. 확인: `node hub.cjs --check`
+4. 상시 실행: `sudo cp dusk-hub.service /etc/systemd/system/ && sudo systemctl enable --now dusk-hub`
+5. 도메인·HTTPS:
+   - DNS에서 `hub.내도메인.com`의 A 레코드를 서버 공인 IP로 지정합니다.
+   - Caddy를 설치하고(`sudo apt install caddy`) `Caddyfile` 파일을 `/etc/caddy/Caddyfile`에 넣은 뒤 `sudo systemctl reload caddy`를 실행합니다. 인증서는 Caddy가 알아서 받습니다.
+   - 오라클은 두 군데를 다 열어야 합니다.
+     - VCN 보안 목록(Security List)에서 TCP 80·443 인바운드를 허용합니다.
+     - 서버 안 iptables도 엽니다: `sudo iptables -I INPUT 6 -p tcp -m multiport --dports 80,443 -j ACCEPT && sudo netfilter-persistent save`
+6. GitHub 웹후크: 저장소 Settings → Webhooks → Add webhook에서 다음과 같이 넣습니다.
+   - Payload URL: `https://hub.내도메인.com/api/github`
+   - Content type: `application/json`
+   - Secret: `GITHUB_WEBHOOK_SECRET`과 같은 값
+   - 이벤트: Issues, Issue comments, Pull requests
+7. 플러그인 연결: `src/data/hub.js`의 `HUB_URL`에 `https://hub.내도메인.com`을 넣고 빌드합니다.
+
+`GITHUB_TOKEN`은 비워도 됩니다(공개 저장소는 시간당 60회까지 읽을 수 있음). 넣는다면 권한은 Issues 읽기 전용(fine-grained)이면 충분합니다.
+
+데이터는 `hub-data/` 폴더의 JSON 파일에 저장됩니다. 백업할 때는 이 폴더만 복사하면 됩니다. IP는 저장하지 않습니다.

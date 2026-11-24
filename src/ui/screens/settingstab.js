@@ -12,6 +12,7 @@ import { renderCleanup, fullBackup, fullRestore } from './tools.js';
 import { renderSettings } from './settings.js';
 import { renderUpdateSettings } from './updsettings.js';
 import { openAbout } from './about.js';
+import { openBugReport } from './bugreport.js';
 import { loadMemoryButtonOn } from '../../data/memorybuttonkey.js';
 import { createCellar, loadCellarEnabled, saveCellarEnabled, loadCellarUrl, saveCellarUrl, CELLAR_DEFAULT_URL } from '../../data/cellar.js';
 import { createCellarBackups } from '../../data/cellarbackup.js';
@@ -84,6 +85,7 @@ export async function renderSettingsTab(ctx, { reuse = false } = {}) {
       ctx.chatMenu ? ctx.chatMenu.isOn().catch(() => true) : Promise.resolve(true)
     ]);
     advData = [memBtnOn, lore, chatQuickOn];
+    const statsOn = (await ctx.hub?.statsOn?.().catch?.(() => true)) ?? true;
     const saved = h("span", { class: "rb-muted", style: "font-size:12.5px" });
     const setLore = async (patch) => {
       Object.assign(lore, patch);
@@ -138,6 +140,11 @@ export async function renderSettingsTab(ctx, { reuse = false } = {}) {
         linkRow("업데이트 설정", "새로 가져온 봇 자동 감지·채팅 백업", () => ctx.go("settings", "updset"), "rb-set-updset"),
         linkRow("설정 정리", "저장한 순서·폴더·프리셋 골라 지우기", () => ctx.go("settings", "cleanup"), "rb-set-cleanup"),
         linkRow("정보 · 라이선스", "버전·AGPL-3.0·소스 위치", () => openAbout(ctx), "rb-set-about")),
+      card("버그 신고 · 사용 통계",
+        linkRow("버그 신고", "개발자에게 바로 보내요. 보낼 내용은 먼저 보여 드려요", () => openBugReport(ctx), "rb-set-bugreport"),
+        valRow("익명 사용 통계", "하루 한 번 무작위 ID·버전·애드온 목록만 보내요. 대화·봇·키는 보내지 않아요", [["on", "보내기"], ["off", "보내지 않기"]], statsOn ? "on" : "off", async (v) => {
+          try { await ctx.hub?.setStats(v === "on"); ctx.toast(v === "on" ? "익명 사용 통계를 보내요. 고마워요!" : "사용 통계를 보내지 않아요"); } catch (e) { fail(e); }
+        }, "rb-set-hubstats")),
       experimentalCard(ctx, () => {
         ctx.refreshTabs();
         ctx.provider?.sync?.().catch(() => {});

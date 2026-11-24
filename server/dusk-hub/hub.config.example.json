@@ -1,0 +1,11 @@
+{
+  "PORT": 6100,
+  "HOST": "127.0.0.1",
+  "ADMIN_TOKEN": "여기에-16자-이상-긴-비밀글",
+  "PUBLIC_URL": "https://hub.내도메인.com",
+  "GITHUB_REPO": "Pyser08/Dusk-Atelier",
+  "GITHUB_TOKEN": "",
+  "GITHUB_WEBHOOK_SECRET": "웹후크용-다른-긴-비밀글",
+  "DISCORD_WEBHOOK": "",
+  "GITHUB_POLL_MINUTES": 10
+}
