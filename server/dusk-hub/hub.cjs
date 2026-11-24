@@ -682,9 +682,9 @@ const k=e.key.toLowerCase();if(tab==="reports"){const l=rFiltered();const i=l.fi
 const st=Object.keys(ST)[+e.key-1];const r=R.find(x=>x.no===rf.sel);if(st&&r)setStatus(r,st)}
 if(tab==="issues"){const l=iFiltered();const i=l.findIndex(x=>x.number===inf.sel);if(k==="j"||e.key==="ArrowDown"){const n=l[Math.min(l.length-1,i+1)];if(n){e.preventDefault();openIssue(n.number)}}if(k==="k"||e.key==="ArrowUp"){const n=l[Math.max(0,i-1)];if(n){e.preventDefault();openIssue(n.number)}}if(k==="o"){const x=I.find(x=>x.number===inf.sel);if(x)window.open(x.url,"_blank","noopener")}}});
 (async()=>{await loadAll();const h=location.hash;if(h==="#tab-reports"||h==="#tab-issues")tab=h.slice(5);if(h.startsWith("#report-")){rf.sel=+h.slice(8);tab="reports"}else if(h.startsWith("#issue-")){inf.sel=+h.slice(7);tab="issues"}setTab(tab);if(tab==="issues"&&inf.sel)openIssue(inf.sel)})();
-// 실시간: 4초마다 바뀐 게 있는지만 묻고, 바뀌었으면 다시 읽어 그린다(입력 중이면 배지·목록 데이터만)
+// 실시간: 2초마다 바뀐 게 있는지만 묻고, 바뀌었으면 다시 읽어 그린다(입력 중이면 배지·목록 데이터만)
 let REV=-1,busy=false;
-setInterval(async()=>{if(busy||document.visibilityState!=="visible")return;busy=true;try{const {rev}=await api("rev");if(rev!==REV){const first=REV<0;REV=rev;if(first)return;await loadAll();const typing=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"");if(!typing&&!$("#modal").classList.contains("on"))await render()}}catch{}finally{busy=false}},4e3);
+setInterval(async()=>{if(busy||document.visibilityState!=="visible")return;busy=true;try{const {rev}=await api("rev");if(rev!==REV){const first=REV<0;REV=rev;if(first)return;await loadAll();const typing=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"");if(!typing&&!$("#modal").classList.contains("on"))await render()}}catch{}finally{busy=false}},2e3);
 `;
 
 const ADMIN_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Dusk 허브</title>${APP_HEAD}<style>${BASE_CSS}${ADMIN_CSS}</style></head><body>

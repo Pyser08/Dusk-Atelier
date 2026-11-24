@@ -25,7 +25,8 @@ export async function activate(api, ctx) {
     if (!force && view && Date.now() - at < 3000) return view;
     return (loading ??= (async () => {
       try {
-        const ci = await api.getCurrentCharacterIndex?.(), ti = await api.getCurrentChatIndex?.();
+        // 0.1.2: 열린 채팅이 없으면 리스가 "reading 'chatPage'" 오류를 던진다 → 채팅 없음으로 본다
+        const ci = await Promise.resolve().then(() => api.getCurrentCharacterIndex?.()).catch(() => -1), ti = await Promise.resolve().then(() => api.getCurrentChatIndex?.()).catch(() => -1);
         if (!(ci >= 0) || !(ti >= 0)) return (view = null);
         const ch = await readChar(api, ci, `${ti}`).catch(() => null), chat = await readChat(api, ci, ti).catch(() => null) ?? ch?.chats?.[ti];
         const msgs = chat?.message ?? [];

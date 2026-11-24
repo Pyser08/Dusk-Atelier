@@ -24,7 +24,8 @@ export function createModCompat(api, { storage, log = (...a) => console.log("[Du
   }
 
   async function where() {
-    const ci = await api.getCurrentCharacterIndex?.(), chi = await api.getCurrentChatIndex?.();
+    // 2.2.51: 열린 채팅이 없을 때(리스 시작 직후·홈) 리스가 "reading 'chatPage'" 오류를 던진다 → 채팅 없음으로 보고 조용히 넘어간다(버그 신고 소음)
+    const ci = await Promise.resolve().then(() => api.getCurrentCharacterIndex?.()).catch(() => -1), chi = await Promise.resolve().then(() => api.getCurrentChatIndex?.()).catch(() => -1);
     return { ci: typeof ci === "number" ? ci : -1, chi: typeof chi === "number" ? chi : -1 };
   }
   // 봇 카드는 통째로 복사되므로 봇이 바뀔 때·조금 지났을 때만 읽는다.
