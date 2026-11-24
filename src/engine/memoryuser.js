@@ -117,7 +117,7 @@ export function meView(folder, now = nowOf(folder)) {
     const pv = pairView(folder, self, c.name, now);
     return {
       name: c.name, stage: c.stage, stageLabel: tiesBetween(folder?.extra?.ties, USER, c.name, keyOf(folder)).map((t) => t.label).join(" · "), shared: c.shared, warmth: c.warmth,
-      feel: pv.feel.ba?.tags ?? {}, myFeel: pv.feel.ab?.tags ?? {},
+      feel: pv.feel.ba?.tags ?? {}, feelKeys: pv.feel.ba?.keys ?? null, myFeel: pv.feel.ab?.tags ?? {},
       callsMe: pv.talk.ba?.call ?? "", toneToMe: pv.talk.ba?.tone ?? "", iCall: pv.talk.ab?.call ?? "",
       face: pv.face.ba ? { alone: pv.face.ba.alone ?? "", public: pv.face.ba.public ?? "" } : null,
       rifts: pv.rifts.filter((r) => !(r.state === "resolved" && (r.grudge ?? "none") === "none")).map((r) => ({ about: r.about ?? "", state: r.state })),

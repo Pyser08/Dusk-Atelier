@@ -176,11 +176,11 @@ export function personTabs(env, parts) {
     const TAGS = tagsFor(loverWith(other));   // 2.2.6 소유욕·독점욕은 애인일 때만
     const fixed = dir != null, back = fixed ? dir : !!rev[pk + "|" + other], fv = back ? v.feel.ba : v.feel.ab, a = back ? shown(other) : me, b = back ? me : shown(other);
     const edit = () => run(modal(ctx.win, (done) => {
-      const ins = Object.fromEntries(TAGS.map((t) => [t, h("input", { class: "rb-input", type: "number", min: 0, max: GAUGE_MAX, placeholder: "비움", value: fv?.stored?.[t] ?? "", "aria-label": EMO_LABEL[t] })]));
+      const ins = Object.fromEntries(TAGS.map((t) => [t, h("input", { class: "rb-input", type: "number", min: 0, max: GAUGE_MAX, placeholder: "비움", value: fv?.tags?.[t] ?? "", "aria-label": EMO_LABEL[t] })]));
       return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(420px,94vw)" }, h("h3", null, `${subj(a)} ${b}에게 느끼는 감정`), h("p", { class: "rb-muted" }, "0~10. 고친 값은 출발점이 되고, 이후엔 대화에 따라 AI가 이어서 바꿔요. 비우면 ‘모름’으로 돌아가요. 소유욕·독점욕은 애인 사이에서만 보여요."),
         h("div", { class: "rb-wk2-form" }, TAGS.map((t) => h("label", { class: "rb-mem-field" }, h("span", null, EMO_LABEL[t]), ins[t]))),
         h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done(ins) })));
-    }).then((ins) => ins && save((fo) => { for (const t of TAGS) { const raw = ins[t].value.trim(), cur = fv?.stored?.[t]; const val = raw === "" ? null : Math.max(0, Math.min(GAUGE_MAX, Math.round(Number(raw)))); if ((cur ?? null) !== val) setTag(fo, back ? other : me, back ? me : other, t, val); } }, "감정을 고쳤어요.")));
+    }).then((ins) => ins && save((fo) => { for (const t of TAGS) { const raw = ins[t].value.trim(), cur = fv?.tags?.[t]; const val = raw === "" ? null : Math.max(0, Math.min(GAUGE_MAX, Math.round(Number(raw)))); if ((cur ?? null) !== val) setTag(fo, back ? other : me, back ? me : other, t, val, Date.now(), fv?.keys); } }, "감정을 고쳤어요.")));
     const rows = fv ? TAGS.filter((t) => fv.stored[t] != null).map((t) => {
       const val = fv.tags[t], was = fv.stored[t];
       return h("div", { class: "rb-wk2-bar" }, h("i", { class: `dot e-${t}`, "aria-hidden": "true" }), h("span", null, EMO_LABEL[t]),

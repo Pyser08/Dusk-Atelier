@@ -420,11 +420,11 @@ export function counterparts(folder, selfNames, now = nowOf(folder)) {
 export function pairView(folder, selfNames, other, now = nowOf(folder)) {
   const K = keyOf(folder), self = keysOf(selfNames, K), ko = K(other), me = [...selfNames][0];
   const feelOf = (fromSelf) => {
-    const p = Object.entries(folder?.emo ?? {}).find(([, x]) => fromSelf ? self.has(K(x.from)) && K(x.to) === ko : K(x.from) === ko && self.has(K(x.to)));
-    if (!p) return null;
-    const [pk, pair] = p, eff = effectiveTags(pair, now);
+    const all = Object.entries(folder?.emo ?? {}).filter(([, x]) => fromSelf ? self.has(K(x.from)) && K(x.to) === ko : K(x.from) === ko && self.has(K(x.to)));
+    if (!all.length) return null;
+    const [pk, pair] = all[0], eff = effectiveTags(pair, now);
     const cooled = Object.entries(eff).filter(([t, v]) => pair.tags[t] != null && v < pair.tags[t]).map(([tag, to]) => ({ tag, from: pair.tags[tag], to }));
-    return { pk, from: pair.from, to: pair.to, tags: eff, stored: { ...pair.tags }, cooled, lock: pair.lock ?? null };
+    return { pk, keys: all.map(([k]) => k), from: pair.from, to: pair.to, tags: eff, stored: { ...pair.tags }, cooled, lock: pair.lock ?? null };
   };
   const talkOf = (fromSelf) => {
     const e = Object.entries(folder?.talk ?? {}).find(([, t]) => fromSelf ? self.has(K(t.from)) && K(t.to) === ko : K(t.from) === ko && self.has(K(t.to)));

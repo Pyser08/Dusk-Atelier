@@ -79,13 +79,24 @@ export function applyEmo(folder, emos, anchor, now = Date.now(), { smooth = fals
 }
 
 // 사용자 직접 수정(위키 인라인 편집용): 값을 정한다(2.2.4부터 잠그지 않음 — 다음 응답부터 이 값에서 AI가 이어서 판단). null이면 '미설정'으로 되돌린다.
-export function setTag(folder, from, to, tag, value, now = Date.now()) {
+// keys: 화면이 같은 두 사람으로 묶어 보여 주는 저장 칸들(별칭·페르소나 이름으로 갈라진 것). 있으면 새 칸을 만들지 않고 그 칸들을 고친다(신고 #4).
+export function setTag(folder, from, to, tag, value, now = Date.now(), keys = null) {
   if (!EMO_TAGS.includes(tag)) return null;
   folder.emo ??= {};
-  const k = key(from) + ">" + key(to), pair = folder.emo[k] ??= { from, to, tags: {}, log: [] };
+  const have = (keys ?? []).filter((x) => folder.emo[x]);
+  if (have.length) {   // 첫 칸(화면에 보이는 칸)은 늘, 나머지는 그 태그 값이 이미 있을 때만
+    const list = have.filter((x, i) => !i || folder.emo[x].tags?.[tag] != null);
+    return list.map((x) => putTag(folder, x, from, to, tag, value, now))[0];
+  }
+  return putTag(folder, key(from) + ">" + key(to), from, to, tag, value, now);
+}
+function putTag(folder, k, from, to, tag, value, now) {
+  const pair = folder.emo[k] ??= { from, to, tags: {}, log: [] };
   const before = pair.tags[tag] ?? null;
   if (value == null) { delete pair.tags[tag]; if (pair.lock) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; } }
   else { pair.tags[tag] = clampG(value); if (pair.lock) { delete pair.lock[tag]; if (!Object.keys(pair.lock).length) delete pair.lock; } }
+  if (pair.pend) delete pair.pend[tag];   // 고치기 전에 쌓인 약한 신호가 고친 값을 바로 움직이지 않게
+  pair.tags ??= {}; pair.log ??= [];
   pair.log.push({ t: { [tag]: pair.tags[tag] ?? null }, from: { [tag]: before }, why: "user", at: null, at_ms: now });
   return pair;
 }
