@@ -152,6 +152,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
     updBtn.hidden = false;
     if (first) ctx.toast(`새 버전 v${v}이 나왔어요. ${UPDATE_HOW}`, { seconds: 12 });
   }
+  const bell = reportBell(() => ctx);   // ctx·hub는 나중에 생긴다 → main.js가 hub를 만든 뒤 ctx.reportBell.attach(hub)
   const head = h(
     "header",
     { class: "rb-head" },
@@ -162,7 +163,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
       h("span", null, h("b", null, "Dusk Atelier"))
     ),
     h("div", { class: "rb-spacer" }),
-    reportBell(ctx),
+    bell.el,
     updBtn,
     btn("가져오기", { icon: "upload", labelClass: "lbl", onClick: () => legacy.open(), id: "rb-import" }),
     iconBtn("palette", "플러그인 꾸미기", { onClick: () => go("look"), id: "rb-look" }),
@@ -666,6 +667,7 @@ export function createApp(api, { legacy, version, onPersonaChanged }) {
   }
   const ctx = {
     api,
+    reportBell: bell,
     confirmAnywhere,
     // 홈이 검색 칸(기능 찾기)을 자기 자리에 붙인다
     mountSearch: (slot) => placeSearch(slot),

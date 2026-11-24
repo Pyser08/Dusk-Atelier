@@ -218,7 +218,7 @@ test("내 신고: 보내면 저장해 종이 보이고, 하루 한 번·누를 �
   let status = "new", reply = "", changedAt = 1, asks = 0;
   const api = { pluginStorage: store, nativeFetch: async (u, o) => {
     const b = JSON.parse(o.body);
-    if (u.endsWith("/api/report")) return { ok: true, json: async () => ({ ok: true, no: 3, key: "k".repeat(16) }) };
+    if (u.endsWith("/api/report")) return { ok: true, json: async () => ({ ok: true, no: 3, key: "k".repeat(16), changedAt }) };
     if (u.endsWith("/api/report-status")) { asks++; assert.deepEqual(Object.keys(b), ["keys"]); return { ok: true, json: async () => b.keys.map((key) => ({ key, no: 3, status, reply, changedAt })) }; }
     return { ok: true, json: async () => ({}) };
   } };
@@ -233,5 +233,47 @@ test("내 신고: 보내면 저장해 종이 보이고, 하루 한 번·누를 �
   await c.checkReports(); assert.equal(asks, 1);   // 하루 안에는 다시 묻지 않는다
   m = await c.myReports(); assert.equal(m.unseen, true); assert.equal(m.list[0].reply, "고쳤어요");
   await c.checkReports({ force: true }); assert.equal(asks, 2);
-  await c.markSeen(); assert.equal((await c.myReports()).unseen, false);
+  await c.markSeen(m.list); assert.equal((await c.myReports()).unseen, false);
+});
+
+// 서버를 흉내 낸 신고 저장소(신고마다 키, 상태 물으면 전부 돌려줌)
+function fakeReports() {
+  const mem = new Map([["dusk.hub.url", "https://hub.test"]]), srv = new Map(), o = { fail: false, asks: 0, hold: null, t: 1000 };
+  const store = { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => { mem.set(k, v); } };
+  const api = { pluginStorage: store, nativeFetch: async (u, init) => {
+    const b = JSON.parse(init.body);
+    if (u.endsWith("/api/report")) { const no = srv.size + 1, key = `key-${no}-0123456789`, changedAt = ++o.t; srv.set(key, { key, no, status: "new", reply: "", changedAt }); return { ok: true, json: async () => ({ ok: true, no, key, changedAt }) }; }
+    o.asks++; if (o.fail) throw new Error("offline");
+    const out = b.keys.map((k) => ({ ...srv.get(k) })); if (o.hold) await o.hold;
+    return { ok: true, json: async () => out };
+  } };
+  const set = (no, patch) => Object.assign([...srv.values()].find((x) => x.no === no), patch, { changedAt: ++o.t });
+  return { c: createClient(api, { version: "t" }), o, set };
+}
+const unseenNos = async (c) => (await c.myReports()).list.filter((x) => x.unseen).map((x) => x.no);
+
+test("내 신고: 새 신고를 보내도 앞 신고의 새 소식은 남는다", async () => {
+  const { c, set } = fakeReports();
+  await c.sendReport({ text: "하나" }); set(1, { status: "done" });
+  await c.sendReport({ text: "둘" }); await c.checkReports({ force: true });
+  assert.deepEqual(await unseenNos(c), [1]);
+});
+
+test("내 신고: 연결 실패로 못 본 답장은 나중에 새 소식으로 뜨고, 실패한 확인은 하루를 쓰지 않는다", async () => {
+  const { c, o, set } = fakeReports();
+  await c.sendReport({ text: "하나" }); set(1, { reply: "고쳤어요" });
+  o.fail = true; const r = await c.checkReports({ force: true });
+  assert.equal(r.failed, true); await c.markSeen(r.list);
+  await c.checkReports(); assert.equal(o.asks, 1);   // 바로 되풀이하지 않는다
+  o.fail = false; const now = Date.now; Date.now = () => now() + 2 * 3600e3;
+  try { await c.checkReports(); } finally { Date.now = now; }
+  assert.equal(o.asks, 2); assert.deepEqual(await unseenNos(c), [1]);
+});
+
+test("내 신고: 상태를 묻는 사이 보낸 신고의 상태를 덮지 않는다", async () => {
+  const { c, o } = fakeReports(); await c.sendReport({ text: "하나" });
+  let go; o.hold = new Promise((r) => { go = r; });
+  const p = c.checkReports({ force: true }); while (!o.asks) await new Promise((r) => setTimeout(r, 1));
+  await c.sendReport({ text: "둘" }); go(); await p;
+  assert.deepEqual((await c.myReports()).list.map((x) => x.status), ["new", "new"]);
 });

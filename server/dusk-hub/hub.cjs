@@ -9,7 +9,7 @@
 //
 // 받는 것:
 //   POST /api/ping     플러그인이 하루 한 번: {id, v, risu, addons:[{id,v,on}], mobile, host}
-//   POST /api/report   버그 신고: {id, v, text, contact, addons, env, logs}  → {no, key}
+//   POST /api/report   버그 신고: {id, v, text, contact, addons, env, logs}  → {no, key, changedAt}
 //   POST /api/report-status  {keys:[확인 키…]} → [{key, no, status, reply, changedAt}]  (신고 내용은 돌려주지 않는다)
 //   POST /api/github   GitHub 웹후크(issues · issue_comment · pull_request). 서명(X-Hub-Signature-256) 확인
 //   그 밖에 GitHub API를 10분마다 읽어 웹후크를 놓쳐도 이슈가 들어온다.
@@ -284,7 +284,7 @@ function createHub(cfg) {
     D.reports.push(r); store.touch("reports");
     const firstErr = logs.find((l) => l.kind !== "warn");
     notify(`🐞 버그 신고 #${no} · v${r.v}${env.mobile ? " · 모바일" : ""}\n${text.slice(0, 600)}${firstErr ? `\n\`\`\`${firstErr.text.slice(0, 400)}\`\`\`` : ""}${cfg.publicUrl ? `\n${cfg.publicUrl}/#report-${no}` : ""}`);
-    return { ok: true, no, key };
+    return { ok: true, no, key, changedAt: r.changedAt };
   }
   // 확인 키로 상태만 본다(내용·환경·연락처는 주지 않는다). 키가 없는 옛 신고는 볼 수 없다.
   function reportStatus(b) {
@@ -694,7 +694,7 @@ async function setStatus(r,v){r.status=v;await api("reports/"+r.no,{method:"PATC
 function bindReportDetail(){const r=R.find(x=>x.no===rf.sel);if(!r)return;const d=$("#det");
 $("#dback")&&($("#dback").onclick=()=>{d.classList.remove("on");rf.sel=null;drawReports()});
 $("#rs").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v)setStatus(r,v)};
-const sv=async()=>{const v=$("#reply").value.replace(/\s+/g," ").trim();if(v===(r.reply||""))return;r.reply=v;await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({reply:v})});$("#rok").textContent="저장됨"};$("#reply").onkeydown=(e)=>{e.stopPropagation();if(e.key==="Enter"){e.preventDefault();sv()}};$("#reply").onchange=sv;
+const sv=async()=>{const v=$("#reply").value.replace(/\s+/g," ").trim();if(v===(r.reply||""))return;const ok=$("#rok");try{const o=await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({reply:v})});if(o?.reply!==v)throw 0;r.reply=v;ok.textContent="저장됨"}catch{ok.textContent="저장하지 못했어요 · 다시 Enter"}};$("#reply").onkeydown=(e)=>{e.stopPropagation();if(e.key==="Enter"){e.preventDefault();sv()}};$("#reply").onchange=sv;
 let mt;$("#memo").oninput=(e)=>{clearTimeout(mt);$("#mok").textContent="…";mt=setTimeout(async()=>{r.memo=e.target.value;await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({memo:r.memo})});$("#mok").textContent="저장됨"},700)};
 $("#rcopy").onclick=async()=>{try{await navigator.clipboard.writeText(reportMd(r));toast("복사했어요")}catch{toast("복사하지 못했어요")}};
 $("#rissue").onclick=()=>{const u="https://github.com/"+S.repo+"/issues/new?title="+encodeURIComponent("[버그 신고 #"+r.no+"] "+firstLine(r.text).slice(0,80))+"&body="+encodeURIComponent(reportMd(r).slice(0,6000));window.open(u,"_blank","noopener")};

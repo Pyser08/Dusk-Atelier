@@ -13,7 +13,7 @@ const DAY = 24 * 3600e3, LOG_MAX = 60;
 export const REPORT_STATUS = { new: "접수됨", seen: "확인했어요", doing: "고치는 중", done: "해결됐어요", dup: "중복·처리 안 함" };
 // 상태가 바뀌었는데 아직 안 본 신고가 있는지(순수): mine [{key}], st {key:{changedAt}}, seen {key:time}
 export function hasUnseen(mine, st, seen) {
-  return (mine ?? []).some((m) => { const x = st?.[m.key]; return x && Number(x.changedAt) > (Number(seen?.[m.key]) || Number(m.at) || 0); });
+  return (mine ?? []).some((m) => { const x = st?.[m.key]; return x && Number(x.changedAt) > (Number(seen?.[m.key]) || 0); });
 }
 
 // 키·토큰처럼 보이는 글을 가린다(순수)
@@ -191,37 +191,57 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     const mine = await jget(MINE_KEY, []), st = stCache ?? (stCache = (await jget(MINE_KEY + ".st", {})) || {}), seen = await jget(MINE_SEEN, {});
     return { list: mine.slice().reverse().map((m) => ({ ...m, ...(st[m.key] ?? {}), unseen: hasUnseen([m], st, seen) })), unseen: hasUnseen(mine, st, seen) };
   }
-  // 하루 한 번(force면 바로) 서버에 상태를 묻는다. 신고가 없으면 아무것도 보내지 않는다.
+  // 저장 묶음은 차례대로(확인과 새 신고가 겹쳐 서로 덮지 않게)
+  let mineChain = Promise.resolve();
+  const mineSerial = (fn) => { const p = mineChain.then(fn, fn); mineChain = p.catch(() => {}); return p; };
+  const RETRY = 3600e3;
+  // 하루 한 번(force면 바로) 서버에 상태를 묻는다. 신고가 없으면 아무것도 보내지 않는다. 실패하면 한 시간 뒤부터 다시 묻고 failed를 알린다.
+  let tryAt = 0;
   async function checkReports({ force = false } = {}) {
     const mine = await jget(MINE_KEY, []);
     if (!mine.length) return myReports();
     const last = Number(await lget(MINE_LAST)) || 0;
-    if (!force && Date.now() - last < DAY) return myReports();
-    await lset(MINE_LAST, String(Date.now()));
+    if (!force && (Date.now() - last < DAY || (tryAt && Date.now() - tryAt < RETRY))) return myReports();
+    tryAt = Date.now();
     const r = await post("/api/report-status", { keys: mine.map((m) => m.key) }).catch(() => null);
-    if (r?.ok && Array.isArray(r.data)) {
-      const st = {};
+    if (!r?.ok || !Array.isArray(r.data)) return { ...(await myReports()), failed: true };
+    tryAt = 0;
+    await mineSerial(async () => {
+      await lset(MINE_LAST, String(Date.now()));
+      const asked = new Set(mine.map((m) => m.key)), old = stCache ?? (await jget(MINE_KEY + ".st", {})) ?? {};
+      const st = Object.fromEntries(Object.entries(old).filter(([k]) => !asked.has(k)));   // 묻는 사이 보낸 새 신고는 남긴다
       for (const x of r.data) if (x?.key) st[x.key] = { no: x.no, status: String(x.status ?? ""), reply: String(x.reply ?? "").slice(0, 300), changedAt: Number(x.changedAt) || 0 };
-      stCache = st; await lset(MINE_KEY + ".st", JSON.stringify(st)); emit();
-    }
+      stCache = st; await lset(MINE_KEY + ".st", JSON.stringify(st));
+    });
+    emit();
     return myReports();
   }
-  async function markSeen() {
-    const mine = await jget(MINE_KEY, []), seen = {}, now = Date.now();
-    for (const m of mine) seen[m.key] = Math.max(now, Number(stCache?.[m.key]?.changedAt) || 0);
-    await lset(MINE_SEEN, JSON.stringify(seen)); emit();
+  // 화면에 보여 준 것만 봤다고 적는다. 기기 시계가 아니라 보여 준 서버 시각(changedAt)으로 적어 그 뒤 소식을 놓치지 않는다.
+  async function markSeen(shown) {
+    await mineSerial(async () => {
+      const mine = await jget(MINE_KEY, []), old = (await jget(MINE_SEEN, {})) ?? {}, seen = {};
+      for (const m of mine) if (old[m.key] != null) seen[m.key] = old[m.key];
+      for (const x of shown ?? []) if (x?.changedAt && mine.some((m) => m.key === x.key)) seen[x.key] = Math.max(Number(seen[x.key]) || 0, Number(x.changedAt));
+      await lset(MINE_SEEN, JSON.stringify(seen));
+    });
+    emit();
   }
   async function sendReport(report) {
     const r = await post("/api/report", report);
     const no = r.data?.no ?? null, key = typeof r.data?.key === "string" ? r.data.key : "";
     if (no && key) {
-      const mine = await jget(MINE_KEY, []);
-      const title = String(report?.text ?? "").split("\n").find((l) => l.trim())?.trim().slice(0, 80) ?? "";
-      mine.push({ no, key, at: Date.now(), title });
-      await lset(MINE_KEY, JSON.stringify(mine.slice(-30)));
-      stCache = { ...(stCache ?? (await jget(MINE_KEY + ".st", {}))), [key]: { no, status: "new", reply: "", changedAt: Date.now() } };
-      await lset(MINE_KEY + ".st", JSON.stringify(stCache));
-      await markSeen();
+      const changedAt = Number(r.data.changedAt) || 0;   // 서버 시각
+      await mineSerial(async () => {
+        const mine = await jget(MINE_KEY, []);
+        const title = String(report?.text ?? "").split("\n").find((l) => l.trim())?.trim().slice(0, 80) ?? "";
+        mine.push({ no, key, at: Date.now(), title });
+        await lset(MINE_KEY, JSON.stringify(mine.slice(-30)));
+        stCache = { ...(stCache ?? (await jget(MINE_KEY + ".st", {}))), [key]: { no, status: "new", reply: "", changedAt } };
+        await lset(MINE_KEY + ".st", JSON.stringify(stCache));
+        const seen = (await jget(MINE_SEEN, {})) ?? {}; seen[key] = changedAt;   // 방금 보낸 신고만
+        await lset(MINE_SEEN, JSON.stringify(seen));
+      }).catch(() => {});   // 신고는 이미 갔다 — 기기에 못 적어도 실패로 알리지 않는다(다시 보내 중복되지 않게)
+      emit();
     }
     return no;
   }

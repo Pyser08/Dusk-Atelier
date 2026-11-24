@@ -20,7 +20,7 @@
 ## 파일 목록
 ### src/
 - `addonlib.gen.js` (588줄) 자동 생성(node tools/build-addons.mjs) — 고치지 마세요. 애드온이 쓰는 코어… — LIB
-- `main.js` (338줄) 
+- `main.js` (339줄) 
 
 ### src/cellar/
 - `node-entry.js` (11줄) Dusk Cellar(서버)에서 장기 기억 분석을 돌리는 Node용 진입점 (v1.9.3, Cella… — ENGINE_VERSION, createMemoryRunner, createMemoryStoreV3, INDEX_KEY, FOLDER_PREFIX
@@ -73,7 +73,7 @@
 - `guidelib.js` (182줄) 묘사 정확도 지침 조각(심리학·해부학·생리학). 교과서 수준의 합의된 내용만, 속설은 "~아님"으로 … — GUIDES
 - `hookbus.js` (51줄) 리스 스크립트 훅(input·output·display) 묶음 (v1.8.1 최적화). — createHookBus
 - `hostgate.js` (39줄) 호스트(리스) 무거운 호출 문: 여러 기능이 한꺼번에 getDatabase·봇·채팅 읽기/쓰기를 부르… — createHostGate
-- `hub.js` (231줄) Dusk 허브(2.2.46): 개발자 서버로 익명 사용 통계(하루 한 번)와 버그 신고를 보낸다. — HUB_URL, HUB_CONFIG_URL, REPORT_STATUS, hasUnseen, redactSecrets
+- `hub.js` (251줄) Dusk 허브(2.2.46): 개발자 서버로 익명 사용 통계(하루 한 번)와 버그 신고를 보낸다. — HUB_URL, HUB_CONFIG_URL, REPORT_STATUS, hasUnseen, redactSecrets
 - `hypaimport.js` (57줄) v1.8.1 HypaPlus 가져오기(데이터): 같은 저장소(pluginStorage)에 남은 Hyp… — createHypaImporter
 - `imgtagfix.js` (142줄) v1.8.2 AI 이미지 태그 교정·알림 훅. 설정에서 각각 켜고 끈다(기본 꺼짐). 모델 호출은 늘… — IMGFIX_KEY, IMGFIX_HINT_KEY, IMGFIX_UNKNOWN_KEY, createImgTagFix
 - `interopSnippet.js` (4줄) DA Interop v1 스니펫 원본: https://github.com/Pyser08/dusk-at…
@@ -458,7 +458,7 @@
 ### src/ui/
 - `aifix.js` (52줄) 로어북 '고칠 부분' 공유 상태 (v1.6.8): 편집기 글칸에서 고른 부분 ↔ AI 창 '고칠 부분…
 - `aistopbtn.js` (90줄) '생성 중지' 버튼 (2.1.0): AI 호출(engine/aistop.js)이 하나라도 돌면 화면 …
-- `app.js` (729줄) 
+- `app.js` (731줄) 
 - `assets.js` (187줄) 
 - `cbs.js` (80줄) 
 - `codeedit.js` (514줄) 가벼운 코드 편집기: 투명한 textarea 뒤에 색을 입힌 pre를 겹쳐 VS Code처럼 보이게 …
@@ -560,7 +560,7 @@
 - `provider.js` (223줄) 프로바이더 (v1.9.3): 리스 모델 목록에 'Dusk 자동'과 'Dusk · 프로필' 을 더한다.…
 - `regress.js` (350줄) 회귀 창 (v1.9.2): 인물을 골라, 그 인물의 기억만 들고 새 채팅을 시작한다.
 - `relmap.js` (299줄) 인물 관계도 탭 (v1.9.3): {{user}}를 가운데 두고 인물을 거리(호감도)·높이(중요도)·…
-- `reportbell.js` (50줄) 내 신고 알림 종(2.2.53): 보낸 신고가 있을 때만 위쪽에 보인다. 상태나 답장이 바뀌면 점이 …
+- `reportbell.js` (53줄) 내 신고 알림 종(2.2.53): 보낸 신고가 있을 때만 위쪽에 보인다. 상태나 답장이 바뀌면 점이 …
 - `roulettepop.js` (64줄) 봇 편집 도구 → 룰렛: 범주별로 무작위 특징을 뽑아 복사하거나 설명 끝에 붙인다.
 - `sdstudio.js` (3줄) 에셋 제작 화면 입구(애드온 sdstudio 전용). 본체는 ./sdstudio/ 폴더(studio·…
 - `sectionhome.js` (150줄) 그룹 개요(기억·관리·작업실, 1.8.3 목업 1): 한 줄 안내 → (기억) 상태 카드 → 목록형 …

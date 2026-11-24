@@ -1,7 +1,8 @@
 ## fix/report-4 · 11-24 허브 신고 상태 알림(미배포 · 허브 0.3.0)
-- 허브 server/dusk-hub/hub.cjs: onReport가 확인 키(r.key, 12바이트 base64url)·changedAt·reply 저장 → {no,key}. `POST /api/report-status {keys}` → [{key,no,status,reply,changedAt}](내용 없음, safeEq 비교, IP당 30/시간). 관리 PATCH reply(한 줄 300자)·상태 바뀔 때 changedAt. 관리 목록·PATCH 응답에서 key 빼고 hasKey만. 관리 화면 신고 상세에 ‘답장’ 칸. VERSION 0.3.0(main에 들어가면 자동 업데이트).
+- 허브 server/dusk-hub/hub.cjs: onReport가 확인 키(r.key, 12바이트 base64url)·changedAt·reply 저장 → {no,key,changedAt}. `POST /api/report-status {keys}` → [{key,no,status,reply,changedAt}](내용 없음, safeEq 비교, IP당 30/시간). 관리 PATCH reply(한 줄 300자)·상태 바뀔 때 changedAt. 관리 목록·PATCH 응답에서 key 빼고 hasKey만. 관리 화면 신고 상세에 ‘답장’ 칸. VERSION 0.3.0(0.2.0부터만 자동 업데이트 — 운영 허브가 0.1.0이면 한 번 직접 교체).
 - 플러그인 src/data/hub.js: REPORT_STATUS·hasUnseen(순수), sendReport가 기기 저장소 dusk.hub.mine에 {no,key,at,title} 30개까지, checkReports({force})(하루 1회 dusk.hub.mineChecked, 신고 없으면 안 보냄)·myReports·markSeen·onReports. src/ui/screens/reportbell.js: 헤더 종(app.js rb-spacer 뒤) — 신고 없으면 숨김, 시작 30초 뒤 확인, 새 소식 점, 누르면 강제 확인 후 목록·답장 → markSeen. 아이콘 bell(icons.js), CSS styles.js .rb-bell*.
-- 테스트 tests/hub.test.js 2건. 안내서 faq.html 질문 1개. CHANGELOG는 버전 섹션이 없어 안 씀(배포 때 함께).
+- 검토 수정: 종은 reportBell(() => ctx)로 만들고 main.js가 ctx.reportBell.attach(hub)(ctx 선언 전 접근으로 앱이 안 켜지던 문제). markSeen(보여 준 목록)은 서버 changedAt으로 기록, 확인 실패는 하루를 쓰지 않고 1시간 뒤 재시도·화면 안내, 신고와 확인이 겹쳐도 덮지 않음.
+- 테스트 tests/hub.test.js 5건·reportbell.test.js 1건. 안내서 faq.html 질문 1개. CHANGELOG는 버전 섹션이 없어 안 씀(배포 때 함께).
 - 미확인: 실제 허브 서버·리스 화면에서 종 모양(e2e smoke 4건 실패는 이전부터). 옛 신고(키 없음)는 종에 안 나옴.
 
 ## lore-lua (2026-11-23, regress-rename e1c7c040에서 분기) — 로어북 규칙 Lua 엔진 · **v2.2.44 릴리스**(아카 글 docs/arca/lorelua-2.2.44.html + img/lorelua-2.2.44/, e2e run-lorelua)
