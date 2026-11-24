@@ -193,3 +193,45 @@ test("디스코드가 거절하면 이유를 남기고, 시험 버튼으로 확�
   assert.equal(good.summary().discord.last.ok, true);
   fake.close(); bad.store.flush(); good.store.flush();
 });
+
+test("신고마다 확인 키를 주고, 키로는 상태·답장만 보이며 답장·상태가 바뀌면 changedAt이 오른다", () => withServer(async ({ base }) => {
+  const post = (p, b, h = {}) => fetch(base + p, { method: "POST", headers: { "Content-Type": "application/json", ...h }, body: JSON.stringify(b) });
+  const r = await (await post("/api/report", { id: "abcdef12-3456", v: "2.2.53", text: "비밀 내용이에요", contact: "나" })).json();
+  assert.ok(typeof r.key === "string" && r.key.length >= 12);
+  const st0 = await (await post("/api/report-status", { keys: [r.key, "없는키없는키없는키없는키"] })).json();
+  assert.equal(st0.length, 1); assert.equal(st0[0].no, r.no); assert.equal(st0[0].status, "new");
+  assert.ok(!JSON.stringify(st0).includes("비밀") && !("text" in st0[0]) && !("contact" in st0[0]));
+  const login = await fetch(base + "/login", { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "token=test-token-1234567890" });
+  const cookie = login.headers.get("set-cookie").split(";")[0];
+  const list = await (await fetch(base + "/api/admin/reports", { headers: { cookie } })).json();
+  assert.ok(!("key" in list[0]) && list[0].hasKey);   // 관리 화면에도 키는 내려보내지 않는다
+  await new Promise((ok) => setTimeout(ok, 5));
+  const up = await (await fetch(base + `/api/admin/reports/${r.no}`, { method: "PATCH", headers: { cookie, "X-Hub": "1" }, body: JSON.stringify({ status: "done", reply: " 2.2.53에서\n고쳤어요 " }) })).json();
+  assert.equal(up.reply, "2.2.53에서 고쳤어요"); assert.ok(!("key" in up));
+  const st1 = await (await post("/api/report-status", { keys: [r.key] })).json();
+  assert.equal(st1[0].status, "done"); assert.equal(st1[0].reply, "2.2.53에서 고쳤어요"); assert.ok(st1[0].changedAt > st0[0].changedAt);
+}));
+
+test("내 신고: 보내면 저장해 종이 보이고, 하루 한 번·누를 때만 묻고, 바뀌면 새 소식 → 보면 꺼진다", async () => {
+  const mem = new Map([["dusk.hub.url", "https://hub.test"]]);
+  const store = { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => { mem.set(k, v); } };
+  let status = "new", reply = "", changedAt = 1, asks = 0;
+  const api = { pluginStorage: store, nativeFetch: async (u, o) => {
+    const b = JSON.parse(o.body);
+    if (u.endsWith("/api/report")) return { ok: true, json: async () => ({ ok: true, no: 3, key: "k".repeat(16) }) };
+    if (u.endsWith("/api/report-status")) { asks++; assert.deepEqual(Object.keys(b), ["keys"]); return { ok: true, json: async () => b.keys.map((key) => ({ key, no: 3, status, reply, changedAt })) }; }
+    return { ok: true, json: async () => ({}) };
+  } };
+  const c = createClient(api, { version: "t" });
+  assert.equal((await c.myReports()).list.length, 0);
+  await c.checkReports({ force: true }); assert.equal(asks, 0);   // 신고가 없으면 묻지 않는다
+  assert.equal(await c.sendReport(await c.buildReport({ text: "첫 줄 제목\n자세히" })), 3);
+  let m = await c.myReports();
+  assert.equal(m.list.length, 1); assert.equal(m.list[0].title, "첫 줄 제목"); assert.equal(m.unseen, false);
+  status = "done"; reply = "고쳤어요"; changedAt = Date.now() + 1000;
+  await c.checkReports(); assert.equal(asks, 1);
+  await c.checkReports(); assert.equal(asks, 1);   // 하루 안에는 다시 묻지 않는다
+  m = await c.myReports(); assert.equal(m.unseen, true); assert.equal(m.list[0].reply, "고쳤어요");
+  await c.checkReports({ force: true }); assert.equal(asks, 2);
+  await c.markSeen(); assert.equal((await c.myReports()).unseen, false);
+});

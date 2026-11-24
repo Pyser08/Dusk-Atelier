@@ -9,7 +9,8 @@
 //
 // 받는 것:
 //   POST /api/ping     플러그인이 하루 한 번: {id, v, risu, addons:[{id,v,on}], mobile, host}
-//   POST /api/report   버그 신고: {id, v, text, contact, addons, env, logs}  → {no}
+//   POST /api/report   버그 신고: {id, v, text, contact, addons, env, logs}  → {no, key}
+//   POST /api/report-status  {keys:[확인 키…]} → [{key, no, status, reply, changedAt}]  (신고 내용은 돌려주지 않는다)
 //   POST /api/github   GitHub 웹후크(issues · issue_comment · pull_request). 서명(X-Hub-Signature-256) 확인
 //   그 밖에 GitHub API를 10분마다 읽어 웹후크를 놓쳐도 이슈가 들어온다.
 // 관리 화면: GET /  (ADMIN_TOKEN으로 로그인)
@@ -21,7 +22,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const DIR = __dirname;
 
 // ── 설정 ───────────────────────────────────────────────
@@ -278,11 +279,19 @@ function createHub(cfg) {
     const no = ++D.meta.reportNo; store.touch("meta");
     const env = b.env && typeof b.env === "object" ? { ua: str(b.env.ua, 300), mobile: !!b.env.mobile, lang: str(b.env.lang, 20), host: str(b.env.host, 20), screen: str(b.env.screen, 20) } : {};
     const logs = (Array.isArray(b.logs) ? b.logs : []).slice(-40).map((l) => ({ t: Number(l?.t) || 0, kind: str(l?.kind, 12), text: str(l?.text, 1500), n: Number(l?.n) || undefined }));
-    const r = { no, at: Date.now(), status: "new", memo: "", install: str(b.id, 64), v: str(b.v, 30), risu: str(b.risu, 30), text, contact: str(b.contact, 200), addons: cleanAddons(b.addons), env, logs };
+    const key = crypto.randomBytes(12).toString("base64url");   // 신고한 사람만 아는 확인 키: 상태·답장만 볼 수 있다
+    const r = { no, key, at: Date.now(), changedAt: Date.now(), reply: "", status: "new", memo: "", install: str(b.id, 64), v: str(b.v, 30), risu: str(b.risu, 30), text, contact: str(b.contact, 200), addons: cleanAddons(b.addons), env, logs };
     D.reports.push(r); store.touch("reports");
     const firstErr = logs.find((l) => l.kind !== "warn");
     notify(`🐞 버그 신고 #${no} · v${r.v}${env.mobile ? " · 모바일" : ""}\n${text.slice(0, 600)}${firstErr ? `\n\`\`\`${firstErr.text.slice(0, 400)}\`\`\`` : ""}${cfg.publicUrl ? `\n${cfg.publicUrl}/#report-${no}` : ""}`);
-    return { ok: true, no };
+    return { ok: true, no, key };
+  }
+  // 확인 키로 상태만 본다(내용·환경·연락처는 주지 않는다). 키가 없는 옛 신고는 볼 수 없다.
+  function reportStatus(b) {
+    const keys = (Array.isArray(b?.keys) ? b.keys : []).slice(0, 50).map((k) => str(k, 40)).filter((k) => k.length >= 12);
+    const out = [];
+    for (const k of keys) { const r = D.reports.find((x) => x.key && safeEq(x.key, k)); if (r) out.push({ key: k, no: r.no, status: r.status, reply: r.reply || "", changedAt: r.changedAt || r.at }); }
+    return out;
   }
 
   // GitHub 이슈 --------------------------------------------
@@ -403,6 +412,11 @@ function createHub(cfg) {
         const b = JSON.parse((await readBody(req, 256e3)).toString("utf8") || "{}");
         const r = onReport(b); return json(res, r.error ? 400 : 200, r, CORS);
       }
+      if (m === "POST" && p === "/api/report-status") {
+        if (!limit(`s:${ip}`, 30, 3600e3)) return json(res, 429, { error: "too many" }, CORS);
+        const b = JSON.parse((await readBody(req, 8e3)).toString("utf8") || "{}");
+        return json(res, 200, reportStatus(b), CORS);
+      }
       if (m === "POST" && p === "/api/github") {
         const raw = await readBody(req, 2e6);
         if (!cfg.webhookSecret) return json(res, 403, { error: "webhook secret not set" });
@@ -442,14 +456,15 @@ function createHub(cfg) {
         if (m === "POST" && rest[0] === "dedupe") return json(res, 200, { merged: dedupeLegacy() });
         if (m === "GET" && rest[0] === "rev") return json(res, 200, { rev: store.rev });
         if (m === "GET" && rest[0] === "summary") return json(res, 200, summary());
-        if (m === "GET" && rest[0] === "reports") return json(res, 200, D.reports.slice().reverse());
+        if (m === "GET" && rest[0] === "reports") return json(res, 200, D.reports.slice().reverse().map(({ key, ...r }) => ({ ...r, hasKey: !!key })));
         if (m === "PATCH" && rest[0] === "reports" && rest[1]) {
           const r = D.reports.find((x) => x.no === Number(rest[1])); if (!r) return json(res, 404, { error: "없음" });
           const b = JSON.parse((await readBody(req, 16e3)).toString("utf8") || "{}");
-          if (["new", "seen", "doing", "done", "dup"].includes(b.status)) r.status = b.status;
+          if (["new", "seen", "doing", "done", "dup"].includes(b.status) && b.status !== r.status) { r.status = b.status; r.changedAt = Date.now(); }
+          if (typeof b.reply === "string") { const t = b.reply.replace(/\s+/g, " ").trim().slice(0, 300); if (t !== (r.reply || "")) { r.reply = t; r.changedAt = Date.now(); } }
           if (typeof b.memo === "string") r.memo = b.memo.slice(0, 4000);
           if (typeof b.issue === "number" || b.issue === null) r.issue = b.issue;
-          store.touch("reports"); return json(res, 200, r);
+          store.touch("reports"); const { key, ...out } = r; return json(res, 200, { ...out, hasKey: !!key });
         }
         if (m === "DELETE" && rest[0] === "reports" && rest[1]) { D.reports = D.reports.filter((x) => x.no !== Number(rest[1])); store.touch("reports"); return json(res, 200, { ok: true }); }
         if (m === "GET" && rest[0] === "issues") return json(res, 200, Object.values(D.issues).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).map((x) => ({ ...x, unseen: isUnseen(x) })));
@@ -671,6 +686,7 @@ return '<button class="btn back" id="dback">← 목록</button><div class="dh"><
 '<div class="sec"><b>내용</b><div class="box">'+esc(r.text)+'</div></div>'+
 '<div class="sec"><b>오류 기록 <span class="chip">'+r.logs.length+'</span></b>'+(r.logs.slice().reverse().map((l,i)=>'<details class="log" style="--k:'+logK(l.kind)+'"'+(i===0&&l.kind!=="warn"?" open":"")+'><summary><span class="chip">'+esc(l.kind)+'</span><span class="s">'+esc(firstLine(l.text))+'</span><span class="kbd">'+(l.n?l.n+"번 · ":"")+(l.t?new Date(l.t).toLocaleTimeString("ko-KR"):"")+'</span></summary><pre>'+esc(l.text)+'</pre></details>').join("")||'<div class="kbd">없음</div>')+'</div>'+
 '<div class="sec"><b>애드온 <span class="chip">'+r.addons.length+'</span></b><div class="facts">'+(r.addons.map(a=>{const L=cat[a.id];const st=!a.on?"old":L&&a.v!==L?"warn":"";return '<span class="chip '+st+'" title="'+(L?"최신 v"+esc(L):"")+'">'+esc(a.id)+' <b>'+esc(a.v)+'</b>'+(a.on?"":" 꺼짐")+(st==="warn"?" ↑":"")+'</span>'}).join("")||'<span class="kbd">없음</span>')+'</div></div>'+
+'<div class="sec"><b>답장 <span class="kbd" id="rok">'+(r.hasKey?"신고한 사람의 종 알림에 보여요":"옛 신고라 신고한 사람에게 보이지 않아요")+'</span></b><input id="reply" maxlength="300" style="width:100%" placeholder="한 줄 답장 (예: 2.2.53에서 고쳤어요) · Enter로 저장" value="'+esc(r.reply||"")+'"></div>'+
 '<div class="sec"><b>메모 <span class="kbd" id="mok"></span></b><textarea id="memo" rows="3" style="width:100%" placeholder="원인·고친 버전 등 (자동 저장)">'+esc(r.memo)+'</textarea></div>'+
 '<div class="acts"><button class="btn primary" id="rissue">GitHub 이슈로 만들기</button><button class="btn" id="rcopy">마크다운 복사</button><span class="sp"></span><button class="btn danger" id="rdel">지우기</button></div>'}
 function reportMd(r){return "**버그 신고 #"+r.no+"** · v"+r.v+(r.env.mobile?" · 모바일":"")+(r.risu?" · RisuAI "+r.risu:"")+"\n\n"+r.text+"\n\n**애드온**: "+(r.addons.map(a=>a.id+" "+a.v+(a.on?"":"(꺼짐)")).join(", ")||"없음")+"\n\n"+(r.logs.length?"<details><summary>오류 기록</summary>\n\n\x60\x60\x60\n"+r.logs.slice(-12).map(l=>"["+l.kind+"] "+l.text).join("\n\n").slice(0,5000)+"\n\x60\x60\x60\n</details>\n":"")}
@@ -678,6 +694,7 @@ async function setStatus(r,v){r.status=v;await api("reports/"+r.no,{method:"PATC
 function bindReportDetail(){const r=R.find(x=>x.no===rf.sel);if(!r)return;const d=$("#det");
 $("#dback")&&($("#dback").onclick=()=>{d.classList.remove("on");rf.sel=null;drawReports()});
 $("#rs").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v)setStatus(r,v)};
+const sv=async()=>{const v=$("#reply").value.replace(/\s+/g," ").trim();if(v===(r.reply||""))return;r.reply=v;await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({reply:v})});$("#rok").textContent="저장됨"};$("#reply").onkeydown=(e)=>{e.stopPropagation();if(e.key==="Enter"){e.preventDefault();sv()}};$("#reply").onchange=sv;
 let mt;$("#memo").oninput=(e)=>{clearTimeout(mt);$("#mok").textContent="…";mt=setTimeout(async()=>{r.memo=e.target.value;await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({memo:r.memo})});$("#mok").textContent="저장됨"},700)};
 $("#rcopy").onclick=async()=>{try{await navigator.clipboard.writeText(reportMd(r));toast("복사했어요")}catch{toast("복사하지 못했어요")}};
 $("#rissue").onclick=()=>{const u="https://github.com/"+S.repo+"/issues/new?title="+encodeURIComponent("[버그 신고 #"+r.no+"] "+firstLine(r.text).slice(0,80))+"&body="+encodeURIComponent(reportMd(r).slice(0,6000));window.open(u,"_blank","noopener")};

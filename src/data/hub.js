@@ -6,7 +6,15 @@
 export const HUB_URL = "";
 export const HUB_CONFIG_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/hub.json";
 const CFG_KEY = "dusk.hub.remote", ID_KEY = "dusk.hub.id", STATS_KEY = "dusk.hub.stats", LAST_KEY = "dusk.hub.lastPing", URL_KEY = "dusk.hub.url";
+const MINE_KEY = "dusk.hub.mine", MINE_SEEN = "dusk.hub.mineSeen", MINE_LAST = "dusk.hub.mineChecked";
 const DAY = 24 * 3600e3, LOG_MAX = 60;
+
+// 내 신고 상태(2.2.53): 서버가 신고마다 확인 키를 주고, 키로만 상태·답장을 본다(내용은 서버가 돌려주지 않음 — 제목 한 줄은 이 기기에만 둔다).
+export const REPORT_STATUS = { new: "접수됨", seen: "확인했어요", doing: "고치는 중", done: "해결됐어요", dup: "중복·처리 안 함" };
+// 상태가 바뀌었는데 아직 안 본 신고가 있는지(순수): mine [{key}], st {key:{changedAt}}, seen {key:time}
+export function hasUnseen(mine, st, seen) {
+  return (mine ?? []).some((m) => { const x = st?.[m.key]; return x && Number(x.changedAt) > (Number(seen?.[m.key]) || Number(m.at) || 0); });
+}
 
 // 키·토큰처럼 보이는 글을 가린다(순수)
 export function redactSecrets(text) {
@@ -174,6 +182,49 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
       logs: withLogs ? recentLogs().slice(-40) : []
     };
   }
-  async function sendReport(report) { const r = await post("/api/report", report); return r.data?.no ?? null; }
-  return { url, installId, statsOn, setStats, pingSoon, buildReport, sendReport, configured: async () => !!(await url()) || !!(await url(true)) };
+  // 내 신고(이 기기에만): [{no, key, at, title}]
+  const jget = async (k, d) => { try { return JSON.parse((await lget(k)) || "null") ?? d; } catch { return d; } };
+  const subs = new Set();
+  const emit = () => { for (const f of subs) { try { f(); } catch { /* 무시 */ } } };
+  let stCache = null;   // {key: {no,status,reply,changedAt}}
+  async function myReports() {
+    const mine = await jget(MINE_KEY, []), st = stCache ?? (stCache = (await jget(MINE_KEY + ".st", {})) || {}), seen = await jget(MINE_SEEN, {});
+    return { list: mine.slice().reverse().map((m) => ({ ...m, ...(st[m.key] ?? {}), unseen: hasUnseen([m], st, seen) })), unseen: hasUnseen(mine, st, seen) };
+  }
+  // 하루 한 번(force면 바로) 서버에 상태를 묻는다. 신고가 없으면 아무것도 보내지 않는다.
+  async function checkReports({ force = false } = {}) {
+    const mine = await jget(MINE_KEY, []);
+    if (!mine.length) return myReports();
+    const last = Number(await lget(MINE_LAST)) || 0;
+    if (!force && Date.now() - last < DAY) return myReports();
+    await lset(MINE_LAST, String(Date.now()));
+    const r = await post("/api/report-status", { keys: mine.map((m) => m.key) }).catch(() => null);
+    if (r?.ok && Array.isArray(r.data)) {
+      const st = {};
+      for (const x of r.data) if (x?.key) st[x.key] = { no: x.no, status: String(x.status ?? ""), reply: String(x.reply ?? "").slice(0, 300), changedAt: Number(x.changedAt) || 0 };
+      stCache = st; await lset(MINE_KEY + ".st", JSON.stringify(st)); emit();
+    }
+    return myReports();
+  }
+  async function markSeen() {
+    const mine = await jget(MINE_KEY, []), seen = {}, now = Date.now();
+    for (const m of mine) seen[m.key] = Math.max(now, Number(stCache?.[m.key]?.changedAt) || 0);
+    await lset(MINE_SEEN, JSON.stringify(seen)); emit();
+  }
+  async function sendReport(report) {
+    const r = await post("/api/report", report);
+    const no = r.data?.no ?? null, key = typeof r.data?.key === "string" ? r.data.key : "";
+    if (no && key) {
+      const mine = await jget(MINE_KEY, []);
+      const title = String(report?.text ?? "").split("\n").find((l) => l.trim())?.trim().slice(0, 80) ?? "";
+      mine.push({ no, key, at: Date.now(), title });
+      await lset(MINE_KEY, JSON.stringify(mine.slice(-30)));
+      stCache = { ...(stCache ?? (await jget(MINE_KEY + ".st", {}))), [key]: { no, status: "new", reply: "", changedAt: Date.now() } };
+      await lset(MINE_KEY + ".st", JSON.stringify(stCache));
+      await markSeen();
+    }
+    return no;
+  }
+  const onReports = (f) => { subs.add(f); return () => subs.delete(f); };
+  return { url, installId, statsOn, setStats, pingSoon, buildReport, sendReport, myReports, checkReports, markSeen, onReports, configured: async () => !!(await url()) || !!(await url(true)) };
 }
