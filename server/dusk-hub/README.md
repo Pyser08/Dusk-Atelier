@@ -7,6 +7,14 @@
 - GitHub 이슈·PR: 웹후크로 바로 받고, 10분마다 API로도 읽어서 놓치지 않습니다. 새 활동은 표시됩니다.
 - 디스코드 알림(선택): 새 신고·새 이슈·새 댓글
 
+## 자동 업데이트
+
+서버는 한 시간마다 GitHub main의 `hub.cjs`를 확인합니다. 바뀌었으면 문법 검사를 거쳐 바꿔 끼우고(이전 파일은 `hub.cjs.bak`), 스스로 끝납니다. 그러면 pm2(또는 systemd)가 새 파일로 다시 켭니다.
+- 관리 화면 개요 맨 아래에서 상태를 보고 **지금 업데이트**를 누를 수 있습니다.
+- 손으로 할 때: `node hub.cjs --update && pm2 restart dusk-hub`
+- 끄려면 `hub.config.json`에 `"AUTO_UPDATE": "0"`을 넣습니다.
+- 되돌리기: `cp hub.cjs.bak hub.cjs && pm2 restart dusk-hub`
+
 ## 앱으로 설치
 
 관리 화면은 웹앱이라 홈 화면이나 PC에 앱처럼 깔 수 있습니다(https 주소에서만).
