@@ -111,47 +111,125 @@ function createHub(cfg) {
   const store = createStore(cfg.dataDir);
   const D = store.data;
   const limit = rateLimiter();
+  const vparts = (v) => String(v ?? "").split(/[.-]/).map((x) => (/^\d+$/.test(x) ? Number(x) : -1));
+  const vcmp = (a, b) => { const x = vparts(a), y = vparts(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] ?? 0) - (y[i] ?? 0); if (d) return d; } return 0; };
 
   function notify(text) {
     if (!cfg.discordWebhook) return;
     fetch(cfg.discordWebhook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: text.slice(0, 1900) }) }).catch((e) => console.error("[hub] 디스코드 알림 실패", e.message));
   }
 
+  // 카탈로그: 애드온 이름·최신 버전, 본체 최신 버전(한 시간마다 GitHub에서 읽음) ----------
+  const branchOf = (r) => r.split("/").slice(0, 2).join("/");
+  let catalog = { core: "", addons: {}, at: 0 };
+  async function loadCatalog() {
+    const raw = (b, f) => fetch(`https://raw.githubusercontent.com/${branchOf(cfg.repo)}/${b}/${f}?t=${Math.floor(Date.now() / 6e4)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const [man, pkg] = await Promise.all([raw("addons", "addons/addons.json"), raw("main", "package.json")]);
+    const addons = {};
+    for (const a of man?.addons ?? []) if (a?.id) addons[a.id] = { name: str(a.name, 80), version: str(a.version, 30) };
+    if (Object.keys(addons).length || pkg?.version) catalog = { core: str(pkg?.version ?? catalog.core, 30), addons: Object.keys(addons).length ? addons : catalog.addons, at: Date.now() };
+    return catalog;
+  }
+
   // 통계 -------------------------------------------------
+  // 같은 사람 합치기: 옛 ID(from)의 기록을 새 ID(to)로 옮기고 옛 ID는 지운다. 일별 사용자 목록도 바꾼다.
+  function mergeInstall(from, to) {
+    const a = D.installs[from], b = D.installs[to];
+    if (!a || !b || from === to) return false;
+    b.first = Math.min(a.first ?? Date.now(), b.first ?? Date.now());
+    if (!b.fp && a.fp) b.fp = a.fp;
+    b.merged = (b.merged ?? 0) + 1 + (a.merged ?? 0);
+    delete D.installs[from];
+    for (const [d, ids] of Object.entries(D.daily)) {
+      if (!ids.includes(from)) continue;
+      const next = ids.filter((x) => x !== from);
+      if (!next.includes(to)) next.push(to);
+      D.daily[d] = next;
+    }
+    (D.meta.aliases ??= {})[from] = to;
+    store.touch("installs"); store.touch("daily"); store.touch("meta");
+    return true;
+  }
+  // 새 ID가 처음 왔을 때: 같은 기기 지문의 기존 기록 중, 버전이 같거나 낮고 이 핑보다 앞서 조용해진 것을 같은 사람으로 본다.
+  function findSame(id, fp, v) {
+    if (!fp) return null;
+    let best = null;
+    for (const [k, x] of Object.entries(D.installs)) {
+      if (k === id || x.fp !== fp) continue;
+      if (x.v && v && vcmp(v, x.v) < 0) continue;            // 새 ID가 더 낮은 버전이면 다른 기기
+      if (Date.now() - x.last > 60 * 864e5) continue;          // 두 달 넘게 끊긴 건 남겨 둔다
+      if (!best || x.last > best[1].last) best = [k, x];
+    }
+    return best?.[0] ?? null;
+  }
+  // 지문이 없던 옛 기록 정리: 한쪽이 끊긴 직후(36시간 안) 다른 쪽이 같은 환경·같거나 높은 버전으로 시작했으면 같은 사람으로 본다.
+  function dedupeLegacy() {
+    const list = Object.entries(D.installs).filter(([, x]) => !x.fp).sort((p, q) => p[1].first - q[1].first);
+    let n = 0;
+    for (let i = 0; i < list.length; i++) {
+      const [ka, a] = list[i]; if (!D.installs[ka]) continue;
+      for (let j = i + 1; j < list.length; j++) {
+        const [kb, b] = list[j]; if (!D.installs[kb]) continue;
+        const sameEnv = a.mobile === b.mobile && (a.host || "") === (b.host || "");
+        const handoff = b.first >= a.first && b.first - a.last < 36 * 3600e3 && a.last <= b.last;
+        const upgrade = !a.v || !b.v || vcmp(b.v, a.v) >= 0;
+        if (sameEnv && handoff && upgrade) { mergeInstall(ka, kb); n++; break; }
+      }
+    }
+    return n;
+  }
   function onPing(b) {
-    const id = str(b.id, 64);
+    let id = str(b.id, 64);
     if (!/^[A-Za-z0-9-]{8,64}$/.test(id)) return { error: "bad id" };
+    id = D.meta.aliases?.[id] ?? id;
+    const fp = /^[a-f0-9]{16}$/.test(String(b.fp ?? "")) ? String(b.fp) : "";
     const now = Date.now();
+    const isNew = !D.installs[id];
     const cur = D.installs[id] ?? { first: now };
     Object.assign(cur, { last: now, v: str(b.v, 30), risu: str(b.risu, 30), mobile: !!b.mobile, host: str(b.host, 20), addons: cleanAddons(b.addons) });
+    if (fp) cur.fp = fp;
     D.installs[id] = cur; store.touch("installs");
     const d = today(now);
     const day = (D.daily[d] ??= []);
     if (!day.includes(id)) { day.push(id); store.touch("daily"); }
+    if (isNew && fp) { const same = findSame(id, fp, cur.v); if (same) mergeInstall(same, id); }
     const keep = Object.keys(D.daily).sort().slice(0, -90);
     for (const k of keep) delete D.daily[k];
     return { ok: true };
   }
+
   function summary() {
     const now = Date.now(), ins = Object.values(D.installs);
     const act = (days) => ins.filter((i) => now - i.last < days * 864e5);
     const a7 = act(7), a30 = act(30);
-    const count = (list, f) => { const m = {}; for (const i of list) for (const k of [].concat(f(i))) if (k) m[k] = (m[k] ?? 0) + 1; return Object.entries(m).sort((x, y) => y[1] - x[1]); };
     const series = [];
     for (let i = 29; i >= 0; i--) { const d = today(now - i * 864e5); series.push([d, (D.daily[d] ?? []).length]); }
-    const newIssues = Object.values(D.issues).filter((x) => x.state === "open" && isUnseen(x)).length;
+    const fresh = []; for (let i = 13; i >= 0; i--) { const d0 = now - i * 864e5; fresh.push([today(d0), ins.filter((x) => today(x.first) === today(d0)).length]); }
+    // 본체 버전: 새 버전부터
+    const cv = {}; for (const i of a7) if (i.v) cv[i.v] = (cv[i.v] ?? 0) + 1;
+    const latestCore = catalog.core || Object.keys(cv).sort(vcmp).pop() || "";
+    const core = Object.entries(cv).sort((x, y) => vcmp(y[0], x[0])).map(([v, c]) => ({ v, c, latest: v === latestCore, old: latestCore && vcmp(v, latestCore) < 0 }));
+    // 애드온: 사용자 수 많은 순, 버전은 새 버전부터
+    const am = {};
+    for (const i of a7) for (const a of i.addons) { const x = (am[a.id] ??= { id: a.id, installed: 0, on: 0, versions: {} }); x.installed++; if (a.on) x.on++; x.versions[a.v] = (x.versions[a.v] ?? 0) + 1; }
+    for (const id of Object.keys(catalog.addons)) am[id] ??= { id, installed: 0, on: 0, versions: {} };
+    const addons = Object.values(am).map((x) => {
+      const latest = catalog.addons[x.id]?.version || Object.keys(x.versions).sort(vcmp).pop() || "";
+      const versions = Object.entries(x.versions).sort((p, q) => vcmp(q[0], p[0])).map(([v, c]) => ({ v, c, latest: v === latest, old: latest && vcmp(v, latest) < 0 }));
+      const upToDate = versions.filter((v) => v.latest || !v.old).reduce((n, v) => n + v.c, 0);
+      return { id: x.id, name: catalog.addons[x.id]?.name || x.id, listed: !!catalog.addons[x.id], latest, installed: x.installed, on: x.on, upToDate, versions };
+    }).sort((p, q) => q.installed - p.installed || p.name.localeCompare(q.name));
+    const issues = Object.values(D.issues);
     return {
       total: ins.length, d1: act(1).length, d7: a7.length, d30: a30.length,
       mobile7: a7.filter((i) => i.mobile).length,
-      versions: count(a7, (i) => i.v).slice(0, 15),
-      addons: count(a7, (i) => i.addons.filter((a) => a.on).map((a) => a.id)),
-      addonVersions: count(a7, (i) => i.addons.map((a) => `${a.id}@${a.v}`)).slice(0, 60),
-      series,
-      reports: { open: D.reports.filter((r) => r.status !== "done" && r.status !== "dup").length, new: D.reports.filter((r) => r.status === "new").length, total: D.reports.length },
-      issues: { open: Object.values(D.issues).filter((x) => x.state === "open" && !x.pr).length, unseen: newIssues, syncedAt: D.meta.issuesSyncedAt },
-      repo: cfg.repo, version: VERSION
+      core, latestCore, addons, series, fresh,
+      reports: { open: D.reports.filter((r) => !["done", "dup"].includes(r.status)).length, new: D.reports.filter((r) => r.status === "new").length, total: D.reports.length },
+      issues: { open: issues.filter((x) => x.state === "open" && !x.pr).length, prs: issues.filter((x) => x.state === "open" && x.pr).length, unseen: issues.filter((x) => x.state === "open" && isUnseen(x)).length, syncedAt: D.meta.issuesSyncedAt },
+      catalogAt: catalog.at, repo: cfg.repo, version: VERSION
     };
   }
+
 
   // 버그 신고 ----------------------------------------------
   function onReport(b) {
@@ -307,6 +385,7 @@ function createHub(cfg) {
         const rest = p.slice("/api/admin/".length).split("/");
         if (m === "GET" && rest[0] === "sessions") { const me = sidOf(req); return json(res, 200, Object.entries(D.sessions).map(([k, v]) => ({ id: k.slice(0, 12), me: k === me, ...v })).sort((a, b) => b.last - a.last)); }
         if (m === "DELETE" && rest[0] === "sessions" && rest[1]) { for (const k of Object.keys(D.sessions)) if (k.startsWith(rest[1]) && k !== sidOf(req)) delete D.sessions[k]; store.touch("sessions"); return json(res, 200, { ok: true }); }
+        if (m === "POST" && rest[0] === "dedupe") return json(res, 200, { merged: dedupeLegacy() });
         if (m === "GET" && rest[0] === "rev") return json(res, 200, { rev: store.rev });
         if (m === "GET" && rest[0] === "summary") return json(res, 200, summary());
         if (m === "GET" && rest[0] === "reports") return json(res, 200, D.reports.slice().reverse());
@@ -323,7 +402,7 @@ function createHub(cfg) {
         if (m === "POST" && rest[0] === "issues" && rest[2] === "seen") { const x = D.issues[rest[1]]; if (x) { x.seenAt = Date.now(); store.touch("issues"); } return json(res, 200, { ok: true }); }
         if (m === "POST" && rest[0] === "issues" && rest[1] === "seen-all") { for (const x of Object.values(D.issues)) x.seenAt = Date.now(); store.touch("issues"); return json(res, 200, { ok: true }); }
         if (m === "GET" && rest[0] === "issues" && rest[2] === "comments") return json(res, 200, await loadComments(Number(rest[1])));
-        if (m === "POST" && rest[0] === "sync") return json(res, 200, { got: await syncIssues() });
+        if (m === "POST" && rest[0] === "sync") { const [got] = await Promise.all([syncIssues(), loadCatalog()]); return json(res, 200, { got }); }
         return json(res, 404, { error: "없음" });
       }
       json(res, 404, { error: "not found" });
@@ -334,132 +413,254 @@ function createHub(cfg) {
       json(res, 500, { error: String(e.message ?? e).slice(0, 200) });
     }
   }
-  return { handle, store, syncIssues, onPing, onReport, onGithubHook, summary };
+  try { const n = dedupeLegacy(); if (n) console.log(`[hub] 겹친 옛 기록 ${n}건을 합쳤어요`); } catch (e) { console.error("[hub] 중복 정리 실패", e.message); }
+  return { handle, store, syncIssues, loadCatalog, dedupeLegacy, onPing, onReport, onGithubHook, summary };
 }
 
 // ── 화면 ─────────────────────────────────────────────────
-const BASE_CSS = `
-:root{--bg:#f6f5f2;--panel:#fff;--line:#e5e2dc;--text:#1d1b18;--mute:#77716a;--accent:#8a5cf6;--accent-soft:#efe9ff;--ok:#1f9d6b;--warn:#c77d0a;--err:#d0444b;--chip:#f0eeea}
-@media (prefers-color-scheme:dark){:root{--bg:#141317;--panel:#1c1b21;--line:#2c2a33;--text:#ecebf0;--mute:#9a96a6;--accent:#a98bff;--accent-soft:#2a2340;--ok:#3cc28e;--warn:#e3a43a;--err:#f06a70;--chip:#26242d}}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-button,input,select,textarea{font:inherit;color:inherit}
-.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 12px;cursor:pointer}.btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+// Dusk 글래스(황혼) 스타일. 바깥 배경은 빛 번짐, 카드는 반투명 유리, 내용 카드 왼쪽엔 기능 색 빛 막대.
+const BASE_CSS = String.raw`
+:root{--bg:#160f2b;--b1:rgba(255,110,180,.42);--b2:rgba(100,120,255,.45);--b3:rgba(255,180,100,.30);--b4:rgba(150,90,255,.36);
+--acc:#ff9a76;--acc2:#b07cff;--tint:#ffd9c7;--grad:linear-gradient(90deg,var(--acc),var(--acc2));--glow:rgba(255,154,118,.45);
+--glass:color-mix(in srgb,var(--bg) 62%,rgba(255,255,255,.5));--glass2:rgba(255,255,255,.07);--glass3:rgba(255,255,255,.12);--gline:rgba(255,255,255,.14);
+--hi:inset 0 1px 0 rgba(255,255,255,.14);--shadow:0 10px 34px rgba(0,0,0,.32);--blur:blur(22px) saturate(140%);
+--text:#f3f0fb;--sub:rgba(243,240,251,.74);--mute:rgba(243,240,251,.54);--line:rgba(255,255,255,.09);
+--ok:#4fdca8;--warn:#ffc35c;--err:#ff6b81;--pink:#e98bd6;--blue:#6f9dff;--mint:#3fcfa6;--orange:#ff8a5c;--r2:12px;--r3:18px}
+*{box-sizing:border-box}html{background:var(--bg)}
+body{margin:0;min-height:100vh;color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+background:radial-gradient(40% 45% at 12% 18%,var(--b1),transparent 70%),radial-gradient(45% 50% at 88% 78%,var(--b2),transparent 70%),radial-gradient(35% 40% at 70% 8%,var(--b3),transparent 70%),radial-gradient(40% 45% at 30% 95%,var(--b4),transparent 70%),var(--bg);background-attachment:fixed}
+a{color:var(--tint)}button,input,select,textarea{font:inherit;color:inherit}
+.btn{border:1px solid var(--gline);background:var(--glass2);border-radius:10px;padding:7px 13px;cursor:pointer;white-space:nowrap;transition:.15s}
+.btn:hover{background:var(--glass3)}.btn.primary{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 0 14px var(--glow)}
+.btn.ghost{border-style:dashed;background:none}.btn.danger{color:var(--err)}.btn:disabled{opacity:.5;cursor:default}
+input,select,textarea{background:rgba(0,0,0,.22);border:1px solid var(--gline);border-radius:10px;padding:8px 11px;outline:none}
+input:focus,textarea:focus{border-color:color-mix(in srgb,var(--acc) 70%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+.glass{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--gline);border-radius:var(--r3);box-shadow:var(--shadow),var(--hi)}
+@media (prefers-reduced-transparency:reduce){.glass{backdrop-filter:none;background:color-mix(in srgb,var(--bg) 80%,#fff 8%)}}
 `;
 const LOGIN_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dusk 허브</title><style>${BASE_CSS}
-.box{max-width:340px;margin:18vh auto 0;padding:28px 24px;background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;gap:12px}
-h1{font-size:18px;margin:0}p{margin:0;color:var(--mute);font-size:13px}.bad{color:var(--err)}</style></head><body>
-<form class="box" method="post" action="/login"><h1>Dusk 허브</h1><p>비밀번호를 넣어 주세요. 이 기기는 다음부터 묻지 않아요.</p>
+.box{max-width:360px;margin:16vh auto 0;padding:30px 26px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:22px;margin:0;background:linear-gradient(90deg,#ffc27a,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+p{margin:0;color:var(--sub);font-size:13px}.bad{color:var(--err)}</style></head><body>
+<form class="box glass" method="post" action="/login"><h1>Dusk 허브</h1><p>비밀번호를 넣어 주세요. 이 기기는 다음부터 묻지 않아요.</p>
 <input type="password" name="token" autocomplete="current-password" autofocus required>
 <script>if(location.search.includes("bad"))document.write('<p class="bad">비밀번호가 맞지 않아요.</p>')</script>
 <button class="btn primary" type="submit">들어가기</button></form></body></html>`;
 
-const ADMIN_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dusk 허브</title><style>${BASE_CSS}
-header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.bar{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.logo{font-weight:700;letter-spacing:-.01em}.logo small{color:var(--mute);font-weight:400;margin-left:6px}
-nav{display:flex;gap:4px;flex:1}@media(max-width:560px){nav{order:3;flex-basis:100%;overflow-x:auto}.logo{flex:1}}nav button{white-space:nowrap;border:0;background:none;padding:7px 12px;border-radius:8px;cursor:pointer;color:var(--mute)}
-nav button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
-.pill{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:var(--err);color:#fff;font-size:11px;line-height:18px;text-align:center;margin-left:4px}
-main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
-.stat .k{color:var(--mute);font-size:12.5px}.stat .v{font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:2px}.stat .s{color:var(--mute);font-size:12px}
-h2{font-size:15px;margin:22px 0 10px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:760px){.two{grid-template-columns:1fr}}
-.rowbar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 44px;gap:8px;align-items:center;padding:4px 0;font-size:13px}
-.rowbar .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rowbar .b{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}.rowbar .b i{display:block;height:100%;background:var(--accent);border-radius:4px}.rowbar .c{text-align:right;color:var(--mute);font-variant-numeric:tabular-nums}
-.chart{display:flex;align-items:flex-end;gap:3px;height:120px;padding-top:6px}.chart div{flex:1;background:var(--accent);opacity:.85;border-radius:3px 3px 0 0;min-height:2px;position:relative}.chart div:hover{opacity:1}
-.chart div:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);font-size:11px;padding:2px 6px;border-radius:5px;white-space:nowrap;margin-bottom:4px}
-.axis{display:flex;justify-content:space-between;color:var(--mute);font-size:11px;margin-top:4px}
-.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.tools .grow{flex:1;min-width:160px}
-.list{display:flex;flex-direction:column;gap:8px}
-.item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;cursor:pointer;display:flex;gap:12px;align-items:flex-start;min-width:0}
-.item:hover{border-color:var(--accent)}.item.unseen{border-left:3px solid var(--accent)}
-.item .main{flex:1;min-width:0}.item .t{font-weight:600;overflow-wrap:anywhere}.item .m{color:var(--mute);font-size:12.5px;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
-.item .no{color:var(--mute);font-variant-numeric:tabular-nums;min-width:44px}
-.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;background:var(--chip);color:var(--mute)}
-.tag.new{background:var(--err);color:#fff}.tag.seen{background:var(--accent-soft);color:var(--accent)}.tag.doing{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}.tag.done{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
-.tag.open{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}.tag.closed{background:var(--chip);color:var(--mute)}.tag.act{background:var(--accent);color:#fff}
-.drawer{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:20}.drawer.on{display:block}
-.drawer .in{position:absolute;right:0;top:0;bottom:0;width:min(720px,100%);background:var(--bg);border-left:1px solid var(--line);overflow:auto;padding:18px 20px 40px}
-.drawer h3{margin:0 0 4px;font-size:17px;overflow-wrap:anywhere}
-pre{white-space:pre-wrap;word-break:break-word;background:var(--chip);padding:10px 12px;border-radius:8px;font-size:12px;margin:6px 0;max-height:360px;overflow:auto}
-.sec{margin-top:16px}.sec>b{display:block;font-size:12.5px;color:var(--mute);margin-bottom:6px;font-weight:600}
-.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:13px}.kv span:nth-child(odd){color:var(--mute)}
-.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{white-space:nowrap;border:0;background:var(--panel);padding:6px 12px;cursor:pointer;color:var(--mute)}.seg button.on{background:var(--accent);color:#fff}
-.empty{color:var(--mute);text-align:center;padding:40px 0}
-.log{border-left:3px solid var(--line);padding-left:10px;margin:6px 0}.log.error,.log.uncaught,.log.rejection{border-color:var(--err)}.log.warn{border-color:var(--warn)}
-.comment{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0}.comment .m{color:var(--mute);font-size:12px;margin-bottom:4px}
-.mute{color:var(--mute)}
-</style></head><body>
-<header><div class="bar"><span class="logo">Dusk 허브<small id="repo"></small></span>
-<nav><button data-tab="overview" class="on">개요</button><button data-tab="reports">버그 신고<span id="rp" class="pill" hidden></span></button><button data-tab="issues">GitHub 이슈<span id="ip" class="pill" hidden></span></button></nav>
-<button class="btn" id="devbtn">로그인한 기기</button><form method="post" action="/logout"><button class="btn">나가기</button></form></div></header>
-<main id="main"></main>
-<div class="drawer" id="drawer"><div class="in" id="din"></div></div>
-<script>
-const $=(s,r=document)=>r.querySelector(s);
+const ADMIN_CSS = String.raw`
+header{position:sticky;top:0;z-index:10;padding:12px 16px 0}
+.bar{max-width:1280px;margin:0 auto;padding:10px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-radius:16px}
+.logo{font-weight:800;font-size:17px;letter-spacing:-.02em;background:linear-gradient(90deg,#ffc27a,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+nav{display:flex;gap:4px;padding:3px;border-radius:12px;background:rgba(0,0,0,.2)}
+nav button{border:0;background:none;padding:7px 14px;border-radius:9px;cursor:pointer;color:var(--sub);white-space:nowrap;display:flex;gap:6px;align-items:center}
+nav button.on{background:var(--grad);color:#fff;font-weight:600;box-shadow:0 0 12px var(--glow)}
+.pill{min-width:18px;padding:0 6px;border-radius:9px;background:var(--err);color:#fff;font-size:11px;line-height:18px;text-align:center;font-weight:700}
+nav button.on .pill{background:#fff;color:var(--err)}
+.sp{flex:1}.live{font-size:12px;color:var(--mute);display:flex;align-items:center;gap:6px}.live i{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+@media(max-width:700px){nav{order:3;flex-basis:100%;overflow-x:auto}.live{display:none}}
+main{max-width:1280px;margin:0 auto;padding:16px 16px 60px}
+.card{position:relative;padding:18px 20px;min-width:0}
+.card.lb::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--k,var(--acc));box-shadow:0 0 12px var(--k,var(--acc))}
+.card h2{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;white-space:nowrap}.card h2 small{font-weight:400;color:var(--mute);font-size:12px}
+.card .desc{color:var(--mute);font-size:12.5px;margin:0 0 12px}
+.g{display:grid;gap:14px}.kpis{grid-template-columns:repeat(5,minmax(0,1fr))}@media(max-width:980px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:16px 18px}.kpi .k{color:var(--sub);font-size:12.5px}.kpi .v{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin-top:4px;background:linear-gradient(180deg,#fff,var(--tint));-webkit-background-clip:text;background-clip:text;color:transparent}
+.kpi .s{color:var(--mute);font-size:12px}
+.row2{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}@media(max-width:980px){.row2{grid-template-columns:1fr}}
+.chart{display:flex;align-items:flex-end;gap:4px;height:150px;position:relative;padding-top:8px;border-bottom:1px solid var(--line)}
+.chart .gl{position:absolute;left:0;right:0;border-top:1px dashed var(--line);font-size:10.5px;color:var(--mute)}
+.chart .gl span{position:absolute;right:0;top:-15px}
+.chart .b{flex:1;border-radius:5px 5px 2px 2px;min-height:3px;background:linear-gradient(180deg,color-mix(in srgb,var(--acc2) 85%,#fff 10%),color-mix(in srgb,var(--acc2) 35%,transparent));position:relative;cursor:default}
+.chart .b.today{background:var(--grad);box-shadow:0 0 12px var(--glow)}
+.chart .b:hover::after{content:attr(data-t);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(10,8,20,.92);border:1px solid var(--gline);color:#fff;font-size:11.5px;padding:3px 8px;border-radius:7px;white-space:nowrap;z-index:2}
+.axis{display:flex;justify-content:space-between;color:var(--mute);font-size:11px;margin-top:6px}
+.todo{display:flex;flex-direction:column;gap:8px}
+.todo button{all:unset;cursor:pointer;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:var(--r2);background:var(--glass2)}
+.todo button:hover{background:var(--glass3)}.todo .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo .n{font-size:11px;color:var(--mute)}.empty{color:var(--mute);text-align:center;padding:26px 0;font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--k,var(--acc));box-shadow:0 0 8px var(--k,var(--acc))}
+.stack{display:flex;height:14px;border-radius:7px;overflow:hidden;background:rgba(0,0,0,.25);margin:6px 0 12px}
+.stack i{display:block;height:100%}
+.leg{display:flex;flex-direction:column;gap:6px}.leg div{display:flex;gap:8px;align-items:center;font-size:13px}.leg .c{margin-left:auto;color:var(--sub);font-variant-numeric:tabular-nums}
+.sw{width:10px;height:10px;border-radius:3px;flex:none}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;background:var(--glass2);border:1px solid var(--line);font-size:12px;color:var(--sub);white-space:nowrap}
+.chip b{color:var(--text);font-weight:600}.chip.latest{background:color-mix(in srgb,var(--ok) 18%,transparent);border-color:color-mix(in srgb,var(--ok) 45%,transparent);color:var(--ok)}
+.chip.latest b{color:#d8fff0}.chip.old{opacity:.8;border-style:dashed}.chip.hot{background:var(--grad);color:#fff;border:0}
+.chip.err{background:color-mix(in srgb,var(--err) 18%,transparent);border-color:color-mix(in srgb,var(--err) 40%,transparent);color:#ffc2cc}
+.chip.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);border-color:color-mix(in srgb,var(--warn) 40%,transparent);color:#ffe2a8}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.tools .grow{flex:1;min-width:170px}
+.seg{display:inline-flex;padding:3px;border-radius:11px;background:rgba(0,0,0,.22);flex-wrap:wrap}
+.seg button{border:0;background:none;padding:5px 11px;border-radius:8px;cursor:pointer;color:var(--sub);white-space:nowrap;font-size:13px}
+.seg button.on{background:var(--glass3);color:#fff;font-weight:600}.seg button .c{opacity:.6;margin-left:4px;font-size:11.5px}
+/* 애드온 표 */
+.adds{display:flex;flex-direction:column}
+.add{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(120px,1fr) 92px minmax(0,2fr);gap:14px;align-items:center;padding:12px 4px;border-top:1px solid var(--line)}
+.add:first-child{border-top:0}.add .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.add .nm small{color:var(--mute);font-size:11.5px}
+.add .use{font-size:12px;color:var(--sub)}.meter{height:7px;border-radius:4px;background:rgba(0,0,0,.28);overflow:hidden;margin-top:5px}.meter i{display:block;height:100%;background:var(--grad);border-radius:4px}
+.add .pct{text-align:center}.add .pct b{font-size:17px;font-variant-numeric:tabular-nums}.add .pct small{display:block;color:var(--mute);font-size:11px}
+.add .vs{display:flex;gap:5px;flex-wrap:wrap}.add.zero{opacity:.45}
+@media(max-width:820px){.add{grid-template-columns:1fr 80px}.add .use{grid-column:1/-1;order:3}.add .vs{grid-column:1/-1;order:4}}
+.good{color:var(--ok)}.mid{color:var(--warn)}.bad{color:var(--err)}
+/* 두 칸(목록 + 상세) */
+.split{display:grid;grid-template-columns:minmax(300px,410px) minmax(0,1fr);gap:14px;align-items:start}
+.listcol{padding:14px;position:sticky;top:84px;max-height:calc(100vh - 100px);display:flex;flex-direction:column}
+.listcol .items{overflow:auto;margin:0 -6px;padding:0 6px;flex:1}
+.it{display:flex;gap:10px;padding:11px 12px;border-radius:var(--r2);cursor:pointer;margin-bottom:4px;align-items:flex-start;border:1px solid transparent}
+.it:hover{background:var(--glass2)}.it.sel{background:var(--glass3);border-color:var(--gline)}
+.it .no{color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums;min-width:34px;padding-top:1px}
+.it .main{flex:1;min-width:0}.it .t{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.it .m{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;align-items:center;font-size:11.5px;color:var(--mute)}
+.it .ud{width:8px;height:8px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc);margin-top:6px;flex:none}
+.it .ud.no{background:none;box-shadow:none}
+.grp{font-size:12px;color:var(--sub);padding:10px 8px 4px;display:flex;gap:6px;align-items:center}
+.grp code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ffc2cc;font-size:11.5px}
+.detail{padding:22px 24px;min-height:300px}
+.detail h3{margin:2px 0 10px;font-size:19px;line-height:1.35;overflow-wrap:anywhere}
+.dh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--mute);font-size:12.5px}
+.sec{margin-top:18px}.sec>b{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:600;text-transform:none}
+.box{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13.5px}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;max-height:320px;overflow:auto}
+details.log{border:1px solid var(--line);border-left:3px solid var(--k,var(--mute));border-radius:10px;margin:6px 0;background:rgba(0,0,0,.18)}
+details.log summary{cursor:pointer;padding:8px 12px;font-size:12.5px;display:flex;gap:8px;align-items:center;list-style:none}
+details.log summary::-webkit-details-marker{display:none}details.log summary .s{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace;font-size:12px}
+details.log pre{padding:0 12px 10px}
+.facts{display:flex;gap:6px;flex-wrap:wrap}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.comment{background:var(--glass2);border:1px solid var(--line);border-radius:var(--r2);padding:11px 13px;margin:8px 0}.comment .m{color:var(--mute);font-size:12px;margin-bottom:5px;display:flex;gap:8px}
+.back{display:none}
+@media(max-width:900px){.split{grid-template-columns:1fr}.listcol{position:static;max-height:none}.detail{position:fixed;inset:0;z-index:30;border-radius:0;overflow:auto;display:none;background:var(--bg)}.detail.on{display:block}.back{display:inline-flex;margin-bottom:10px}}
+.kbd{font-size:11px;color:var(--mute)}.kbd kbd{border:1px solid var(--gline);border-radius:5px;padding:0 5px;font:inherit;background:var(--glass2)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:9px 16px;border-radius:12px;background:rgba(10,8,20,.92);border:1px solid var(--gline);font-size:13px;z-index:50;opacity:0;transition:.2s;pointer-events:none}.toast.on{opacity:1}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:40;align-items:center;justify-content:center;padding:16px}.modal.on{display:flex}.modal .in{max-width:640px;width:100%;max-height:85vh;overflow:auto}
+`;
+
+const ADMIN_JS = String.raw`
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=(s)=>String(s??"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const api=async(p,o={})=>{const r=await fetch("/api/admin/"+p,{...o,headers:{"Content-Type":"application/json","X-Hub":"1",...(o.headers||{})}});if(r.status===401){location.reload();throw new Error("login")}const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);return j};
 const ago=(t)=>{if(!t)return"-";const s=(Date.now()-new Date(t).getTime())/1e3;if(s<60)return"방금";if(s<3600)return Math.floor(s/60)+"분 전";if(s<86400)return Math.floor(s/3600)+"시간 전";if(s<86400*30)return Math.floor(s/86400)+"일 전";return new Date(t).toLocaleDateString("ko-KR")};
-const ST={new:"새 신고",seen:"확인함",doing:"고치는 중",done:"해결",dup:"중복·무시"};
-let tab="overview",S=null,R=[],I=[],rf={q:"",st:"open"},inf={q:"",st:"open",kind:"issue"};
+const toast=(t)=>{const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),1800)};
+const firstLine=(s)=>String(s||"").split("\n")[0];
+const ST={new:["새 신고","err"],seen:["확인함",""],doing:["고치는 중","warn"],done:["해결","latest"],dup:["중복·무시","old"]};
+const hue=(s)=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))%360;return h};
+const label=(l)=>'<span class="chip" style="border-color:hsla('+hue(l)+',80%,70%,.45);color:hsl('+hue(l)+',85%,80%)">'+esc(l)+'</span>';
+let tab=localStorage.getItem("hub.tab")||"overview",S=null,R=[],I=[];
+const rf={q:"",st:"open",group:localStorage.getItem("hub.group")==="1",sel:null};
+const inf={q:"",st:"open",kind:"issue",sel:null};
+let addFilter=localStorage.getItem("hub.addf")||"installed";
 function pills(){const a=S?.reports?.new||0,b=S?.issues?.unseen||0;$("#rp").hidden=!a;$("#rp").textContent=a;$("#ip").hidden=!b;$("#ip").textContent=b;document.title=(a+b?"("+(a+b)+") ":"")+"Dusk 허브"}
-async function load(){S=await api("summary");$("#repo").textContent=S.repo;pills();render()}
-function bars(list,max){const top=Math.max(1,...list.map(x=>x[1]));return list.slice(0,max).map(([n,c])=>'<div class="rowbar"><span class="n" title="'+esc(n)+'">'+esc(n)+'</span><span class="b"><i style="width:'+(c/top*100)+'%"></i></span><span class="c">'+c+'</span></div>').join("")||'<div class="mute">아직 없음</div>'}
-function overview(){const s=S;const top=Math.max(1,...s.series.map(x=>x[1]));
-return '<div class="grid">'+
-[["오늘 켠 사람",s.d1,"최근 24시간"],["주간 사용자",s.d7,"7일 안에 켬"],["월간 사용자",s.d30,"30일 안에 켬"],["모든 설치",s.total,"한 번이라도 켬"],["새 버그 신고",s.reports.new,"처리 안 됨 "+s.reports.open+"건"],["열린 이슈",s.issues.open,"새 활동 "+s.issues.unseen+"건"]].map(([k,v,t])=>'<div class="card stat"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+t+'</div></div>').join("")+'</div>'+
-'<h2>최근 30일 일일 사용자</h2><div class="card"><div class="chart">'+s.series.map(([d,c])=>'<div style="height:'+(c/top*100)+'%" data-t="'+d.slice(5)+' · '+c+'명"></div>').join("")+'</div><div class="axis"><span>'+s.series[0][0].slice(5)+'</span><span>오늘</span></div></div>'+
-'<div class="two"><div><h2>애드온별 사용자 <span class="mute" style="font-weight:400;font-size:12px">(주간 사용자 중 켜 둔 사람)</span></h2><div class="card">'+bars(s.addons,30)+'</div></div>'+
-'<div><h2>본체 버전 <span class="mute" style="font-weight:400;font-size:12px">(주간)</span></h2><div class="card">'+bars(s.versions,15)+'</div><h2>환경</h2><div class="card">'+bars([["모바일",s.mobile7],["PC",s.d7-s.mobile7]],2)+'</div></div></div>'+
-'<h2>애드온 버전 분포</h2><div class="card">'+bars(s.addonVersions,60)+'</div>'+
-'<p class="mute" style="font-size:12px;margin-top:16px">이슈 마지막 동기화: '+ago(s.issues.syncedAt)+' · 허브 v'+s.version+'</p>'}
-function reportsView(){const q=rf.q.toLowerCase();const list=R.filter(r=>(rf.st==="all"||(rf.st==="open"?!["done","dup"].includes(r.status):r.status===rf.st))&&(!q||(r.text+" "+r.contact+" "+r.v+" "+r.logs.map(l=>l.text).join(" ")).toLowerCase().includes(q)));
-return '<div class="tools"><input class="grow" id="rq" placeholder="내용·오류·버전으로 찾기" value="'+esc(rf.q)+'"><span class="seg" id="rst">'+[["open","처리 전"],["new","새 신고"],["doing","고치는 중"],["done","해결"],["all","전체"]].map(([k,l])=>'<button data-v="'+k+'" class="'+(rf.st===k?"on":"")+'">'+l+'</button>').join("")+'</span></div>'+
-'<div class="list">'+(list.map(r=>{const e=r.logs.find(l=>l.kind!=="warn"&&l.kind!=="log")||r.logs[0];return '<div class="item'+(r.status==="new"?" unseen":"")+'" data-r="'+r.no+'"><span class="no">#'+r.no+'</span><div class="main"><div class="t">'+esc(r.text.split("\\n")[0].slice(0,140))+'</div><div class="m"><span class="tag '+r.status+'">'+ST[r.status]+'</span><span>v'+esc(r.v)+'</span>'+(r.env.mobile?'<span>모바일</span>':'')+'<span>애드온 '+r.addons.length+'개</span>'+(e?'<span style="color:var(--err)">'+esc(e.text.split("\\n")[0].slice(0,90))+'</span>':'')+'<span>'+ago(r.at)+'</span></div></div></div>'}).join("")||'<div class="empty">신고가 없어요</div>')+'</div>'}
-function issuesView(){const q=inf.q.toLowerCase();const list=I.filter(x=>(inf.kind==="all"||(inf.kind==="pr"?x.pr:!x.pr))&&(inf.st==="all"||(inf.st==="unseen"?x.unseen&&x.state==="open":x.state===inf.st))&&(!q||(x.title+" "+x.body+" "+x.user+" "+x.labels.join(" ")).toLowerCase().includes(q)));
-return '<div class="tools"><input class="grow" id="iq" placeholder="제목·내용·작성자·라벨로 찾기" value="'+esc(inf.q)+'"><span class="seg" id="ist">'+[["unseen","새 활동"],["open","열림"],["closed","닫힘"],["all","전체"]].map(([k,l])=>'<button data-v="'+k+'" class="'+(inf.st===k?"on":"")+'">'+l+'</button>').join("")+'</span><span class="seg" id="ikind">'+[["issue","이슈"],["pr","PR"],["all","둘 다"]].map(([k,l])=>'<button data-v="'+k+'" class="'+(inf.kind===k?"on":"")+'">'+l+'</button>').join("")+'</span><button class="btn" id="sync">지금 동기화</button><button class="btn" id="seenall">모두 읽음</button></div>'+
-'<div class="list">'+(list.map(x=>'<div class="item'+(x.unseen&&x.state==="open"?" unseen":"")+'" data-i="'+x.number+'"><span class="no">#'+x.number+'</span><div class="main"><div class="t">'+esc(x.title)+'</div><div class="m"><span class="tag '+x.state+'">'+(x.state==="open"?"열림":"닫힘")+'</span>'+(x.unseen&&x.state==="open"?'<span class="tag act">새 활동</span>':'')+(x.pr?'<span class="tag">PR</span>':'')+x.labels.map(l=>'<span class="tag">'+esc(l)+'</span>').join("")+'<span>'+esc(x.user)+'</span><span>댓글 '+x.comments+'</span><span>'+ago(x.updatedAt)+'</span></div></div></div>').join("")||'<div class="empty">'+(I.length?"조건에 맞는 이슈가 없어요":"아직 불러온 이슈가 없어요. ‘지금 동기화’를 눌러 보세요")+'</div>')+'</div>'}
-async function render(){const m=$("#main");document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
-if(tab==="overview")m.innerHTML=overview();
-if(tab==="reports"){R=await api("reports");m.innerHTML=reportsView();bindR()}
-if(tab==="issues"){I=await api("issues");m.innerHTML=issuesView();bindI()}}
-function bindR(){const m=$("#main");$("#rq").oninput=(e)=>{rf.q=e.target.value;const p=e.target.selectionStart;m.innerHTML=reportsView();bindR();const i=$("#rq");i.focus();i.setSelectionRange(p,p)};$("#rst").onclick=(e)=>{if(e.target.dataset.v){rf.st=e.target.dataset.v;m.innerHTML=reportsView();bindR()}};m.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>openReport(+el.dataset.r))}
-function bindI(){const m=$("#main");$("#iq").oninput=(e)=>{inf.q=e.target.value;const p=e.target.selectionStart;m.innerHTML=issuesView();bindI();const i=$("#iq");i.focus();i.setSelectionRange(p,p)};
-$("#ist").onclick=(e)=>{if(e.target.dataset.v){inf.st=e.target.dataset.v;m.innerHTML=issuesView();bindI()}};$("#ikind").onclick=(e)=>{if(e.target.dataset.v){inf.kind=e.target.dataset.v;m.innerHTML=issuesView();bindI()}};
-$("#sync").onclick=async(e)=>{e.target.disabled=true;e.target.textContent="동기화 중…";try{await api("sync",{method:"POST"});await load()}catch(err){alert(err.message)}};
-$("#seenall").onclick=async()=>{await api("issues/seen-all",{method:"POST"});await load()};m.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>openIssue(+el.dataset.i))}
-function drawer(html){$("#din").innerHTML=html;$("#drawer").classList.add("on")}
-$("#drawer").onclick=(e)=>{if(e.target.id==="drawer"){$("#drawer").classList.remove("on");history.replaceState(null,"",location.pathname);load()}};
-document.addEventListener("keydown",(e)=>{if(e.key==="Escape"&&$("#drawer").classList.contains("on")){$("#drawer").classList.remove("on");history.replaceState(null,"",location.pathname);load()}});
-async function openReport(no){if(!R.length)R=await api("reports");const r=R.find(x=>x.no===no);if(!r)return;history.replaceState(null,"","#report-"+no);
-if(r.status==="new"){r.status="seen";api("reports/"+no,{method:"PATCH",body:JSON.stringify({status:"seen"})})}
-drawer('<div class="mute" style="font-size:12px">버그 신고 #'+r.no+' · '+new Date(r.at).toLocaleString("ko-KR")+'</div><h3>'+esc(r.text.split("\\n")[0].slice(0,160))+'</h3>'+
-'<div class="sec"><span class="seg" id="rs">'+Object.entries(ST).map(([k,l])=>'<button data-v="'+k+'" class="'+(r.status===k?"on":"")+'">'+l+'</button>').join("")+'</span></div>'+
-'<div class="sec"><b>내용</b><pre>'+esc(r.text)+'</pre></div>'+
-'<div class="sec"><b>정보</b><div class="kv"><span>본체</span><span>v'+esc(r.v)+'</span><span>RisuAI</span><span>'+esc(r.risu||"-")+'</span><span>연락처</span><span>'+esc(r.contact||"-")+'</span><span>환경</span><span>'+esc([r.env.mobile?"모바일":"PC",r.env.host,r.env.screen,r.env.lang].filter(Boolean).join(" · "))+'</span><span>브라우저</span><span style="font-size:12px">'+esc(r.env.ua||"-")+'</span><span>설치 ID</span><span style="font-size:12px">'+esc(r.install)+'</span></div></div>'+
-'<div class="sec"><b>애드온 ('+r.addons.length+')</b><div>'+(r.addons.map(a=>'<span class="tag" style="margin:0 4px 4px 0">'+esc(a.id)+' '+esc(a.v)+(a.on?"":" (꺼짐)")+'</span>').join("")||'<span class="mute">없음</span>')+'</div></div>'+
-'<div class="sec"><b>최근 오류 기록 ('+r.logs.length+')</b>'+(r.logs.slice().reverse().map(l=>'<div class="log '+esc(l.kind)+'"><div class="mute" style="font-size:11.5px">'+esc(l.kind)+' · '+(l.t?new Date(l.t).toLocaleTimeString("ko-KR"):"")+(l.n?" · "+l.n+"번 반복":"")+'</div><pre>'+esc(l.text)+'</pre></div>').join("")||'<div class="mute">없음</div>')+'</div>'+
-'<div class="sec"><b>메모</b><textarea id="memo" rows="4" style="width:100%">'+esc(r.memo)+'</textarea><div style="display:flex;gap:8px;margin-top:8px;align-items:center"><button class="btn primary" id="msave">메모 저장</button><span class="mute" id="mok"></span><span style="flex:1"></span><button class="btn" id="rdel" style="color:var(--err)">신고 지우기</button></div></div>');
-$("#rs").onclick=async(e)=>{const v=e.target.dataset.v;if(!v)return;await api("reports/"+no,{method:"PATCH",body:JSON.stringify({status:v})});r.status=v;$("#rs").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v))};
-$("#msave").onclick=async()=>{r.memo=$("#memo").value;await api("reports/"+no,{method:"PATCH",body:JSON.stringify({memo:r.memo})});$("#mok").textContent="저장했어요"};
-$("#rdel").onclick=async()=>{if(!confirm("#"+no+" 신고를 지울까요?"))return;await api("reports/"+no,{method:"DELETE"});$("#drawer").classList.remove("on");R=[];load()}}
-async function openIssue(n){if(!I.length)I=await api("issues");const x=I.find(i=>i.number===n);if(!x)return;history.replaceState(null,"","#issue-"+n);api("issues/"+n+"/seen",{method:"POST"});x.unseen=false;
-const body=()=>'<div class="mute" style="font-size:12px">'+(x.pr?"PR":"이슈")+' #'+x.number+' · '+esc(x.user)+' · '+new Date(x.createdAt).toLocaleString("ko-KR")+'</div><h3>'+esc(x.title)+'</h3><div style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap"><span class="tag '+x.state+'">'+(x.state==="open"?"열림":"닫힘")+'</span>'+x.labels.map(l=>'<span class="tag">'+esc(l)+'</span>').join("")+'<a class="btn" style="margin-left:auto" href="'+esc(x.url)+'" target="_blank" rel="noopener">GitHub에서 열기 ↗</a></div>'+
-'<div class="sec"><b>본문</b><pre>'+esc(x.body||"(본문 없음)")+'</pre></div><div class="sec"><b>최근 댓글</b><div id="cm">'+(x.recent?.length?x.recent.map(c=>'<div class="comment"><div class="m">'+esc(c.user)+' · '+ago(c.at)+'</div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(c.body)+'</div></div>').join(""):'<div class="mute">불러오는 중…</div>')+'</div></div>';
-drawer(body());try{x.recent=await api("issues/"+n+"/comments");$("#cm").innerHTML=x.recent.length?x.recent.map(c=>'<div class="comment"><div class="m">'+esc(c.user)+' · '+ago(c.at)+' · <a href="'+esc(c.url)+'" target="_blank" rel="noopener">열기</a></div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(c.body)+'</div></div>').join(""):'<div class="mute">댓글 없음</div>'}catch(e){$("#cm").innerHTML='<div class="mute">댓글을 불러오지 못했어요: '+esc(e.message)+'</div>'}}
-async function devices(){const l=await api("sessions");drawer('<h3>로그인한 기기</h3><p class="mute" style="font-size:13px">한 번 들어간 기기는 400일 동안 다시 묻지 않아요(쓸 때마다 늘어나요). 모르는 기기가 있으면 내보내세요.</p><div class="list">'+l.map(d=>'<div class="item" style="cursor:default"><div class="main"><div class="t" style="font-weight:500;font-size:13px">'+esc(d.ua||"알 수 없는 기기")+'</div><div class="m"><span>처음 '+ago(d.at)+'</span><span>마지막 '+ago(d.last)+'</span>'+(d.me?'<span class="tag seen">지금 이 기기</span>':'')+'</div></div>'+(d.me?'':'<button class="btn" data-k="'+d.id+'">내보내기</button>')+'</div>').join("")+'</div>');$("#din").querySelectorAll("[data-k]").forEach(b=>b.onclick=async()=>{await api("sessions/"+b.dataset.k,{method:"DELETE"});devices()})}
+function setTab(t){tab=t;localStorage.setItem("hub.tab",t);$$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));render()}
+
+/* ── 개요 ── */
+function pctCls(p){return p>=80?"good":p>=50?"mid":"bad"}
+function overview(){const s=S;const top=Math.max(4,...s.series.map(x=>x[1]));const step=Math.ceil(top/4);const max=step*4;
+const latestN=s.core.filter(v=>v.latest).reduce((n,v)=>n+v.c,0),coreTotal=s.core.reduce((n,v)=>n+v.c,0)||0,latestPct=coreTotal?Math.round(latestN/coreTotal*100):0;
+const newR=R.filter(r=>r.status==="new").slice(0,4),unseen=I.filter(x=>x.unseen&&x.state==="open").slice(0,4);
+let h='<div class="g kpis">'+[["오늘 켠 사람",s.d1,"최근 24시간"],["주간 사용자",s.d7,"7일 안에 켬"],["월간 사용자",s.d30,"30일 안에 켬"],["모든 설치",s.total,"한 번이라도 켬"],["최신 본체",coreTotal?latestPct+"%":"-",s.latestCore?"v"+s.latestCore+" 사용 비율":"버전 정보 없음"]].map(([k,v,t])=>'<div class="glass kpi"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+esc(t)+'</div></div>').join("")+'</div>';
+h+='<div class="g row2" style="margin-top:14px"><section class="glass card lb" style="--k:var(--blue)"><h2>일일 사용자 <small>최근 30일 · 막대에 올리면 숫자</small></h2><div class="chart" style="margin-top:14px">'+[1,2,3,4].map(i=>'<div class="gl" style="bottom:'+(i*25)+'%"><span>'+(step*i)+'</span></div>').join("")+s.series.map(([d,c],i)=>'<div class="b'+(i===s.series.length-1?" today":"")+'" style="height:'+(c/max*100)+'%" data-t="'+d.slice(5).replace("-","/")+" · "+c+'명"></div>').join("")+'</div><div class="axis"><span>'+s.series[0][0].slice(5).replace("-","/")+'</span><span>2주 전</span><span>오늘</span></div>'+
+'<div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="kbd" style="margin-right:4px">새로 설치(14일)</span>'+s.fresh.map(([d,c])=>'<span class="chip'+(c?" hot":"")+'" title="'+d+'">'+d.slice(8)+'일 '+c+'</span>').join("")+'</div></section>'+
+'<section class="glass card lb" style="--k:var(--pink)"><h2>할 일</h2><p class="desc">눌러서 바로 열어요</p><div class="todo">'+
+(newR.map(r=>'<button data-go-r="'+r.no+'"><span class="dot" style="--k:var(--err)"></span><span class="t">'+esc(firstLine(r.text))+'</span><span class="n">#'+r.no+' · '+ago(r.at)+'</span></button>').join("")+unseen.map(x=>'<button data-go-i="'+x.number+'"><span class="dot"></span><span class="t">'+esc(x.title)+'</span><span class="n">'+(x.pr?"PR ":"이슈 ")+'#'+x.number+' · '+ago(x.updatedAt)+'</span></button>').join("")||'<div class="empty">밀린 일이 없어요</div>')+'</div></section></div>';
+// 본체 버전
+const pal=(i,v)=>v.latest?"var(--ok)":["#b07cff","#6f9dff","#e98bd6","#ffc35c","#ff8a5c","#8f8aa6"][i%6];
+h+='<div class="g row2" style="margin-top:14px"><section class="glass card lb" style="--k:var(--orange)"><h2>애드온 <small>주간 사용자 '+s.d7+'명 기준</small><span class="sp"></span><span class="seg" id="addf">'+[["installed","설치된 것"],["all","모두"],["old","옛 버전 있는 것"]].map(([k,l])=>'<button data-v="'+k+'" class="'+(addFilter===k?"on":"")+'">'+l+'</button>').join("")+'</span></h2><p class="desc">설치 수 · 최신 버전 비율 · 버전별 사람 수. 초록 칩이 최신이에요.</p><div class="adds">'+addonRows()+'</div></section>'+
+'<section class="glass card lb" style="--k:var(--mint)"><h2>본체 버전 <small>주간</small></h2><p class="desc">'+(s.latestCore?'최신 v'+esc(s.latestCore)+' · <b class="'+pctCls(latestPct)+'">'+latestPct+'%</b>가 최신을 써요':'버전 정보를 기다리는 중')+'</p>'+
+(coreTotal?'<div class="stack">'+s.core.map((v,i)=>'<i style="width:'+(v.c/coreTotal*100)+'%;background:'+pal(i,v)+'" title="v'+esc(v.v)+' · '+v.c+'명"></i>').join("")+'</div><div class="leg">'+s.core.map((v,i)=>'<div><span class="sw" style="background:'+pal(i,v)+'"></span>v'+esc(v.v)+(v.latest?' <span class="chip latest">최신</span>':v.old?'':' <span class="chip">새 버전?</span>')+'<span class="c">'+v.c+'명 · '+Math.round(v.c/coreTotal*100)+'%</span></div>').join("")+'</div>':'<div class="empty">아직 없음</div>')+
+'<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)"><b style="font-size:12px;color:var(--sub)">환경</b><div class="stack" style="margin-top:8px"><i style="width:'+(s.d7?s.mobile7/s.d7*100:0)+'%;background:var(--pink)"></i><i style="width:'+(s.d7?(s.d7-s.mobile7)/s.d7*100:0)+'%;background:var(--blue)"></i></div><div class="leg"><div><span class="sw" style="background:var(--pink)"></span>모바일<span class="c">'+s.mobile7+'명</span></div><div><span class="sw" style="background:var(--blue)"></span>PC<span class="c">'+(s.d7-s.mobile7)+'명</span></div></div></div></section></div>';
+h+='<p class="kbd" style="margin-top:16px">애드온 목록 '+(s.catalogAt?ago(s.catalogAt)+" 확인":"확인 전")+' · 이슈 '+ago(s.issues.syncedAt)+' 동기화 · 허브 v'+s.version+' · <button class="btn ghost" id="dedupe" style="padding:2px 9px;font-size:11.5px">겹친 사용자 정리</button></p>';
+return h}
+function addonRows(){let l=S.addons;if(addFilter==="installed")l=l.filter(a=>a.installed);if(addFilter==="old")l=l.filter(a=>a.versions.some(v=>v.old));
+if(!l.length)return'<div class="empty">'+(addFilter==="installed"?"아직 애드온을 쓰는 사람이 없어요":"해당하는 애드온이 없어요")+'</div>';
+return l.map(a=>{const p=a.installed?Math.round(a.upToDate/a.installed*100):0;const share=S.d7?Math.round(a.installed/S.d7*100):0;
+return '<div class="add'+(a.installed?"":" zero")+'"><div class="nm"><b title="'+esc(a.name)+'">'+esc(a.name)+'</b><small>'+esc(a.id)+(a.latest?' · 최신 v'+esc(a.latest):'')+(a.listed?'':' · 목록에 없음')+'</small></div>'+
+'<div class="use">'+a.installed+'명 설치 · 켬 '+a.on+'<div class="meter"><i style="width:'+share+'%"></i></div></div>'+
+'<div class="pct">'+(a.installed?'<b class="'+pctCls(p)+'">'+p+'%</b><small>최신 사용</small>':'<small>-</small>')+'</div>'+
+'<div class="vs">'+(a.versions.map(v=>'<span class="chip '+(v.latest?"latest":v.old?"old":"")+'">v'+esc(v.v)+' <b>'+v.c+'</b></span>').join("")||'<span class="kbd">설치한 사람 없음</span>')+'</div></div>'}).join("")}
+
+/* ── 버그 신고 ── */
+const sigOf=(r)=>{const e=r.logs.find(l=>!["warn","log"].includes(l.kind))||r.logs[0];return e?firstLine(e.text).replace(/\d+/g,"#").slice(0,120):""};
+function rFiltered(){const q=rf.q.toLowerCase();return R.filter(r=>(rf.st==="all"||(rf.st==="open"?!["done","dup"].includes(r.status):r.status===rf.st))&&(!q||(r.text+" "+r.contact+" "+r.v+" "+r.logs.map(l=>l.text).join(" ")).toLowerCase().includes(q)))}
+const rItem=(r)=>{const e=sigOf(r);return '<div class="it'+(rf.sel===r.no?" sel":"")+'" data-r="'+r.no+'"><span class="ud'+(r.status==="new"?"":" no")+'"></span><div class="main"><div class="t">'+esc(firstLine(r.text).slice(0,160))+'</div><div class="m"><span class="chip '+ST[r.status][1]+'">'+ST[r.status][0]+'</span><span>#'+r.no+'</span><span>v'+esc(r.v)+'</span>'+(r.env.mobile?'<span>모바일</span>':'')+'<span>'+ago(r.at)+'</span></div>'+(e?'<div class="m"><span style="color:#ffb3bf;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e)+'</span></div>':'')+'</div></div>'};
+function reportsView(){const list=rFiltered();const cnt=(k)=>R.filter(r=>k==="all"||(k==="open"?!["done","dup"].includes(r.status):r.status===k)).length;
+let items;if(rf.group){const g={};for(const r of list){const k=sigOf(r)||"(오류 기록 없음)";(g[k]??=[]).push(r)}items=Object.entries(g).sort((a,b)=>b[1].length-a[1].length).map(([k,rs])=>'<div class="grp"><span class="chip '+(rs.length>1?"hot":"")+'">'+rs.length+'건</span><code title="'+esc(k)+'">'+esc(k)+'</code></div>'+rs.map(rItem).join("")).join("")}else items=list.map(rItem).join("");
+return '<div class="split"><aside class="glass listcol"><div class="tools"><input class="grow" id="rq" placeholder="내용·오류·버전 찾기" value="'+esc(rf.q)+'"></div><div class="tools"><span class="seg" id="rst">'+[["open","처리 전"],["new","새 신고"],["doing","고치는 중"],["done","해결"],["all","전체"]].map(([k,l])=>'<button data-v="'+k+'" class="'+(rf.st===k?"on":"")+'">'+l+'<span class="c">'+cnt(k)+'</span></button>').join("")+'</span><label class="kbd" style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="rgrp"'+(rf.group?" checked":"")+'>같은 오류 묶기</label></div><div class="items">'+(items||'<div class="empty">신고가 없어요</div>')+'</div><div class="kbd" style="margin-top:8px"><kbd>J</kbd>/<kbd>K</kbd> 이동 · <kbd>1</kbd>~<kbd>5</kbd> 상태</div></aside><section class="glass detail" id="det">'+reportDetail()+'</section></div>'}
+function reportDetail(){const r=R.find(x=>x.no===rf.sel);if(!r)return'<div class="empty" style="padding-top:90px">왼쪽에서 신고를 고르세요</div>';
+const lc=S?.latestCore,cat={};for(const a of S?.addons||[])cat[a.id]=a.latest;
+const vChip=lc&&r.v?(r.v===lc?'<span class="chip latest">v'+esc(r.v)+' 최신</span>':'<span class="chip warn">v'+esc(r.v)+' · 최신 v'+esc(lc)+'</span>'):'<span class="chip">v'+esc(r.v||"?")+'</span>';
+const logK=(k)=>k==="warn"?"var(--warn)":k==="log"?"var(--blue)":"var(--err)";
+return '<button class="btn back" id="dback">← 목록</button><div class="dh"><span>버그 신고 #'+r.no+'</span><span>·</span><span>'+new Date(r.at).toLocaleString("ko-KR")+'</span></div><h3>'+esc(firstLine(r.text).slice(0,200))+'</h3>'+
+'<span class="seg" id="rs">'+Object.entries(ST).map(([k,[l]],i)=>'<button data-v="'+k+'" class="'+(r.status===k?"on":"")+'" title="'+(i+1)+'">'+l+'</button>').join("")+'</span>'+
+'<div class="sec"><b>환경</b><div class="facts">'+vChip+'<span class="chip">'+(r.env.mobile?"모바일":"PC")+'</span>'+(r.env.host?'<span class="chip">'+esc(r.env.host)+'</span>':'')+(r.risu?'<span class="chip">RisuAI '+esc(r.risu)+'</span>':'')+(r.env.screen?'<span class="chip">'+esc(r.env.screen)+'</span>':'')+(r.contact?'<span class="chip hot">연락: '+esc(r.contact)+'</span>':'')+'</div>'+(r.env.ua?'<div class="kbd" style="margin-top:6px;overflow-wrap:anywhere">'+esc(r.env.ua)+'</div>':'')+'</div>'+
+'<div class="sec"><b>내용</b><div class="box">'+esc(r.text)+'</div></div>'+
+'<div class="sec"><b>오류 기록 <span class="chip">'+r.logs.length+'</span></b>'+(r.logs.slice().reverse().map((l,i)=>'<details class="log" style="--k:'+logK(l.kind)+'"'+(i===0&&l.kind!=="warn"?" open":"")+'><summary><span class="chip">'+esc(l.kind)+'</span><span class="s">'+esc(firstLine(l.text))+'</span><span class="kbd">'+(l.n?l.n+"번 · ":"")+(l.t?new Date(l.t).toLocaleTimeString("ko-KR"):"")+'</span></summary><pre>'+esc(l.text)+'</pre></details>').join("")||'<div class="kbd">없음</div>')+'</div>'+
+'<div class="sec"><b>애드온 <span class="chip">'+r.addons.length+'</span></b><div class="facts">'+(r.addons.map(a=>{const L=cat[a.id];const st=!a.on?"old":L&&a.v!==L?"warn":"";return '<span class="chip '+st+'" title="'+(L?"최신 v"+esc(L):"")+'">'+esc(a.id)+' <b>'+esc(a.v)+'</b>'+(a.on?"":" 꺼짐")+(st==="warn"?" ↑":"")+'</span>'}).join("")||'<span class="kbd">없음</span>')+'</div></div>'+
+'<div class="sec"><b>메모 <span class="kbd" id="mok"></span></b><textarea id="memo" rows="3" style="width:100%" placeholder="원인·고친 버전 등 (자동 저장)">'+esc(r.memo)+'</textarea></div>'+
+'<div class="acts"><button class="btn primary" id="rissue">GitHub 이슈로 만들기</button><button class="btn" id="rcopy">마크다운 복사</button><span class="sp"></span><button class="btn danger" id="rdel">지우기</button></div>'}
+function reportMd(r){return "**버그 신고 #"+r.no+"** · v"+r.v+(r.env.mobile?" · 모바일":"")+(r.risu?" · RisuAI "+r.risu:"")+"\n\n"+r.text+"\n\n**애드온**: "+(r.addons.map(a=>a.id+" "+a.v+(a.on?"":"(꺼짐)")).join(", ")||"없음")+"\n\n"+(r.logs.length?"<details><summary>오류 기록</summary>\n\n\x60\x60\x60\n"+r.logs.slice(-12).map(l=>"["+l.kind+"] "+l.text).join("\n\n").slice(0,5000)+"\n\x60\x60\x60\n</details>\n":"")}
+async function setStatus(r,v){r.status=v;await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({status:v})});S=await api("summary");pills();drawReports(true)}
+function bindReportDetail(){const r=R.find(x=>x.no===rf.sel);if(!r)return;const d=$("#det");
+$("#dback")&&($("#dback").onclick=()=>{d.classList.remove("on");rf.sel=null;drawReports()});
+$("#rs").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v)setStatus(r,v)};
+let mt;$("#memo").oninput=(e)=>{clearTimeout(mt);$("#mok").textContent="…";mt=setTimeout(async()=>{r.memo=e.target.value;await api("reports/"+r.no,{method:"PATCH",body:JSON.stringify({memo:r.memo})});$("#mok").textContent="저장됨"},700)};
+$("#rcopy").onclick=async()=>{try{await navigator.clipboard.writeText(reportMd(r));toast("복사했어요")}catch{toast("복사하지 못했어요")}};
+$("#rissue").onclick=()=>{const u="https://github.com/"+S.repo+"/issues/new?title="+encodeURIComponent("[버그 신고 #"+r.no+"] "+firstLine(r.text).slice(0,80))+"&body="+encodeURIComponent(reportMd(r).slice(0,6000));window.open(u,"_blank","noopener")};
+$("#rdel").onclick=async()=>{if(!confirm("#"+r.no+" 신고를 지울까요?"))return;await api("reports/"+r.no,{method:"DELETE"});R=R.filter(x=>x!==r);rf.sel=null;S=await api("summary");pills();drawReports()}}
+async function openReport(no){rf.sel=no;const r=R.find(x=>x.no===no);history.replaceState(null,"","#report-"+no);if(r&&r.status==="new"){r.status="seen";api("reports/"+no,{method:"PATCH",body:JSON.stringify({status:"seen"})}).then(async()=>{S=await api("summary");pills()})}drawReports(true);$("#det").classList.add("on")}
+function drawReports(keepScroll){const sc=$(".listcol .items")?.scrollTop;$("#main").innerHTML=reportsView();if(keepScroll&&sc)$(".listcol .items").scrollTop=sc;
+$("#rq").oninput=(e)=>{rf.q=e.target.value;const p=e.target.selectionStart;drawReports();const i=$("#rq");i.focus();i.setSelectionRange(p,p)};
+$("#rst").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v){rf.st=v;drawReports()}};
+$("#rgrp").onchange=(e)=>{rf.group=e.target.checked;localStorage.setItem("hub.group",rf.group?"1":"0");drawReports()};
+$$("[data-r]").forEach(el=>el.onclick=()=>openReport(+el.dataset.r));if(rf.sel)$("#det").classList.add("on");bindReportDetail()}
+
+/* ── 이슈 ── */
+function iFiltered(){const q=inf.q.toLowerCase();return I.filter(x=>(inf.kind==="all"||(inf.kind==="pr"?x.pr:!x.pr))&&(inf.st==="all"||(inf.st==="unseen"?x.unseen&&x.state==="open":x.state===inf.st))&&(!q||(x.title+" "+x.body+" "+x.user+" "+x.labels.join(" ")).toLowerCase().includes(q)))}
+function issuesView(){const list=iFiltered();const base=I.filter(x=>inf.kind==="all"||(inf.kind==="pr"?x.pr:!x.pr));const cnt={unseen:base.filter(x=>x.unseen&&x.state==="open").length,open:base.filter(x=>x.state==="open").length,closed:base.filter(x=>x.state==="closed").length,all:base.length};
+return '<div class="split"><aside class="glass listcol"><div class="tools"><input class="grow" id="iq" placeholder="제목·내용·작성자·라벨 찾기" value="'+esc(inf.q)+'"><button class="btn" id="sync" title="GitHub에서 지금 다시 읽기">동기화</button></div><div class="tools"><span class="seg" id="ist">'+[["unseen","새 활동"],["open","열림"],["closed","닫힘"],["all","전체"]].map(([k,l])=>'<button data-v="'+k+'" class="'+(inf.st===k?"on":"")+'">'+l+'<span class="c">'+cnt[k]+'</span></button>').join("")+'</span><span class="seg" id="ikind">'+[["issue","이슈"],["pr","PR"],["all","둘 다"]].map(([k,l])=>'<button data-v="'+k+'" class="'+(inf.kind===k?"on":"")+'">'+l+'</button>').join("")+'</span>'+(cnt.unseen?'<button class="btn ghost" id="seenall">모두 읽음</button>':'')+'</div><div class="items">'+
+(list.map(x=>'<div class="it'+(inf.sel===x.number?" sel":"")+'" data-i="'+x.number+'"><span class="ud'+(x.unseen&&x.state==="open"?"":" no")+'"></span><div class="main"><div class="t">'+esc(x.title)+'</div><div class="m"><span class="chip '+(x.state==="open"?"latest":"old")+'">'+(x.state==="open"?"열림":"닫힘")+'</span>'+(x.pr?'<span class="chip">PR</span>':'')+'<span>#'+x.number+'</span><span>'+esc(x.user)+'</span><span>💬 '+x.comments+'</span><span>'+ago(x.updatedAt)+'</span></div>'+(x.labels.length?'<div class="m">'+x.labels.map(label).join("")+'</div>':'')+'</div></div>').join("")||'<div class="empty">'+(I.length?"조건에 맞는 이슈가 없어요":"아직 불러온 이슈가 없어요. ‘동기화’를 눌러 보세요")+'</div>')+
+'</div><div class="kbd" style="margin-top:8px"><kbd>J</kbd>/<kbd>K</kbd> 이동 · <kbd>O</kbd> GitHub에서 열기</div></aside><section class="glass detail" id="det">'+issueDetail()+'</section></div>'}
+function issueDetail(){const x=I.find(i=>i.number===inf.sel);if(!x)return'<div class="empty" style="padding-top:90px">왼쪽에서 이슈를 고르세요</div>';
+return '<button class="btn back" id="dback">← 목록</button><div class="dh"><span>'+(x.pr?"PR":"이슈")+' #'+x.number+'</span><span>·</span><span>'+esc(x.user)+'</span><span>·</span><span>'+new Date(x.createdAt).toLocaleString("ko-KR")+'</span></div><h3>'+esc(x.title)+'</h3><div class="facts"><span class="chip '+(x.state==="open"?"latest":"old")+'">'+(x.state==="open"?"열림":"닫힘")+'</span>'+x.labels.map(label).join("")+'<span class="chip">💬 '+x.comments+'</span><span class="chip">마지막 활동 '+ago(x.updatedAt)+'</span></div>'+
+'<div class="sec"><b>본문</b><div class="box">'+(esc(x.body)||'<span class="kbd">(본문 없음)</span>')+'</div></div><div class="sec"><b>댓글</b><div id="cm">'+(x.recent?.length?comments(x.recent):'<div class="kbd">불러오는 중…</div>')+'</div></div>'+
+'<div class="acts"><a class="btn primary" href="'+esc(x.url)+'" target="_blank" rel="noopener" style="text-decoration:none">GitHub에서 열기 · 답하기 ↗</a></div>'}
+const comments=(l)=>l.length?l.map(c=>'<div class="comment"><div class="m"><b style="color:var(--text)">'+esc(c.user)+'</b><span>'+ago(c.at)+'</span><a href="'+esc(c.url)+'" target="_blank" rel="noopener">열기</a></div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(c.body)+'</div></div>').join(""):'<div class="kbd">댓글 없음</div>';
+async function openIssue(n){inf.sel=n;const x=I.find(i=>i.number===n);history.replaceState(null,"","#issue-"+n);if(x&&x.unseen){x.unseen=false;api("issues/"+n+"/seen",{method:"POST"}).then(async()=>{S=await api("summary");pills()})}drawIssues(true);$("#det").classList.add("on");
+try{const c=await api("issues/"+n+"/comments");if(x)x.recent=c;if(inf.sel===n&&$("#cm"))$("#cm").innerHTML=comments(c)}catch(e){$("#cm")&&($("#cm").innerHTML='<div class="kbd">댓글을 불러오지 못했어요: '+esc(e.message)+'</div>')}}
+function drawIssues(keepScroll){const sc=$(".listcol .items")?.scrollTop;$("#main").innerHTML=issuesView();if(keepScroll&&sc)$(".listcol .items").scrollTop=sc;
+$("#iq").oninput=(e)=>{inf.q=e.target.value;const p=e.target.selectionStart;drawIssues();const i=$("#iq");i.focus();i.setSelectionRange(p,p)};
+$("#ist").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v){inf.st=v;drawIssues()}};$("#ikind").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v){inf.kind=v;drawIssues()}};
+$("#sync").onclick=async(e)=>{e.target.disabled=true;e.target.textContent="읽는 중…";try{await api("sync",{method:"POST"});I=await api("issues");S=await api("summary");pills();toast("동기화했어요")}catch(err){toast(err.message)}drawIssues()};
+$("#seenall")&&($("#seenall").onclick=async()=>{await api("issues/seen-all",{method:"POST"});I=await api("issues");S=await api("summary");pills();drawIssues()});
+$$("[data-i]").forEach(el=>el.onclick=()=>openIssue(+el.dataset.i));const d=$("#det");if(inf.sel)d.classList.add("on");$("#dback")&&($("#dback").onclick=()=>{d.classList.remove("on");inf.sel=null;drawIssues()})}
+
+/* ── 공통 ── */
+async function render(){const m=$("#main");
+if(tab==="overview"){m.innerHTML=overview();$("#addf").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v){addFilter=v;localStorage.setItem("hub.addf",v);render()}};
+$$("[data-go-r]").forEach(b=>b.onclick=()=>{setTab("reports");openReport(+b.dataset.goR)});$$("[data-go-i]").forEach(b=>b.onclick=()=>{setTab("issues");openIssue(+b.dataset.goI)});
+$("#dedupe").onclick=async()=>{const r=await api("dedupe",{method:"POST"});S=await api("summary");render();toast(r.merged?"겹친 사용자 "+r.merged+"명을 합쳤어요":"겹친 사용자가 없어요")}}
+if(tab==="reports")drawReports(true);if(tab==="issues")drawIssues(true)}
+async function loadAll(){[S,R,I]=await Promise.all([api("summary"),api("reports"),api("issues")]);$("#repo").textContent=S.repo;pills()}
+async function devices(){const l=await api("sessions");$("#mdin").innerHTML='<div class="glass card"><h2>로그인한 기기</h2><p class="desc">한 번 들어간 기기는 400일 동안 다시 묻지 않아요(쓸 때마다 늘어나요). 모르는 기기가 있으면 내보내세요.</p>'+l.map(d=>'<div class="it" style="cursor:default"><div class="main"><div class="t" style="font-weight:500">'+esc(d.ua||"알 수 없는 기기")+'</div><div class="m"><span>처음 '+ago(d.at)+'</span><span>마지막 '+ago(d.last)+'</span>'+(d.me?'<span class="chip latest">지금 이 기기</span>':'')+'</div></div>'+(d.me?'':'<button class="btn danger" data-k="'+d.id+'">내보내기</button>')+'</div>').join("")+'<div class="acts"><span class="sp"></span><button class="btn" id="mclose">닫기</button></div></div>';$("#modal").classList.add("on");
+$("#mclose").onclick=()=>$("#modal").classList.remove("on");$$("#mdin [data-k]").forEach(b=>b.onclick=async()=>{await api("sessions/"+b.dataset.k,{method:"DELETE"});devices()})}
+$("#modal").onclick=(e)=>{if(e.target.id==="modal")$("#modal").classList.remove("on")};
 $("#devbtn").onclick=devices;
-document.querySelector("nav").onclick=(e)=>{const b=e.target.closest("button");if(b){tab=b.dataset.tab;render()}};
-(async()=>{await load();const h=location.hash;if(h.startsWith("#report-")){tab="reports";await render();openReport(+h.slice(8))}else if(h.startsWith("#issue-")){tab="issues";await render();openIssue(+h.slice(7))}})();
-// 실시간: 4초마다 바뀐 게 있는지만 묻고, 바뀌었으면 숫자·목록을 다시 그린다(입력 중이거나 상세 창이 열려 있으면 배지만)
+document.querySelector("nav").onclick=(e)=>{const b=e.target.closest("button");if(b)setTab(b.dataset.tab)};
+document.addEventListener("keydown",(e)=>{if(/INPUT|TEXTAREA/.test(document.activeElement?.tagName))return;if(e.key==="Escape"){$("#modal").classList.remove("on");$("#det")?.classList.remove("on");return}
+const k=e.key.toLowerCase();if(tab==="reports"){const l=rFiltered();const i=l.findIndex(r=>r.no===rf.sel);if(k==="j"||e.key==="ArrowDown"){const n=l[Math.min(l.length-1,i+1)];if(n){e.preventDefault();openReport(n.no)}}if(k==="k"||e.key==="ArrowUp"){const n=l[Math.max(0,i-1)];if(n){e.preventDefault();openReport(n.no)}}
+const st=Object.keys(ST)[+e.key-1];const r=R.find(x=>x.no===rf.sel);if(st&&r)setStatus(r,st)}
+if(tab==="issues"){const l=iFiltered();const i=l.findIndex(x=>x.number===inf.sel);if(k==="j"||e.key==="ArrowDown"){const n=l[Math.min(l.length-1,i+1)];if(n){e.preventDefault();openIssue(n.number)}}if(k==="k"||e.key==="ArrowUp"){const n=l[Math.max(0,i-1)];if(n){e.preventDefault();openIssue(n.number)}}if(k==="o"){const x=I.find(x=>x.number===inf.sel);if(x)window.open(x.url,"_blank","noopener")}}});
+(async()=>{await loadAll();const h=location.hash;if(h.startsWith("#report-")){rf.sel=+h.slice(8);tab="reports"}else if(h.startsWith("#issue-")){inf.sel=+h.slice(7);tab="issues"}setTab(tab);if(tab==="issues"&&inf.sel)openIssue(inf.sel)})();
+// 실시간: 4초마다 바뀐 게 있는지만 묻고, 바뀌었으면 다시 읽어 그린다(입력 중이면 배지·목록 데이터만)
 let REV=-1,busy=false;
-setInterval(async()=>{if(busy||document.visibilityState!=="visible")return;busy=true;try{const {rev}=await api("rev");if(rev!==REV){const first=REV<0;REV=rev;if(first)return;S=await api("summary");pills();const typing=document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName);if(!$("#drawer").classList.contains("on")&&!typing)await render();else if(tab==="reports")R=await api("reports");else if(tab==="issues")I=await api("issues")}}catch{}finally{busy=false}},4e3);
-</script></body></html>`;
+setInterval(async()=>{if(busy||document.visibilityState!=="visible")return;busy=true;try{const {rev}=await api("rev");if(rev!==REV){const first=REV<0;REV=rev;if(first)return;await loadAll();const typing=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"");if(!typing&&!$("#modal").classList.contains("on"))await render()}}catch{}finally{busy=false}},4e3);
+`;
+
+const ADMIN_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dusk 허브</title><style>${BASE_CSS}${ADMIN_CSS}</style></head><body>
+<header><div class="bar glass"><span class="logo">Dusk 허브</span><span class="kbd" id="repo"></span>
+<nav><button data-tab="overview">개요</button><button data-tab="reports">버그 신고<span id="rp" class="pill" hidden></span></button><button data-tab="issues">GitHub 이슈<span id="ip" class="pill" hidden></span></button></nav>
+<span class="sp"></span><span class="live"><i></i>실시간</span><button class="btn" id="devbtn">로그인한 기기</button><form method="post" action="/logout" style="margin:0"><button class="btn">나가기</button></form></div></header>
+<main id="main"><div class="empty" style="padding-top:120px">불러오는 중…</div></main>
+<div class="modal" id="modal"><div class="in" id="mdin"></div></div><div class="toast" id="toast"></div>
+<script>${ADMIN_JS}</script></body></html>`;
 
 // ── 시작 ─────────────────────────────────────────────────
 if (require.main === module) {
@@ -484,6 +685,8 @@ if (require.main === module) {
   server.listen(cfg.port, cfg.host, () => console.log(`[hub] v${VERSION} http://${cfg.host}:${cfg.port} · 저장 ${cfg.dataDir} · 저장소 ${cfg.repo}`));
   const poll = () => hub.syncIssues().then((n) => n && console.log(`[hub] 이슈 동기화 ${n}건`)).catch((e) => console.error("[hub] 이슈 동기화 실패", e.message));
   setTimeout(poll, 3e3);
+  const cat = () => hub.loadCatalog().catch(() => {});
+  cat(); setInterval(cat, 3600e3).unref();
   if (cfg.pollMinutes > 0) setInterval(poll, cfg.pollMinutes * 60e3).unref();
   const stop = () => { try { hub.store.flush(); } catch (e) { console.error(e); } process.exit(0); };
   process.on("SIGINT", stop); process.on("SIGTERM", stop);

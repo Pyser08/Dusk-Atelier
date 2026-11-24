@@ -276,6 +276,8 @@ async function start() {
   const hub = createHub(api, { version: VERSION, addons });
   app.ctx.hub = hub;
   setTimeout(() => { hub.pingSoon().catch(() => {}); }, 20e3);
+  // 애드온을 설치·업데이트·끄면 30초 뒤 한 번 확인(버전이 실제로 바뀐 경우에만 보냄)
+  { let t = null; try { addons.subscribe?.(() => { clearTimeout(t); t = setTimeout(() => { hub.pingSoon().catch(() => {}); }, 30e3); }); } catch { /* 구독 없음 */ } }
   // 2.0.0으로 올라온 기존 사용자: 쓰던 기능(장기기억·기억카드·위젯)의 애드온을 자동으로 받아 그대로 쓰게 한다.
   const rawOf = async (k) => { try { const v = await api.pluginStorage.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };
   const on = (v) => v === true || v === "on" || v === "true";

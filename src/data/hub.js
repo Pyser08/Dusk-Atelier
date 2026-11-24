@@ -71,12 +71,30 @@ export function envInfo(win = globalThis) {
   };
 }
 
+// 기기 지문(2.2.49): 같은 기기가 설치 ID를 잃어도 서버가 같은 사람으로 합칠 수 있게. 원래 값은 보내지 않고 해시 앞 16자만.
+export async function deviceFingerprint(win = globalThis) {
+  try {
+    const nav = win.navigator ?? {};
+    const ua = String(nav.userAgent ?? "").replace(/[\d._]+/g, "#");   // 브라우저 버전이 올라도 같게
+    const tz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ""; } })();
+    const src = [ua, nav.platform ?? "", nav.language ?? "", tz, win.screen ? `${win.screen.width}x${win.screen.height}x${win.screen.colorDepth}` : "", nav.hardwareConcurrency ?? ""].join("|");
+    const buf = await win.crypto.subtle.digest("SHA-256", new TextEncoder().encode("dusk-hub|" + src));
+    return [...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch { return ""; }
+}
+
 const uuid = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 
 export function createHub(api, { version, addons, risuVersion } = {}) {
   const store = api.pluginStorage;
   const get = async (k) => { try { const v = await store.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };
   const set = (k, v) => store.setItem(k, v).catch?.(() => {});
+  // 기기마다 따로인 저장소(getLocalPluginStorage). 설치 ID·마지막 핑은 여기에 둔다 — pluginStorage는 기기끼리 같이 쓰일 수 있어서
+  // 두 기기가 한 사람으로 세이거나, 한 기기가 핑을 못 보내는 일이 있었다(2.2.49).
+  let localP = null;
+  const local = () => (localP ??= Promise.resolve().then(() => api.getLocalPluginStorage?.()).then((s) => (s?.getItem && s?.setItem ? s : null)).catch(() => null));
+  const lget = async (k) => { const l = await local(); if (!l) return get(k); try { const v = await l.getItem(k); return v == null || v === "" ? null : v; } catch { return null; } };
+  const lset = async (k, v) => { const l = await local(); if (!l) return set(k, v); try { await l.setItem(k, v); } catch { /* 못 쓰면 다음에 */ } };
   const okUrl = (u) => /^https:\/\/[^\s"'<>]+$/.test(String(u ?? "")) ? String(u).replace(/\/+$/, "") : "";
   let remote = null;
   // 주소가 있으면 하루, 비어 있으면 10분만 기억한다(2.2.47: 빈 값을 하루 기억해 hub.json을 채워도 늦게 반영됐다). force는 버그 신고 창을 열 때.
@@ -95,7 +113,15 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     return u;
   }
   const url = async (force = false) => okUrl(await get(URL_KEY)) || okUrl(HUB_URL) || await remoteUrl(force);
-  async function installId() { let id = await get(ID_KEY); if (!id) { id = uuid(); await set(ID_KEY, id); } return String(id); }
+  // 설치 ID: 기기 저장소 → (예전 버전이 남긴) pluginStorage → 새로 만들기. 동시에 불려도 하나만 만든다.
+  let idP = null;
+  const installId = () => (idP ??= (async () => {
+    let id = await lget(ID_KEY);
+    if (!id) { id = (await get(ID_KEY)) || uuid(); await lset(ID_KEY, id); }
+    return String(id);
+  })());
+  let fpP = null;
+  const fingerprint = () => (fpP ??= deviceFingerprint());
   async function addonList() {
     try { const idx = await addons?.getIndex?.(); return Object.entries(idx ?? {}).map(([id, a]) => ({ id, v: String(a?.version ?? ""), on: a?.on !== false })).slice(0, 80); } catch { return []; }
   }
@@ -119,17 +145,21 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
   // 하루 한 번만 보낸다. 실패해도 조용히 넘어간다.
   async function pingSoon() {
     if (!(await url()) || !(await statsOn())) return false;
-    const last = Number(await get(LAST_KEY)) || 0;
-    if (Date.now() - last < DAY) return false;
-    await set(LAST_KEY, String(Date.now()));
+    // 하루가 지났거나 본체·애드온 버전이 바뀌었을 때만(업데이트 직후 버전 통계가 바로 맞게 — 서버는 그 사람의 옛 버전을 새 버전으로 바꿔 센다)
+    const list = await addonList();
+    const sig = [String(version), ...list.map((a) => `${a.id}@${a.v}${a.on ? "" : "-"}`).sort()].join("|");
+    const last = Number(await lget(LAST_KEY)) || 0, lastSig = await lget(LAST_KEY + ".v");
+    if (Date.now() - last < DAY && lastSig === sig) return false;
+    await lset(LAST_KEY, String(Date.now())); await lset(LAST_KEY + ".v", sig);
     const env = envInfo();
-    await post("/api/ping", { id: await installId(), v: version, risu: risuVersion?.() ?? "", addons: await addonList(), mobile: env.mobile, host: env.host }).catch(() => {});
+    await post("/api/ping", { id: await installId(), fp: await fingerprint(), v: version, risu: risuVersion?.() ?? "", addons: list, mobile: env.mobile, host: env.host }).catch(() => {});
     return true;
   }
   // 보낼 신고를 만든다(미리보기에 그대로 보여 준다)
   async function buildReport({ text, contact, withLogs = true } = {}) {
     return {
       id: await installId(),
+      fp: await fingerprint(),
       v: version,
       risu: risuVersion?.() ?? "",
       text: redactSecrets(String(text ?? "")).slice(0, 4000),
