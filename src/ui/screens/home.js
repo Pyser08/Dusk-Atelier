@@ -2,6 +2,10 @@
 // 위젯 = 바로가기 4 · 숫자 4 · 최근 기록 · 빠른 설정 · 이어서 하기 · 추천 · 애드온. 배치는 prefs.ui.homeGrid[칸 수].
 // 위젯 안 요소의 클래스·id(rb-htile·rb-hnum·rb-hrecent·rb-hcont·rb-home-*)는 예전 그대로(둘러보기·e2e가 씀).
 import { renderFeatureFind } from "./featurefind.js";
+import { openBugReport } from './bugreport.js';
+import { insertBelow } from '../homegrid.js';
+// 2.2.49: 예전에 홈 배치를 저장한 사람에게도 버그 신고 상자를 바로가기 4칸 아래에 한 번 넣는다
+const withBugTile = (g) => { const out = { ...g }; for (const c of Object.keys(out)) out[c] = insertBelow(out[c], "bug", ["imp", "mem", "man", "wrk"], Number(c)); return out; };
 import { readState } from "./homestate.js";
 import { h, replace } from '../dom.js';
 import { icon } from '../icons.js';
@@ -59,6 +63,8 @@ export async function renderHome(ctx) {
     mem: { name: "기억", el: tile("brain", "기억", "장기 기억·기억 카드·코코아", () => ctx.go("memory-home"), "rb-home-memory", 2) },
     man: { name: "관리", el: tile("module", "관리", "캐릭터·모듈·플러그인", () => ctx.go("manage-home"), "rb-home-manage", 3) },
     wrk: { name: "작업실", el: tile("tools", "작업실", "프로바이더·AI 봇 제작·도구", () => ctx.go("work-home"), "rb-home-work", 4) },
+    bug: { name: "버그 신고", el: h("button", { type: "button", class: "rb-htile tone-5 rb-hbug", id: "rb-home-bug", onClick: () => openBugReport(ctx) },
+      h("span", { class: "ico" }, icon("bug", 22)), h("span", { class: "t" }, h("b", null, "버그 신고"), h("small", null, "문제가 생기면 바로 알려 주세요 · 보낼 내용은 먼저 보여 드려요")), h("span", { class: "go", "aria-hidden": "true" }, icon("chevron", 16))) },
     n1: { name: "저장된 기억", el: nums.n1.el }, n2: { name: "이번에 넣음", el: nums.n2.el }, n3: { name: "인물", el: nums.n3.el }, n4: { name: "확인할 것", el: nums.n4.el },
     rec: { name: "최근 기록", el: recentEl },
     qs: { name: "빠른 설정", el: qsEl },
@@ -76,7 +82,8 @@ export async function renderHome(ctx) {
   let saveT = null;
   const G = homeGrid({
     widgets,
-    saved: ctx.prefs.ui?.homeGrid ?? {},
+    // 한 번만 넣는다(숨기면 다시 넣지 않음)
+    saved: ctx.prefs.ui?.homeBugTile ? (ctx.prefs.ui?.homeGrid ?? {}) : (() => { const g = withBugTile(ctx.prefs.ui?.homeGrid ?? {}); if (ctx.prefs.ui) { ctx.prefs.ui.homeBugTile = true; ctx.prefs.ui.homeGrid = g; } ctx.prefs.saveUi?.({ homeBugTile: true, homeGrid: g })?.catch?.(() => {}); return g; })(),
     onSave: (cols, list) => {
       const next = { ...(ctx.prefs.ui?.homeGrid ?? {}), [cols]: list };
       if (ctx.prefs.ui) ctx.prefs.ui.homeGrid = next;

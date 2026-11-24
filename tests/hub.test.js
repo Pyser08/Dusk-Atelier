@@ -62,7 +62,7 @@ test("핑·신고를 받고 관리 화면은 로그인해야 보인다", () => w
   const login = await fetch(base + "/login", { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "token=test-token-1234567890" });
   const cookie = login.headers.get("set-cookie").split(";")[0];
   const s = await (await fetch(base + "/api/admin/summary", { headers: { cookie } })).json();
-  assert.equal(s.d1, 1); assert.deepEqual(s.addons[0], ["memory", 1]); assert.equal(s.reports.new, 1);
+  assert.equal(s.d1, 1); assert.equal(s.addons[0].id, "memory"); assert.equal(s.addons[0].installed, 1); assert.equal(s.addons[0].upToDate, 1); assert.equal(s.reports.new, 1);
   // 쓰기 요청은 X-Hub 머리말이 있어야 한다(CSRF)
   assert.equal((await fetch(base + "/api/admin/reports/1", { method: "PATCH", headers: { cookie }, body: "{}" })).status, 403);
   const up = await (await fetch(base + "/api/admin/reports/1", { method: "PATCH", headers: { cookie, "X-Hub": "1" }, body: JSON.stringify({ status: "done", memo: "고침" }) })).json();
@@ -130,4 +130,49 @@ test("오류 기록은 큰 객체를 통째로 글자로 바꾸지 않고, 일�
   assert.equal(stringified, 0);
   assert.equal(recentLogs().length, before + 1);
   assert.match(recentLogs().at(-1).text, /저장 실패 \[Object\]/);
+});
+
+test("예전에 저장한 홈 배치에도 버그 신고 상자가 바로가기 4칸 아래에 들어간다", async () => {
+  const { insertBelow, normalizeLayout } = await import("../src/ui/homegrid.js");
+  const saved = [{ id: "imp", x: 2, y: 0, w: 1, h: 1 }, { id: "mem", x: 3, y: 0, w: 1, h: 1 }, { id: "man", x: 2, y: 1, w: 1, h: 1 }, { id: "wrk", x: 3, y: 1, w: 1, h: 1 }, { id: "n1", x: 2, y: 2, w: 1, h: 1 }];
+  const out = insertBelow(saved, "bug", ["imp", "mem", "man", "wrk"], 6);
+  const bug = out.find((i) => i.id === "bug");
+  assert.deepEqual([bug.x, bug.y, bug.w, bug.h], [2, 2, 2, 1]);
+  assert.equal(out.find((i) => i.id === "n1").y, 3);
+  assert.equal(insertBelow(out, "bug", ["imp"], 6), out);   // 이미 있으면 그대로
+  assert.ok(normalizeLayout(out, 6, out.map((i) => i.id)).some((i) => i.id === "bug"));
+});
+
+test("같은 기기 지문으로 새 설치 ID가 오면(업데이트로 ID를 잃음) 한 사람으로 합친다", () => withServer(async ({ hub }) => {
+  hub.onPing({ id: "old-install-01", fp: "aaaaaaaaaaaaaaaa", v: "2.2.47" });
+  hub.onPing({ id: "new-install-02", fp: "aaaaaaaaaaaaaaaa", v: "2.2.48" });
+  hub.onPing({ id: "other-device-3", fp: "bbbbbbbbbbbbbbbb", v: "2.2.48" });
+  const s = hub.summary();
+  assert.equal(s.total, 2); assert.equal(s.d1, 2);
+  hub.onPing({ id: "old-install-01", fp: "aaaaaaaaaaaaaaaa", v: "2.2.48" });   // 옛 ID가 다시 와도 새 ID로 센다
+  assert.equal(hub.summary().total, 2);
+  // 더 낮은 버전의 새 ID는 다른 기기로 본다
+  hub.onPing({ id: "lower-ver-0004", fp: "aaaaaaaaaaaaaaaa", v: "2.2.40" });
+  assert.equal(hub.summary().total, 3);
+}));
+
+test("지문 없는 옛 기록도 끊긴 직후 더 높은 버전으로 이어지면 합친다", () => withServer(async ({ hub }) => {
+  const D = hub.store.data, t = Date.now();
+  D.installs["legacy-aaaa-1"] = { first: t - 7200e3, last: t - 3600e3, v: "2.2.46", mobile: false, host: "web", addons: [] };
+  D.installs["legacy-bbbb-2"] = { first: t - 1800e3, last: t, v: "2.2.47", mobile: false, host: "web", addons: [] };
+  D.installs["legacy-cccc-3"] = { first: t - 1800e3, last: t, v: "2.2.47", mobile: true, host: "web", addons: [] };
+  assert.equal(hub.dedupeLegacy(), 1);
+  assert.equal(hub.summary().total, 2);
+}));
+
+test("하루가 안 지나도 본체나 애드온 버전이 바뀌면 바로 다시 알리고, 그대로면 보내지 않는다", async () => {
+  const mem = new Map([["dusk.hub.url", "https://hub.test"]]); let sent = 0; let idx = { memory: { version: "0.3.1" } };
+  const api = { pluginStorage: { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => mem.set(k, v) }, nativeFetch: async (u, o) => { if (o?.method === "POST") sent++; return { ok: true, json: async () => ({}), text: async () => "{}" }; } };
+  const mk = (v) => createClient(api, { version: v, addons: { getIndex: async () => idx } });
+  assert.equal(await mk("2.2.49").pingSoon(), true);
+  assert.equal(await mk("2.2.49").pingSoon(), false);
+  idx = { memory: { version: "0.3.2" } };
+  assert.equal(await mk("2.2.49").pingSoon(), true);
+  assert.equal(await mk("2.2.50").pingSoon(), true);
+  assert.equal(sent, 3);
 });

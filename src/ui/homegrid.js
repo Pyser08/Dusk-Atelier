@@ -17,13 +17,14 @@ export var WIDGET_SIZES = {
   qs: { min: [2, 2], max: [3, 5] },
   cont: { min: [2, 1], max: [6, 2] },
   disc: { min: [2, 1], max: [6, 2] },
+  bug: { min: [2, 1], max: [6, 1] },   // 버그 신고 상자(2.2.49): 바로가기 4칸 아래 길쭉하게
   add: { min: [2, 2], max: [6, 60] }   // 높이는 내용에 맞춤(autoH) — 잘리지 않게 넉넉히
 };
 
 var row = (a) => ({ id: a[0], x: a[1], y: a[2], w: a[3], h: a[4] });
 export var DEFAULT_LAYOUT = {
-  6: [["rec", 0, 0, 2, 2], ["imp", 2, 0, 1, 1], ["mem", 3, 0, 1, 1], ["man", 2, 1, 1, 1], ["wrk", 3, 1, 1, 1], ["qs", 4, 0, 2, 5], ["n1", 0, 2, 1, 1], ["n2", 1, 2, 1, 1], ["n3", 2, 2, 1, 1], ["n4", 3, 2, 1, 1], ["cont", 0, 3, 2, 2], ["disc", 2, 3, 2, 2], ["add", 0, 5, 6, 2]],
-  2: [["imp", 0, 0, 1, 1], ["mem", 1, 0, 1, 1], ["man", 0, 1, 1, 1], ["wrk", 1, 1, 1, 1], ["n1", 0, 2, 1, 1], ["n2", 1, 2, 1, 1], ["rec", 0, 3, 2, 2], ["cont", 0, 5, 2, 2], ["disc", 0, 7, 2, 2], ["qs", 0, 9, 2, 4], ["add", 0, 13, 2, 3], ["n3", 0, 16, 1, 1], ["n4", 1, 16, 1, 1]]
+  6: [["rec", 0, 0, 2, 2], ["imp", 2, 0, 1, 1], ["mem", 3, 0, 1, 1], ["man", 2, 1, 1, 1], ["wrk", 3, 1, 1, 1], ["bug", 2, 2, 2, 1], ["qs", 4, 0, 2, 5], ["n1", 0, 3, 1, 1], ["n2", 1, 3, 1, 1], ["n3", 2, 3, 1, 1], ["n4", 3, 3, 1, 1], ["cont", 0, 4, 2, 2], ["disc", 2, 4, 2, 2], ["add", 0, 6, 6, 2]],
+  2: [["imp", 0, 0, 1, 1], ["mem", 1, 0, 1, 1], ["man", 0, 1, 1, 1], ["wrk", 1, 1, 1, 1], ["bug", 0, 2, 2, 1], ["n1", 0, 3, 1, 1], ["n2", 1, 3, 1, 1], ["rec", 0, 4, 2, 2], ["cont", 0, 6, 2, 2], ["disc", 0, 8, 2, 2], ["qs", 0, 10, 2, 4], ["add", 0, 14, 2, 3], ["n3", 0, 17, 1, 1], ["n4", 1, 17, 1, 1]]
 };
 export var defaultLayout = (cols) => (DEFAULT_LAYOUT[cols] ?? DEFAULT_LAYOUT[2]).map(row);
 
@@ -63,6 +64,17 @@ export function normalizeLayout(saved, cols, avail) {
     out.push(fitSize(it, cols));
   }
   return settle(out);
+}
+
+// 새 위젯을 예전에 저장한 배치에도 한 번 끼워 넣는다: anchor 위젯들 바로 아래, 그 칸들 너비로(나머지는 아래로 밀림)
+export function insertBelow(saved, id, anchors, cols) {
+  if (!Array.isArray(saved) || !saved.length || saved.some((i) => i?.id === id)) return saved;
+  const as = saved.filter((i) => anchors.includes(i?.id));
+  if (!as.length) return [...saved, { id, x: 0, y: saved.reduce((m, i) => Math.max(m, (i.y ?? 0) + (i.h ?? 1)), 0), w: Math.min(2, cols), h: 1 }];
+  const x = Math.min(...as.map((i) => i.x)), right = Math.max(...as.map((i) => i.x + i.w)), y = Math.max(...as.map((i) => i.y + i.h));
+  const it = { id, x, y, w: Math.max(2, Math.min(cols, right - x)), h: 1 };
+  const out = saved.map((i) => ({ ...i }));
+  return settle([...out, it], it).map(({ id: k, x: a, y: b, w: c, h: d }) => ({ id: k, x: a, y: b, w: c, h: d }));
 }
 
 // 숨긴 위젯을 맨 아래에 다시 넣는다
