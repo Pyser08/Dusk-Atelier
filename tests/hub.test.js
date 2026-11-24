@@ -117,3 +117,17 @@ test("hub.json이 비어 있던 것을 기억해도, 버그 신고 창은 열 �
   assert.equal(await c.configured(), true);     // 창을 열 때는 새로 읽는다
   assert.equal(await c.url(), "https://duskhub.duckdns.org");
 });
+
+test("오류 기록은 큰 객체를 통째로 글자로 바꾸지 않고, 일반 log는 건너뛴다", async () => {
+  const { startLogCapture: start } = await import("../src/data/hub.js");
+  let stringified = 0;
+  const big = { toJSON() { stringified++; return {}; } };
+  const fake = { console: { log() {}, warn() {}, error() {} }, addEventListener() {} };
+  start(fake);
+  const before = recentLogs().length;
+  for (let i = 0; i < 1000; i++) fake.console.log("그냥 로그", big);
+  fake.console.error("[Dusk Atelier] 저장 실패", big);
+  assert.equal(stringified, 0);
+  assert.equal(recentLogs().length, before + 1);
+  assert.match(recentLogs().at(-1).text, /저장 실패 \[Object\]/);
+});
