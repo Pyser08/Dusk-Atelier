@@ -6,6 +6,7 @@
 //  [응답 뒤] 기록하기(Writer): 리수폿 Writer 호출에 Dusk 기록 구획(dusk)을 같이 실어 한 번에 받는다.
 //    - 두 구획은 따로 검증한다. dusk 구획이 없거나 틀리면 기존 방식(따로 한 번 더 호출)으로 대신한다.
 //  빠른 모드: 모델 호출 없이 키워드로 인물을 고르고 정리 노트를 건너뛴다(응답 뒤 호출 1회). 정확하게: 고르기+정리 노트 사용.
+import { settleTarget } from "./settlescope.js";
 import { cycleOnlyInScene } from "../engine/cyclescene.js";
 import { logFailure, logEvent } from "./memlog.js";
 import { applyCycleEvents, syncCycles } from "./cyclesync.js";
@@ -437,15 +438,16 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         try { if (cyclePending) { const ev = milestonesBetween(cyclePending, cycleStates(r.wiki.snapshot())); cyclePending = null; cycleEvents.push(...ev); } } catch { cyclePending = null; }
         if (ok && cycleSync.length) { const ev = cycleSync.splice(0); try { let changed = []; const st = r.wiki.requireStore(); st.replace((v) => { const o = applyCycleEvents(v, ev); changed = o.changed; return o.scope; }); await st.flush(); if (changed.length) { log(`월경 기록 맞춤: ${changed.join(", ")}`); logEvent({ area: "월경·임신", title: `생리 시작·유산 반영 · ${changed.join(", ")}`, detail: ev }); } } catch (e) { log("월경 기록 맞춤 실패", e?.message ?? e); } }
         // 0.3.22 동거 여성 월경 주기 동기화(한 주기 지날 때마다 조금씩)
+        let target = null;   // 두 동기화가 같은 대상·같은 폴더 하나를 쓴다
         if (ok) { try {
-          const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(), ch = await api.getCharacterFromIndex(ci), chat0 = await api.getChatFromIndex(ci, ti);
-          const chaId = ch ? String(ch.chaId) : "", ck = chat0 ? chatKeyOf(chat0, ti) : "", fo = chaId && ck ? await store.getFolder(chaId, ck) : null, e = extraOf(fo);
-          if (e.cohabit.length) { let res = null; const st = r.wiki.requireStore(); st.replace((v) => { res = syncCycles(v, e.cohabit, e.cycleSync); return res.scope; }); await st.flush();
+          target = await settleTarget(r.wiki, store);
+          const { chaId, ck, folder: fo } = target ?? {}, e = extraOf(fo);
+          if (target && e.cohabit.length) { let res = null; const st = r.wiki.requireStore(); st.replace((v) => { res = syncCycles(v, e.cohabit, e.cycleSync); return res.scope; }); await st.flush();
             if (res && JSON.stringify(res.last) !== JSON.stringify(e.cycleSync)) await store.updateFolder(chaId, ck, (f) => { const x = extraOf(f); x.cycleSync = res.last; f.extra = x; });
             if (res?.changed.length) { log(`월경 주기 동기화: ${res.changed.join(", ")}`); logEvent({ area: "월경·임신", title: `함께 사는 사람끼리 주기가 조금 가까워졌어요 · ${res.changed.join(", ")}` }); } }
         } catch (e) { log("월경 주기 동기화 실패", e?.message ?? e); } }
         // 2.2.30 호감도 = 감정(인간적·이성적 호감·신뢰, 적대·두려움) + 친밀도 + 첫인상(엔진 계산, 호출 없음)
-        if (ok) { try { await syncAffinityNow(r); } catch (e) { log("호감도 계산 실패", e?.message ?? e); } }
+        if (ok) { try { await syncAffinityNow(r, target); } catch (e) { log("호감도 계산 실패", e?.message ?? e); } }
         return ok;
       };
       link.takeCycle = () => cycleEvents.splice(0);
@@ -474,10 +476,8 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
     return true;
   }
   // 설정(flow.on·mode, 모델)이 바뀐 뒤 부른다.
-  async function syncAffinityNow(r) {
-    const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex(), ch = await api.getCharacterFromIndex(ci), chat0 = await api.getChatFromIndex(ci, ti);
-    const chaId = ch ? String(ch.chaId) : "", ck = chat0 ? chatKeyOf(chat0, ti) : "", fo = chaId && ck ? await store.getFolder(chaId, ck) : null;
-    if (!fo?.emo) return;
+  async function syncAffinityNow(r, target) {
+    const fo = target?.folder; if (!fo?.emo || !target.same()) return;
     let policy = null; try { policy = JSON.parse(r.main.sourceLibrary?.base?.policies ?? "{}")?.policies?.["affinity.score"] ?? null; } catch { policy = null; }
     if (!policy) return;
     const K = keyOfH(fo), now = nowOfH(fo), uk = K("{{user}}");

@@ -44,7 +44,7 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
   let spanMode = true, probe = null;
   const checkSpans = () => { if (probe || !spanMode) return; probe = setTimeout(async () => { probe = null; try { await overlay.hook(); } catch { /* 아래서 판단 */ } if (overlay.total() === 0 && spanMode) { spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "리스 화면에서 이름을 찾지 못해 상태창을 이름 아래 펼침으로 바꿨어요(이름을 다시 누르면 닫혀요)" }); } }, 5000); };
   const decided = async () => { if (!spanMode) return false; if (mount.ready()) return true; await Promise.race([mount.ensureDoc().catch(() => null), new Promise((r) => setTimeout(r, 1200))]); return mount.ready() && spanMode; };
-  const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: async (pid) => { const c = cache ?? await ready().catch(() => null); const d = byId.get(pid); return d && c?.cardOf ? c.cardOf(d) : ""; }, onFail: () => { if (!spanMode) return; spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "상태창 창을 띄우지 못해 이름 아래 펼침으로 바꿨어요(다음 응답부터)" }); }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
+  const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: async (pid) => { const c = cache ?? await ready().catch(() => null); const d = byId.get(pid); if (!d || !c?.cardOf) return ""; await Promise.race([c.thumb?.(d), new Promise((r) => setTimeout(r, 700))]); return c.cardOf(d); }, onFail: () => { if (!spanMode) return; spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "상태창 창을 띄우지 못해 이름 아래 펼침으로 바꿨어요(다음 응답부터)" }); }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
   let cache = null, checked = 0, loading = null;
   // 2.2.22 성능: 캐릭터 통째(채팅 전체 포함, 큰 채팅은 수십 MB)는 봇이 바뀔 때만 한 번 읽고, 이름·설명·이미지 목록만 남긴다
   let charMemo = null, users = null, usersAt = 0;
@@ -72,11 +72,14 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
     const when = [...(f.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
     const docs = Object.values(f.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && !/\{\{user\}\}/i.test(d.title ?? ""));
     const imgs = new Map();
-    if (api && character) await Promise.all(docs.map(async (d) => { const u = await charThumb(api, character, [d.title, ...(d.aliases ?? [])]).catch(() => null); if (u) imgs.set(d.id, u); }));
+    // 신고 #5: 사진은 첫 표시 때 모두 기다리지 않는다 — 화면 위 방식은 그 인물 상태창을 열 때, 펼침 방식은 붙이기 전에
+    const thumbs = new Map();
+    const thumb = (d) => { if (!api || !character) return Promise.resolve(); if (!thumbs.has(d.id)) thumbs.set(d.id, charThumb(api, character, [d.title, ...(d.aliases ?? [])]).catch(() => null).then((u) => { if (u) { imgs.set(d.id, u); htmls.delete(d.id); } })); return thumbs.get(d.id); };
+    const thumbAll = () => Promise.all(docs.map(thumb));
     const htmls = new Map(), cardOf = (d) => { if (!htmls.has(d.id)) htmls.set(d.id, statusCardHtml(f, d, { when, status: inj.status !== false, img: imgs.get(d.id) ?? null, thoughts: (() => { try { return thoughts?.()?.tabFor?.([d.title, ...(d.aliases ?? [])]) ?? ""; } catch { return ""; } })() })); return htmls.get(d.id); };
     byId = new Map(docs.map((d) => [d.id, d]));
     const people = docs.map((d) => ({ id: d.id, names: [d.title, ...(d.aliases ?? [])].filter((n) => String(n ?? "").trim().length >= 2), get html() { return cardOf(d); } }));
-    cache = { key, cur, links, scene, people, folder: f, cardOf, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, character?.desc].filter(Boolean).join(" ") };
+    cache = { key, cur, links, scene, people, folder: f, cardOf, thumb, thumbAll, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, character?.desc].filter(Boolean).join(" ") };
     checked = Date.now();   // 2.2.22: 다 읽은 뒤에 시각을 적는다(읽는 데 3초가 넘으면 다 읽자마자 만료돼 매번 처음부터 다시 읽었다)
   };
   // 11-21 제보: 표시 훅은 유저 입력에도 불린다 → 채팅의 유저 메시지 글을 모아 두고 같은 글이면 상태창을 붙이지 않는다.
@@ -110,7 +113,7 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
     },
     // 본문 글에만 링크(뒤에 붙는 게이지·일기·로어북 상자는 호출하는 쪽이 따로 붙인다)
     async link(text) {
-      try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = await decided(); const out = linkNames(text, c.people, { overlay: ov }); if (ov && out !== text) { overlay.soon(); checkSpans(); } return out; } catch { return text; }
+      try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = await decided(); if (!ov) await c.thumbAll(); const out = linkNames(text, c.people, { overlay: ov }); if (ov && out !== text) { overlay.soon(); checkSpans(); } return out; } catch { return text; }
     },
     // 장면 상태창 HTML(없으면 ""). 상태 줄이 있는 응답, 또는 등장인물이 나온 긴 응답에만
     async scene(text) {
@@ -126,6 +129,7 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
         if (!s.fromLine && !(ppl.length && text.length >= 300)) return "";
         if (await userish(text)) return "";
         const ov = await decided(); if (ov && c.links && ppl.some((p) => p.doc)) { overlay.soon(); checkSpans(); }
+        if (!ov && c.links && ppl.some((p) => p.doc)) await c.thumbAll();
         return scenePanelHtml({ ...s, force: true, people: ppl.map((p) => (p.doc && c.links ? (ov ? { name: p.name, pid: p.doc.id } : { name: p.name, card: c.cardOf(p.doc) }) : { name: p.name })) });
       } catch { return ""; }
   }
