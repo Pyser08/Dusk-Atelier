@@ -167,14 +167,14 @@ export function compatCard(env, card, doc) {
   const paint = () => env.redraw?.();
   const chips = h("div", { class: "rb-compat-pick", role: "group", "aria-label": "상대 고르기" }, others.map((d) => h("button", { type: "button", class: "rb-chip", "aria-pressed": d.id === pick.id ? "true" : "false", onClick: () => { m.compat[doc.id] = d.id; paint(); } }, d.title)));
   const R = 26, L = 2 * Math.PI * R, list = (t, arr, cls) => arr.length ? h("div", { class: ["row", cls] }, h("small", null, t), h("div", { class: "tags" }, arr.map((x) => h("span", null, x)))) : null;
-  box.append(
+  box.append(...[
     h("div", { class: "head" },
       h("svg", { svg: true, viewBox: "0 0 64 64", class: "ring", "aria-label": `궁합 ${c.score}점` }, h("circle", { svg: true, cx: 32, cy: 32, r: R, class: "bg" }), h("circle", { svg: true, cx: 32, cy: 32, r: R, class: "fg", "stroke-dasharray": `${(c.score / 100) * L} ${L}`, transform: "rotate(-90 32 32)" }),
         h("text", { svg: true, x: 32, y: 37, "text-anchor": "middle" }, String(c.score))),
       h("div", null, h("b", null, `${doc.title} × ${pick.title}`), h("div", { class: "lab" }, c.label), c.lead ? h("small", { class: "rb-muted" }, c.lead) : null)),
     list("둘 다 좋아함", c.shared, "ok"), list("아직 안 해 본 겹치는 취향", c.untried, "new"),
     list("엇갈림(한쪽은 좋아하고 한쪽은 싫어함)", c.clash.map((x) => `${x.item} — ${x.who === "a" ? doc.title : pick.title}만 좋아함`), "bad"),
-    !c.shared.length && !c.clash.length ? note("겹치거나 엇갈리는 취향이 아직 없어요. 체위·플레이·선호·금기 태그가 쌓이면 더 정확해져요.") : null);
+    !c.shared.length && !c.clash.length ? note("겹치거나 엇갈리는 취향이 아직 없어요. 체위·플레이·선호·금기 태그가 쌓이면 더 정확해져요.") : null].filter(Boolean));   // 11-24: DOM append에 null을 넘기면 글자 “null”이 찍힌다
   return card("💞 궁합", [chips, box], null, "rb-life");
 }
 

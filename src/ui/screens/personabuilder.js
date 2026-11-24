@@ -890,7 +890,7 @@ export async function renderPersonaBuilder(ctx) {
         ...(s.kind === "fixed" ? [h("div", { class: "rb-pb-fixed" }, h("div", { class: "rb-muted", style: "margin-bottom:6px" }, "AI에게 주는 규칙이에요. 영어 그대로 설명 맨 위에 들어가요. (양식 편집에서 바꿀 수 있어요)"), s.text)]
           : s.kind === "free" ? [fieldBox(freeKey(s.title), s.ko, s.hint ? `(${s.hint})` : "자유롭게", true, s.title)]
           : [...s.fields.map((f) => fieldBox(fieldKey(s.title, f.label), f.ko, f.hint, false, f.label, () => dropField(s, f))), h("button", { type: "button", class: "rb-pb-add", onClick: () => newField(s) }, `＋ '${s.ko}'에 항목 추가`)]),
-        s.kind === "fixed" ? null : genBar(s),
+        ...(s.kind === "fixed" ? [] : [genBar(s)]),
         h("div", { style: "display:flex;justify-content:flex-end" }, h("button", { type: "button", class: "rb-pb-x", style: "font-size:12px;padding:3px 6px", onClick: () => dropSection(s) }, "이 폴더 양식에서 빼기")));
       body = card;
     }

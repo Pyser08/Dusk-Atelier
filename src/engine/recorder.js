@@ -147,7 +147,7 @@ export function deepMenu(run) {
 export const CYCLE_STAGE1 = [
   "",
   "",
-  "Cycle tracking is on — ALSO write these lines, only for characters who are women and appear in newest:",
+  "Cycle tracking is on — ALSO write these lines, only for characters who are women now (incl. turned female) and appear in newest:",
   "women|Name, Name      REQUIRED in every reply, exactly one line: every woman (never {{user}}, the player — even when {{user}} is a woman) who appears in newest, or women|none when no other woman appears",
   "woman|Name      every woman who appears in newest (one line each)",
   "sex|Name|male partner|used, outside or none      vaginal intercourse with a man in newest, one line per man. Count it also when it is clearly implied (a time skip right after undressing in bed, waking up together after it, narration saying they did it, semen inside her). Not oral, anal or hands only. used = condom, pill, IUD or other contraception clearly shown; outside = he clearly pulled out or finished outside her; none = everything else, including when nothing is said",
@@ -236,6 +236,8 @@ export function plainLines(raw) {
     walk(JSON.parse(t)); return acc.join("\n");
   } catch { return String(raw ?? ""); }
 }
+// sex 줄은 두 가지: 성별 변화(sex|이름|m·f|인용) / 월경 추적의 관계(sex|여성|상대|used·outside·none)
+const isSexChange = (f) => /^(m|f|male|female|남|여|남자|여자|남성|여성)$/i.test(f[2] ?? "") && !/^(used|outside|none|pull)/i.test(f[3] ?? "");
 export function nsfwFrom(raw, known = []) {
   const out = [];
   for (const line0 of String(raw ?? "").split(/\r?\n/)) {
@@ -247,7 +249,7 @@ export function nsfwFrom(raw, known = []) {
     else if (tag === "act" && f[3]) { const a = String(f[3]).toLowerCase(), act = /sex|관계|섹스/.test(a) ? "sex" : /climax|절정|사정|오르가/.test(a) ? "climax" : /kiss|키스/.test(a) ? "kiss" : "touch";
       out.push({ kind: "act", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), act, labels: String(f[4] ?? "").split(/[,，、·]/).map((x) => x.trim()).filter((x) => x && !/^(none|없음|-)$/i.test(x) && !/^\d+\s*(?:번|회|times?)?$/i.test(x)).slice(0, 4), times: actTimes(f[5] || (/^\s*\d+\s*(?:번|회|times?)?\s*$/i.test(f[4] ?? "") ? f[4] : "")) }); }   // 체위 칸을 비우고 횟수를 앞당겨 적어도 횟수로
     else if (tag === "sleep") out.push({ kind: "sleep", name });
-    else if (tag === "sex" && f[2] && /^(m|f|male|female|남|여|남자|여자|남성|여성)$/i.test(f[2])) out.push({ kind: "sex", name, g: /^(m|male|남)/i.test(f[2]) ? "m" : "f", quote: (f[3] ?? "").slice(0, 160) });   // 이야기에서 몸의 성별이 바뀜
+    else if (tag === "sex" && isSexChange(f)) out.push({ kind: "sex", name, g: /^(m|male|남)/i.test(f[2]) ? "m" : "f", quote: (f[3] ?? "").slice(0, 160) });   // 이야기에서 몸의 성별이 바뀜
     else if (tag === "touch" && f[2]) out.push({ kind: "touch", name, parts: String(f[2]).split(/[,，、·]/).map((x) => x.trim()).filter(Boolean).slice(0, 4) });
     else if (tag === "sat" && f[3]) out.push({ kind: "sat", name, partner: canonName(String(f[2] ?? "").trim(), known) || String(f[2] ?? "").trim(), level: /good|좋|만족/i.test(f[3]) ? "good" : /bad|아쉬|불만/i.test(f[3]) ? "bad" : "ok" });
     else if (tag === "gauge" && f[2] && f[3]) out.push({ kind: "gauge", name, key: /fat|피로/i.test(f[2]) ? "fat" : "lust", delta: Number(String(f[3]).replace(/[^\d+-]/g, "")), quote: (f[4] ?? "").slice(0, 160) });
@@ -261,9 +263,9 @@ export function nsfwFrom(raw, known = []) {
 
 // 원문 → cycle_report 목록 [{name, adult, sex:[{partner, contraception}], known, birth}]
 // outside(질외 사정)는 실패율을 생각해 다섯 번에 한 번만 피임 안 함으로 넘긴다(주기 계산 모듈은 used/none만 안다)
-export function cycleFrom(raw, known = [], random = Math.random) {
+export function cycleFrom(raw, known = [], random = Math.random, { user = false } = {}) {
   const m = new Map();
-  const get = (n) => { const name = canonName(String(n ?? "").trim(), known); if (!name || name === "{{user}}") return null; if (!m.has(nk(name))) m.set(nk(name), { name, adult: true, sex: [], known: false, birth: false, period: false, loss: false }); return m.get(nk(name)); };
+  const get = (n) => { const name = canonName(String(n ?? "").trim(), known); if (!name || (name === "{{user}}" && !user)) return null; if (!m.has(nk(name))) m.set(nk(name), { name, adult: true, sex: [], known: false, birth: false, period: false, loss: false }); return m.get(nk(name)); };
   let text = String(raw ?? "");
   try { const t = text.replace(/```[a-z]*/gi, "").trim(); if (/^[[{]/.test(t)) { const o = JSON.parse(t); const acc = []; const walk = (v) => { if (typeof v === "string") acc.push(...v.split(/\r?\n/)); else if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === "object") Object.values(v).forEach(walk); }; walk(o); text = acc.join("\n"); } } catch { /* 줄로 읽기 */ }
   for (const line0 of text.split(/\r?\n/)) {
@@ -271,6 +273,7 @@ export function cycleFrom(raw, known = [], random = Math.random) {
     const tag = (f[0] ?? "").toLowerCase();
     if (tag === "woman") get(f[1]);
     else if (tag === "women") { for (const n of String(f[1] ?? "").split(/[,，、·]/).map((x) => x.trim())) if (n && !/^(none|없음|no one|nobody)$/i.test(n)) get(n); }
+    else if (tag === "sex" && isSexChange(f)) continue;   // 11-24: 성별 변화 줄(sex|이름|f)을 ‘f라는 상대와 관계’로 읽었다
     else if (tag === "sex" && f[2]) { const w = get(f[1]); if (w && w.sex.length < 4) { const c = String(f[3] ?? "").toLowerCase(); w.sex.push({ partner: f[2].slice(0, 60), contraception: /^used/.test(c) ? "used" : /^outside|pull/.test(c) ? (random() < 0.2 ? "none" : "used") : "none" }); } }
     else if (tag === "pregnant") { const w = get(f[1]); if (w) w.known = true; }
     else if (tag === "birth") { const w = get(f[1]); if (w) w.birth = true; }
@@ -292,16 +295,16 @@ export const GROUP_MAX = 3;   // 2.1.4: 한 번에 묻는 인물 수
 const names = (chunk) => chunk.map((t) => t.name).join("·");
 // dusk: runner.prepareLatest().input (없으면 null). 반환 { stage1, people:[{name, ref, isNew, lines}] }
 // cast(name, aliases) → bool: 로어북에 있는 인물만 새로 만들기(설정 '로어북에 있는 인물만 새로 기록'). 없으면 막지 않는다. 이미 위키에 있는 인물은 묻지 않고 통과.
-export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, nsfw = false, world = false, status = false, outfit = false, weather = false, race = false, onWarn = () => {} } = {}) {
+export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, userWoman = false, nsfw = false, world = false, status = false, outfit = false, weather = false, race = false, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
   const key = nk(source).slice(0, 4000);
-  const ckey = key + (cycle ? "|cycle" : "") + (nsfw ? "|nsfw" : "") + "|human|tie" + (world ? "|world" : "") + (status ? "|status" : "") + (outfit ? "|outfit" : "") + (weather ? "|weather" : "") + (race ? "|race" : "") + (nsfw && isHotText([run.user, source].join("\n")) ? "|hot" : "");
+  const ckey = key + (cycle ? "|cycle" + (userWoman ? "-u" : "") : "") + (nsfw ? "|nsfw" : "") + "|human|tie" + (world ? "|world" : "") + (status ? "|status" : "") + (outfit ? "|outfit" : "") + (weather ? "|weather" : "") + (race ? "|race" : "") + (nsfw && isHotText([run.user, source].join("\n")) ? "|hot" : "");
   // 2.2.30 보조 토큰 절약: 성적인 장면이 아니면 성인 줄은 욕구·피로·잠(매 턴 필요)만 묻고 나머지(체위·약점·흔적 등 10여 줄)는 뺀다.
   // 바뀌는 부분(성인 줄)은 맨 뒤에 둬서 앞부분 지침이 매번 같게 — 모델 제공사의 프롬프트 캐시가 먹는다.
   const hot = nsfw && isHotText([run.user, source].join("\n"));
-  const extra = (cycle ? CYCLE_STAGE1 + COHABIT_STAGE1 : "") + HUMAN_STAGE1 + TIE_STAGE1 + (world ? EXTRA_STAGE1 : "") + (status ? STATUS_STAGE1 : "") + (outfit ? OUTFIT_STAGE1 : "") + (weather ? WEATHER_STAGE1 : "") + (race ? RACE_STAGE1 : "") + (nsfw ? (hot ? NSFW_STAGE1 + MARK_STAGE1 + DRIVE_STAGE1 : NSFW_LITE_STAGE1 + DRIVE_STAGE1) : "");   // 0.3.22 소문·목표·세계 문서는 설정 ‘세계 탭’(기본 꺼짐)   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
+  const extra = (cycle ? (userWoman ? CYCLE_STAGE1.replace("(never {{user}}, the player — even when {{user}} is a woman)", "(including {{user}}, who is a woman — write her as {{user}})").replace("no other woman", "no woman") : CYCLE_STAGE1) + COHABIT_STAGE1 : "") + HUMAN_STAGE1 + TIE_STAGE1 + (world ? EXTRA_STAGE1 : "") + (status ? STATUS_STAGE1 : "") + (outfit ? OUTFIT_STAGE1 : "") + (weather ? WEATHER_STAGE1 : "") + (race ? RACE_STAGE1 : "") + (nsfw ? (hot ? NSFW_STAGE1 + MARK_STAGE1 + DRIVE_STAGE1 : NSFW_LITE_STAGE1 + DRIVE_STAGE1) : "");   // 0.3.22 소문·목표·세계 문서는 설정 ‘세계 탭’(기본 꺼짐)   // 성인 항목이면 장면 판단 줄도(Erosync 장면 판단 대신, 추가 호출 없음)
   let stage1 = cache?.get(ckey) ?? null;
   if (!stage1) {
     const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: tail(run.recent || (dusk?.recent ?? []).join("\n"), RECENT_MAX), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
@@ -310,7 +313,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
       raw = plainLines(raw);   // 신고 #10: JSON {"lines":[…]} 답이면 성인·사람다움·세계·장면 판단 줄이 전부 버려졌다(parseLines·월경만 JSON을 풀어 읽었다)
       const got = fromStage1(lines, { known, source, openIds });
       // addon-rebuild: women| 줄이 있었는지 — 없으면 '모델이 월경 줄을 빠뜨림', 있으면 '여성이 없다고 보고'로 구분한다
-      if (cycle) { got.cycle = cycleFrom(raw, known); got.cycleDeclared = /(^|\n)\s*(?:[-*•>]+\s*)?women\s*[|｜¦]/i.test(String(raw ?? "")) || got.cycle.length > 0; }
+      if (cycle) { got.cycle = cycleFrom(raw, known, Math.random, { user: userWoman }); got.cycleDeclared = /(^|\n)\s*(?:[-*•>]+\s*)?women\s*[|｜¦]/i.test(String(raw ?? "")) || got.cycle.length > 0; }
       got.human = humanFrom(raw, known, HUMAN_TRAITS);
       got.extra = extraFrom(raw, (n) => canonName(String(n ?? "").trim(), known) || String(n ?? "").trim(), { marks: nsfw, world, status, outfit, weather, cohabit: cycle, race });
       if (nsfw) { got.nsfw = nsfwFrom(raw, known); got.drive = driveFrom(raw, (n) => { const c = canonName(String(n ?? "").trim(), known); return c && c !== "{{user}}" ? c : (/\{\{user\}\}/i.test(String(n)) ? "{{user}}" : ""); }); }

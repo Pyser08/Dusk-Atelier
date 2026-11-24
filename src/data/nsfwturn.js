@@ -13,6 +13,7 @@ import { randomZones, sexZones } from "../engine/zonegen.js";
 import { characterDocs, setUserNsfwNames, USER_NSFW_ID } from "../engine/usernsfw.js";
 import { genderOf, setGender, guessGender } from "../engine/gender.js";
 import { BODY_PARTS } from "../engine/humanitems.js";
+import { userAdultText } from "../engine/useradult.js";
 import { personaInfo } from "./profileseed.js";
 
 const key = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
@@ -74,7 +75,7 @@ export function applyLifeTurn(f, { events = [], present = [], gauge = null, text
   const turn = Number.isInteger(f.cursor?.at) ? f.cursor.at : Number.isFinite(f.life?.turn) ? f.life.turn : 0;
   const actors = events.map((e) => e.name), who = [...new Set([...present, ...actors])];
   const when = [...(f?.scenes ?? [])].filter((x) => !x.orphan && x.when).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))[0]?.when ?? "";
-  const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = f?.wiki?.people?.profiles?.[d.id];
+  const profOf = (d) => { const n = f?.nsfw?.[d.id], pr = d.id === USER_NSFW_ID ? { sexualDesire: { text: userAdultText(f, "sexual_desire") }, paraphilia: { text: userAdultText(f, "paraphilia") } } : f?.wiki?.people?.profiles?.[d.id];
     return { interest: n?.sexual?.eroticInterest ?? 50, mult: n?.lustMult ?? 1, spont: n?.sexual?.sexualSpontaneity, initiative: n?.axes?.initiative, when, boost: [n?.boost?.desire !== false && pr?.sexualDesire?.text, n?.boost?.para !== false && pr?.paraphilia?.text].filter(Boolean) }; };
   const date = String(when).match(/\d{1,5}-\d{1,2}-\d{1,2}/)?.[0] ?? "";   // 2.2.22 이야기 날짜(종족 발정기·첫 관계 날짜)
   const changed = tickLife(f, { turn, present: who, events, gauge, text, date, evKey }, profOf);

@@ -4,6 +4,7 @@ import { logFailure, logEvent } from "./memlog.js";
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
 import { buildBlock, insertBlock, injectVerdict, upsertLoreEntry } from "../engine/memoryinject.js";
 import { scaleBlock, wikiAware } from "../engine/memoryscale.js";
+import { userCycleSection } from "../engine/usercycle.js";
 import { nsfwSection } from "../engine/nsfwprofile.js";
 import { driveSection, seeded } from "../engine/scenedrive.js";
 import { nsfwByName } from "./nsfwturn.js";
@@ -92,6 +93,7 @@ export function createMemoryInjector(api, { store, prep = null, storyNow = null,
       // 1:1 봇은 자기 이름을 잘 안 써서 이름 찾기만으론 빠졌다 → 기억 블록에 든 인물·봇 캐릭터도 장면 인물로
       const present = [...(built.manifest?.included ?? []).filter((x) => x.kind === "person").map((x) => x.name), character?.name].filter(Boolean);
       add(nsfwSection(folder, recent, 4, { present }));
+      add(userCycleSection(folder));
       // 사람다운 항목·몸과 마음 상태(엔진 계산) — 최근 글에 이름이 나온 인물 + 장면 인물
       { const low = recent.normalize("NFKC").toLowerCase();
         const here = [...present, ...Object.values(folder?.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && [d.title, ...(d.aliases ?? [])].some((n) => String(n ?? "").length >= 2 && low.includes(String(n).normalize("NFKC").toLowerCase()))).map((d) => d.title)];

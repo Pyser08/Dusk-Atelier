@@ -9,7 +9,9 @@ import { btn, modal, confirmDialog } from "../../kit.js";
 import { mem, avatar, fail } from "./common.js";
 import { editFolder } from "./people.js";
 import { nsfwCard, nsfwStatusCard, nsfwTempCard, nsfwTagsCard } from "./nsfwcard.js";
-import { adultCandCard } from "./adultcands.js";
+import { adultCandCard, userAdultCard } from "./adultcands.js";
+import { userCycleState, userCycleText, userFemale } from "../../../engine/usercycle.js";
+import { cyclePaused } from "../../../engine/cyclegender.js";
 import { marksCard, compatCard, statusCard, fertilityCard, outfitCard, raceCard, diaryCard } from "./extracards.js";   // 0.3.22 몸 흔적·궁합
 import { subTabs } from "./subtabs.js";
 import { lustCard, moodCard, bodyCard, humanCard, heatOf, heatFx, compareCard } from "./lifecards.js";
@@ -438,9 +440,8 @@ export function personTabs(env, parts) {
   // NSFW 탭: Dusk 성인 항목(월경·임신, 성적 욕망·이상성향 후보) + Erosync 성적 항목(켜져 있을 때만). 항상 보인다.
   // 월경·임신 한눈에: 주기 띠(생리·가임기·오늘) + 다음 월경·배란까지 남은 날 / 임신이면 주차·출산 예정까지
   const dayN = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5 : NaN; };
-  const cycleViz = () => {
-    const sec = (doc?.sections ?? []).find((x) => x?.provenance?.slotId === "cycle.state" || x?.heading === "월경·임신");
-    const st = sec ? parseCycleBody(sec.body) : null;
+  const cycleState = () => { const sec = (doc?.sections ?? []).find((x) => x?.provenance?.slotId === "cycle.state" || x?.heading === "월경·임신"); return sec ? parseCycleBody(sec.body) : null; };
+  const cycleViz = (st = cycleState()) => {
     if (!st) return null;
     const stat = (big, small, cls) => h("div", { class: ["rb-cyc-stat", cls] }, h("b", null, big), h("small", null, small));
     if (st.conception) {
@@ -463,10 +464,11 @@ export function personTabs(env, parts) {
   const nsfw = () => {
     // addon-rebuild: 성인 프로필은 이 채팅 장기기억(folder.nsfw) 값만 쓴다(Erosync 프로필·요약·임시값·태그 카드는 뺌)
     const a = parts.adult ?? {};
-    const cyc = a.cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), a.cyc.lines.join(" · "), a.cyc.date ? h("small", { class: "rb-muted" }, ` (${a.cyc.date} 기준)`) : null) : null;
+    const cyc = doc && cyclePaused(env.folder, doc, cycleState()) ? (a.cyc ? h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, "지금은 몸이 남성이라 월경 주기를 멈춰 두었어요. 여성으로 바뀌면 다시 보여요.") : null) : a.cyc ? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), a.cyc.lines.join(" · "), a.cyc.date ? h("small", { class: "rb-muted" }, ` (${a.cyc.date} 기준)`) : null) : null;
     const note = (t) => h("p", { class: "rb-muted", style: "margin:0;white-space:normal" }, t);
     // 값이 없어도 기본 칸은 보인다: 월경·임신 / 성적 욕망·이상성향 후보 / 성인 프로필
-    const cv = lay && a.cyc ? cycleViz() : null;
+    const paused = doc && cyclePaused(env.folder, doc, cycleState());
+    const cv = !paused && lay && a.cyc ? cycleViz() : null;
     const cycCard = card("월경·임신", [cv ?? cyc ?? note("아직 기록이 없어요. 장기 기억 설정에서 ‘월경·임신 기록’(성인 항목)을 켜면 이야기 속 날짜로 따라가요.")], null, "rb-nsfw-base");
     // 세부 탭: 상태(성욕·몸) / 몸(성감대·월경) / 취향(프로필·잠자리·후보·태그) / 장면(장면 판단)
     const pane = (...k) => h("div", { class: "rb-wk2-pane", id: "rb-wk2-nsfw" }, k.filter(Boolean));
@@ -474,10 +476,11 @@ export function personTabs(env, parts) {
     const uNames = [userLabel(), ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.title, ...(ctx.memory?.flow?.runtime?.()?.wiki?.userIdentity?.aliases ?? [])].filter(Boolean);
     if (selfNames.some((n) => n === "{{user}}" || userKeySet(uNames).has(String(n).toLowerCase().replace(/\s+/g, "")))) {   // 11-22: 나의 위키 문서가 있어도 같은 유저 칸
       setUserNsfwNames(uNames);
-      const ud = userNsfwDoc();
+      const ud = userNsfwDoc(), us = env.cycleOn ? userCycleState(env.folder) : null;
+      const myCyc = us ? (lay ? cycleViz(us) : null) ?? h("div", { class: "rb-mem-cycle", role: "note" }, h("b", null, "월경·임신 "), userCycleText(env.folder).replace(/\n/g, " · ")) : env.cycleOn && userFemale(env.folder) ? note("다음 응답부터 나의 월경 주기를 따라가요.") : null;
       return sub2("nsfw", [
-        { id: "state", label: "상태", icon: "🌡️", hint: "성욕 게이지·피로·경험·월경·임신", render: () => pane(lustCard(env, card, ud, { after: fertilityCard(env, card, ud), cycle: cv ?? cyc ?? null })) },
-        { id: "taste", label: "취향", icon: "🫦", hint: "프로필·잠자리·태그", render: () => pane(nsfwCard(env, card, ud), humanCard(env, card, ud, "ext"), nsfwTagsCard(env, card, ud)) },
+        { id: "state", label: "상태", icon: "🌡️", hint: "성욕 게이지·피로·경험·월경·임신", render: () => pane(lustCard(env, card, ud, { after: fertilityCard(env, card, ud), cycle: myCyc })) },
+        { id: "taste", label: "취향", icon: "🫦", hint: "프로필·잠자리·후보·태그", render: () => pane(nsfwCard(env, card, ud), humanCard(env, card, ud, "ext"), userAdultCard(env, card, ud), nsfwTagsCard(env, card, ud)) },
         { id: "body", label: "몸", icon: "💋", hint: "성감대·몸 흔적", n: (env.folder?.nsfw?.[ud.id]?.zones ?? []).length, render: () => pane(bodyCard(env, card, ud), marksCard(env, card, ud)) },
         { id: "compat", label: "궁합", icon: "💞", hint: "상대와 취향이 얼마나 맞는지", render: () => pane(compatCard(env, card, ud)) }]);
     }

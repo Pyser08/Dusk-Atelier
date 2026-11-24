@@ -1,5 +1,6 @@
 // addon-rebuild: 인물 위키 NSFW 탭의 성인 프로필 카드 — 이 채팅 장기기억(folder.nsfw[문서 id]) 값. Erosync 프로필을 쓰지 않는다.
 // 게이지·칩 모양은 예전 Erosync 카드와 같다(bar·eroDetailRows를 같이 씀).
+import { userAdultProfile } from "../../../engine/useradult.js";
 import { memStore } from "./memstore.js";
 import { h } from "../../dom.js";
 import { btn, confirmDialog, modal, promptDialog } from "../../kit.js";
@@ -35,7 +36,7 @@ export async function regenerate(env, doc, { keep = null, quiet = false } = {}) 
   const mine = isUserNsfwDoc(doc) ? await userNsfwNeed(ctx.api ?? env.api, {}).catch(() => null) : null;   // 유저 칸: 페르소나 설명으로
   if (!prof && !mine) return ctx.toast("이 인물은 기본 성격이 아직 없어요. 다음 턴에 기본 성격과 함께 만들어져요.", { error: true });
   if (!quiet) ctx.toast("성인 프로필을 만드는 중이에요…");
-  const r = await imp.runNsfw([{ id: doc.id, name: doc.title || doc.id, profile: mine ? mine.profile : profileText(prof) }]).catch((e) => ({ byId: {}, failed: [{ id: doc.id, error: e?.message ?? String(e) }] }));
+  const r = await imp.runNsfw([{ id: doc.id, name: doc.title || doc.id, profile: mine ? [mine.profile, userAdultProfile(stored ?? env.folder)].filter(Boolean).join("\n") : profileText(prof) }]).catch((e) => ({ byId: {}, failed: [{ id: doc.id, error: e?.message ?? String(e) }] }));
   const n = normalizeNsfw(r.byId[doc.id]);
   if (!n) {
     const msg = r.failed[0]?.error || "문제: 답의 nsfw 값이 비었거나 형식이 맞지 않아요", cen = /^\s*검열[:：]/.test(msg);
