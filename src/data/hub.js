@@ -66,20 +66,22 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
   const set = (k, v) => store.setItem(k, v).catch?.(() => {});
   const okUrl = (u) => /^https:\/\/[^\s"'<>]+$/.test(String(u ?? "")) ? String(u).replace(/\/+$/, "") : "";
   let remote = null;
-  async function remoteUrl() {
-    if (remote && Date.now() - remote.at < DAY) return remote.url;
+  // 주소가 있으면 하루, 비어 있으면 10분만 기억한다(2.2.47: 빈 값을 하루 기억해 hub.json을 채워도 늦게 반영됐다). force는 버그 신고 창을 열 때.
+  const fresh = (c) => c && Date.now() - c.at < (c.url ? DAY : 600e3);
+  async function remoteUrl(force = false) {
+    if (!force && fresh(remote)) return remote.url;
     let c = null; try { c = JSON.parse((await get(CFG_KEY)) || "null"); } catch { /* 없음 */ }
-    if (c && Date.now() - c.at < DAY) return (remote = c).url;
+    if (!force && fresh(c)) return (remote = c).url;
     let u = c?.url ?? "";
     try {
-      const res = typeof api.nativeFetch === "function" ? await api.nativeFetch(`${HUB_CONFIG_URL}?t=${Math.floor(Date.now() / 36e5)}`, { method: "GET" }) : null;
-      if (res?.ok) u = okUrl((await res.json())?.url);
+      const res = typeof api.nativeFetch === "function" ? await api.nativeFetch(`${HUB_CONFIG_URL}?t=${Math.floor(Date.now() / 6e4)}`, { method: "GET" }) : null;
+      if (res?.ok) { const t = await res.text(); u = okUrl(JSON.parse(t)?.url); }
     } catch { /* 못 읽으면 지난 값 */ }
     remote = { at: Date.now(), url: u };
     await set(CFG_KEY, JSON.stringify(remote));
     return u;
   }
-  const url = async () => okUrl(await get(URL_KEY)) || okUrl(HUB_URL) || await remoteUrl();
+  const url = async (force = false) => okUrl(await get(URL_KEY)) || okUrl(HUB_URL) || await remoteUrl(force);
   async function installId() { let id = await get(ID_KEY); if (!id) { id = uuid(); await set(ID_KEY, id); } return String(id); }
   async function addonList() {
     try { const idx = await addons?.getIndex?.(); return Object.entries(idx ?? {}).map(([id, a]) => ({ id, v: String(a?.version ?? ""), on: a?.on !== false })).slice(0, 80); } catch { return []; }
@@ -125,5 +127,5 @@ export function createHub(api, { version, addons, risuVersion } = {}) {
     };
   }
   async function sendReport(report) { const r = await post("/api/report", report); return r.data?.no ?? null; }
-  return { url, installId, statsOn, setStats, pingSoon, buildReport, sendReport, configured: async () => !!(await url()) };
+  return { url, installId, statsOn, setStats, pingSoon, buildReport, sendReport, configured: async () => !!(await url(true)) };
 }

@@ -28,7 +28,7 @@ test("같은 오류가 이어지면 한 줄로 묶어 센다", () => {
 
 test("서버 주소가 어디에도 없으면(hub.json도 비면) 통계를 보내지 않는다", async () => {
   let calls = 0;
-  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} }, nativeFetch: async (u, o) => { if (o?.method === "POST") calls++; return { ok: true, json: async () => ({ url: "" }) }; } };
+  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} }, nativeFetch: async (u, o) => { if (o?.method === "POST") calls++; return { ok: true, json: async () => ({ url: "" }), text: async () => JSON.stringify({ url: "" }) }; } };
   const c = createClient(api, { version: "t" });
   assert.equal(await c.pingSoon(), false);
   assert.equal(calls, 0);
@@ -82,7 +82,7 @@ test("GitHub 웹후크는 서명이 맞을 때만 이슈를 넣는다", () => wi
 
 test("hub.json에 주소가 있으면 그 주소로 보낸다", async () => {
   const sent = [];
-  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} }, nativeFetch: async (u, o) => { if (o?.method === "POST") { sent.push(u); return { ok: true, json: async () => ({}) }; } return { ok: true, json: async () => ({ url: "https://hub.duckdns.org/" }) }; } };
+  const api = { pluginStorage: { getItem: async () => null, setItem: async () => {} }, nativeFetch: async (u, o) => { if (o?.method === "POST") { sent.push(u); return { ok: true, json: async () => ({}) }; } return { ok: true, text: async () => JSON.stringify({ url: "https://hub.duckdns.org/" }) }; } };
   assert.equal(await createClient(api, { version: "t" }).pingSoon(), true);
   assert.deepEqual(sent, ["https://hub.duckdns.org/api/ping"]);
 });
@@ -105,4 +105,15 @@ test("비밀번호로 들어가고, 기기 세션은 서버를 다시 켜도 남
   await fetch(a.base + "/logout", { method: "POST", redirect: "manual", headers: { cookie } });
   assert.equal((await fetch(a.base + "/api/admin/summary", { headers: { cookie } })).status, 401);
   a.srv.close(); a.hub.store.flush();
+});
+
+test("hub.json이 비어 있던 것을 기억해도, 버그 신고 창은 열 때 다시 읽는다", async () => {
+  const mem = new Map(); let body = { url: "" };
+  const api = { pluginStorage: { getItem: async (k) => mem.get(k) ?? null, setItem: async (k, v) => mem.set(k, v) }, nativeFetch: async () => ({ ok: true, text: async () => JSON.stringify(body) }) };
+  const c = createClient(api, { version: "t" });
+  assert.equal(await c.url(), "");
+  body = { url: "https://duskhub.duckdns.org" };
+  assert.equal(await c.url(), "");              // 10분 안에는 기억한 빈 값
+  assert.equal(await c.configured(), true);     // 창을 열 때는 새로 읽는다
+  assert.equal(await c.url(), "https://duskhub.duckdns.org");
 });
