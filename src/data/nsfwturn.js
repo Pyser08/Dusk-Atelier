@@ -119,7 +119,7 @@ export async function applyNsfwTurn(memory, log = () => {}, info = null, api = n
   if (!q.length && !dq.length && !events.length && !present.length && !ex.length) return 0;
   const cur = await memory.switches?.currentChat?.().catch?.(() => null);
   if (!cur) return 0;
-  try { const ui = memory.flow?.runtime?.()?.wiki?.userIdentity; if (ui?.title) setUserNsfwNames([ui.title, ...(ui.aliases ?? [])]); } catch { /* 이름 모름 → {{user}}만 */ }
+  try { const ui = memory.flow?.runtime?.()?.wiki?.userIdentity; if (ui?.title) setUserNsfwNames([ui.title, ...(ui.aliases ?? []), ...((await memory.store.peekFolder?.(cur.chaId, cur.chatId).catch(() => null))?.userAliases ?? [])]); } catch { /* 이름 모름 → {{user}}만 */ }
   let personaG = null; try { personaG = api ? guessGender((await personaInfo(api))?.desc) : null; } catch { personaG = null; }
   const gauge = await readGauge(api).catch(() => null);
   let out = [], drive = [], life = [], pruned = [], extra = [], zoned = [];

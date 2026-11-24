@@ -9,6 +9,8 @@ import { meView, userMergePlan, mergeIntoUser, TONE_LABEL, USER } from "../../..
 import { setTag } from "../../../engine/memoryemo.js";
 import { setTalk } from "../../../engine/memoryhuman.js";
 import { loadUserNames } from "../../../data/usernames.js";
+import { userAliasesFor, setUserAliases } from "../../../engine/useralias.js";
+import { withoutPast } from "../../../engine/pastpersona.js";
 import { loadUserName } from "./username.js";
 import { autoMergeUser } from "../../../data/usermerge.js";
 
@@ -69,7 +71,8 @@ export async function renderMemoryMe(ctx, host, { redraw }) {
   const cur = await M.switches.currentChat();
   if (!cur) return replace(host, h("div", { class: "rb-me" }, pageHead("나", { back }), emptyState({ icon: "character", title: "열린 채팅이 없어요", text: "채팅을 열면 그 채팅에서 다른 인물들이 나를 어떻게 기억하는지 보여 줘요." })));
   let [folder, names] = await Promise.all([M.store.getFolder(cur.chaId, cur.chatId).catch(() => null), personaNames(ctx)]);
-  await loadUserName(ctx);   // '나' 자리에 이 채팅에 묶인 페르소나 이름이 보이게
+  const uname = await loadUserName(ctx);
+  { const bot = String(cur.botName ?? "").replace(/\s+/g, "").toLowerCase(); names = withoutPast([...new Set([...names, ...userAliasesFor(uname ? [uname] : [], folder)])]).filter((n) => String(n).replace(/\s+/g, "").toLowerCase() !== bot); }   // 신고 #12 한글 읽기·직접 적은 이름도   // '나' 자리에 이 채팅에 묶인 페르소나 이름이 보이게
   try {   // 페르소나 이름으로 따로 쌓인 옛 기록은 자동으로 {{user}}에 합친다(합칠 게 없으면 아무것도 안 함)
     const merged = await autoMergeUser(M.store, cur.chaId, cur.chatId, folder, names);
     if (merged) { folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => folder); ctx.toast?.(`'${merged.names.join("', '") || "다른 이름"}' 기록을 '나'로 합쳤어요.`); }
@@ -104,6 +107,11 @@ export async function renderMemoryMe(ctx, host, { redraw }) {
       } catch (e) { fail(ctx)(e); }
     } })) : null;
 
+  // 신고 #12: 자동으로 못 맞히는 이름은 직접 적는다
+  const aliasIn = h("input", { class: "rb-input", id: "rb-me-alias", value: (folder?.userAliases ?? []).join(", "), placeholder: "예: 라이언, 라이언 카터", "aria-label": "나의 다른 이름" });
+  const aliasCard = h("section", { class: "rb-card bordered" }, h("b", null, "나의 다른 이름"),
+    h("p", { class: "rb-muted", style: "white-space:normal;margin:4px 0" }, "페르소나가 영문인데 본문엔 한글로 나오는 등 이름이 다르게 적힐 때 쉼표로 적어 주세요. 다음 기록부터 모두 ‘나’로 모으고, 따로 쌓인 장기 기억 기록은 지금 ‘나’로 합쳐요(되돌리려면 기억 백업). 다른 인물의 이름은 적지 마세요."),
+    h("div", { class: "rb-mem-edrow", style: "gap:6px" }, aliasIn, btn("저장", { size: "sm", kind: "primary", id: "rb-me-alias-save", onClick: async () => { try { await M.store.updateFolder(cur.chaId, cur.chatId, (f) => { setUserAliases(f, aliasIn.value); }); ctx.toast("저장했어요."); redraw(); } catch (e) { fail(ctx)(e); } } })));
   const close = v.others.filter((o) => o.stage === "close" || o.stage === "very close").length;
   const stats = h("div", { class: "rb-hnums rb-me-nums" },
     h("div", { class: "rb-hnum" }, h("b", null, String(v.others.length)), h("small", null, "나를 아는 인물")),
@@ -118,5 +126,5 @@ export async function renderMemoryMe(ctx, host, { redraw }) {
   const list = v.others.length
     ? h("div", { class: "rb-me-grid" }, ...v.others.map((o) => otherCard(o, openWiki, onEdit)))
     : emptyState({ icon: "character", title: "아직 나를 기억하는 인물이 없어요", text: "대화가 이어지면 인물들이 나에게 느끼는 감정·호칭이 여기에 쌓여요." });
-  replace(host, h("div", { class: "rb-me" }, pageHead("나", { back, sub: "다른 인물들이 나를 어떻게 보고 부르는지 모아 봐요." }), merge, head, moments, list));
+  replace(host, h("div", { class: "rb-me" }, pageHead("나", { back, sub: "다른 인물들이 나를 어떻게 보고 부르는지 모아 봐요." }), merge, head, aliasCard, moments, list));
 }

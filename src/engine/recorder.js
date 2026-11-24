@@ -9,6 +9,7 @@
 // 저장 형식은 바뀌지 않는다(리수폿 위키·Dusk 폴더 둘 다 예전 그대로).
 import { sameKoreanPerson } from "./namekr.js";
 import { scaleDelta } from "./gaugemult.js";
+import { foldUserNames } from "./useralias.js";
 import { seedFirst, seedLewd } from "./adultseed.js";
 import { stripThoughts, JSON_FALLBACK, isNoneReply as coreNoneReply, parseLines, fromStage1, fromStage2, linesStage2, linesStage2Group, splitGroupReply, LINES_STAGE1, LINES_STAGE1_MIN, quoteOk, focusText, knownInText, failureKind, RETRY_NOTE, coerceInt } from "./memorylines.js";
 import { canonNameKo as canonName } from "./namekr.js";   // addon-rebuild: 한국 이름 성 한 글자(하연=지하연)까지 맞춤
@@ -298,6 +299,9 @@ const names = (chunk) => chunk.map((t) => t.name).join("·");
 export async function recordTurn(call, run, { dusk = null, light = false, beliefs = false, cache = null, auto = null, cast = null, group = false, cycle = false, userWoman = false, nsfw = false, world = false, status = false, outfit = false, weather = false, race = false, onWarn = () => {} } = {}) {
   const source = run.rp, known0 = knownOf(run, dusk?.known ?? []);
   const known = knownInText(known0, [run.recent, source].join("\n"));
+  const meDoc = (d) => [d.title, ...(d.aliases ?? [])].some((n) => /^\{\{user\}\}$/i.test(String(n ?? "").trim()));
+  const taken = run.docs.filter((d) => !meDoc(d) && nk(d.title) !== nk(run.userNames[0])).map((d) => d.title);
+  const fold = (raw) => foldUserNames(plainLines(raw), run.userNames, { taken, explicit: run.userExplicit ?? [] });
   const openItems = dusk?.openItems ?? [], openIds = new Set(openItems.map((x) => String(x.id)));
   const key = nk(source).slice(0, 4000);
   const ckey = key + (cycle ? "|cycle" + (userWoman ? "-u" : "") : "") + (nsfw ? "|nsfw" : "") + "|human|tie" + (world ? "|world" : "") + (status ? "|status" : "") + (outfit ? "|outfit" : "") + (weather ? "|weather" : "") + (race ? "|race" : "") + (nsfw && isHotText([run.user, source].join("\n")) ? "|hot" : "");
@@ -309,8 +313,9 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   if (!stage1) {
     const payload = { bot: dusk?.bot ?? "", known: known.map((p) => ({ name: p.name, ...(p.aliases?.length ? { aliases: p.aliases.slice(0, 6) } : {}), ...(p.state ? { state: p.state } : {}), ...(p.last ? { last: cut(p.last, 60) } : {}) })), previousScene: dusk?.previousScene ?? null, ...(openItems.length ? { openItems } : {}), ...(dusk?.storyDate ? { storyDate: dusk.storyDate } : {}), recent: tail(run.recent || (dusk?.recent ?? []).join("\n"), RECENT_MAX), ...(run.user ? { userInput: cut(run.user, 2000) } : {}), newest: source.slice(0, 8000) };
     stage1 = await ask(call, [{ role: "system", content: LINES_STAGE1 + extra }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
-      const lines = parseLines(raw); if (!lines.length) return null;
-      raw = plainLines(raw);   // 신고 #10: JSON {"lines":[…]} 답이면 성인·사람다움·세계·장면 판단 줄이 전부 버려졌다(parseLines·월경만 JSON을 풀어 읽었다)
+      let lines = parseLines(raw); if (!lines.length) return null;
+      raw = fold(raw);   // 신고 #12 나의 이름(영문·한글 읽기)을 {{user}}로 모은다
+      lines = parseLines(raw);   // 신고 #10: JSON {"lines":[…]} 답이면 성인·사람다움·세계·장면 판단 줄이 전부 버려졌다(parseLines·월경만 JSON을 풀어 읽었다)
       const got = fromStage1(lines, { known, source, openIds });
       // addon-rebuild: women| 줄이 있었는지 — 없으면 '모델이 월경 줄을 빠뜨림', 있으면 '여성이 없다고 보고'로 구분한다
       if (cycle) { got.cycle = cycleFrom(raw, known, Math.random, { user: userWoman }); got.cycleDeclared = /(^|\n)\s*(?:[-*•>]+\s*)?women\s*[|｜¦]/i.test(String(raw ?? "")) || got.cycle.length > 0; }
@@ -351,7 +356,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
   const profileLine = (who) => `profile|one-line personality|trait1,trait2|what they value      for ${who}: write it (its personality is not in the card yet)`;
   const askPerson = (t, payload, isNew, useLight, tries = 2) => ask(call, [{ role: "system", content: linesStage2(t.name, { light: useLight, beliefs, wiki: true, isNew, extraLines: [...deepMenu(run), ...startLine(run), ...(noFirst(t) ? [firstLine("the focus character")] : []), ...(noProfile(t) ? [profileLine("the focus character")] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
     if (isNoneReply(raw)) return { lines: [] };
-    const lines = parseLines(raw); return lines.length ? { lines } : null;
+    const lines = parseLines(fold(raw)); return lines.length ? { lines } : null;
   }, { tries });
   const payloadOf = (t) => {
     const mine = (arr) => (arr ?? []).filter((x) => JSON.stringify(x).includes(t.name));
@@ -376,6 +381,7 @@ export async function recordTurn(call, run, { dusk = null, light = false, belief
     const names = chunk.map((t) => t.name), anyNew = chunk.some((t) => !t.doc);
     const payload = { known: known.map((p) => p.name), overview: { scene: stage1.scene?.sum ?? "" }, people: chunk.map((t) => { const p = payloadOf(t); delete p.focus; delete p.known; delete p.newest; return { name: t.name, ...(t.doc ? {} : { new: true }), ...p, overview: undefined, act: t.act ?? "" }; }), newest: source.slice(0, 8000) };
     return ask(call, [{ role: "system", content: linesStage2Group({ light: lite, beliefs, wiki: true, anyNew, extraLines: [...deepMenu(run), ...startLine(run), ...(chunk.some(noFirst) ? [firstLine("each character whose card has no first impression")] : []), ...(chunk.some(noProfile) ? [profileLine(`each of ${chunk.filter(noProfile).map((t) => t.name).join(", ")}`)] : [])] }) }, { role: "user", content: JSON.stringify(payload) }], (raw) => {
+      raw = fold(raw);
       const m = splitGroupReply(raw, names); if (!m || !m.size) return null;
       return new Map([...m].map(([n, block]) => [n, isNoneReply(block) ? [] : parseLines(block)]));
     }, { tries: 2 });

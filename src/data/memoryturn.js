@@ -177,6 +177,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       const s0 = (await store.getIndex()).settings ?? {};
       const cyc = String(prompt).includes(CYCLE_BLOCK_MARK);   // 2.1.4: 월경·임신 기록도 기록기로(1단계에 줄 몇 개 더, 예전엔 늘 리수폿 Writer)
       const run = parseWriterRun(prompt); if (!run) return null;
+      try { const fo = (await userSpot())?.folder; run.userExplicit = fo?.userAliases ?? []; run.userNames = [...new Set([...run.userNames, ...run.userExplicit])]; } catch { run.userExplicit = []; }   // 신고 #12 직접 적은·합칠 때 배운 나의 이름
       run.cycleOn = cyc;
       // addon-rebuild: 월경·임신이 왜 안 잡히는지 전체 기록에(꺼짐 사유는 바뀔 때만 한 번)
       if (!cyc) { let why = "월경·임신 기록이 꺼져 있어요"; try { const ps = settings.snapshot(); why = ps?.sexualDesireEnabled !== true ? "꺼짐 — 기억 설정의 ‘욕구 기록’이 꺼져 있어요(월경·임신 기록의 바탕)" : ps?.features?.openness?.cycle !== true ? "꺼짐 — 기억 설정의 ‘월경·임신 기록’이 꺼져 있어요" : "꺼짐 — 이번 기록 요청에 월경 지침이 없어요"; } catch { /* 설정 없음 */ }

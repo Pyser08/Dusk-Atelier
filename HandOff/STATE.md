@@ -1,3 +1,6 @@
+## fix/report-12 · 11-24 신고 #12 → 장기기억 0.3.64(애드온만)
+- useralias.js: 이름 표·로마자 읽기, foldUserNames(기록기 줄의 이름 칸 → {{user}}), 나 화면 ‘나의 다른 이름’(folder.userAliases). 이미 갈라진 위키 문서는 자동으로 합치지 않음(인물 합치기).
+
 ## remove/report-chat · 11-24 채팅 기능 제거 → v2.2.59 + 허브 0.5.0
 - 커뮤니티 규정 때문에 사용자가 제거 결정. 다시 만들지 말 것. /api/chat은 410. 옛 대화(reports.json의 chat)는 지우지 않고 어디에도 보여 주지 않는다.
 

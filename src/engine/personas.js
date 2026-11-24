@@ -2,6 +2,7 @@
 // 사건 기록·감정·관계 종류·흔적·옷차림·성인 칸(actor:user)·나 위키 문서가 옛 페르소나로 가고, 새 페르소나는 {{user}}로 새로 시작한다.
 // 옛 페르소나는 folder.personas에 남아 관계도 가운데서 나와 함께 돌고, 다른 인물·지금의 나와의 관계도 이어서 보인다.
 import { USER, relinkNames } from "./memoryuser.js";
+import { sameUserName } from "./useralias.js";
 import { USER_NSFW_ID } from "./usernsfw.js";
 import { createWikiDocument, normalizeWikiScope } from "./pot/wiki-schema.js";
 
@@ -24,6 +25,7 @@ export function notePersona(folder, name, { turn = null, now = new Date().toISOS
   const prev = String(folder.persona?.name ?? "").trim();
   if (!prev) { folder.persona = { name: n, since: turn }; return { changed: false }; }
   if (key(prev) === key(n)) return { changed: false };
+  if (sameUserName(prev, n)) { folder.persona = { ...folder.persona, name: n }; return { changed: false }; }   // 신고 #12: Jade ↔ 제이드는 같은 페르소나
   detachPersona(folder, prev, { turn, now });
   // 예전에 떼어 둔 페르소나로 돌아왔으면 목록에서 빼고 그 인물의 기록을 다시 나로 합친다
   if (isPastPersona(folder, n)) {
