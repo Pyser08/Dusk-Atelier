@@ -1,0 +1,3 @@
+hub.내도메인.com {
+	reverse_proxy 127.0.0.1:6100
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Dusk Hub
+After=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/dusk-hub
+ExecStart=/usr/bin/node /home/ubuntu/dusk-hub/hub.cjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
