@@ -4,6 +4,7 @@
 // 쓰는 법:
 //   ADMIN_TOKEN=아무긴비밀글 node hub.cjs            (설정은 같은 폴더 hub.config.json 또는 환경 변수)
 //   node hub.cjs --check                            설정만 확인하고 끝냄
+//   node hub.cjs --set-password                     관리 화면 비밀번호 정하기(해시만 hub-data/auth.json에 저장)
 //
 // 받는 것:
 //   POST /api/ping     플러그인이 하루 한 번: {id, v, risu, addons:[{id,v,on}], mobile, host}
@@ -47,7 +48,7 @@ function loadConfig() {
 // ── 저장소(JSON 파일, 쓰기는 모아서) ───────────────────────
 function createStore(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const files = { installs: {}, daily: {}, reports: [], issues: {}, meta: { reportNo: 0, issuesSyncedAt: null } };
+  const files = { installs: {}, daily: {}, reports: [], issues: {}, meta: { reportNo: 0, issuesSyncedAt: null }, sessions: {}, auth: {} };
   const data = {};
   for (const [k, d] of Object.entries(files)) {
     const p = path.join(dir, `${k}.json`);
@@ -96,12 +97,19 @@ function rateLimiter() {
 const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 const cleanAddons = (list) => (Array.isArray(list) ? list : []).slice(0, 80).map((a) => ({ id: str(a?.id, 60), v: str(a?.v, 30), on: a?.on !== false })).filter((a) => a.id);
 
+// 비밀번호: scrypt 해시만 저장
+function hashPassword(pw) { const salt = crypto.randomBytes(16); return `scrypt$${salt.toString("hex")}$${crypto.scryptSync(pw, salt, 32).toString("hex")}`; }
+function checkPassword(stored, pw) {
+  const [kind, salt, hash] = String(stored ?? "").split("$");
+  if (kind !== "scrypt" || !salt || !hash || !pw) return false;
+  return safeEq(crypto.scryptSync(String(pw), Buffer.from(salt, "hex"), 32).toString("hex"), hash);
+}
+
 // ── 앱 ───────────────────────────────────────────────────
 function createHub(cfg) {
   const store = createStore(cfg.dataDir);
   const D = store.data;
   const limit = rateLimiter();
-  const sessionKey = crypto.createHmac("sha256", cfg.adminToken || "none").update("dusk-hub-session").digest("hex");
 
   function notify(text) {
     if (!cfg.discordWebhook) return;
@@ -236,7 +244,23 @@ function createHub(cfg) {
 
   // 로그인 ------------------------------------------------
   const cookieOf = (req) => Object.fromEntries(String(req.headers.cookie ?? "").split(/;\s*/).filter(Boolean).map((c) => { const i = c.indexOf("="); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
-  const authed = (req) => !!cfg.adminToken && safeEq(cookieOf(req).hub_s ?? "", sessionKey);
+  // 기기마다 무작위 세션. 쓸 때마다 400일로 늘어나서, 한 번 들어간 기기는 다시 묻지 않는다.
+  const SESSION_DAYS = 400;
+  const sidOf = (req) => { const v = String(cookieOf(req).hub_s ?? ""); return /^[a-f0-9]{64}$/.test(v) ? crypto.createHash("sha256").update(v).digest("hex") : ""; };
+  function authed(req) {
+    const k = sidOf(req), s = k && D.sessions[k];
+    if (!s) return false;
+    if (Date.now() - s.last > SESSION_DAYS * 864e5) { delete D.sessions[k]; store.touch("sessions"); return false; }
+    if (Date.now() - s.last > 3600e3) { s.last = Date.now(); store.touch("sessions"); }
+    return true;
+  }
+  const passOk = (pw) => checkPassword(D.auth?.pw, pw) || (!!cfg.adminToken && safeEq(pw, cfg.adminToken));
+  function newSession(req) {
+    const raw = crypto.randomBytes(32).toString("hex");
+    D.sessions[crypto.createHash("sha256").update(raw).digest("hex")] = { at: Date.now(), last: Date.now(), ua: str(req.headers["user-agent"], 160) };
+    store.touch("sessions");
+    return `hub_s=${raw}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_DAYS * 86400}${secure()}`;
+  }
   const secure = () => cfg.publicUrl.startsWith("https://") ? "; Secure" : "";
 
   // 요청 처리 ---------------------------------------------
@@ -268,12 +292,10 @@ function createHub(cfg) {
       if (m === "POST" && p === "/login") {
         if (!limit(`l:${ip}`, 10, 600e3)) return json(res, 429, { error: "too many" });
         const b = new URLSearchParams((await readBody(req, 4e3)).toString("utf8"));
-        if (cfg.adminToken && safeEq(b.get("token") ?? "", cfg.adminToken)) {
-          res.writeHead(303, { Location: "/", "Set-Cookie": `hub_s=${sessionKey}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${secure()}` }); return res.end();
-        }
+        if (passOk(b.get("token") ?? "")) { res.writeHead(303, { Location: "/", "Set-Cookie": newSession(req) }); return res.end(); }
         res.writeHead(303, { Location: "/?bad=1" }); return res.end();
       }
-      if (m === "POST" && p === "/logout") { res.writeHead(303, { Location: "/", "Set-Cookie": "hub_s=; Path=/; Max-Age=0" }); return res.end(); }
+      if (m === "POST" && p === "/logout") { const k = sidOf(req); if (k && D.sessions[k]) { delete D.sessions[k]; store.touch("sessions"); } res.writeHead(303, { Location: "/", "Set-Cookie": "hub_s=; Path=/; Max-Age=0" }); return res.end(); }
       if (m === "GET" && (p === "/" || p === "/index.html")) {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Frame-Options": "DENY", "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:", "Referrer-Policy": "no-referrer" });
         return res.end(authed(req) ? ADMIN_HTML : LOGIN_HTML);
@@ -282,6 +304,8 @@ function createHub(cfg) {
         if (!authed(req)) return json(res, 401, { error: "login" });
         if (m !== "GET" && req.headers["x-hub"] !== "1") return json(res, 403, { error: "csrf" });
         const rest = p.slice("/api/admin/".length).split("/");
+        if (m === "GET" && rest[0] === "sessions") { const me = sidOf(req); return json(res, 200, Object.entries(D.sessions).map(([k, v]) => ({ id: k.slice(0, 12), me: k === me, ...v })).sort((a, b) => b.last - a.last)); }
+        if (m === "DELETE" && rest[0] === "sessions" && rest[1]) { for (const k of Object.keys(D.sessions)) if (k.startsWith(rest[1]) && k !== sidOf(req)) delete D.sessions[k]; store.touch("sessions"); return json(res, 200, { ok: true }); }
         if (m === "GET" && rest[0] === "summary") return json(res, 200, summary());
         if (m === "GET" && rest[0] === "reports") return json(res, 200, D.reports.slice().reverse());
         if (m === "PATCH" && rest[0] === "reports" && rest[1]) {
@@ -325,9 +349,9 @@ input,select,textarea{background:var(--panel);border:1px solid var(--line);borde
 const LOGIN_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dusk 허브</title><style>${BASE_CSS}
 .box{max-width:340px;margin:18vh auto 0;padding:28px 24px;background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;gap:12px}
 h1{font-size:18px;margin:0}p{margin:0;color:var(--mute);font-size:13px}.bad{color:var(--err)}</style></head><body>
-<form class="box" method="post" action="/login"><h1>Dusk 허브</h1><p>관리 토큰을 넣어 주세요.</p>
+<form class="box" method="post" action="/login"><h1>Dusk 허브</h1><p>비밀번호를 넣어 주세요. 이 기기는 다음부터 묻지 않아요.</p>
 <input type="password" name="token" autocomplete="current-password" autofocus required>
-<script>if(location.search.includes("bad"))document.write('<p class="bad">토큰이 맞지 않아요.</p>')</script>
+<script>if(location.search.includes("bad"))document.write('<p class="bad">비밀번호가 맞지 않아요.</p>')</script>
 <button class="btn primary" type="submit">들어가기</button></form></body></html>`;
 
 const ADMIN_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dusk 허브</title><style>${BASE_CSS}
@@ -371,7 +395,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--chip);padding:10
 </style></head><body>
 <header><div class="bar"><span class="logo">Dusk 허브<small id="repo"></small></span>
 <nav><button data-tab="overview" class="on">개요</button><button data-tab="reports">버그 신고<span id="rp" class="pill" hidden></span></button><button data-tab="issues">GitHub 이슈<span id="ip" class="pill" hidden></span></button></nav>
-<form method="post" action="/logout"><button class="btn">나가기</button></form></div></header>
+<button class="btn" id="devbtn">로그인한 기기</button><form method="post" action="/logout"><button class="btn">나가기</button></form></div></header>
 <main id="main"></main>
 <div class="drawer" id="drawer"><div class="in" id="din"></div></div>
 <script>
@@ -426,6 +450,8 @@ async function openIssue(n){if(!I.length)I=await api("issues");const x=I.find(i=
 const body=()=>'<div class="mute" style="font-size:12px">'+(x.pr?"PR":"이슈")+' #'+x.number+' · '+esc(x.user)+' · '+new Date(x.createdAt).toLocaleString("ko-KR")+'</div><h3>'+esc(x.title)+'</h3><div style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap"><span class="tag '+x.state+'">'+(x.state==="open"?"열림":"닫힘")+'</span>'+x.labels.map(l=>'<span class="tag">'+esc(l)+'</span>').join("")+'<a class="btn" style="margin-left:auto" href="'+esc(x.url)+'" target="_blank" rel="noopener">GitHub에서 열기 ↗</a></div>'+
 '<div class="sec"><b>본문</b><pre>'+esc(x.body||"(본문 없음)")+'</pre></div><div class="sec"><b>최근 댓글</b><div id="cm">'+(x.recent?.length?x.recent.map(c=>'<div class="comment"><div class="m">'+esc(c.user)+' · '+ago(c.at)+'</div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(c.body)+'</div></div>').join(""):'<div class="mute">불러오는 중…</div>')+'</div></div>';
 drawer(body());try{x.recent=await api("issues/"+n+"/comments");$("#cm").innerHTML=x.recent.length?x.recent.map(c=>'<div class="comment"><div class="m">'+esc(c.user)+' · '+ago(c.at)+' · <a href="'+esc(c.url)+'" target="_blank" rel="noopener">열기</a></div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(c.body)+'</div></div>').join(""):'<div class="mute">댓글 없음</div>'}catch(e){$("#cm").innerHTML='<div class="mute">댓글을 불러오지 못했어요: '+esc(e.message)+'</div>'}}
+async function devices(){const l=await api("sessions");drawer('<h3>로그인한 기기</h3><p class="mute" style="font-size:13px">한 번 들어간 기기는 400일 동안 다시 묻지 않아요(쓸 때마다 늘어나요). 모르는 기기가 있으면 내보내세요.</p><div class="list">'+l.map(d=>'<div class="item" style="cursor:default"><div class="main"><div class="t" style="font-weight:500;font-size:13px">'+esc(d.ua||"알 수 없는 기기")+'</div><div class="m"><span>처음 '+ago(d.at)+'</span><span>마지막 '+ago(d.last)+'</span>'+(d.me?'<span class="tag seen">지금 이 기기</span>':'')+'</div></div>'+(d.me?'':'<button class="btn" data-k="'+d.id+'">내보내기</button>')+'</div>').join("")+'</div>');$("#din").querySelectorAll("[data-k]").forEach(b=>b.onclick=async()=>{await api("sessions/"+b.dataset.k,{method:"DELETE"});devices()})}
+$("#devbtn").onclick=devices;
 document.querySelector("nav").onclick=(e)=>{const b=e.target.closest("button");if(b){tab=b.dataset.tab;render()}};
 (async()=>{await load();const h=location.hash;if(h.startsWith("#report-")){tab="reports";await render();openReport(+h.slice(8))}else if(h.startsWith("#issue-")){tab="issues";await render();openIssue(+h.slice(7))}})();
 setInterval(()=>{if(!$("#drawer").classList.contains("on")&&document.visibilityState==="visible")api("summary").then(s=>{S=s;pills();if(tab==="overview")render()}).catch(()=>{})},60e3);
@@ -434,6 +460,19 @@ setInterval(()=>{if(!$("#drawer").classList.contains("on")&&document.visibilityS
 // ── 시작 ─────────────────────────────────────────────────
 if (require.main === module) {
   const cfg = loadConfig();
+  if (process.argv.includes("--set-password")) {
+    const rl = require("node:readline").createInterface({ input: process.stdin, output: process.stdout });
+    rl.question("새 비밀번호 (8자 이상): ", (pw) => {
+      rl.close();
+      if (String(pw).length < 8) { console.error("[hub] 8자 이상으로 정해 주세요."); process.exit(1); }
+      const st = createStore(cfg.dataDir);
+      st.data.auth = { pw: hashPassword(pw), at: Date.now() }; st.data.sessions = {};
+      st.touch("auth"); st.touch("sessions"); st.flush();
+      console.log("[hub] 비밀번호를 정했어요. 로그인해 있던 기기는 모두 나가졌어요. 서버를 다시 켜 주세요 (pm2 restart dusk-hub).");
+      process.exit(0);
+    });
+    return;
+  }
   if (!cfg.adminToken || cfg.adminToken.length < 16) { console.error("[hub] ADMIN_TOKEN을 16자 이상으로 정해 주세요 (환경 변수 또는 hub.config.json)."); process.exit(1); }
   if (process.argv.includes("--check")) { console.log("[hub] 설정 확인", { ...cfg, adminToken: "***", githubToken: cfg.githubToken ? "***" : "", webhookSecret: cfg.webhookSecret ? "***" : "", discordWebhook: cfg.discordWebhook ? "***" : "" }); process.exit(0); }
   const hub = createHub(cfg);
