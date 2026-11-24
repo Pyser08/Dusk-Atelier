@@ -4,6 +4,7 @@
 // 쓰는 법:
 //   ADMIN_TOKEN=아무긴비밀글 node hub.cjs            (설정은 같은 폴더 hub.config.json 또는 환경 변수)
 //   node hub.cjs --check                            설정만 확인하고 끝냄
+//   node hub.cjs --update                          GitHub main의 새 hub.cjs로 바로 바꾸기(자동 업데이트는 한 시간마다)
 //   node hub.cjs --set-password                     관리 화면 비밀번호 정하기(해시만 hub-data/auth.json에 저장)
 //
 // 받는 것:
@@ -20,7 +21,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 const DIR = __dirname;
 
 // ── 설정 ───────────────────────────────────────────────
@@ -41,7 +42,9 @@ function loadConfig() {
     discordWebhook: String(pick("DISCORD_WEBHOOK", "")),
     publicUrl: String(pick("PUBLIC_URL", "")).replace(/\/+$/, ""),
     trustProxy: String(pick("TRUST_PROXY", "1")) !== "0",
-    pollMinutes: Number(pick("GITHUB_POLL_MINUTES", 10))
+    pollMinutes: Number(pick("GITHUB_POLL_MINUTES", 10)),
+    autoUpdate: String(pick("AUTO_UPDATE", "1")) !== "0",
+    updateUrl: String(pick("UPDATE_URL", ""))
   };
 }
 
@@ -97,6 +100,27 @@ function rateLimiter() {
 }
 const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 const cleanAddons = (list) => (Array.isArray(list) ? list : []).slice(0, 80).map((a) => ({ id: str(a?.id, 60), v: str(a?.v, 30), on: a?.on !== false })).filter((a) => a.id);
+
+// 자기 업데이트: GitHub main의 hub.cjs가 지금 파일과 다르면 문법 검사 후 바꿔 끼우고, 다시 켜지게 끝낸다(pm2·systemd가 다시 켬).
+const sha = (buf) => crypto.createHash("sha256").update(buf).digest("hex");
+function updateSource(cfg) { return cfg.updateUrl || `https://raw.githubusercontent.com/${cfg.repo.split("/").slice(0, 2).join("/")}/main/server/dusk-hub/hub.cjs`; }
+async function fetchUpdate(cfg) {
+  const res = await fetch(`${updateSource(cfg)}?t=${Math.floor(Date.now() / 6e4)}`, { headers: { "User-Agent": "dusk-hub" } });
+  if (!res.ok) throw new Error(`새 파일을 받지 못했어요 (HTTP ${res.status})`);
+  const text = await res.text();
+  if (!text.includes("Dusk 허브") || !text.includes("module.exports") || text.length < 20000) throw new Error("받은 파일이 허브 파일이 아니에요");
+  const cur = fs.readFileSync(__filename);
+  const ver = /const VERSION = "([^"]+)"/.exec(text)?.[1] ?? "?";
+  return { text, ver, same: sha(cur) === sha(Buffer.from(text)), cur: sha(cur).slice(0, 8), next: sha(Buffer.from(text)).slice(0, 8) };
+}
+function applyUpdate(text) {
+  const next = __filename.replace(/\.cjs$/, "") + ".next.cjs";   // 확장자가 .cjs여야 node --check가 읽는다
+  fs.writeFileSync(next, text);
+  const chk = require("node:child_process").spawnSync(process.execPath, ["--check", next], { encoding: "utf8" });
+  if (chk.status !== 0) { try { fs.unlinkSync(next); } catch { /* 없음 */ } throw new Error("새 파일 문법 검사에 실패해서 바꾸지 않았어요: " + String(chk.stderr).split("\n")[0]); }
+  fs.copyFileSync(__filename, __filename + ".bak");
+  fs.renameSync(next, __filename);
+}
 
 // 비밀번호: scrypt 해시만 저장
 function hashPassword(pw) { const salt = crypto.randomBytes(16); return `scrypt$${salt.toString("hex")}$${crypto.scryptSync(pw, salt, 32).toString("hex")}`; }
@@ -388,6 +412,16 @@ function createHub(cfg) {
         const rest = p.slice("/api/admin/".length).split("/");
         if (m === "GET" && rest[0] === "sessions") { const me = sidOf(req); return json(res, 200, Object.entries(D.sessions).map(([k, v]) => ({ id: k.slice(0, 12), me: k === me, ...v })).sort((a, b) => b.last - a.last)); }
         if (m === "DELETE" && rest[0] === "sessions" && rest[1]) { for (const k of Object.keys(D.sessions)) if (k.startsWith(rest[1]) && k !== sidOf(req)) delete D.sessions[k]; store.touch("sessions"); return json(res, 200, { ok: true }); }
+        if (m === "GET" && rest[0] === "update") { try { const u = await fetchUpdate(cfg); return json(res, 200, { version: VERSION, next: u.ver, available: !u.same, auto: cfg.autoUpdate, cur: u.cur, nextHash: u.next }); } catch (e) { return json(res, 200, { version: VERSION, error: e.message, auto: cfg.autoUpdate }); } }
+        if (m === "POST" && rest[0] === "update") {
+          const u = await fetchUpdate(cfg);
+          if (u.same) return json(res, 200, { updated: false });
+          applyUpdate(u.text); store.flush();
+          console.log(`[hub] 관리 화면에서 업데이트 v${VERSION} → v${u.ver}. 다시 켜요.`);
+          json(res, 200, { updated: true, next: u.ver });
+          setTimeout(() => process.exit(0), 400);
+          return;
+        }
         if (m === "POST" && rest[0] === "dedupe") return json(res, 200, { merged: dedupeLegacy() });
         if (m === "GET" && rest[0] === "rev") return json(res, 200, { rev: store.rev });
         if (m === "GET" && rest[0] === "summary") return json(res, 200, summary());
@@ -593,7 +627,7 @@ h+='<div class="g row2" style="margin-top:14px"><section class="glass card lb" s
 '<section class="glass card lb" style="--k:var(--mint)"><h2>본체 버전 <small>주간</small></h2><p class="desc">'+(s.latestCore?'최신 v'+esc(s.latestCore)+' · <b class="'+pctCls(latestPct)+'">'+latestPct+'%</b>가 최신을 써요':'버전 정보를 기다리는 중')+'</p>'+
 (coreTotal?'<div class="stack">'+s.core.map((v,i)=>'<i style="width:'+(v.c/coreTotal*100)+'%;background:'+pal(i,v)+'" title="v'+esc(v.v)+' · '+v.c+'명"></i>').join("")+'</div><div class="leg">'+s.core.map((v,i)=>'<div><span class="sw" style="background:'+pal(i,v)+'"></span>v'+esc(v.v)+(v.latest?' <span class="chip latest">최신</span>':v.old?'':' <span class="chip">새 버전?</span>')+'<span class="c">'+v.c+'명 · '+Math.round(v.c/coreTotal*100)+'%</span></div>').join("")+'</div>':'<div class="empty">아직 없음</div>')+
 '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)"><b style="font-size:12px;color:var(--sub)">환경</b><div class="stack" style="margin-top:8px"><i style="width:'+(s.d7?s.mobile7/s.d7*100:0)+'%;background:var(--pink)"></i><i style="width:'+(s.d7?(s.d7-s.mobile7)/s.d7*100:0)+'%;background:var(--blue)"></i></div><div class="leg"><div><span class="sw" style="background:var(--pink)"></span>모바일<span class="c">'+s.mobile7+'명</span></div><div><span class="sw" style="background:var(--blue)"></span>PC<span class="c">'+(s.d7-s.mobile7)+'명</span></div></div></div></section></div>';
-h+='<p class="kbd" style="margin-top:16px">애드온 목록 '+(s.catalogAt?ago(s.catalogAt)+" 확인":"확인 전")+' · 이슈 '+ago(s.issues.syncedAt)+' 동기화 · 허브 v'+s.version+' · <button class="btn ghost" id="dedupe" style="padding:2px 9px;font-size:11.5px">겹친 사용자 정리</button></p>';
+h+='<p class="kbd" style="margin-top:16px">애드온 목록 '+(s.catalogAt?ago(s.catalogAt)+" 확인":"확인 전")+' · 이슈 '+ago(s.issues.syncedAt)+' 동기화 · 허브 v'+s.version+' <span id="upd"></span> · <button class="btn ghost" id="dedupe" style="padding:2px 9px;font-size:11.5px">겹친 사용자 정리</button></p>';
 return h}
 function addonRows(){let l=S.addons;if(addFilter==="installed")l=l.filter(a=>a.installed);if(addFilter==="old")l=l.filter(a=>a.versions.some(v=>v.old));
 if(!l.length)return'<div class="empty">'+(addFilter==="installed"?"아직 애드온을 쓰는 사람이 없어요":"해당하는 애드온이 없어요")+'</div>';
@@ -662,8 +696,12 @@ $$("[data-i]").forEach(el=>el.onclick=()=>openIssue(+el.dataset.i));const d=$("#
 async function render(){const m=$("#main");
 if(tab==="overview"){m.innerHTML=overview();$("#addf").onclick=(e)=>{const v=e.target.closest("button")?.dataset.v;if(v){addFilter=v;localStorage.setItem("hub.addf",v);render()}};
 $$("[data-go-r]").forEach(b=>b.onclick=()=>{setTab("reports");openReport(+b.dataset.goR)});$$("[data-go-i]").forEach(b=>b.onclick=()=>{setTab("issues");openIssue(+b.dataset.goI)});
+checkUpd();
 $("#dedupe").onclick=async()=>{const r=await api("dedupe",{method:"POST"});S=await api("summary");render();toast(r.merged?"겹친 사용자 "+r.merged+"명을 합쳤어요":"겹친 사용자가 없어요")}}
 if(tab==="reports")drawReports(true);if(tab==="issues")drawIssues(true)}
+async function checkUpd(){const el=$("#upd");if(!el)return;try{const u=await api("update");if(u.error){el.innerHTML='<span class="kbd">(업데이트 확인 실패)</span>';return}
+el.innerHTML=u.available?'<button class="btn primary" id="updgo" style="padding:2px 10px;font-size:11.5px">새 허브 v'+esc(u.next)+' 지금 업데이트</button>':'<span class="chip latest" style="font-size:11px">최신'+(u.auto?' · 자동 업데이트 켜짐':'')+'</span>';
+const b=$("#updgo");if(b)b.onclick=async()=>{b.disabled=true;b.textContent="바꾸는 중…";try{const r=await api("update",{method:"POST"});if(r.updated){toast("업데이트했어요. 다시 켜지는 중…");setTimeout(()=>location.reload(),4000)}else checkUpd()}catch(e){toast(e.message);checkUpd()}}}catch{}}
 async function loadAll(){[S,R,I]=await Promise.all([api("summary"),api("reports"),api("issues")]);$("#repo").textContent=S.repo;pills()}
 async function devices(){const l=await api("sessions");$("#mdin").innerHTML='<div class="glass card"><h2>로그인한 기기</h2><p class="desc">한 번 들어간 기기는 400일 동안 다시 묻지 않아요(쓸 때마다 늘어나요). 모르는 기기가 있으면 내보내세요.</p>'+l.map(d=>'<div class="it" style="cursor:default"><div class="main"><div class="t" style="font-weight:500">'+esc(d.ua||"알 수 없는 기기")+'</div><div class="m"><span>처음 '+ago(d.at)+'</span><span>마지막 '+ago(d.last)+'</span>'+(d.me?'<span class="chip latest">지금 이 기기</span>':'')+'</div></div>'+(d.me?'':'<button class="btn danger" data-k="'+d.id+'">내보내기</button>')+'</div>').join("")+'<div class="acts"><span class="sp"></span><button class="btn" id="mclose">닫기</button></div></div>';$("#modal").classList.add("on");
 $("#mclose").onclick=()=>$("#modal").classList.remove("on");$$("#mdin [data-k]").forEach(b=>b.onclick=async()=>{await api("sessions/"+b.dataset.k,{method:"DELETE"});devices()})}
@@ -711,6 +749,11 @@ if (require.main === module) {
     });
     return;
   }
+  if (process.argv.includes("--update")) {
+    fetchUpdate(cfg).then((u) => { if (u.same) { console.log(`[hub] 이미 최신이에요 (v${VERSION})`); process.exit(0); } applyUpdate(u.text); console.log(`[hub] v${VERSION} → v${u.ver}로 바꿨어요. 서버를 다시 켜 주세요 (pm2 restart dusk-hub).`); process.exit(0); })
+      .catch((e) => { console.error("[hub]", e.message); process.exit(1); });
+    return;
+  }
   if (!cfg.adminToken || cfg.adminToken.length < 16) { console.error("[hub] ADMIN_TOKEN을 16자 이상으로 정해 주세요 (환경 변수 또는 hub.config.json)."); process.exit(1); }
   if (process.argv.includes("--check")) { console.log("[hub] 설정 확인", { ...cfg, adminToken: "***", githubToken: cfg.githubToken ? "***" : "", webhookSecret: cfg.webhookSecret ? "***" : "", discordWebhook: cfg.discordWebhook ? "***" : "" }); process.exit(0); }
   const hub = createHub(cfg);
@@ -718,6 +761,12 @@ if (require.main === module) {
   server.listen(cfg.port, cfg.host, () => console.log(`[hub] v${VERSION} http://${cfg.host}:${cfg.port} · 저장 ${cfg.dataDir} · 저장소 ${cfg.repo}`));
   const poll = () => hub.syncIssues().then((n) => n && console.log(`[hub] 이슈 동기화 ${n}건`)).catch((e) => console.error("[hub] 이슈 동기화 실패", e.message));
   setTimeout(poll, 3e3);
+  // 자동 업데이트: 켜고 2분 뒤, 그다음 한 시간마다. 바뀌었으면 바꿔 끼우고 끝낸다(pm2가 새 파일로 다시 켬)
+  if (cfg.autoUpdate) {
+    const selfUpdate = () => fetchUpdate(cfg).then((u) => { if (u.same) return; applyUpdate(u.text); hub.store.flush(); console.log(`[hub] 자동 업데이트 v${VERSION} → v${u.ver}. 다시 켜요.`); setTimeout(() => process.exit(0), 300); })
+      .catch((e) => console.error("[hub] 자동 업데이트 확인 실패", e.message));
+    setTimeout(selfUpdate, 120e3); setInterval(selfUpdate, 3600e3).unref();
+  }
   const cat = () => hub.loadCatalog().catch(() => {});
   cat(); setInterval(cat, 3600e3).unref();
   if (cfg.pollMinutes > 0) setInterval(poll, cfg.pollMinutes * 60e3).unref();
