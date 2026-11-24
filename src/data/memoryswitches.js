@@ -32,7 +32,7 @@ export function createSwitches({ api, store, flow = null, now = () => Date.now()
     if (!(ci >= 0) || !(ti >= 0)) return null;
     const pos = `${ci}:${ti}`, g = cacheGen();
     if (!fresh && curByPos && curByPos.pos === pos && curByPos.g === g && now() - curByPos.t < CUR_TTL) return curByPos.v;
-    const v = await currentChat({ getCurrentCharacterIndex: async () => ci, getCurrentChatIndex: async () => ti, getCharacterFromIndex: (i) => (fresh ? api.getCharacterFromIndex(i) : readChar(api, i, ti)) });   // 2.2.23 같이 읽기(fresh면 새로)
+    const v = await currentChat({ getCurrentCharacterIndex: async () => ci, getCurrentChatIndex: async () => ti, getCharacterFromIndex: (i) => readChar(api, i, ti, { fresh }) });   // 2.2.23 같이 읽기 · 11-24 fresh도 읽는 중인 같은 요청이 있으면 같이 기다림
     // 예전 키(chat.id) 폴더에 쌓인 기억을 지금 범위 키 폴더로 옮긴다(한 번만). 화면이 빈 폴더를 보던 문제(2.0.0)
     if (v && v.legacyId && v.legacyId !== v.chatId) { try { await store.adoptFolder?.(v.chaId, v.legacyId, v.chatId); } catch { /* 옮기기 실패는 막지 않음 */ } }
     curByPos = v ? { pos, g, t: now(), v } : null;

@@ -1,5 +1,6 @@
 // 채팅 메뉴의 떠 있는 버튼 만들기(장기기억 애드온). 켜고 끄기 설정은 memorybuttonkey.js(코어).
-export { MEMORY_BUTTON_KEY, loadMemoryButtonOn } from "./memorybuttonkey.js";
+import { MEMORY_BUTTON_KEY, loadMemoryButtonOn } from "./memorybuttonkey.js";
+export { MEMORY_BUTTON_KEY, loadMemoryButtonOn };   // 재수출만 하면 이 파일 안에 이름이 없어 start()/set()이 ReferenceError(2.2.44 버그)
 import { createFloatButton } from "./floatbtn.js";
 // 2.2.25: ensureDoc(리스 화면 문서, 권한 있을 때)가 있으면 Dusk가 직접 그린 동그란 반투명 버튼(끌어서 옮김)을 쓰고, 없으면 리스 버튼
 export function createMemoryButton(api, { name, icon, open, log, ensureDoc = null }) {

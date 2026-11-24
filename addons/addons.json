@@ -91,11 +91,16 @@
       "id": "memory",
       "name": "장기기억·관계도",
       "category": "memory",
-      "version": "0.3.55",
-      "minCore": "2.2.42",
+      "version": "0.3.56",
+      "minCore": "2.2.45",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "notes": [
+        {
+          "v": "0.3.56",
+          "date": "",
+          "body": "- 봇별 공통 설정이 꺼져 있으면 화면에선 성인 기록이 켜져 보여도 기록이 안 되던 문제를 고쳤어요.\n- ‘세 번 했다’처럼 횟수가 적힌 관계는 그 횟수만큼 세요. 체위 칸에 숫자만 와도 횟수로 읽어요.\n- 성인 장면 판단을 다듬었어요. ‘떠나 버렸다’·‘못을 박았다’·‘잠자리가 날았다’ 같은 흔한 문장은 더 이상 성인 장면으로 보지 않아요."
+        },
         {
           "v": "0.3.55",
           "date": "2026-11-23",
@@ -110,16 +115,11 @@
           "v": "0.3.53",
           "date": "2026-11-23",
           "body": "- ‘바꾼 페르소나를 로어북에’ 옆에 다른 옵션처럼 ‘호출 없음’ 표시를 붙였어요."
-        },
-        {
-          "v": "0.3.52",
-          "date": "2026-11-23",
-          "body": "- 장기 기억 → 설정 → 기억 옵션에 **‘바꾼 페르소나를 로어북에’**가 생겼어요(기본 꺼짐). 켜 두면 채팅 도중 페르소나를 바꿀 때 옛 페르소나 설명을 이 봇의 로어북에 그 이름의 인물 항목으로 넣어요. 설명 안의 {{user}}는 옛 페르소나 이름으로 바꿔서 새 페르소나와 헷갈리지 않아요. 같은 페르소나는 다시 바꿔도 그 항목만 고쳐요."
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "b0819fa885c4b9b26a2f6878a579eb3b148497648686c39cefcaf8443116ae67",
-      "size": 2420384
+      "sha256": "80394c834180d2e3e6bac236a5fe768429175a87d3767f67edcf1a8e9952a3d4",
+      "size": 2422699
     },
     {
       "id": "cards",
@@ -150,8 +150,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/cards.js",
-      "sha256": "04e5d0a5d95a16ccbc7b737dbd0172f7441defa65db0debdbdcb1cc236a00afe",
-      "size": 685651
+      "sha256": "30021c91c49b7b65d9893b7e0584e7028d07a88c08016138d4974884caa11a2f",
+      "size": 685681
     },
     {
       "id": "protlink",
@@ -277,8 +277,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/innerthought.js",
-      "sha256": "74fb33b85edefe2b03a964dc2f93f892d961db5cc8d8be95d2721b8bb97e072d",
-      "size": 15458
+      "sha256": "3e1bdf6dce80adee070e5b82a209f47d8fad3a64e8dda936197e02fa5dcb2bb8",
+      "size": 15507
     }
   ]
 }

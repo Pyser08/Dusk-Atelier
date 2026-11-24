@@ -123,6 +123,19 @@ test("첫 실행 자동 받기(adopt): 쓰던 기능만 받고, 다 받으면 �
   assert.deepEqual((await A.adopt([["widgets", async () => true]])).got, []);
 });
 
+test("adopt 11-24: 옛 전체 표시가 있어도 나중에 옮긴 기능은 따로 검사해 받는다", async () => {
+  const { createAddons, ADOPT_KEY } = await import("../src/data/addons.js");
+  const files = new Map([[ADOPT_KEY, "1"]]), store = { getItem: async (k) => files.get(k) ?? null, setItem: async (k, v) => { files.set(k, v); }, removeItem: async (k) => { files.delete(k); } };
+  const code = "export async function activate(){ return { deactivate(){} }; }";
+  const { sha256 } = await import("../src/engine/hash.js");
+  const h = await sha256(new TextEncoder().encode(code));
+  const manifest = JSON.stringify({ format: 1, addons: [{ id: "cards", version: "1.0.0", sha256: h, url: "https://x/c.js" }, { id: "newfeat", version: "1.0.0", sha256: h, url: "https://x/n.js" }] });
+  const A = createAddons({ pluginStorage: store }, { core: "2.0.0", storage: store, fetcher: async (_a, url) => (url.split("?")[0].endsWith(".json") ? manifest : code), importer: async () => ({ activate: async () => ({ deactivate() {} }) }) });
+  const r = await A.adopt([["cards", async () => true], ["newfeat", async () => true]]);
+  assert.deepEqual(r.got, ["newfeat"]);
+  assert.deepEqual((await A.adopt([["newfeat", async () => true]])).got, []);
+});
+
 test("애드온이 단 훅은 끌 때 모두 떼고, 프로바이더는 같은 이름으로 다시 달면 처리기만 바뀐다", async () => {
   const { createAddons } = await import("../src/data/addons.js");
   const { sha256 } = await import("../src/engine/hash.js");

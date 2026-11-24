@@ -2,7 +2,7 @@
 //  · 캐릭터 상태창: 본문 인물 이름에 링크(설정 inject.nameLinks, 기본 켜짐) — 얼굴 사진은 봇 이미지·에셋에서
 //  · 장면 상태창: 응답 아래(로어북 버튼 위)에 날짜·시간·장소·날씨·등장인물(설정 inject.scenePanel, 기본 켜짐)
 // 메시지마다 불리므로 지금 채팅 폴더·설정은 3초 동안 재사용하고, 상태창 HTML은 인물별로 한 번만 만든다.
-import { readChar } from "./apiread.js";
+import { readChar, readChat } from "./apiread.js";
 import { userTexts, isUserText } from "../engine/msgrole.js";
 import { statusCardHtml, linkNames, NAMECARD_CSS } from "../engine/namecard.js";
 import { scenePanelHtml, sceneOf, peopleIn, SCENE_CSS, streamMemo } from "../engine/scenepanel.js";
@@ -47,11 +47,13 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
   const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: async (pid) => { const c = cache ?? await ready().catch(() => null); const d = byId.get(pid); return d && c?.cardOf ? c.cardOf(d) : ""; }, onFail: () => { if (!spanMode) return; spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "상태창 창을 띄우지 못해 이름 아래 펼침으로 바꿨어요(다음 응답부터)" }); }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
   let cache = null, checked = 0, loading = null;
   // 2.2.22 성능: 캐릭터 통째(채팅 전체 포함, 큰 채팅은 수십 MB)는 봇이 바뀔 때만 한 번 읽고, 이름·설명·이미지 목록만 남긴다
-  let charMemo = null;
+  let charMemo = null, users = null, usersAt = 0;
   const charOf = async (cur) => {
     if (charMemo?.chaId === cur.chaId) return charMemo.v;
     const c = cur.ci != null && api?.getCharacterFromIndex ? await readChar(api, cur.ci, cur.ti).catch(() => null) : null;
     const v = c ? { name: c.name ?? "", desc: String(c.desc ?? "").slice(0, 1500), image: c.image, emotionImages: c.emotionImages ?? [], additionalAssets: c.additionalAssets ?? [] } : null;
+    // 11-24 성능: 이미 읽은 캐릭터에 열린 채팅이 들어 있으니 유저 글 목록(최근 80개)도 여기서 만든다 → 첫 표시 때 채팅을 다시 받지 않음
+    const msgs = c?.chats?.[cur.ti]?.message; if (Array.isArray(msgs)) { users = { set: userTexts(msgs), at: `${cur.chaId}|${cur.chatId}` }; usersAt = Date.now(); }
     charMemo = { chaId: cur.chaId, v }; return v;
   };
   const load = async () => {
@@ -74,19 +76,21 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
     const htmls = new Map(), cardOf = (d) => { if (!htmls.has(d.id)) htmls.set(d.id, statusCardHtml(f, d, { when, status: inj.status !== false, img: imgs.get(d.id) ?? null, thoughts: (() => { try { return thoughts?.()?.tabFor?.([d.title, ...(d.aliases ?? [])]) ?? ""; } catch { return ""; } })() })); return htmls.get(d.id); };
     byId = new Map(docs.map((d) => [d.id, d]));
     const people = docs.map((d) => ({ id: d.id, names: [d.title, ...(d.aliases ?? [])].filter((n) => String(n ?? "").trim().length >= 2), get html() { return cardOf(d); } }));
-    cache = { key, links, scene, people, folder: f, cardOf, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, character?.desc].filter(Boolean).join(" ") };
+    cache = { key, cur, links, scene, people, folder: f, cardOf, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, character?.desc].filter(Boolean).join(" ") };
     checked = Date.now();   // 2.2.22: 다 읽은 뒤에 시각을 적는다(읽는 데 3초가 넘으면 다 읽자마자 만료돼 매번 처음부터 다시 읽었다)
   };
   // 11-21 제보: 표시 훅은 유저 입력에도 불린다 → 채팅의 유저 메시지 글을 모아 두고 같은 글이면 상태창을 붙이지 않는다.
   // 모르는 글이면(방금 보낸 입력일 수 있음) 채팅을 다시 읽어 본다(1.5초에 한 번까지)
-  let users = null, usersAt = 0; const notUser = new Set();   // 한 번 읽고도 유저 글이 아니었던 글은 다시 읽지 않는다(응답마다 채팅을 읽지 않게)
+  const notUser = new Set();   // 한 번 읽고도 유저 글이 아니었던 글은 다시 읽지 않는다(응답마다 채팅을 읽지 않게)
   const userish = async (text) => {
+    if (users && cache?.cur && users.at !== `${cache.cur.chaId}|${cache.cur.chatId}`) { users = null; usersAt = 0; }   // 채팅이 바뀌면 옛 목록 버림
     if (users && isUserText(users.set, text)) return true;
     const head = String(text).replace(/\s+/g, "").slice(0, 60); if (notUser.has(head)) return false;
     if (Date.now() - usersAt < 1500) return false;
     usersAt = Date.now();
-    try { const cur = await memory?.switches?.currentChat?.({ fresh: true }); if (cur?.ci == null || !api?.getChatFromIndex) return false;
-      const chat = await api.getChatFromIndex(cur.ci, cur.ti); users = { set: userTexts(chat?.message ?? []) }; } catch { return false; }
+    // 11-24 성능: 캐릭터를 fresh로 통째 다시 받지 않는다 — 위치만 확인하는 캐시된 currentChat + 같이 읽기(readChat, 다른 곳과 공유)
+    try { const cur = cache?.cur ?? await memory?.switches?.currentChat?.(); if (cur?.ci == null || !api?.getChatFromIndex) return false;
+      const chat = await readChat(api, cur.ci, cur.ti); users = { set: userTexts(chat?.message ?? []), at: `${cur.chaId}|${cur.chatId}` }; } catch { return false; }
     const yes = isUserText(users.set, text); if (!yes) { notUser.add(head); if (notUser.size > 300) notUser.delete(notUser.values().next().value); } return yes;
   };
   const ready = async () => { loading ??= load().finally(() => { loading = null; }); await loading; if (cache && !cache.off) { mount.ensureDoc().catch(() => {}); return cache; } return null; };

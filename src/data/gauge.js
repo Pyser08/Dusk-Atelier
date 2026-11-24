@@ -103,20 +103,27 @@ export function createGaugeService(api, { store, log = () => {}, call = null } =
   };
 
   // ── 채팅 표시용 보기 ──────────────────────────
-  let view = null;   // {entries, defs}
-  async function ensureView() {
-    if (view) return view;
-    const idx = await store.getIndex(), entries = [], defs = [];
-    for (const [chaId, g] of Object.entries(idx.gauges ?? {})) {
-      defs.push(...g.defs);
-      for (const chatId of Object.keys(g.chats ?? {})) {
-        const f = await store.getFolder(chaId, chatId);
-        for (const b of f?.gauge?.log ?? []) if (b.head && b.snap?.length) entries.push({ head: b.head, tail: b.tail, snap: b.snap, items: b.items });
+  // 11-24 성능: 읽는 중인 promise를 같이 기다리고(메시지마다 불려도 한 번), 폴더는 읽기 전용 공유 파싱(peekFolder)으로
+  let view = null, viewP = null, viewGen = 0;   // {entries, defs}
+  function ensureView() {
+    if (view) return Promise.resolve(view);
+    if (viewP) return viewP;
+    const gen = viewGen;
+    const p = (async () => {
+      const idx = await store.getIndex(), entries = [], defs = [];
+      const read = (a, b) => (store.peekFolder ? store.peekFolder(a, b) : store.getFolder(a, b));
+      for (const [chaId, g] of Object.entries(idx.gauges ?? {})) {
+        defs.push(...g.defs);
+        const fs = await Promise.all(Object.keys(g.chats ?? {}).map((chatId) => read(chaId, chatId).catch(() => null)));
+        for (const f of fs) for (const b of f?.gauge?.log ?? []) if (b.head && b.snap?.length) entries.push({ head: b.head, tail: b.tail, snap: b.snap, items: b.items });
       }
-    }
-    return view = { entries: entries.slice(-300), defs };
+      const v = { entries: entries.slice(-300), defs };
+      if (gen === viewGen) view = v;
+      return v;
+    })().finally(() => { if (viewP === p) viewP = null; });
+    return viewP = p;
   }
-  const invalidate = () => { view = null; };
+  const invalidate = () => { view = null; viewP = null; viewGen++; };
   async function onDisplay(text) {
     try {
       if (typeof text !== "string" || text.includes('x-dusk="gauge"')) return text;
