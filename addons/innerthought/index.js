@@ -5,7 +5,7 @@
 //  · 장기기억 애드온의 캐릭터 상태창(이름 누르기)에 ‘속마음’ 탭: ext svc "innerthought".tabFor(이름들)
 // 설정은 이 애드온 저장소(dusk.storage "settings").
 import { buildAssetIndex, resolveTag } from "../../src/engine/imgtagfix.js";
-import { normSettings, summary, hintText, assetList, stripThoughts, renderThoughts, pickImage, imageTag, detectStyle, collectFromMessages, thoughtsFor, cardTabHtml, emotionWords, HINT_MARK, hasThought } from "../../src/engine/innerthought.js";
+import { normSettings, summary, hintText, assetList, stripThoughts, renderThoughts, pickImage, imageTag, detectStyle, collectFromMessages, thoughtsFor, cardTabHtml, emotionWords, assetEmotions, cleanEmo, HINT_MARK, hasThought } from "../../src/engine/innerthought.js";
 import { insertHint } from "../../src/engine/imghint.js";
 import { readChar, readChat } from "../../src/data/apiread.js";
 import { loadPrimaryUserName } from "../../src/data/usernames.js";
@@ -43,7 +43,10 @@ export async function activate(api, ctx) {
         } catch { /* 봇 이미지만 */ }
         const idx = buildAssetIndex(groups);
         const recent = msgs.filter((m) => m?.role !== "user").slice(-12).map((m) => String(m?.data ?? ""));
-        view = { key, botName: ch?.name ?? "", emotions, assets, idx, list: assetList(idx), style: detectStyle(recent), by: collectFromMessages(msgs), emos: emotionWords([...emotions, ...assets], [ch?.name ?? ""]) };
+        // 신고 #20: 추가 에셋은 인물 이름을 떼고 감정만(NPC 에셋 이름이 감정으로 나오던 문제)
+        const who = [ch?.name ?? ""], emos = emotionWords([...assetEmotions(buildAssetIndex([emotions]), who), ...assetEmotions(buildAssetIndex([assets]), who)], who);
+        for (const w of emotions) if (!/[\s_\-.]/.test(w) && !emos.includes(w) && w !== who[0]) emos.push(w);   // 감정 이름만 있는 감정 이미지(smug)
+        view = { key, botName: ch?.name ?? "", emotions, assets, idx, list: assetList(idx), style: detectStyle(recent), by: collectFromMessages(msgs), emos };
         at = Date.now(); rev++;
         return view;
       } catch (e) { log("읽기 실패", e?.message ?? e); return view; } finally { loading = null; }
@@ -72,7 +75,7 @@ export async function activate(api, ctx) {
     try {
       if (!hasThought(text)) return text;
       const v = await load().catch(() => null);
-      return renderThoughts(text, imgFor(v));
+      return renderThoughts(text, imgFor(v), (t) => cleanEmo(t.emo, t.name, v ?? {}));
     } catch { return text; }
   }
   const hook = async (fn, what) => { try { await fn(); } catch (e) { log(`${what} 훅 등록 실패`, e?.message ?? e); } };
@@ -82,7 +85,7 @@ export async function activate(api, ctx) {
   // 장기기억 상태창 ‘속마음’ 탭(동기 호출 — 모음은 미리 읽어 둔 것). rev가 바뀌면 상태창을 다시 만든다
   const svc = {
     rev: () => rev,
-    tabFor(names = []) { if (!view) { load().catch(() => {}); return ""; } return cardTabHtml(thoughtsFor(view.by, names)); },
+    tabFor(names = []) { if (!view) { load().catch(() => {}); return ""; } return cardTabHtml(thoughtsFor(view.by, names).map((t) => ({ ...t, emo: cleanEmo(t.emo, t.name, view) }))); },
     refresh: () => load(true),
     settings: () => st
   };

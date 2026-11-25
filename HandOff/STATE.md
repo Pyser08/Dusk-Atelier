@@ -1,3 +1,6 @@
+## fix/report-20-21 · 11-25 신고 #20·#21 → v2.2.62 + 장기기억 0.3.69 + 인물 속마음 0.1.4
+- #20: innerthought assetEmotions(에셋 → 감정 낱말만)·cleanEmo(화면 이름표만, 저장 글은 그대로). #21: inject.wikiPosition → replaceWikiMarker 세 번째 인자(기본 afterSystem). 신고 창에 아카 #번호 안내. 테스트 tests/report20-21.test.js.
+
 ## fix/report-19 · 11-25 신고 #19 → 장기기억 0.3.68
 - scenenow.js: 이어지는 장면(changed=false)의 sc.when을 버려 시간이 멈췄다 → scene.nowWhen(when은 시작 시각 그대로). sceneOf·previousScene.when이 nowWhen 먼저, 뒤로는 안 감(자정 넘김만). 손으로 고치면 nowWhen 지움. 리롤·삭제해도 nowWhen은 안 되돌림. 테스트 tests/report19.test.js.
 
