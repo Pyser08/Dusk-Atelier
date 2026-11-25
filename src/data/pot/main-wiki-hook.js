@@ -53,6 +53,8 @@ export class MainWikiHook {
   subscribe(fn) { this.listeners.add(fn); fn(this.last); return () => this.listeners.delete(fn); }
   emit() { for (const fn of this.listeners) try { fn(this.last); } catch {} }
   clearDirectorCache() { this.directorCache.clear(); }
+  // 신고 #21: 위키·정리 노트를 넣을 위치(장기 기억 설정). 못 읽으면 예전 위치.
+  async wikiPosition() { try { return await this.position?.() || 'afterSystem'; } catch { return 'afterSystem'; } }
   settingsForBot(characterId) { return effectiveRelationshipSettings(featureSettingsFor(this.store.rawSnapshot?.() ?? this.store.snapshot(), characterId)); }
   reset(mode) { this.cache.clear(); this.directorCache.clear(); this.result(mode,mode,[]); this.emit(); }
   result(requested,actual,docs,message='',skippedReason='') {
@@ -115,7 +117,7 @@ export class MainWikiHook {
       const finalWiki=this.wiki.snapshot();if(finalWiki?.revision!==directorRevision||finalWiki?.scope?.characterId+'\n'+finalWiki?.scope?.chatKey!==directorScopeKey){this.skip(mode,'Director 실행 중 인물정보 변경 감지 · 이전 결과 주입 취소');return messages;}
       this.auto?.reviewHandoff?.commit(handoffTicket,docs,newCharacters);
       this.progressPanel?.mainReady(progressToken,docs.length,docs.map(document=>document.title),this.last.director.status==='completed'?'Director Note 준비 완료':this.last.message);this.emit();
-      const injectionSettings=this.settingsForBot(scope.scope.characterId);return replaceWikiMarker(messages,[renderWikiReference(docs,injectionSettings.features,undefined,injectionSettings.npcRelationshipEnabled!==false,injectionSettings.relationshipOnlyMode===true),directorNote].filter(Boolean).join('\n\n'));
+      const injectionSettings=this.settingsForBot(scope.scope.characterId);return replaceWikiMarker(messages,[renderWikiReference(docs,injectionSettings.features,undefined,injectionSettings.npcRelationshipEnabled!==false,injectionSettings.relationshipOnlyMode===true),directorNote].filter(Boolean).join('\n\n'),await this.wikiPosition());
     } catch {
       this.skip(mode,'Wiki 검색 실패 · 원본 Main 요청 유지');
       if(progressToken!==null)this.progressPanel?.mainReady(progressToken,0,[],'Wiki 검색 실패 · Main 원본 요청을 진행합니다.');

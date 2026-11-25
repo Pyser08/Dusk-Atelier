@@ -85,6 +85,8 @@ const nz = (s) => String(s ?? "").normalize("NFKC").toLowerCase().replace(/[\s_\
 const SYN = [["기쁨", "happy", "joy", "smile", "웃음", "행복"], ["슬픔", "sad", "cry", "울음"], ["화남", "angry", "anger", "mad", "분노"], ["놀람", "surprise", "surprised", "shock"],
   ["부끄러움", "shy", "blush", "embarrassed", "수줍"], ["불안", "anxious", "worry", "nervous", "걱정"], ["평온", "calm", "neutral", "normal", "default", "기본"], ["설렘", "excited", "love", "heart", "두근"],
   ["당황", "confused", "panic", "flustered"], ["질투", "jealous", "pout", "삐짐"]];
+const isEmo = (w) => { const k = nz(w); return !!k && SYN.some((g) => g.some((x) => nz(x) === k)); };
+const TOK = /[\s_\-.]+/;
 const synOf = (e) => { const k = nz(e); return SYN.find((g) => g.some((w) => nz(w) === k)) ?? [e]; };
 export function pickImage({ emotions = [], assets = [] } = {}, name, emo, { botName = "" } = {}) {
   const words = synOf(emo).map(nz).filter(Boolean), who = nz(name), bot = nz(botName);
@@ -120,6 +122,18 @@ export function imageTag(pick, style = "img") {
 const BUBBLE = "display:flex;gap:12px;align-items:center;margin:10px 0 18px;padding:12px 16px;border-radius:24px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);box-shadow:0 8px 24px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);position:relative;max-width:min(560px,100%);box-sizing:border-box";
 const DOT = (l, b, s) => `<span style="position:absolute;left:${l}px;bottom:${b}px;width:${s}px;height:${s}px;border-radius:50%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22)"></span>`;
 // side=true: 본문 옆(같은 줄)에 붙는 풍선 — 꼬리가 왼쪽(본문 쪽)
+// 신고 #20: 화면 이름표의 감정에서 에셋·인물 이름을 떼어 낸다(저장된 글은 그대로). 감정이 안 남으면 빈 글.
+export function cleanEmo(emo, name = "", { idx = null, emos = [] } = {}) {
+  const raw = String(emo ?? "").trim(); if (!raw) return "";
+  if (emos.some((e) => nz(e) === nz(raw))) return raw;
+  const people = new Set([nz(name)].filter(Boolean));
+  for (const c of idx?.chars?.values?.() ?? []) if (nz(c.name)) people.add(nz(c.name));
+  const all = raw.split(TOK).filter(Boolean), known = all.find(isEmo);
+  if (known && all.length > 1 && (people.has(nz(all[0])) || people.has(nz(all.at(-1))))) return known;
+  const rest = all.filter((t) => !people.has(nz(t)) || isEmo(t));
+  if (rest.length === all.length && !people.has(nz(raw))) return raw;
+  return rest.every((t) => /^\d+$/.test(t)) || (people.has(nz(raw)) && !isEmo(raw)) ? "" : rest.join(" ");
+}
 export function bubbleHtml(t, img = "", side = false) {
   return `<span x-dusk="thought" data-dusk="thought" style="${side ? BUBBLE.replace("display:flex", "display:inline-flex").replace("margin:10px 0 18px", "margin:4px 0;text-align:left") : BUBBLE}">`
     + (img ? `<span style="flex:none;width:72px;max-height:96px;overflow:hidden;border-radius:16px;line-height:0;opacity:.95">${img}</span>` : "")
@@ -133,19 +147,20 @@ const ICON = "list-style:none;display:inline-block;position:relative;cursor:poin
 // 생각풍선 꼬리(본문 쪽 왼쪽 아래로 작은 동그라미 둘)
 const TAILDOT = (l, b, s) => `<span style="position:absolute;left:${l}px;bottom:${b}px;width:${s}px;height:${s}px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28)"></span>`;
 // 태그가 있던 자리(그 인물의 행동·대사 끝)에 💭 아이콘 하나. 누르면 그 속마음 풍선이 펼쳐진다
-export function renderThoughts(text, imgFor = () => "") {
+export function renderThoughts(text, imgFor = () => "", emoFor = (t) => t.emo) {
   if (!hasThought(text)) return text;
   let out = fix(text).replace(new RegExp(`[ \\t]*\\n?[ \\t]*<${TAG}\\b(${ATTRS})>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi"), (all, attrs, body) => {
     const t = { name: attrOf(attrs, "name").trim(), emo: attrOf(attrs, "emo").trim(), img: attrOf(attrs, "img").trim(), text: body.replace(/<[^>]+>/g, "").trim() };
     if (!t.text) return "";
     t.name ||= "속마음";   // 이름을 빠뜨려도 보여 준다
-    return " " + thoughtIcon(t, imgFor);
+    return " " + thoughtIcon(t, imgFor, emoFor);
   });
   out = out.replace(new RegExp(`\\s*<${TAG}\\b[^>]*>?[\\s\\S]*$`, "i"), "");
   return out;
 }
-export function thoughtIcon(t, imgFor = () => "") {
+export function thoughtIcon(t, imgFor = () => "", emoFor = (x) => x.emo) {
   let img = ""; try { img = imgFor(t) || ""; } catch { img = ""; }
+  try { t = { ...t, emo: emoFor(t) ?? "" }; } catch { /* 그대로 */ }
   return `<details x-dusk="thoughts" data-dusk="thoughts" style="display:inline-flex;align-items:center;flex-wrap:wrap;vertical-align:middle;max-width:100%;margin:0"><summary aria-label="${esc(t.name)} 속마음 보기" title="${esc(t.name)} 속마음" style="${ICON}">💭${TAILDOT(-6, 1, 6)}${TAILDOT(-11, -2, 3)}</summary>`
     + `<span style="display:inline-block;vertical-align:middle;margin-left:10px">${bubbleHtml(t, img, true)}</span></details>`;
 }
@@ -175,6 +190,16 @@ export function emotionWords(emotions = [], names = []) {
     let k = String(e ?? "").trim(); for (const n of strip) k = k.replace(new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig"), "");
     k = k.replace(/^[\s_\-.]+|[\s_\-.]+$/g, "").replace(/[\s_\-.]+/g, " ").trim();
     if (k && !seen.has(k.toLowerCase())) { seen.add(k.toLowerCase()); out.push(k); }
+  }
+  return out;
+}
+// 신고 #20: 추가 에셋(NPC 이름_감정)에서 감정 낱말만. 아는 감정이면 그 낱말, 아니면 인물 이름을 뗀 키워드. 이름뿐인 그림·번호는 뺀다
+export function assetEmotions(idx, names = []) {
+  const people = new Set([...(idx?.chars?.values?.() ?? [])].map((c) => nz(c.name)).concat(names.map(nz)).filter(Boolean)), out = [], seen = new Set();
+  for (const e of idx?.entries ?? []) {
+    const known = String(e.bare ?? e.name).replace(/\.(?:png|apng|jpe?g|webp|gif|avif)$/i, "").split(TOK).find(isEmo);
+    const kw = known ?? String(e.kw ?? "").split(TOK).filter((t) => t && !/^\d+$/.test(t) && !people.has(nz(t))).join(" ");
+    const k = kw.toLowerCase(); if (kw && !seen.has(k)) { seen.add(k); out.push(kw); }
   }
   return out;
 }
