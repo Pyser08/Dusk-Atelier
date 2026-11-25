@@ -23,3 +23,11 @@ export function pruneModules(dir, manifest) {
   if (bytes > MAX_BYTES) throw new Error(`addons 브랜치가 ${(bytes / 1048576).toFixed(1)}MB예요(한도 45MB) — 남기는 개수를 줄여 주세요.`);
   return { removed, bytes };
 }
+// 버전이 공개본과 같은데 내용만 다른 애드온: 목록 줄을 공개본의 sha256·size로 되돌리고 그 줄들을 돌려준다
+export function heldAddons(list, pub, pubJs) {
+  return list.filter((a) => {
+    const o = pub.find((x) => x.id === a.id);
+    if (!o || o.version !== a.version || o.sha256 === a.sha256 || !pubJs[a.id]) return false;
+    a.sha256 = o.sha256; a.size = o.size; a.minCore = o.minCore; return true;
+  });
+}

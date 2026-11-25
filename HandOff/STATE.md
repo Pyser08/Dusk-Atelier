@@ -1,3 +1,6 @@
+## fix/erosync-retire · 11-25 → v2.2.61
+- addons.js RETIRED: boot에서 erosync 코드·인덱스 삭제(저장 값 erosync_*·dusk.erosync.* 유지, 커스텀 애드온은 안 건드림). publish-addons: 버전이 그대로인 애드온은 직전 공개본 유지(heldAddons).
+
 ## chore/addons-keep3 · 11-25 jsDelivr 50MB 초과
 - addons 브랜치가 220MB라 jsDelivr가 새 파일을 403으로 거부. tools/addons-prune.mjs: 애드온마다 .mjs 최근 3개(addons/history.json 순서), 45MB 넘으면 배포 중단. 손으로 addons 브랜치에 올릴 때도 pruneModules를 쓸 것.
 

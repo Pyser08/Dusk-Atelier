@@ -19,6 +19,8 @@ export const ADOPT_ID_PREFIX = "dusk.addon.adopted.v2.";
 export const LEGACY_ADOPTED = ["manage", "memory", "cards", "widgets", "provider", "protlink"];
 export const NOTES_KEY = "dusk.addon.notes.v1";   // 2.2.10 업데이트된 애드온의 아직 안 보여 준 패치노트
 export const SEEN_KEY = "dusk.addon.seen.v1";   // 목록에서 본 적 있는 애드온 id(새로 생긴 애드온 알림용)
+// 지원을 끝낸 공식 애드온: 시작할 때 코드만 지운다(저장 값은 남김). 직접 불러온 커스텀 애드온은 따로라 건드리지 않는다
+const RETIRED = ["erosync"];
 const INDEX_KEY = "dusk.addon.index", CODE = (id) => `dusk.addon.code.${id}`, PREV = (id) => `dusk.addon.prev.${id}`;
 // 커스텀 애드온(2.1.0): 사용자가 파일로 불러온 것. 공식 목록과 따로 저장하고, 실행 표에서는 "custom:<id>"로 구분한다.
 export const CUSTOM_INDEX_KEY = "dusk.addon.custom.index";
@@ -172,6 +174,10 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
   // onSettled(id, ok): 켜 둔 애드온이 켜졌거나 실패했을 때, onIndex(ids): 켤 목록을 알았을 때
   async function boot({ onIndex, onSettled } = {}) {
     const idx = await getIndex();
+    for (const id of RETIRED.filter((x) => idx[x])) {
+      try { const gone = { ...idx }; delete gone[id]; delete idx[id]; await setIndex(gone, [id]); await store.removeItem(CODE(id)); await store.removeItem(PREV(id)); log(`${id}: 지원이 끝난 애드온이라 지웠어요(저장 값은 남아요)`); }
+      catch (e) { log(`${id} 정리 실패(다음 시작에 다시) ${e?.message ?? e}`); }
+    }
     // 다시 시작했으니 저장된(새) 버전으로 켜진다 → '새로고침하면 적용' 표시를 지운다
     if (Object.values(idx).some((v) => v?.pendingRestart)) { for (const v of Object.values(idx)) if (v) delete v.pendingRestart; await setIndex(idx); }
     // 동시에 켠다: 저장된 코드는 한꺼번에 읽고, 각 애드온은 자기 필요 애드온(requires)이 켜지기만 기다린다.
