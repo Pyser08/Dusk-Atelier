@@ -41,8 +41,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/provider.js",
-      "sha256": "5fb67a6071934ee9d4861fdc857a002e2e751a23f7b86b91d982f2ea65118502",
-      "size": 163328
+      "sha256": "ab915cf0ec3d83fb25c93da00869826030b118e361e2f6577beb2f50886ddc8b",
+      "size": 162824
     },
     {
       "id": "chattheme",
@@ -155,8 +155,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/cards.js",
-      "sha256": "dce48fb24587b41cc8187eafd3c50691c7a45a4e5431be891ab1a2a3e476dd47",
-      "size": 686193
+      "sha256": "30021c91c49b7b65d9893b7e0584e7028d07a88c08016138d4974884caa11a2f",
+      "size": 685681
     },
     {
       "id": "protlink",
@@ -292,8 +292,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/innerthought.js",
-      "sha256": "9e45a747d241db36b6ed7c112b110feeb27a2d54427d855403b93f81dad885cb",
-      "size": 16101
+      "sha256": "c0c1205e03363c174cbc247e262c466600796f79ebc8cccd724c178dede2f49b",
+      "size": 15591
     }
   ]
 }
