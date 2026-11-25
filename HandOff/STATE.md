@@ -1,4 +1,11 @@
 ## fix/report-11-p2 · 11-24 신고 #11 남은 P2 → 장기기억 0.3.65(애드온만)
+
+## Dusk Saga (브랜치 Dusk-RPG, 2026-11-25)
+- 설계·진행 기록: `docs/rpg/DESIGN.md` (8절이 최신)
+- [x] P0 엔진 이식·동등성 시험·Tactics 저장 가져오기
+- [ ] P0 저장·AI 호출·화면 이식, 애드온 등록 (화면은 미리보기 확인 뒤)
+- [ ] main(v2.2.61) 따라잡기
+
 - peekIndex(읽기 전용 — 고치면 안 됨) · scenes bySit · affhud 캐릭터 공유(3초) · cardoverlay 키 해제 · settings 숫자 조용히 저장 · personv2 acc 지연 부착 · relmap glow. 테스트 tests/report11-p2.test.js.
 - 보류: 요청 직전 위키 가드(다른 채팅 기록 위험, 호스트 범위 조회 API 확인 전), watch·위치 메타(호스트 API 필요), 훅 순서·Cellar·bridge(이득 미측정), mdetail 직렬, subtabs·icons 지연, 글꼴, scenes 점진 생성·레거시 해시. Android Firefox 두 번째 글자 재현 못 함.
 
