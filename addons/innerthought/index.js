@@ -5,7 +5,7 @@
 //  · 장기기억 애드온의 캐릭터 상태창(이름 누르기)에 ‘속마음’ 탭: ext svc "innerthought".tabFor(이름들)
 // 설정은 이 애드온 저장소(dusk.storage "settings").
 import { buildAssetIndex, resolveTag } from "../../src/engine/imgtagfix.js";
-import { normSettings, summary, hintText, assetList, stripThoughts, renderThoughts, pickImage, imageTag, detectStyle, collectFromMessages, thoughtsFor, cardTabHtml, emotionWords, HINT_MARK, TAG } from "../../src/engine/innerthought.js";
+import { normSettings, summary, hintText, assetList, stripThoughts, renderThoughts, pickImage, imageTag, detectStyle, collectFromMessages, thoughtsFor, cardTabHtml, emotionWords, HINT_MARK, hasThought } from "../../src/engine/innerthought.js";
 import { insertHint } from "../../src/engine/imghint.js";
 import { readChar, readChat } from "../../src/data/apiread.js";
 import { loadPrimaryUserName } from "../../src/data/usernames.js";
@@ -64,13 +64,13 @@ export async function activate(api, ctx) {
       const v = await load();
       const user = await loadPrimaryUserName(api).catch(() => "");
       const list = messages.filter((m) => !(m?.role === "system" && textOf(m.content).startsWith(HINT_MARK)))
-        .map((m) => (typeof m?.content === "string" && m.content.includes(`<${TAG}`) ? { ...m, content: stripThoughts(m.content) } : m));
+        .map((m) => (typeof m?.content === "string" && hasThought(m.content) ? { ...m, content: stripThoughts(m.content) } : m));
       return insertHint(list, hintText(st, { emos: v?.emos ?? [], user, assets: v?.list ?? "" }));
     } catch (e) { log("요청 안내 실패", e?.message ?? e); return messages; }
   }
   async function onDisplay(text) {
     try {
-      if (typeof text !== "string" || !text.toLowerCase().includes(`<${TAG}`)) return text;
+      if (!hasThought(text)) return text;
       const v = await load().catch(() => null);
       return renderThoughts(text, imgFor(v));
     } catch { return text; }

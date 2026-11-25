@@ -88,7 +88,7 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
   async function show(pid) {
     const d = await ensureDoc(); if (!d) return false;
     await close();
-    const html = await cardOf(pid); if (!html) return false;
+    const html = await cardOf(pid); if (!html) return null;   // 그 인물 내용이 없을 뿐(다른 채팅 이름 등) — 창을 못 띄운 것이 아니다
     const body = await d.querySelector("body"); if (!body) return false;
     const wrap = await d.createElement("div"); await wrap.setAttribute("x-dusk", "card-ov");
     await wrap.setStyleAttribute("position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:2147483000;");
@@ -109,6 +109,11 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
       if (kid != null && typeof d.removeEventListener === "function") keyOff = async () => { try { await d.removeEventListener("keydown", kid); } catch { /* 이미 없음 */ } }; } catch { /* 키를 못 받아도 닫기 버튼 */ } }
     return true;
   }
+  // 펼침으로 그려진 이름이면(권한이 늦게 온 경우 등) 화면 위 창을 띄운 뒤 같은 인물의 펼침 칸은 감춘다
+  async function hidePanels(d, safe) {
+    const list = await d.querySelectorAll(`.dusk-pcb-${safe}, .x-risu-dusk-pcb-${safe}`), len = typeof list?.length === "function" ? await list.length() : list?.length ?? 0;
+    for (let i = 0; i < len; i++) { const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; await el?.setStyleAttribute?.("display:none"); }
+  }
   // 응답 안 이름(data-dusk="nm")에 클릭을 단다. 이미 단 것은 data-hk로 건너뛴다
   // 응답 안 이름에 클릭을 단다. 2.2.29: 속성을 읽지 않고(판에 따라 getAttribute가 없음) 인물마다 선택자로 찾는다 — data-pid, 클래스(리스가 x-risu- 를 붙이는 판 포함)
   async function hook() {
@@ -127,7 +132,7 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
           const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; if (!el) continue;
           await attr(el, "x-dusk-hk", "1"); await attr(el, "data-hk", "1");
           // 11-23: 판에 따라 click이 안 오고 pointerup만 오기도 한다 → 둘 다 받고 0.5초 안 두 번은 한 번으로
-          let last = 0; const fire = () => { const t = Date.now(); if (t - last < 500) return; last = t; show(pid).then((ok) => { if (!ok) { log("상태창을 열지 못했어요", pid); onFail(); } }).catch((e) => { log("상태창 열기 실패", e?.message ?? e); onFail(); }); };
+          let last = 0; const fire = () => { const t = Date.now(); if (t - last < 500) return; last = t; show(pid).then((ok) => { if (ok) hidePanels(d, safe).catch(() => {}); if (!ok) { log("상태창을 열지 못했어요", pid); if (ok === false) onFail(); } }).catch((e) => { log("상태창 열기 실패", e?.message ?? e); onFail(); }); };
           await el.addEventListener("click", fire); try { await el.addEventListener("pointerup", fire); } catch { /* click만 */ }
           n++; total++;
         }
@@ -138,12 +143,12 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
   // 응답이 그려진 뒤 찾는다(리스가 그리는 시점을 모르니 몇 번 나눠서)
   // 2.2.28: 리스가 메시지를 다시 그리면 클릭이 사라진다 → 몇 초마다 새 이름을 찾는다(응답 표시 직후엔 빨리)
   function soon() {
-    for (const t of timers) clearTimeout(t); timers = [300, 1200, 3500].map((ms) => setTimeout(() => { hook().catch(() => {}); }, ms));
+    for (const t of timers) clearTimeout(t); timers = [300, 1200, 3500].map((ms) => { const t = setTimeout(() => { hook().catch(() => {}); }, ms); t?.unref?.(); return t; });
     gap = 2500; arm();
   }
   // 새 이름이 없으면 간격을 조금씩 늘린다(2.5초 → 최대 5초). 응답이 다시 표시되면(soon) 처음 간격으로
   function arm() {
-    clearTimeout(loop); loop = setTimeout(async () => { const n = await hook().catch(() => 0); if (!loop) return; gap = n ? 2500 : Math.min(5000, gap * 1.4); arm(); }, gap);
+    clearTimeout(loop); loop = setTimeout(async () => { const n = await hook().catch(() => 0); if (!loop) return; gap = n ? 2500 : Math.min(5000, gap * 1.4); arm(); }, gap); loop?.unref?.();
   }
   return { show, close, hook, soon, total: () => total, stop: () => { clearTimeout(loop); loop = null; for (const t of timers) clearTimeout(t); timers = []; } };
 }

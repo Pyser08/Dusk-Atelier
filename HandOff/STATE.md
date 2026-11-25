@@ -1,3 +1,23 @@
+## fix/report-19 · 11-25 신고 #19 → 장기기억 0.3.68
+- scenenow.js: 이어지는 장면(changed=false)의 sc.when을 버려 시간이 멈췄다 → scene.nowWhen(when은 시작 시각 그대로). sceneOf·previousScene.when이 nowWhen 먼저, 뒤로는 안 감(자정 넘김만). 손으로 고치면 nowWhen 지움. 리롤·삭제해도 nowWhen은 안 되돌림. 테스트 tests/report19.test.js.
+
+## fix/report-18 · 11-25 장면 상태창 이름 → 장기기억 0.3.67(미배포)
+- linkHtml chip/pid: 알약은 summary에만, 펼침 summary에도 data-pid·dusk-pid → cardoverlay가 화면 위 창으로 띄우고 펼침 칸(dusk-pcb-)은 감춤. namelinks checkSpans 5·10·20초, 이름을 찾으면 화면 위로 복귀, 내용 없음(null)은 실패로 안 봄. ::before 고정 막은 리스 메시지 층에 갇혀 쓰지 않음.
+
+## fix/report-18 · 11-25 신고 #18 → 인물 속마음 0.1.3(미배포)
+- innerthought.js fix(): 값 안의 <img="…">·'>'·굽은 따옴표·&lt;·dusk_thought·안 닫힌 태그를 바로잡아 읽음. 신고자의 실제 응답은 못 봄. 체내 정액량은 다시 보내 준다고 해서 안 고침(위키 문서 없는 인물은 기록 안 됨 — 확인 거리). 테스트 tests/report18.test.js.
+
+## fix/erosync-retire · 11-25 → v2.2.61
+- addons.js RETIRED: boot에서 erosync 코드·인덱스 삭제(저장 값 erosync_*·dusk.erosync.* 유지, 커스텀 애드온은 안 건드림). publish-addons: 버전이 그대로인 애드온은 직전 공개본 유지(heldAddons).
+
+## chore/addons-keep3 · 11-25 jsDelivr 50MB 초과
+- addons 브랜치가 220MB라 jsDelivr가 새 파일을 403으로 거부. tools/addons-prune.mjs: 애드온마다 .mjs 최근 3개(addons/history.json 순서), 45MB 넘으면 배포 중단. 손으로 addons 브랜치에 올릴 때도 pruneModules를 쓸 것.
+
+## fix/report-13 · 11-25 신고 #13·#14 → v2.2.60 + 장기기억 0.3.66
+- #13: chat-scope scopeIsCopy(분기 표식 → 목록 위쪽이 사본), 갈라진 범위 키 = chat.id(겹치면 새 id), memoryrunner splitCopy(위키 꺼진 봇도 기록 전에 가름), adoptFolder가 위키 scope.chatKey도 바꿈. 이미 섞이거나 빠진 기록은 자동으로 되돌리지 않음.
+- #14: turninfo 표시 훅이 배경 HTML에도 불려 claimDice가 주사위를 줌 → 지금 채팅의 글인지 확인(inChat). 저장된 잘못된 기록도 안 보임.
+- #15~17: 신고자가 안 고쳐도 된다고 함(페르소나 없는 장면의 AI 오판) — 안 고침. 테스트 tests/report13-14.test.js.
+
 ## fix/report-11-p2 · 11-24 신고 #11 남은 P2 → 장기기억 0.3.65(애드온만)
 
 ## Dusk Saga (브랜치 Dusk-RPG, 2026-11-25)

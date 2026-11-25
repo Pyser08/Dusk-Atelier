@@ -392,3 +392,14 @@ test("애드온 패치노트: CHANGELOG에서 그 애드온 절만 뽑고, 목�
   const m = parseManifest({ format: 1, addons: [{ id: "memory", name: "m", version: "0.3.8", sha256: "a".repeat(64), url: "https://x/y.js", notes: n }] });
   assert.equal(m.addons[0].notes.length, 3);
 });
+
+test("지원이 끝난 Erosync는 시작할 때 코드만 지운다(저장 값·다른 애드온은 그대로)", async () => {
+  const { A, kv, log } = await setup();
+  kv.set("dusk.addon.index", JSON.stringify({ erosync: { version: "0.1.4", on: true, prev: { version: "0.1.3" } }, a: { version: "1.0.0", on: true } }));
+  kv.set("dusk.addon.code.erosync", "ok:ero"); kv.set("dusk.addon.prev.erosync", "ok:old"); kv.set("dusk.addon.code.a", "ok:1"); kv.set("erosync_data", "값"); kv.set("dusk.erosync.on", "on");
+  await A.boot();
+  assert.deepEqual(log.map((x) => x[1]), ["ok:1"]);
+  assert.deepEqual(Object.keys(JSON.parse(kv.get("dusk.addon.index"))), ["a"]);
+  assert.ok(!kv.has("dusk.addon.code.erosync") && !kv.has("dusk.addon.prev.erosync"));
+  assert.equal(kv.get("erosync_data"), "값"); assert.equal(kv.get("dusk.erosync.on"), "on");
+});

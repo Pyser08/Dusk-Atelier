@@ -4,6 +4,7 @@ import { alignDocTitles } from "./peoplemerge.js";
 import { gradeResponse, findDuplicate, gradeRank } from "./memorygrade.js";
 import { applyRel, applyOpen, reinforce, applyTies } from "./memoryplus.js";
 import { mergeWhen } from "./storydate.js";
+import { advanceNow } from "./scenenow.js";
 import { isTombed } from "./memorydelete.js";
 import { applyEmo, emoForPrompt, convertAffinity } from "./memoryemo.js";
 import { isLover, strayRisk } from "./lover.js";
@@ -77,6 +78,7 @@ export function applyAnalysis(folder, result, anchor, { now = Date.now(), ignore
   } else if (sc && prev) {
     if (sc.facts?.length) prev.facts = sc.facts;
     if (storyDate && prev.iso !== storyDate) { prev.iso = storyDate; prev.when = mergeWhen(prev.when, storyDate); }
+    if (!keepAhead || anchor?.at >= (prev.at ?? 0)) advanceNow(prev, sc.when, storyDate);   // 신고 #19: 장면이 안 바뀌어도 시각은 흐른다
     prev.updated_ms = now; out.scene = "updated";
   }
   const sit = latestScene(folder)?.id ?? null;

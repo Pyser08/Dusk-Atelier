@@ -40,18 +40,45 @@ export function hintText(s, { emos = [], user = "", assets = "" } = {}) {
     + `이 태그 밖 본문은 평소대로 쓰고, 태그 안 글을 본문에 다시 쓰지 않아요.`;
 }
 
-const RE = new RegExp(`<${TAG}\\b([^>]*)>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi");
-const attrOf = (attrs, k) => (new RegExp(`\\b${k}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i").exec(attrs) ?? []).slice(1).find((x) => x != null) ?? "";
+// 신고 #18: 모델이 태그를 조금 다르게 써도 읽는다 — 값 안의 <img="…">·'>', 굽은 따옴표, &lt; &gt;, dusk_thought, 빠진 닫는 태그.
+// fix: 여는 태그를 다듬고, 안 닫힌 태그는 그 줄 끝(또는 다음 속마음 앞)에서 닫는다. 멀쩡한 글은 그대로.
+const ATTRS = `(?:"[^"]*"|'[^']*'|[^>"'])*`;
+const RE = new RegExp(`<${TAG}\\b(${ATTRS})>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi");
+const LOOSE = /dusk[-_]thought/i;
+function fix(text) {
+  let s = String(text ?? "");
+  if (!LOOSE.test(s)) return s;
+  s = s.replace(/&lt;(\/?\s*dusk[-_]thought\b)([\s\S]{0,400}?)&gt;/gi, (_, a, b) => `<${a}${b.replace(/&quot;/gi, '"').replace(/&#39;/g, "'")}>`)
+    .replace(/<\s*(\/?)\s*dusk[-_]thought\b/gi, `<$1${TAG}`);
+  // 여는 태그 안의 이미지 태그: img="<img="x">" · <img="x"> → img="x"
+  s = s.replace(new RegExp(`(<${TAG}\\b[^<>\\n]*?)(?:\\bimg\\s*=\\s*["'“”]?\\s*)?<img\\s*(?:src\\s*)?=\\s*["'“”]?([^"'“”<>\\n]+)["'“”]?\\s*\\/?>["'“”]?`, "gi"), '$1 img="$2"');
+  s = s.replace(new RegExp(`<${TAG}\\b[^<>\\n]*>`, "gi"), (t) => t.replace(/[“”]/g, '"').replace(/[‘’]/g, "'"));
+  // 따옴표를 안 닫은 값(img="x>): 그 태그만 따옴표를 지운다
+  s = s.replace(new RegExp(`<${TAG}\\b([^<>\\n]*)>`, "gi"), (t, a, at, all) => ((a.match(/"/g) ?? []).length % 2 && !new RegExp(`^<${TAG}\\b(?:"[^"\\n]*"|'[^'\\n]*'|[^>"'\\n])*>`, "i").test(all.slice(at, at + 400).split(`</${TAG}`)[0]) ? `<${TAG}${a.replace(/=\s*"([^"]*)$/, '="$1"')}>` : t));
+  const open = new RegExp(`<${TAG}\\b${ATTRS}>`, "gi"), close = new RegExp(`<\\/${TAG}\\s*>`, "i");
+  let out = "", i = 0, m;
+  while ((m = open.exec(s))) {
+    const end = open.lastIndex, rest = s.slice(end), c = close.exec(rest), n = new RegExp(`<${TAG}\\b`, "i").exec(rest);
+    out += s.slice(i, end); i = end;
+    if (c && (!n || c.index < n.index)) continue;
+    const nl = rest.search(/\n|$/), cut = Math.min(nl < 0 ? rest.length : nl, n ? n.index : rest.length);
+    if (!n && cut === rest.length) break;   // 글 끝까지 안 닫힘(스트리밍 중) → 화면에서 숨긴다
+    out += `${rest.slice(0, cut)}</${TAG}>`; i = end + cut; open.lastIndex = i;
+  }
+  return out + s.slice(i);
+}
+const attrOf = (attrs, k) => (new RegExp(`(?:^|\\s)${k}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i").exec(attrs) ?? []).slice(1).find((x) => x != null) ?? "";
 export function parseThoughts(text) {
   const out = [];
-  for (const m of String(text ?? "").matchAll(RE)) {
+  for (const m of fix(text).matchAll(RE)) {
     const name = attrOf(m[1], "name").trim(), body = m[2].replace(/<[^>]+>/g, "").trim();
     if (name && body) { const t = { name: name.slice(0, 40), emo: attrOf(m[1], "emo").trim().slice(0, 30), text: body.slice(0, 400) }; const img = attrOf(m[1], "img").trim(); if (img) t.img = img.slice(0, 120); out.push(t); }
   }
   return out;
 }
 // 요청 사본: 지난 응답의 속마음 태그는 빼서 보낸다(토큰 절약·횟수 흉내 방지)
-export const stripThoughts = (text) => String(text ?? "").replace(RE, "").replace(/[ \t]+\n/g, "\n");
+export const stripThoughts = (text) => fix(text).replace(RE, "").replace(/[ \t]+\n/g, "\n");
+export const hasThought = (text) => typeof text === "string" && LOOSE.test(text);
 
 // 감정 이미지 고르기. emotions = 봇 감정 이미지 이름, assets = 추가 에셋 이름
 const nz = (s) => String(s ?? "").normalize("NFKC").toLowerCase().replace(/[\s_\-.()\[\]]+/g, "");
@@ -107,10 +134,11 @@ const ICON = "list-style:none;display:inline-block;position:relative;cursor:poin
 const TAILDOT = (l, b, s) => `<span style="position:absolute;left:${l}px;bottom:${b}px;width:${s}px;height:${s}px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28)"></span>`;
 // 태그가 있던 자리(그 인물의 행동·대사 끝)에 💭 아이콘 하나. 누르면 그 속마음 풍선이 펼쳐진다
 export function renderThoughts(text, imgFor = () => "") {
-  if (typeof text !== "string" || !text.toLowerCase().includes(`<${TAG}`)) return text;
-  let out = text.replace(new RegExp(`[ \\t]*\\n?[ \\t]*<${TAG}\\b([^>]*)>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi"), (all, attrs, body) => {
+  if (!hasThought(text)) return text;
+  let out = fix(text).replace(new RegExp(`[ \\t]*\\n?[ \\t]*<${TAG}\\b(${ATTRS})>([\\s\\S]*?)<\\/${TAG}\\s*>`, "gi"), (all, attrs, body) => {
     const t = { name: attrOf(attrs, "name").trim(), emo: attrOf(attrs, "emo").trim(), img: attrOf(attrs, "img").trim(), text: body.replace(/<[^>]+>/g, "").trim() };
-    if (!t.name || !t.text) return "";
+    if (!t.text) return "";
+    t.name ||= "속마음";   // 이름을 빠뜨려도 보여 준다
     return " " + thoughtIcon(t, imgFor);
   });
   out = out.replace(new RegExp(`\\s*<${TAG}\\b[^>]*>?[\\s\\S]*$`, "i"), "");

@@ -2,7 +2,8 @@
 // 날씨마다 움직이는 배경(비 줄기·눈송이·햇살·구름·안개·번개·바람·실내 등불). 움직임은 한 번 넣는 <style>의 키프레임을 쓰고,
 // 호스트가 <style>을 지우면 그라데이션 바탕만 남는다(그래도 읽기엔 문제없음). 스크립트는 쓰지 않는다.
 import { parseStatus } from "./storytime.js";
-import { kvStatus, wordTime } from "./kvstatus.js";
+import { kvStatus } from "./kvstatus.js";
+import { sceneWhen, clockOf } from "./scenenow.js";
 import { weatherOf, nk } from "./memextra.js";
 import { linkHtml, nameSpan, TAB_CSS, PC_OPEN_CSS } from "./namecard.js";
 import { forecast, climateOf, anchorOf, weekday, parseIso, ZONES, STATES } from "./weather.js";
@@ -16,9 +17,9 @@ export function sceneOf(text, folder, { seed = "", hint = "" } = {}) {
   const s = kvStatus(text) ?? parseStatus(text);   // 11-22: 카드가 쓰는 긴 key=value 상태 줄 먼저
   const sc = [...(folder?.scenes ?? [])].filter((x) => !x.orphan).sort((a, b) => (b.at ?? 0) - (a.at ?? 0)), last = sc[0];
   // 11-22 버그리포트(날씨 줄이 일부 턴에만): 가장 최근 장면에 날짜가 없으면 예보가 안 만들어졌다 → 날짜가 있는 가장 최근 장면, 시간은 시각이 있는 가장 최근 장면
-  const dated = sc.find((x) => parseIso(x.when)), timed = sc.find((x) => /\d{1,2}:\d{2}/.test(x.when ?? "") || wordTime(x.when));
-  const fromWhen = (w) => { const p = parseIso(w); return p ? { date: `${String(p.y).padStart(4, "0")}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`, time: String(w).match(/\d{1,2}:\d{2}/)?.[0] ?? wordTime(w) } : { date: "", time: wordTime(w) }; };   // 11-22: ‘저녁’ 같은 낱말 시간도
-  const fw0 = fromWhen(dated?.when), tw = timed && (timed.at ?? 0) >= (dated?.at ?? 0) ? (String(timed.when).match(/\d{1,2}:\d{2}/)?.[0] ?? wordTime(timed.when)) : "";
+  const dated = sc.find((x) => parseIso(sceneWhen(x))), timed = sc.find((x) => clockOf(sceneWhen(x)));
+  const fromWhen = (w) => { const p = parseIso(w); return p ? { date: `${String(p.y).padStart(4, "0")}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`, time: clockOf(w) } : { date: "", time: clockOf(w) }; };   // 11-22: ‘저녁’ 같은 낱말 시간도
+  const fw0 = fromWhen(sceneWhen(dated)), tw = timed && (timed.at ?? 0) >= (dated?.at ?? 0) ? clockOf(sceneWhen(timed)) : "";
   const fw = { date: fw0.date, time: tw || fw0.time };
   const body = String(text ?? "").replace(/^[^\n]*\n/, "");
   const date = s.date || fw.date, time = s.time || fw.time, place = s.place || last?.place || "";
@@ -214,8 +215,10 @@ export function scenePanelHtml({ date = "", time = "", place = "", weather = "",
   const chips = people.map((p) => {
     const init = esc([...String(p.name ?? "?")][0] ?? "?");
     const dot = `<span style="display:inline-grid;place-items:center;width:18px;height:18px;margin-right:5px;border-radius:50%;background:linear-gradient(140deg,#8b6fe0,#e8578e);color:#fff;font-size:10px;font-weight:700;vertical-align:-4px">${init}</span>`;
-    return p.card || p.pid
-      ? `<span style="display:inline-block;margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(139,111,224,.14);border:1px solid rgba(139,111,224,.3)">${dot}${p.pid ? nameSpan(p.name, p.pid) : linkHtml(p.name, p.card)}</span>`
+    const pill = "margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(139,111,224,.14);border:1px solid rgba(139,111,224,.3)";
+    if (!p.pid && p.card) return linkHtml(p.name, p.card, { chip: pill, head: dot, pid: p.id ?? "" });
+    return p.pid
+      ? `<span style="display:inline-block;${pill}">${dot}${nameSpan(p.name, p.pid)}</span>`
       : `<span style="display:inline-block;margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(127,127,127,.12);opacity:.85">${dot}${esc(p.name)}</span>`;
   }).join("");
   const up = (d) => `animation:dkUp .55s cubic-bezier(.22,1,.36,1) both ${d}s`;
