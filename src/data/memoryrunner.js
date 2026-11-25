@@ -44,8 +44,9 @@ import { hintsForPrompt } from "../engine/memoryinner.js";
 import { needsDigest, digestTargets, digestMessages, applyDigest } from "../engine/memorydigest.js";
 import { loadUserNames } from "./usernames.js";
 import { withoutPast } from "../engine/pastpersona.js";
-import { memoryState } from "../engine/memoryswitch.js";
-import { chatKeyOf, legacyChatKeyOf } from "../engine/chatkey.js";
+import { memoryState, potState } from "../engine/memoryswitch.js";
+import { chatKeyOf, legacyChatKeyOf, SCOPE_FIELD } from "../engine/chatkey.js";
+import { ChatScopeManager } from "../engine/pot/chat-scope.js";
 
 const MAX_FAILS = 5;
 // 자동 기록 시점: next(기본) = 다음 입력을 보낼 때 직전 응답을 확정해 기록 | now = 응답 직후
@@ -92,11 +93,23 @@ export function createMemoryRunner(api, { store, prep = null, prompts = null, af
     try { const cur = (await (store.peekIndex ?? store.getIndex)()).status ?? {}; if (Object.entries(patch).every(([k, v]) => JSON.stringify(cur[k]) === JSON.stringify(v))) return; } catch { /* 못 읽으면 쓴다 */ }
     return store.updateIndex((idx) => { Object.assign(idx.status, patch); }).catch(() => {}); }
 
+  // 신고 #13: 복사·분기 채팅은 원본의 범위 ID를 들고 온다. 인물 위키가 켜져 있으면 위키 런타임이 갈라 주지만,
+  // 꺼져 있으면 아무도 안 갈라 원본과 한 폴더에 섞여 기록됐다 → 기록하기 전에 여기서 가른다.
+  async function splitCopy(character, chat, ci, ti) {
+    if (!chat[SCOPE_FIELD] || typeof api.setChatToIndex !== "function") return;
+    if (link?.settle && potState(await store.getIndex(), String(character.chaId ?? ci)).on) return;
+    const mgr = new ChatScopeManager(api), r = await mgr.resolveAt(character, chat, ci, ti);
+    if (!r.duplicate) return;
+    if (!await mgr.pin(ci, ti, chat, r.candidateChatKey)) throw new Error("분기한 채팅의 기억을 원래 채팅과 나누지 못했어요.");
+    chat[SCOPE_FIELD] = r.candidateChatKey;
+  }
+
   // 분석 대상 한 묶음의 공통 자료(채팅·앵커·설정). 모델 호출 없음.
   // shared: 일괄 분석이 한 번만 읽어 둔 {character, chat}. 묶음마다 캐릭터·채팅을 통째로 다시 복사하면 큰 봇에서 메모리가 폭증한다(아이폰 OOM).
   async function gather(charIndex, chatIndex, group, shared = null) {
     const character = shared?.character ?? await api.getCharacterFromIndex(charIndex), chat = shared?.chat ?? await api.getChatFromIndex(charIndex, chatIndex);
     if (!character || !chat) throw new Error("캐릭터 또는 채팅을 찾지 못했어요.");
+    await splitCopy(character, chat, charIndex, chatIndex);
     const chaId = String(character.chaId ?? charIndex), chatId = chatKeyOf(chat, chatIndex);
     if (chatId !== legacyChatKeyOf(chat, chatIndex)) await store.adoptFolder?.(chaId, legacyChatKeyOf(chat, chatIndex), chatId).catch(() => {});
     const messages = chat.message ?? [];

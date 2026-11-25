@@ -14,12 +14,23 @@ function chatIdentityFingerprint(chat) {
   return JSON.stringify([chat.name, chat.title, chat.lastDate, messages.length, tail]);
 }
 // gets a new chat.id, so the chat whose id equals the scope id is the original wherever it sits in the list.
-// When no chat matches (a scope id made by an earlier split), the chat lower in the list is the copy, as before.
-function scopeIsCopy(chats, chatIndex, chat, pluginId) {
+// 신고 #13: 분기를 다시 분기하면 범위 ID가 어느 채팅의 id와도 같지 않다. 그때는 분기 표식(branchedfrom::<원본 id>)을 보고,
+// 없으면 목록 위쪽을 사본으로 본다(리스는 복사·분기 채팅을 맨 위에 넣는다). 예전에는 아래쪽을 사본으로 봐서 원본이 기억을 잃었다.
+const branchedFrom = (chat) => {
+  const list = Array.isArray(chat?.message) ? chat.message : [];
+  for (let i = list.length - 1; i >= 0; i--) { const m = /\{\{specialcomment::branchedfrom::([^:}]+)::/.exec(String(list[i]?.data ?? '')); if (m) return m[1]; }
+  return '';
+};
+const hasTwinId = (chats, chatIndex, id) => chats.some((c, i) => i !== chatIndex && (scopeText(c?.id) === id || scopeText(c?.[CHAT_SCOPE_FIELD]) === id));
+export function scopeIsCopy(chats, chatIndex, chat, pluginId) {
   const twins = chats.map((candidate, index) => ({ candidate, index })).filter(item => item.index !== chatIndex && scopeText(item.candidate?.[CHAT_SCOPE_FIELD]) === pluginId);
-  if (!twins.length || scopeText(chat?.id) === pluginId) return false;
+  const id = scopeText(chat?.id);
+  if (!twins.length || id === pluginId) return false;
   if (twins.some(item => scopeText(item.candidate?.id) === pluginId)) return true;
-  return twins.some(item => item.index < chatIndex);
+  const from = branchedFrom(chat);
+  if (from && twins.some(item => scopeText(item.candidate?.id) === from)) return true;
+  if (id && twins.some(item => branchedFrom(item.candidate) === id)) return false;
+  return twins.some(item => item.index > chatIndex);
 }
 function scopeRandomId() {
   const uuid = globalThis.crypto?.randomUUID?.();
@@ -28,6 +39,13 @@ function scopeRandomId() {
 export class ChatScopeManager {
   constructor(api, { idFactory = scopeRandomId, isEnabled = () => true } = {}) { this.api = api; this.idFactory = idFactory; this.isEnabled = isEnabled; this.pendingForks = new Map(); }
   forkKey(characterId, chatIndex, source) { return `${characterId}\n${chatIndex}\n${source}`; }
+  // 갈라진 범위는 그 채팅의 고유 id를 쓴다(다음 분기 때 어느 쪽이 원본인지 바로 안다). 다른 채팅이 쓰는 id면 새로 만든다.
+  forkTarget(pendingKey, chats, chatIndex, chat) {
+    const id = scopeText(chat?.id);
+    if (id && !hasTwinId(chats, chatIndex, id)) return id;
+    if (!this.pendingForks.has(pendingKey)) this.pendingForks.set(pendingKey, this.idFactory());
+    return this.pendingForks.get(pendingKey);
+  }
   completeFork(characterId, chatIndex, source) { this.pendingForks.delete(this.forkKey(characterId, chatIndex, source)); }
   async pin(characterIndex, chatIndex, seenChat, nextId) {
     if (!this.isEnabled()) return false;
@@ -59,8 +77,8 @@ export class ChatScopeManager {
       if (pluginId) {
         if (scopeIsCopy(chats, chatIndex, chat, pluginId)) {
           const pendingKey = this.forkKey(characterId, chatIndex, pluginId);
-          if (!this.pendingForks.has(pendingKey)) this.pendingForks.set(pendingKey, this.idFactory());
-          return { available: false, writeBlocked: true, duplicate: true, warning: '복사·분기된 채팅이 기존 Wiki 범위를 공유하고 있습니다. 독립 범위로 분리하는 중입니다.', characterId, characterName, chatName, characterIndex, chatIndex, chat, sourceChatKey: pluginId, candidateChatKey: this.pendingForks.get(pendingKey) };
+          const candidateChatKey = this.forkTarget(pendingKey, chats, chatIndex, chat);
+          return { available: false, writeBlocked: true, duplicate: true, warning: '복사·분기된 채팅이 기존 Wiki 범위를 공유하고 있습니다. 독립 범위로 분리하는 중입니다.', characterId, characterName, chatName, characterIndex, chatIndex, chat, sourceChatKey: pluginId, candidateChatKey };
         }
         return { available: true, writeBlocked: false, personaBinding:String(chat.bindedPersona||''), identityCharacter:scopedIdentityCharacter(character,chat), characterId, characterName, chatName, characterIndex, chatIndex, chatKey: pluginId, source: CHAT_SCOPE_FIELD };
       }
@@ -79,7 +97,7 @@ export class ChatScopeManager {
     const pluginId = scopeText(chat[CHAT_SCOPE_FIELD]);
     if (pluginId) {
       const chats = Array.isArray(character.chats) ? character.chats : [];
-      if (scopeIsCopy(chats, chatIndex, chat, pluginId)) { const pendingKey = this.forkKey(characterId, chatIndex, pluginId); if (!this.pendingForks.has(pendingKey)) this.pendingForks.set(pendingKey, this.idFactory()); return { available: false, duplicate: true, characterId, characterName, chatName, characterIndex, chatIndex, chat, sourceChatKey: pluginId, candidateChatKey: this.pendingForks.get(pendingKey) }; }
+      if (scopeIsCopy(chats, chatIndex, chat, pluginId)) { const pendingKey = this.forkKey(characterId, chatIndex, pluginId); const candidateChatKey = this.forkTarget(pendingKey, chats, chatIndex, chat); return { available: false, duplicate: true, characterId, characterName, chatName, characterIndex, chatIndex, chat, sourceChatKey: pluginId, candidateChatKey }; }
       return { available: true, writeBlocked: false, personaBinding:String(chat.bindedPersona||''), identityCharacter:scopedIdentityCharacter(character,chat), characterId, characterName, chatName, characterIndex, chatIndex, chatKey: pluginId, source: CHAT_SCOPE_FIELD };
     }
     const adopted = scopeText(chat.id) || this.idFactory();
