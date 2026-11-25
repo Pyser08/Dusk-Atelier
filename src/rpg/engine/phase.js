@@ -1,4 +1,5 @@
 // Dusk Saga 엔진 — 턴·증원·전장 불러오기 (순수 함수, DOM·api 없음)
+import { elemOfUnit } from "./elements.js";
 import { setJob } from "./classes.js";
 import { applyRace } from "./races.js";
 import { alive, living, nearestFree, syncRears, uterr } from "./board.js";
@@ -28,6 +29,7 @@ export function beginPhase(S, team, ev) {
     const d = S.defs[u.ref], t = uterr(S, u); let h = t.heal ? Math.ceil(d.stats.hp * t.heal / 100) : 0;
     for (const id of d.skills) { const sk = S.skills[id]; if (sk && sk.type === 'passive' && sk.flags.regen && cond(S, u, sk.cond, {})) h += sk.flags.regen; }
     h = Math.min(h, d.stats.hp - u.hp); if (h > 0) { u.hp += h; ev.push({ t: 'heal', id: u.id, amt: h, hp: u.hp }); log(S, d.name + ': 턴 시작 ' + h + ' 회복' + hpOf(S, u) + (t.heal ? ' (' + t.n + ')' : ''), 'regen'); }
+    if (t.burn && elemOfUnit(d) !== 'fire') { const dmg = Math.min(u.hp - 1, Math.ceil(d.stats.hp * t.burn / 100)); if (dmg > 0) { u.hp -= dmg; ev.push({ t: 'burn', id: u.id, amt: dmg, hp: u.hp }); log(S, d.name + ': ' + t.n + '에서 ' + dmg + ' 피해' + hpOf(S, u)); } }
   }
 }
 export function endTurn(S, ev) {
@@ -68,7 +70,7 @@ export function loadEncounter(S, j) {
   let rows = (Array.isArray(j.map) ? j.map : []).filter(r => typeof r === 'string').slice(0, 16);
   if (rows.length < 4) rows = Array.from({ length: 8 }, () => '..........');
   const w = clamp(Math.max(...rows.map(r => r.length)), 5, 20);
-  rows = rows.map(r => r.padEnd(w, '.').slice(0, w).replace(/[^.bfpmFTw#]/g, '.'));
+  rows = rows.map(r => r.padEnd(w, '.').slice(0, w).replace(/[^.bfpmFTw#lsihHv]/g, '.'));
   if (j.indoor === true) rows = rows.map(r => r.replace(/[fm]/g, 'p')); // an interior has no woods or mountains, whatever the model drew
   const obj = j.objective && typeof j.objective === 'object' ? j.objective : {};
   const B = { name: txt(j.name, 60, '이름 없는 전장'), map: rows, w, h: rows.length, turn: 1, phase: 'ally', status: 'active', units: {}, obj: { type: OBJ[obj.type] ? obj.type : 'rout' } };

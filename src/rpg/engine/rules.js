@@ -15,6 +15,12 @@ export const TERRAIN = {
   'F': { n: '요새', c: [2, 2, 2, 1], avo: 20, def: 2, heal: 20 },
   'T': { n: '옥좌', c: [1, 1, 1, 1], avo: 30, def: 3, heal: 10 },
   'w': { n: '물', c: [INF, INF, INF, 1], avo: 0, def: 0 },
+  'l': { n: '용암', c: [2, 2, 3, 1], avo: 0, def: 0, burn: 15 },
+  's': { n: '늪', c: [3, 4, 4, 1], avo: -15, def: 0 },
+  'i': { n: '얼음판', c: [1, 2, 2, 1], avo: -10, def: 0 },
+  'h': { n: '언덕', c: [2, 2, 2, 1], avo: 10, def: 1, up: 1 },
+  'H': { n: '고지', c: [2, 3, 3, 1], avo: 10, def: 1, up: 2 },
+  'v': { n: '허공', c: [INF, INF, INF, 1], avo: 0, def: 0 },
   '#': { n: '벽', c: [INF, INF, INF, INF], avo: 0, def: 0 },
 };
 export const T0 = TERRAIN['.'];

@@ -1,6 +1,7 @@
 // Dusk Saga 엔진 — 적 AI (순수 함수, DOM·api 없음)
+import { elemOfUnit } from "./elements.js";
 import { canUse } from "./classes.js";
-import { alive, ammo, canShoot, canWatch, coverAt, gun, pathTo, reach, stops, uterr, wr } from "./board.js";
+import { alive, ammo, canShoot, canWatch, coverAt, gun, pathTo, reach, stops, uterr, wr, terr } from "./board.js";
 import { DIRS, K, arm, dist, foe, log, unK } from "./rules.js";
 import { actReload, forecast, moveUnit, resolve, went } from "./combat.js";
 
@@ -18,7 +19,7 @@ export function aiAct(S, u, ev) {
   }
   let best = null;
   for (const k of cand) {
-    const [x, y] = unK(k); u.x = x; u.y = y; const cover = uterr(S, u).avo / 10 - R.get(k).c * 0.01 + (S.xcom ? coverAt(S, u, foes) / 10 : 0);
+    const [x, y] = unK(k); u.x = x; u.y = y; const cover = uterr(S, u).avo / 10 - R.get(k).c * 0.01 - (uterr(S, u).burn && elemOfUnit(d) !== 'fire' ? 12 : 0) + (S.xcom ? coverAt(S, u, foes) / 10 : 0);
     d.weapons.forEach((w, i) => {
       if (!arm(w) || !canUse(d, w)) return; u.wi = i;
       for (const f of foes) {
@@ -52,7 +53,7 @@ export function aiAct(S, u, ev) {
     }
     if (tk == null) return;
     const ok = new Set(stops(S, u, R)); let dest = null;
-    for (const p of pathTo(full, tk)) { const k = K(p.x, p.y); if (ok.has(k)) dest = p; else if (!R.has(k)) break; }
+    for (const p of pathTo(full, tk)) { const k = K(p.x, p.y); if (ok.has(k) && (!dest || !(terr(B, p.x, p.y).burn && d.mtype !== 'fly'))) dest = p; else if (!R.has(k)) break; }
     if (dest && S.xcom) {
       const cov = (x, y) => { u.x = x; u.y = y; const v = coverAt(S, u, foes); u.x = ox; u.y = oy; return v; }; let bv = cov(dest.x, dest.y);
       for (const [dx, dy] of DIRS) { const x = dest.x + dx, y = dest.y + dy; if (ok.has(K(x, y)) && (x !== ox || y !== oy)) { const v = cov(x, y); if (v > bv) { bv = v; dest = { x, y }; } } }

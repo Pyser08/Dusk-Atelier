@@ -19,3 +19,4 @@ export { recordSheets, recordBattle, unitView, rpgSection, seedFromMemory, raceF
 export { ELEMENTS, elemOf, elemMod, elemFromText, elemOfUnit } from "./elements.js";
 export { GRADES, KINDS, RANK_MAX, gradeName, rankOf, rankFromText, kindFromText, makeWeapon, makeSpell, parseGear, gearInProse, lookOf } from "./gear.js";
 export { storyKit, applyKit } from "./memlink.js";
+export { up } from "./board.js";

@@ -35,7 +35,7 @@ export const GEN_PROMPT = `Design one battle for an original grid tactics RPG fr
  "away": ["saved ally id no longer with the party"],
  "growth": [ {"id":"saved ally id","reason":"무엇이 달라졌는가","stats":{"str":1},"exp":0,"learn":["skill_id"],"forget":[],"weapon":{"name":"...","kind":"sword","grade":"양질","elem":""}} ]
 }
-MAP CHARS: . plain | f forest (avo+20 def+1, slow) | m mountain (avo+30 def+2, very slow, no armor/horse) | F fort (avo+20 def+2, heals) | p pillar | w water (fliers only) | b bridge | # wall | T throne (required for "seize"; the boss stands on it).
+MAP CHARS: . plain | f forest (avo+20 def+1, slow) | m mountain (avo+30 def+2, very slow, no armor/horse) | F fort (avo+20 def+2, heals) | p pillar | w water (fliers only) | b bridge | # wall | l lava (walkable, burns 15% HP each turn) | s swamp (very slow, avo-15) | i ice (avo-10) | h hill, H high ground (attacking down: hit+15; up: hit-10; H is reached only from h or H) | v empty sky (fliers only) | T throne (required for "seize"; the boss stands on it).
 TERRAIN RULES: every tile is something really in the scene. Over half the map plain; terrain in connected clumps and lines (a wood of 3-6, a wall with a gap, a river with 1-2 crossings), never sprinkled singles; 1-2 chokepoints or cover worth fighting over; everyone can walk to the enemy (no sealed room, no water without a bridge).
 - "indoor": true for any interior (hall, dungeon, cave, building, ship, sewer): # walls shape rooms and corridors, cover is p (columns, furniture, crates); never f or m; w only as a pool or canal with b; F barricade; T throne, altar or command seat.
 - Wilds: f woods, m cliffs and rubble, w rivers with b; # only for a real structure, p only in ruins.

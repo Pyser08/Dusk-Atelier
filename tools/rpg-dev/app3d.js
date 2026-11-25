@@ -18,27 +18,34 @@ function run() {
   const mats = new Map(), mat = (c, o) => { const k = c + JSON.stringify(o ?? 0); if (!mats.has(k)) mats.set(k, new THREE.MeshToonMaterial({ color: c, gradientMap: steps, ...(o?.emissive ? { emissive: o.emissive, emissiveIntensity: .6 } : {}) })); return mats.get(k); };
   const geo = { box: new THREE.BoxGeometry(1, 1, 1), cone: new THREE.ConeGeometry(1, 1, 6), cyl: new THREE.CylinderGeometry(1, 1, 1, 8), ball: new THREE.IcosahedronGeometry(1, 1), body: new THREE.CylinderGeometry(.55, 1, 1, 7), ring: new THREE.RingGeometry(.4, .46, 32), tile: new THREE.PlaneGeometry(.94, .94) };
   const add = (g, shape, c, sx, sy, sz, x, y, z, o) => { const m = new THREE.Mesh(geo[shape], mat(c, o)); m.scale.set(sx, sy, sz); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; g.add(m); return m; };
-  const H = { f: 0, m: .3, w: -.18, b: 0, wall: .9, F: .12, T: .25, p: 0, dot: 0 };
-  const TOP = { dot: 0xb9c67e, f: 0x8fae6a, m: 0xb3a590, w: 0x4fb0c6, b: 0xc79a5c, wall: 0xa79ab0, F: 0xcdb58a, T: 0xe0b552, p: 0xbdb3a6 };
+  const H = { l: -.1, s: -.06, i: 0, h: .5, H: 1, v: -3, f: 0, m: .3, w: -.18, b: 0, wall: .9, F: .12, T: .25, p: 0, dot: 0 };
+  const TOP = { dot: 0xb9c67e, f: 0x8fae6a, m: 0xb3a590, w: 0x4fb0c6, b: 0xc79a5c, wall: 0xa79ab0, l: 0xff6a2a, s: 0x7a8052, i: 0xbfe4f2, h: 0xa9b46c, H: 0x95985e, v: 0xcfe0f2, F: 0xcdb58a, T: 0xe0b552, p: 0xbdb3a6 };
   let land = null, key = "", W = 0, D = 0, water = []; const trees = new Map(), hgt = new Map(), marks = new Map(), units = new Map();
-  const kindOf = (b) => /(?:^| )t(dot|wall|[fmwbFTp])(?: |$)/.exec(b.className)?.[1] ?? "dot";
+  const kindOf = (b) => /(?:^| )t(dot|wall|[fmwbFTplsihHv])(?: |$)/.exec(b.className)?.[1] ?? "dot";
   const THEME = { "": { sky: 0xf3c9a0, field: 0x9bab72 }, snow: { sky: 0xbfd4e8, field: 0xb6c9d8, dot: 0xc9d8e4, f: 0xb4c8d4, m: 0xc6cdd6, w: 0x9fd0e6, b: 0xb9a58c }, desert: { sky: 0xffd9a0, field: 0xe0bf7c, dot: 0xecd08f, f: 0xcfc07a, m: 0xd09a66 }, lava: { sky: 0x5a2a2e, field: 0x4a3438, dot: 0x6d5352, f: 0x5d4a48, m: 0x4a3a3e, w: 0xff6a2a, b: 0x8a7a78, wall: 0x52434c, p: 0x6a5a60 }, swamp: { sky: 0xb9c4a0, field: 0x7d8258, dot: 0x949763, f: 0x768a55, w: 0x66764e, m: 0x86806a }, night: { sky: 0x2c3560, field: 0x43557a, dot: 0x5f7596, f: 0x4c668a, m: 0x68708e, w: 0x3a5fa0, b: 0x7d7390, wall: 0x5b5a80, p: 0x8f93b4 } };
   function build(tiles) {
     const th = THEME[board.dataset.theme] ?? THEME[""], dark = board.dataset.theme === "night"; scene.background.setHex(th.sky); scene.fog.color.setHex(th.sky); sun.color.setHex(dark ? 0xaec4ff : 0xffe2bd); sun.intensity = dark ? 1.5 : 2.1;
     if (land) scene.remove(land); born = true; for (const o of units.values()) scene.remove(o.g); units.clear(); land = new THREE.Group(); water = []; hgt.clear(); trees.clear(); for (const m of marks.values()) scene.remove(m); marks.clear();
     W = Math.max(...tiles.map((b) => +b.dataset.x)) + 1; D = Math.max(...tiles.map((b) => +b.dataset.y)) + 1;
     for (const b of tiles) {
-      const x = +b.dataset.x, y = +b.dataset.y, k = kindOf(b), h = H[k], r = ((x * 73 + y * 151) % 17) / 17, id = x + "," + y; hgt.set(id, h);
-      const c = new THREE.Color(th[k] ?? TOP[k]).offsetHSL(0, 0, (r - .5) * .05).getHex(), t = add(land, "box", c, .99, .6 + h, .99, x, (h - .6) / 2, y, k === "w" ? { roughness: .15, metalness: .3 } : undefined); if (k === "w") water.push(t);
+      const x = +b.dataset.x, y = +b.dataset.y, k = kindOf(b), h = H[k] + (/^[pFTb]$/.test(k) ? Math.max(0, ...[[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => { const q = tiles.find((z) => +z.dataset.x === x + dx && +z.dataset.y === y + dy), kk = q && kindOf(q); return kk === "H" ? 1 : kk === "h" ? .5 : 0; })) : 0), r = ((x * 73 + y * 151) % 17) / 17, id = x + "," + y; hgt.set(id, h);
+      if (k === "v") { const m0 = new THREE.Mesh(geo.tile, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); m0.rotation.x = -Math.PI / 2; m0.position.set(x, .02, y); m0.userData = { x, y }; scene.add(m0); marks.set(id, m0); hgt.set(id, .4); continue; }
+      const c = new THREE.Color(th[k] ?? TOP[k]).offsetHSL(0, 0, (r - .5) * .05).getHex(), t = add(land, "box", c, .99, .6 + h, .99, x, (h - .6) / 2, y, k === "w" ? { roughness: .15, metalness: .3 } : undefined); if (k === "w" || k === "l") water.push(t);
+      if (k === "l") for (const [dx, dz, r2] of [[-.2, .15, .1], [.22, -.2, .07]]) add(land, "ball", 0xffc23a, r2, .03, r2, x + dx, h + .01, y + dz, { emissive: 0xff8a2a });
+      if (k === "s") { for (const [dx, dz] of [[-.3, -.25], [.28, .2], [.05, .33]]) add(land, "cyl", 0x5a6a3a, .02, .34, .02, x + dx, .1, y + dz); add(land, "ball", 0x8a9a5a, .13, .03, .13, x + .1, h + .02, y - .15); }
+      if (k === "i") for (const [dx, dz, a] of [[-.15, -.1, .5], [.2, .2, -.4]]) { const cr = add(land, "box", 0xf2fbff, .34, .012, .02, x + dx, h + .01, y + dz); cr.rotation.y = a; }
+      if (k === "h" || k === "H") { for (const [dx, dz, g2] of [[-.3, .3, .08], [.32, -.28, .06]]) add(land, "ball", 0x8a8272, g2, g2 * .7, g2, x + dx, h + .03, y + dz); }
       if (k === "f") { const tg = new THREE.Group(); tg.position.set(x, 0, y); land.add(tg); trees.set(id, tg); } if (k === "f") for (const [dx, dz, s] of [[-.25, -.2, 1], [.22, .1, .8], [-.1, .28, .65]]) { const tg = trees.get(id); add(tg, "cyl", 0x5b4030, .05, .25, .05, dx, .12, dz); add(tg, "cone", 0x3f7a55, .22 * s, .6 * s, .22 * s, dx, .22 + .3 * s, dz); add(tg, "cone", 0x559064, .15 * s, .42 * s, .15 * s, dx, .42 + .36 * s, dz); }
       if (k === "m") { add(land, "cone", 0x8b8078, .42, .9, .42, x - .1, .7, y - .12); add(land, "cone", 0xe9dfe0, .16, .34, .16, x - .1, 1.0, y - .12); add(land, "cone", 0x6e645f, .26, .5, .26, x + .25, .5, y + .22); }
+      { const n0 = land.children.length, lift = h - H[k];
       if (k === "p") { add(land, "cyl", 0xb0a6bb, .17, .95, .17, x - .22, .47, y - .22); add(land, "box", 0xc6bdd0, .44, .1, .44, x - .22, .97, y - .22); }
       if (k === "F") for (const [dx, dz] of [[-.42, -.42], [.42, -.42], [-.42, .42], [.42, .42]]) add(land, "box", 0xa39079, .14, .5, .14, x + dx, .3, y + dz);
       if (k === "T") { add(land, "box", 0xd9ab4e, .5, .8, .12, x, .6, y - .38, { metalness: .5, roughness: .4 }); add(land, "ball", 0xff9a5c, .08, .08, .08, x, 1.1, y - .38, { emissive: 0xff7a30, emissiveIntensity: 2 }); }
       if (k === "b") for (const dz of [-.46, .46]) add(land, "box", 0x6b4c2c, 1, .22, .06, x, .1, y + dz);
+      if (lift) for (const q of land.children.slice(n0)) q.position.y += lift; }
       const m = new THREE.Mesh(geo.tile, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(x, h + .025, y); m.userData = { x, y }; scene.add(m); marks.set(id, m);
     }
-    const field = new THREE.Mesh(new THREE.CircleGeometry(60, 40), mat(th.field)); field.rotation.x = -Math.PI / 2; field.position.set(W / 2, -.5, D / 2); field.receiveShadow = true; land.add(field);
+    const sky = tiles.some((b) => kindOf(b) === "v"); const field = new THREE.Mesh(new THREE.CircleGeometry(60, 40), mat(th.field)); field.rotation.x = -Math.PI / 2; field.visible = !sky; field.position.set(W / 2, -.5, D / 2); field.receiveShadow = true; land.add(field);
     scene.add(land); ctl.target.set(W / 2 - 1.5, 0, D / 2 - .5); cam.position.set(ctl.target.x, 9, ctl.target.z + 8); sun.position.set(-7, 9, D + 2); sun.target.position.set(W / 2, 0, D / 2);
   }
   const TC = { ally: 0x2f6fd6, enemy: 0xd8403f, friend: 0x3fa566, third: 0xd79a2b };
@@ -50,6 +57,8 @@ function run() {
     const look = info.race ?? "", race = RACE_BY_ID[look], bd = race?.body ?? {}, fr = race?.frame, [skin, hair] = SKIN[look] ?? [0xf0c8a4, FUR[look] ?? 0];
     const g = new THREE.Group(), b = new THREE.Group(); g.add(b); g.userData.body = b; const c = TC[team] ?? 0x888888, heavy = info.mt ? info.mt === "armor" : /🛡|👹/.test(emoji), horse = info.mt ? info.mt === "horse" : /🐎/.test(emoji), arms = info.w || "", mage = arms ? arms === "tome" || arms === "staff" : /🧙|✨|🔮/.test(emoji), steel = { metalness: .6, roughness: .35 };
     const y = horse ? .34 : 0; if (horse) { add(b, "box", 0x6a4733, .26, .26, .62, 0, .36, 0); add(b, "box", 0x6a4733, .16, .4, .18, 0, .56, .34); for (const [x, z] of [[-.09, -.24], [.09, -.24], [-.09, .24], [.09, .24]]) add(b, "box", 0x4c3226, .08, .26, .08, x, .13, z); }
+    // 관절: 어깨·골반을 축으로 도는 팔다리. 무기는 오른손에 매달린다
+    const J = (x, yy, z) => { const q = new THREE.Group(); q.position.set(x, yy, z); b.add(q); return q; }, ra = J(.21, y + .54, .02), la = J(-.21, y + .54, .02), rl = J(.1, y + .16, .02), ll = J(-.1, y + .16, .02); g.userData.rig = { ra, la, rl, ll };
     const girl = info.sex === "f", hc = hair || (team === "enemy" ? 0x2d2028 : 0x7a4a2c);
     // 여성: 잘록한 허리와 퍼진 치마·긴 머리, 남성: 넓은 어깨와 짧은 머리
     if (girl) { add(b, "cone", c, heavy ? .31 : .27, .46, heavy ? .29 : .25, 0, y + .27, 0); add(b, "body", c, heavy ? .22 : .16, .26, heavy ? .18 : .14, 0, y + .46, 0).rotation.x = Math.PI; }
@@ -57,7 +66,7 @@ function run() {
     if (girl) { add(b, "ball", hc, .16, .3, .09, 0, y + .58, -.12); for (const s of [-1, 1]) add(b, "ball", hc, .045, .19, .06, s * .135, y + .6, .03); } add(b, "ball", skin, .15, .15, .15, 0, y + .7, 0); if (heavy) add(b, "ball", 0xa9acb8, .175, .16, .175, 0, y + .74, 0, steel); else if (mage) add(b, "cone", c, .2, .36, .2, 0, y + .92, 0); else add(b, "ball", hair || (team === "enemy" ? 0x2d2028 : 0x7a4a2c), .165, .12, .165, 0, y + .77, -.02);
     const cape = add(b, "box", new THREE.Color(c).multiplyScalar(.6).getHex(), .34, .48, .04, 0, y + .36, -.2); cape.rotation.x = .18;
     // 무기: 모양은 종류, 재질·장식은 등급, 빛은 속성
-    const lk = info.look ?? {}, tr = lk.tier ?? 1, metal = [0x8a7a6a, 0xa9acb6, 0xc6ccd6, 0xdfe6f2, 0x9fc6f2, 0xd8b0f2, 0xf2d26a, 0xfff6d8][tr], trim = [0x5a4433, 0x6b4c2c, 0x6b4c2c, 0x4a5a8a, 0x3f6fc0, 0x8a4fc0, 0xd99a2b, 0xff7a6a][tr], gemC = lk.glow ? new THREE.Color(lk.glow).getHex() : trim, big = 1 + tr * .035, wg = new THREE.Group(); wg.position.set(.29, y + .3, .1); b.add(wg);
+    const lk = info.look ?? {}, tr = lk.tier ?? 1, metal = [0x8a7a6a, 0xa9acb6, 0xc6ccd6, 0xdfe6f2, 0x9fc6f2, 0xd8b0f2, 0xf2d26a, 0xfff6d8][tr], trim = [0x5a4433, 0x6b4c2c, 0x6b4c2c, 0x4a5a8a, 0x3f6fc0, 0x8a4fc0, 0xd99a2b, 0xff7a6a][tr], gemC = lk.glow ? new THREE.Color(lk.glow).getHex() : trim, big = 1 + tr * .035, wg = new THREE.Group(); wg.position.set(.08, -.26, .09); ra.add(wg); g.userData.rig.wg = wg;
     const W = (shape, col, sx, sy, sz, x, yy, z = 0, rz = 0, o) => { const m = add(wg, shape, col, sx * big, sy * big, sz * big, x * big, yy * big, z); m.rotation.z = rz; return m; }, pole = (len, col = trim) => W("cyl", col, .022, len, .022, 0, len / 2 - .28), gem = (x, yy, r = .035) => { if (tr >= 3 || lk.glow) W("ball", gemC, r, r, r, x, yy, .02, 0, { emissive: gemC }); }, hilt = (w = .16) => { W("cyl", trim, .025, .16, .025, 0, -.04); W("box", trim, w, .035, .05, 0, .05); gem(0, .05); };
     const arcs = (r, tube, a, rz) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r * big, tube, 5, 14, a), mat(metal)); m.rotation.z = rz; wg.add(m); return m; };
     const BLADE = { sword: () => { hilt(); W("box", metal, .055, .56, .02, 0, .34); }, katana: () => { hilt(.08); const m = W("box", metal, .035, .64, .016, .03, .38, 0, -.09); void m; }, thin: () => { hilt(.12); W("cyl", metal, .014, .62, .014, 0, .36); }, great: () => { hilt(.26); W("box", metal, .13, .8, .03, 0, .46); W("cone", metal, .075, .12, .03, 0, .91); }, curve: () => { hilt(.1); W("box", metal, .06, .34, .02, 0, .24); W("box", metal, .07, .28, .02, .06, .5, 0, -.4); }, twin: () => { hilt(); W("box", metal, .045, .44, .02, 0, .28); W("box", metal, .045, .44, .02, -.58, .28); W("box", trim, .13, .03, .04, -.58, .05); }, dagger: () => { hilt(.1); W("box", metal, .045, .24, .018, 0, .18); }, whip: () => { W("cyl", trim, .025, .18, .025, 0, 0); for (let k = 0; k < 7; k++) W("ball", metal, .028, .028, .028, .05 + Math.sin(k * .9) * .08, .12 + k * .075); },
@@ -86,9 +95,10 @@ function run() {
     const SIZE = { small: .78, giant: 1.28, dwarf: .82 }; if (look === "goblin" || look === "mouse" || look === "hamster" || look === "pixie") b.scale.setScalar(.8); else if (look === "orc" || look === "bear" || look === "troll") b.scale.setScalar(1.16); else if (SIZE[fr]) b.scale.setScalar(SIZE[fr]); if (fr === "dwarf") b.scale.x = b.scale.z = 1.04; if (boss && look) b.scale.multiplyScalar(1.15);
     if (girl && !heavy) add(b, "ball", TC[team] === c ? 0xf2b134 : c, .045, .045, .045, .12, y + .83, .06);
     for (const x of [-.06, .06]) add(b, "box", /undead|vampire|demon|android|golem|fallen/.test(look) ? 0xc21f2f : 0x1c1626, girl ? .036 : .026, girl ? .062 : .042, .02, x, y + .69, .145);
-    for (const s of [-1, 1]) { const arm = add(b, "box", new THREE.Color(c).multiplyScalar(.85).getHex(), .09, .3, .1, s * .24, y + .42, .05); arm.rotation.z = s * .35; add(b, "ball", skin, .055, .055, .055, s * .29, y + .28, .08); if (!horse) add(b, "box", 0x3a2a30, .11, .14, .16, s * .1, .06, .03); }
+    for (const [q, k] of [[ra, 1], [la, -1]]) { const arm = add(q, "box", new THREE.Color(c).multiplyScalar(.85).getHex(), .09, .28, .1, k * .04, -.12, .02); arm.rotation.z = k * .2; add(q, "ball", skin, .055, .055, .055, k * .075, -.27, .06); }
+    if (!horse && !bd.lower) for (const [q, k] of [[rl, 1], [ll, -1]]) add(q, "box", 0x3a2a30, .11, .2, .15, k * .01, -.07, .02);
     // 먹선: 뒤집은 껍데기를 살짝 키워 두른다
-    for (const m of [...b.children]) if (m.isMesh && m.geometry.type !== "TorusGeometry" && m.scale.x > .04) { const e = new THREE.Mesh(m.geometry, ink); e.position.copy(m.position); e.rotation.copy(m.rotation); const t = m.geometry === geo.box ? .03 : .018; e.scale.set(m.scale.x + t, m.scale.y + t, m.scale.z + t); b.add(e); }
+    for (const root of [b, ra, la, rl, ll]) for (const m of [...root.children]) if (m.isMesh && m.geometry.type !== "TorusGeometry" && m.scale.x > .04) { const e = new THREE.Mesh(m.geometry, ink); e.position.copy(m.position); e.rotation.copy(m.rotation); const t = m.geometry === geo.box ? .03 : .018; e.scale.set(m.scale.x + t, m.scale.y + t, m.scale.z + t); root.add(e); }
     const ring = new THREE.Mesh(geo.ring, new THREE.MeshBasicMaterial({ color: c, transparent: true, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = .04; g.add(ring); g.userData.ring = ring; return g;
   }
   const COL = [["tg", 0xffd27a, .65], ["mv", 0x58a8ff, .5], ["rd", 0xff5a6e, .4], ["dz", 0xff3d8a, .28]];
@@ -104,24 +114,24 @@ function run() {
   hooks.fight = fx.fight;
   // 초상: 같은 모형을 작은 그림으로 찍어 둔다
   let snap = null; const shots = new Map();
-  hooks.face = (team, emoji, boss, info, full) => {
-    const k = team + emoji + boss + info.race + JSON.stringify(info.look ?? "") + info.w + info.mt + info.sex + (full ? "full" : ""); if (shots.has(k)) return shots.get(k); let url = "";
+  hooks.face = (team, emoji, boss, info, full, pose) => {
+    const k = team + emoji + boss + info.race + JSON.stringify(info.look ?? "") + info.w + info.mt + info.sex + (full ? "full" : "") + JSON.stringify(pose ?? ""); if (shots.has(k)) return shots.get(k); let url = "";
     try { if (!snap) { const r = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true }); r.setSize(256, 256); const s = new THREE.Scene(), c = new THREE.PerspectiveCamera(24, 1, .1, 10), l = new THREE.DirectionalLight(0xffe2bd, 2), b = new THREE.DirectionalLight(0xffffff, .4); l.position.set(-2, 2, 3); b.position.set(3, 2, -2); s.add(new THREE.HemisphereLight(0xffffff, 0xb7a3c4, 1.9), l, b); snap = { r, s, c }; }
-      const g = figure(team, emoji, boss, info); g.userData.ring.visible = false; g.rotation.y = -.45; const y = (info.mt === "horse" ? .95 : .62) * (/dwarf|goblin|halfling|gnome|mouse|hamster|pixie/.test(info.race) && info.race !== "hobgoblin" ? .82 : /giant|ogre/.test(info.race) ? 1.25 : 1); snap.c.position.set(0, y + .12, 1.75); snap.c.lookAt(0, y, 0); if (full) { snap.c.position.set(1.2, 1.1, 3.6); snap.c.lookAt(0, .5, 0); } snap.s.add(g); snap.r.render(snap.s, snap.c); url = snap.r.domElement.toDataURL("image/png"); snap.s.remove(g); } catch {}
+      const g = figure(team, emoji, boss, info); g.userData.ring.visible = false; g.rotation.y = -.45; const y = (info.mt === "horse" ? .95 : .62) * (/dwarf|goblin|halfling|gnome|mouse|hamster|pixie/.test(info.race) && info.race !== "hobgoblin" ? .82 : /giant|ogre/.test(info.race) ? 1.25 : 1); snap.c.position.set(0, y + .12, 1.75); snap.c.lookAt(0, y, 0); if (pose) { for (const j of ["ra", "la", "rl", "ll", "wg"]) g.userData.rig[j].rotation.set(...pose[j]); const bd = g.userData.body; bd.rotation.set(pose.lean, pose.twist, pose.roll); bd.position.set(0, pose.hop, 0); g.rotation.y = -1.1; } if (full) { snap.c.position.set(1.2, 1.1, 3.6); snap.c.lookAt(0, .5, 0); } snap.s.add(g); snap.r.render(snap.s, snap.c); url = snap.r.domElement.toDataURL("image/png"); snap.s.remove(g); } catch {}
     shots.set(k, url); return url;
   };
   hooks.menu = (m, aim) => {
     aimAt = aim; const id = m?.id ?? null, h = m ? m.items.join("") : "", enter = id !== ringOf || (!!aim) !== (ringEl.dataset.aim === "1"); ringOf = id; ringEl.dataset.aim = aim ? "1" : "0"; if (ringEl.dataset.h === h) return; ringEl.dataset.h = h; const top = ringEl.scrollTop; ringEl.innerHTML = h; ringEl.scrollTop = top; ringEl.classList.toggle("enter", enter);
     ringEl.classList.toggle("wpanel", !!m?.panel); [...ringEl.children].forEach((b, i) => { b.style.setProperty("--i", i); });
   };
-  window.__saga = { E: hooks.E, face: hooks.face, races: Object.values(RACE_BY_ID).map((r) => [r.id, r.label]) };   // 미리보기 점검용
+  window.__saga = { moves: fx.moves, near: fx.near, far: fx.far, E: hooks.E, face: hooks.face, races: Object.values(RACE_BY_ID).map((r) => [r.id, r.label]) };   // 미리보기 점검용
   hooks.redraw?.();
   let lastSel = "", goal = null, born = true, cw = 0, ch = 0; const clock = new THREE.Clock(), v = new THREE.Vector3();
   gl.setAnimationLoop(() => {
     const dt = Math.min(.05, clock.getDelta()), now = clock.elapsedTime, w = view.clientWidth, h = view.clientHeight; if (w !== cw || h !== ch) { cw = w; ch = h; gl.setSize(w, h); cam.aspect = w / h; cam.fov = w < h ? 52 : 42; cam.updateProjectionMatrix(); }
     const tiles = [...board.querySelectorAll(".t")], k = board.dataset.theme + tiles.map(kindOf).join(); if (k !== key) { key = k; build(tiles); }
     for (const b of tiles) { const m = marks.get(b.dataset.x + "," + b.dataset.y), c = COL.find(([n]) => b.classList.contains(n)); m.material.opacity += ((c ? c[2] * (.85 + .15 * Math.sin(now * 4)) : 0) - m.material.opacity) * Math.min(1, dt * 12); if (c) m.material.color.setHex(c[1]); }
-    for (const t of water) t.position.y = -.39 + Math.sin(now * 1.6 + t.position.x * 2 + t.position.z) * .025;
+    for (const t of water) t.position.y = (t.userData.base ??= t.position.y) + Math.sin(now * 1.6 + t.position.x * 2 + t.position.z) * .025;
     const held = new Set([...units.values()].filter((o) => !o.gone).map((o) => o.tx + "," + o.ty)); for (const [id, g] of trees) { const s = g.scale.x + ((held.has(id) ? .38 : 1) - g.scale.x) * Math.min(1, dt * 8); g.scale.setScalar(s); }
     const seen = new Set(); let sel = "";
     for (const n of board.querySelectorAll(".u")) {
@@ -130,7 +140,9 @@ function run() {
       o.tx = x; o.ty = y; o.gone = n.classList.contains("dead"); const p = o.g.position, dx = x - p.x, dz = y - p.z, far = Math.hypot(dx, dz), s = Math.min(1, dt * 11); p.x += dx * s; p.z += dz * s; p.y += ((hgt.get(x + "," + y) ?? 0) + (far > .08 ? .12 * Math.abs(Math.sin(now * 14)) : 0) - p.y) * Math.min(1, dt * 10);
       if (far > .12) { const a = Math.atan2(dx, dz); o.g.rotation.y += Math.atan2(Math.sin(a - o.g.rotation.y), Math.cos(a - o.g.rotation.y)) * Math.min(1, dt * 12); }
       const hp = n.querySelector(".hpb").style.width; if (o.hp && hp !== o.hp && parseFloat(hp) < parseFloat(o.hp)) o.shake = .3; o.hp = hp; o.shake = Math.max(0, (o.shake ?? 0) - dt);
-      const bd = o.g.userData.body; bd.position.x = (o.shake ? Math.sin(now * 60) * o.shake * .3 : 0) + (o.dodge ?? 0); bd.position.z = o.lunge ?? 0; bd.rotation.y = o.twist ?? 0; bd.position.y = Math.sin(now * 2.2 + x * 3) * .015 + (o.hop ?? 0); bd.rotation.x = o.gone ? Math.max(-1.4, bd.rotation.x - dt * 5) : (o.lean ?? 0); const isSel = n.classList.contains("sel"), hot = n.classList.contains("aim"), ready = n.classList.contains("ready"); if (isSel) sel = id + x + y;
+      const bd = o.g.userData.body; bd.position.x = (o.shake ? Math.sin(now * 60) * o.shake * .3 : 0) + (o.dodge ?? 0); bd.position.z = o.lunge ?? 0; bd.rotation.y = o.twist ?? 0; bd.position.y = Math.sin(now * 2.2 + x * 3) * .015 + (o.hop ?? 0); const rig = o.g.userData.rig, ps = o.pose, walk = far > .08 ? Math.sin(now * 13) : 0, br = Math.sin(now * 2.2 + x * 3) * .04, mixr = Math.min(1, dt * 30);
+      for (const k of ["ra", "la", "rl", "ll", "wg"]) { const q = rig[k], t = ps?.[k]; const tx = t ? t[0] : k === "ra" ? -walk * .5 + br : k === "la" ? walk * .7 - br : k === "rl" ? walk * .8 : k === "ll" ? -walk * .8 : 0, ty = t ? t[1] : 0, tz = t ? t[2] : 0; if (ps) q.rotation.set(tx, ty, tz); else { q.rotation.x += (tx - q.rotation.x) * mixr; q.rotation.y += (ty - q.rotation.y) * mixr; q.rotation.z += (tz - q.rotation.z) * mixr; } }
+      bd.rotation.z = o.roll ?? 0; bd.rotation.x = o.gone ? Math.max(-1.4, bd.rotation.x - dt * 5) : (o.lean ?? 0); const isSel = n.classList.contains("sel"), hot = n.classList.contains("aim"), ready = n.classList.contains("ready"); if (isSel) sel = id + x + y;
       const ring = o.g.userData.ring; ring.material.color.setHex(hot ? 0xff2d4d : isSel ? 0xffd27a : TC[team]); if (isSel && !o.was) o.sq = 1; o.was = isSel; o.sq = (o.sq ?? 0) * Math.exp(-dt * 5); const q = Math.sin((1 - o.sq) * 16) * o.sq * .32; o.g.scale.set(1 - q * .6, 1 + q, 1 - q * .6); ring.scale.setScalar(isSel || hot || ready ? 1.12 + .1 * Math.sin(now * 5) : 1); ring.material.opacity = n.classList.contains("done") ? .25 : 1;
       v.set(p.x, p.y + 1.25, p.z).project(cam); n.style.left = (v.x + 1) / 2 * w + "px"; n.style.top = (1 - v.y) / 2 * h + "px"; n.style.visibility = v.z > 1 || (fx.active() && !fx.has(id)) ? "hidden" : "";
       if (isSel && sel !== lastSel) goal = new THREE.Vector3(x, 0, y);

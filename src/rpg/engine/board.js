@@ -37,6 +37,7 @@ export function reach(S, u, o) {
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= B.w || ny >= B.h) continue;
       const tc = terr(B, nx, ny).c[mt], nc = c + tc; if (tc >= INF || nc > max) continue;
+      if (mt !== 3 && Math.abs(up(B, nx, ny) - up(B, x, y)) > 1) continue; // 두 층 차이는 걸어서 못 오르내린다
       const z = occ.get(K(nx, ny)); if (z && foe(z, u) && !o.ignoreUnits) continue;
       const cur = R.get(K(nx, ny)); if (!cur || nc < cur.c) { R.set(K(nx, ny), { c: nc, p: K(x, y) }); q.push(nc, nx, ny); }
     }
@@ -95,3 +96,6 @@ export function nearestFree(S, def, x, y, taken) {
   while (q.length) { const [cx, cy] = q.shift(); if (terr(B, cx, cy).c[mt] < INF && !taken.has(K(cx, cy))) return [cx, cy]; for (const [dx, dy] of DIRS) { const nx = cx + dx, ny = cy + dy, k = K(nx, ny); if (nx >= 0 && ny >= 0 && nx < B.w && ny < B.h && !seen.has(k)) { seen.add(k); q.push([nx, ny]); } } }
   return null;
 }
+// 땅 높이(0 평지 · 1 언덕 · 2 고지). 산은 예전 규칙대로 높이를 치지 않는다
+// 고지 위에 세운 기둥·요새·옥좌·다리는 둘레 땅의 높이를 따른다
+export const up = (B, x, y) => { const c = (B.map[y] || '')[x], h = terr(B, x, y).up || 0; return c === 'p' || c === 'F' || c === 'T' || c === 'b' ? Math.max(0, ...DIRS.map(([dx, dy]) => ((B.map[y + dy] || '')[x + dx] ? terr(B, x + dx, y + dy).up || 0 : 0))) : h; };

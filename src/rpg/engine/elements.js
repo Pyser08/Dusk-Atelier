@@ -17,6 +17,6 @@ export const elemOfUnit = (d) => elemOf(d?.elem) || BY[RACES[d?.race]?.mem] || "
 export function elemMod(elem, d, ground = "") {
   if (!elemOf(elem)) return 1; const e = elemOfUnit(d); let m = 1;
   if (e) m = ELEMENTS[elem].beats.includes(e) ? 1.3 : e === elem ? 0.75 : ELEMENTS[e].beats.includes(elem) ? 0.85 : 1;
-  if ((elem === "thunder" || elem === "ice") && (ground === "w" || ground === "b")) m += .15; if (elem === "fire" && ground === "f") m += .15; if (elem === "wind" && d?.mtype === "fly") m += .15; if (elem === "thunder" && d?.mtype === "armor") m += .15;
+  if ((elem === "thunder" || elem === "ice") && (ground === "w" || ground === "b" || ground === "s" || ground === "i")) m += .15; if (elem === "fire" && ground === "f") m += .15; if (elem === "wind" && d?.mtype === "fly") m += .15; if (elem === "thunder" && d?.mtype === "armor") m += .15;
   return Math.round(m * 100) / 100;
 }

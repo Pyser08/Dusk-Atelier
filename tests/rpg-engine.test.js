@@ -102,9 +102,9 @@ test("프롬프트에 다른 게임의 작품명이 들어가지 않는다", () 
 
 test("모든 맵 프리셋은 12×9이고 걸어서 양쪽이 이어진다", () => {
   for (const [name, m] of Object.entries(NEW.MAPS)) for (const rows of [m.rows, ...(m.alts ?? [])]) {
-    assert.ok(rows.length >= 7 && rows.every((r) => r.length === 12 && /^[.bfpmFTw#]+$/.test(r)), name);
+    assert.ok(rows.length >= 7 && rows.every((r) => r.length === 12 && /^[.bfpmFTw#lsihHv]+$/.test(r)), name);
     const foot = []; rows.forEach((r, y) => [...r].forEach((c, x) => { if (NEW.TERRAIN[c].c[0] < 99) foot.push(x + "," + y); }));
-    const ok = new Set(foot), seen = new Set([foot[0]]), q = [foot[0]]; while (q.length) { const [x, y] = q.pop().split(",").map(Number); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = x + dx + "," + (y + dy); if (ok.has(k) && !seen.has(k)) { seen.add(k); q.push(k); } } }
+    const ok = new Set(foot), seen = new Set([foot[0]]), q = [foot[0]]; while (q.length) { const [x, y] = q.pop().split(",").map(Number); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = x + dx + "," + (y + dy); const B = { map: rows }; if (ok.has(k) && !seen.has(k) && Math.abs(NEW.up(B, x + dx, y + dy) - NEW.up(B, x, y)) < 2) { seen.add(k); q.push(k); } } }
     assert.equal(seen.size, ok.size, name + " 끊긴 칸"); assert.ok(foot.length >= 40, name);
     if (m.indoor) assert.ok(!rows.join("").match(/[fm]/), name);
   }
@@ -143,4 +143,13 @@ test("장기기억: 용과 드래곤을 가르고, 이미 저장된 dragon 기�
   for (const [t, id] of [["드래곤", "dragon"], ["용족", "dragon"], ["레드 드래곤", "dragon"], ["용", "ryu"], ["용 (청룡)", "ryu"], ["흑룡", "ryu"], ["용왕", "ryu"], ["이무기", "imugi"], ["공룡", ""], ["용병", ""], ["네코마타", "nekomata"]]) assert.equal(M.raceIdOf(t), id, t);
   const f = { extra: { race: { a: { name: "리나", id: "dragon", label: "" }, b: { name: "청", id: "ryu", label: "" } } } }; assert.equal(M.raceFor(f, "리나").label, "드래곤"); assert.equal(M.raceFor(f, "청").label, "용");
   assert.equal(NEW.seedFromMemory(f, "리나").race, "드래곤"); assert.equal(NEW.seedFromMemory(f, "청").race, "용");
+});
+
+test("지형: 용암은 태우되 죽이지 않고 불 속성은 안 타며, 높은 곳이 유리하고 절벽은 못 오른다", () => {
+  const mk = (map, a = {}) => { const S = NEW.fresh(); NEW.loadEncounter(S, { name: "t", map, units: [{ id: "a", preset: "병사", ...a }, { id: "b", preset: "병사" }], place: [{ ref: "a", team: "ally", x: 2, y: 2 }, { ref: "b", team: "enemy", x: 3, y: 2, ai: "guard" }] }); return S; };
+  const L = Array(6).fill("llllllll"), S = mk(L); S.battle.units.b.x = 7; S.battle.units.b.y = 5; const ev = []; S.battle.units.a.hp = 2; for (let i = 0; i < 3; i++) NEW.endTurn(S, ev); assert.ok(ev.some((e) => e.t === "burn")); assert.equal(S.battle.units.a.hp, 1); const F = mk(L, { elem: "fire" }), e2 = []; F.battle.units.b.x = 7; F.battle.units.b.y = 5; NEW.endTurn(F, e2); assert.ok(!e2.some((e) => e.t === "burn" && e.id === "a"));
+  const hi = mk(["........", ".Hh.....", "........", "........"]), flat = mk(["........", "........", "........", "........"]), f = (s, x, y) => NEW.forecast(s, s.battle.units[x], s.battle.units[y], null).a;
+  assert.ok(f(hi, "a", "b").hi > 0 && f(hi, "b", "a").hi < 0); assert.equal(f(flat, "a", "b").hi, 0);
+  const c = mk([".....", "..H..", ".....", "....."]), k = NEW.K(2, 1); assert.ok(!NEW.reach(c, c.battle.units.a).has(k), "절벽"); const g = mk([".....", ".hH..", ".....", "....."], {}); g.battle.units.b.x = 4; g.battle.units.b.y = 3; assert.ok(NEW.reach(g, g.battle.units.a).has(k)); const w = mk([".....", "..H..", ".....", "....."], { mtype: "fly" }); w.battle.units.b.x = 4; w.battle.units.b.y = 3; assert.ok(NEW.reach(w, w.battle.units.a).has(k));
+  for (const m of Object.keys(NEW.MAPS).slice(-20)) { const s = mk(Array(6).fill("........")); NEW.loadEncounter(s, { name: m, mapPreset: m, units: [{ id: "a", preset: "병사" }, { id: "b", preset: "기병" }], place: [{ ref: "a", team: "ally", x: 2, y: 5 }, { ref: "b", team: "enemy", x: 11, y: 5 }] }); const ev2 = []; for (let i = 0; i < 12; i++) NEW.endTurn(s, ev2); }
 });

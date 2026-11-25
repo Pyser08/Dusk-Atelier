@@ -3,7 +3,7 @@ import { elemMod } from "./elements.js";
 import { canUse } from "./classes.js";
 import { DIRS, GUNS, INF, K, MT, SIDE, T0, WT, arm, clamp, dist, foe, gunOf, log, roll, utags } from "./rules.js";
 import { grantExp, xp } from "./growth.js";
-import { alive, ammo, canShoot, canWatch, coverFrom, est, fireOk, gun, line, living, occMap, pathTo, syncRears, terr, unitAt, uterr, wr } from "./board.js";
+import { alive, ammo, canShoot, canWatch, coverFrom, est, fireOk, gun, line, living, occMap, pathTo, syncRears, terr, unitAt, up, uterr, wr } from "./board.js";
 
 export function actWatch(S, u) { const mv = went(S, u); u.ow = true; u.done = true; log(S, S.defs[u.ref].name + ': ' + (mv ? mv + ', ' : '') + '경계', 'ow'); }
 export function actReload(S, u, i) { const d = S.defs[u.ref], w = d.weapons[i], mv = went(S, u); if (u.am) delete u.am[w.name]; u.done = true; log(S, d.name + ': ' + (mv ? mv + ', ' : '') + w.name + ' 재장전'); }
@@ -76,13 +76,14 @@ export function side(S, A, D, init, art, free, dart) {
   if (gk === 'shotgun') { gm.h = ds <= 1 ? 20 : ds === 2 ? 0 : -20; gm.d = ds <= 1 ? 3 : ds === 2 ? 0 : -3; } else if (gk === 'rifle' && ds <= 1) gm.h = -10; else if (gk === 'sniper') gm.c = 10; else if (gk === 'auto') gm.h = -10;
   const cv = S.xcom && free !== true && ds >= 2 ? coverFrom(S, D, A) : { v: 0 }, open = !!S.xcom && free !== true && ds >= 2 && !cv.v;
   out.cover = cv.v >= 40 ? '완전엄폐' : cv.v ? '반엄폐' : cv.flank ? '측면' : '';
-  const atk = (magic ? sa.mag : sa.str) + w.mt * (eff ? 3 : 1) + tri + am.m.atk + gm.d;
+  const atk = (magic ? sa.mag : sa.str) + w.mt * (eff ? 3 : 1) + tri + am.m.atk + gm.d + (up(S.battle, A.x, A.y) > up(S.battle, D.x, D.y) ? 1 : 0);
   let df = (magic ? sd.res + dm.m.res : sd.def + dm.m.def) + tt.def; out.df0 = df;
   if (am.fl.pierce) df = Math.floor(df * (100 - am.fl.pierce) / 100);
   out.elem = (ask && ask.elem) || w.elem || ''; out.em = out.elem ? elemMod(out.elem, dd, (S.battle.map[D.y] || '')[D.x]) : 1; out.mul = (am.fl.mult || 1) * out.em; out.blk = dm.fl.block || 0; out.dmg = Math.floor(Math.floor(Math.max(0, atk - df) * out.mul) * (100 - out.blk) / 100); out.atk = atk; out.eff = eff; out.tri = tri; out.magic = magic;
   const pt = free ? null : partnerOf(S, A, D, dart); out.partner = pt;
   out.hit = am.fl.sure ? 100 : clamp(gm.h - cv.v + w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri * 15 + am.m.hit + (pt ? 10 : 0) - ((sd.spd + dm.m.spd) * 2 + sd.lck + tt.avo + dm.m.avo + (wd && wd.type === 'claw' && w.type !== 'claw' ? 15 : 0)), 0, 100);
   out.crit = clamp(gm.c + (open ? 10 : 0) + w.crit + Math.floor(sa.skl / 2) + am.m.crit - sd.lck - (D.rear ? 5 : 0), 0, 100);
+  const hi = up(S.battle, A.x, A.y) - up(S.battle, D.x, D.y); out.hi = Math.sign(hi); if (hi && !am.fl.sure) out.hit = clamp(out.hit + (hi > 0 ? 15 : -10), 0, 100);
   out.init = init; out.hits = gk === 'auto' ? (init ? clamp(ammo(S, A, w), 1, 2) : 1) : am.fl.brave || (init && w.brave) ? 2 : 1; if (gk) out.hits = clamp(ammo(S, A, w), 1, out.hits);
   return out;
 }
