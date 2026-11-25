@@ -17,6 +17,7 @@ export { THEMES } from "./phase.js";
 export { CLASSES, CLASS_LINES, PROMOTE_LEVEL, jobOf, canUse, setJob, promotions, promote } from "./classes.js";
 export { recordSheets, recordBattle, unitView, rpgSection, seedFromMemory, raceFromText, prune, statTabHtml } from "./memlink.js";
 export { ELEMENTS, elemOf, elemMod, elemFromText, elemOfUnit } from "./elements.js";
-export { GRADES, KINDS, RANK_MAX, gradeName, rankOf, rankFromText, kindFromText, makeWeapon, makeSpell, parseGear, gearInProse, lookOf } from "./gear.js";
+export { GRADES, KINDS, RANK_MAX, gradeName, rankOf, rankFromText, kindFromText, makeWeapon, makeSpell, TRAITS, budgetOf, costOf, fitBudget, traitsFromText, parseGear, gearInProse, lookOf } from "./gear.js";
 export { storyKit, applyKit } from "./memlink.js";
 export { up } from "./board.js";
+export { MODELS, modelOf, moveOf } from "./bestiary.js";

@@ -2,7 +2,7 @@
 // folder.rpg = { v:1, units:{ key:{ name, docId, log:[{at,job,level,exp,mtype,move,stats,gear,skills,why}] } }, battles:[{id,at,name,result,turn,ids}] }
 import { SIDE, SL, STATS, MTL, WT } from "./rules.js";
 import { ELEMENTS } from "./elements.js";
-import { KINDS, gearInProse, gradeName, kindFromText, makeSpell, makeWeapon, parseGear } from "./gear.js";
+import { KINDS, fitBudget, gearInProse, gradeName, kindFromText, makeSpell, makeWeapon, parseGear } from "./gear.js";
 import { normSkill, normWeapon, tameSkill } from "./normalize.js";
 import { raceById, raceFromText } from "./races.js";
 
@@ -96,6 +96,6 @@ export function storyKit(f, name, { entries = [], text = "", level = 1 } = {}) {
 export function applyKit(S, id, kit) {
   const d = S.defs[id]; if (!d || !kit) return []; const out = [];
   if (kit.weapons?.length) { const items = d.weapons.filter((w) => w.type === "item"), ws = kit.weapons.map(normWeapon).slice(0, 5 - Math.min(1, items.length)); d.weapons = [...ws, ...items].slice(0, 5); out.push(...ws.map((w) => w.name)); if (S.battle) for (const u of Object.values(S.battle.units)) if (u.ref === id) u.wi = 0; }
-  for (const s of kit.skills ?? []) { const k = tameSkill(normSkill(s, 0)); if (!S.skills[k.id]) S.skills[k.id] = k; if (!d.skills.includes(k.id) && d.skills.length < 6) { d.skills.push(k.id); out.push(k.name); } }
+  for (const s of kit.skills ?? []) { const k = tameSkill(normSkill(s, 0)); if (k.grade != null) fitBudget(k, k.grade); if (!S.skills[k.id]) S.skills[k.id] = k; if (!d.skills.includes(k.id) && d.skills.length < 6) { d.skills.push(k.id); out.push(k.name); } }
   return out;
 }

@@ -43,20 +43,57 @@ export function makeWeapon(o, level = 1) {
   if (elem) w.elem = elem; if (k.brave) w.brave = true; if (k.magic && k.base !== "tome") w.magic = true; if (k.gun) w.gun = k.gun; const eff = [...(k.eff ?? [])]; if (elem === "light" && rank >= 16) eff.push("undead", "demon"); if (/용\s?(?:사냥|살|퇴치)|드래곤\s?슬레이어|dragon ?slay/i.test(text)) eff.push("dragon"); if (/마물\s?사냥|짐승\s?사냥|beast/i.test(text)) eff.push("beast"); if (eff.length) w.eff = [...new Set(eff)].slice(0, 4); if (/흡혈|피를\s?(?:빠|마)|흡수|vampiric|lifesteal/i.test(text)) w.drain = clamp(20 + rank, 20, 45);
   return w;
 }
-// 스펠: 형태는 설명에서, 세기는 등급에서
-const FORM = [["heal", /치유|회복|재생|생명력을\s?(?:불어|나눠)|heal|regenerat/i], ["guard", /방어|보호|방벽|결계|장막|수호|방패|barrier|shield|ward|protect/i], ["drain", /흡수|흡혈|빨아|생명\s?탈취|drain|absorb/i], ["pierce", /관통|꿰뚫|방어를?\s?무시|갑옷을?\s?(?:뚫|부)|pierc|penetrat/i], ["multi", /연격|연속|난무|난사|두\s?번|쌍|연타|무수|combo|flurry|barrage/i], ["sure", /필중|반드시\s?(?:맞|명중)|추적|유도|homing|unerring/i], ["ambush", /기습|암습|배후|은신|그림자\s?이동|반격할\s?틈|ambush|stealth|backstab/i], ["boost", /강화|가속|고양|집중|각성|버프|축복|enhance|boost|haste|focus/i], ["blast", /./]];
-/** 이야기·장기기억의 기술 하나 → 게임 기술. o = { name, desc, grade, elem, form } */
+// ── 기술: 봇마다 다른 고유 기술에 등급을 매기고, 등급이 정한 총합 상한 안에서 특성대로 점수를 나눈다 ──
+/** 등급(0..23) → 쓸 수 있는 점수 총합 */
+export const budgetOf = (rank) => Math.round((4 + clamp(rank, 0, RANK_MAX) * 1.35) * 10) / 10;
+// 특성: 낱말 · 한 점의 값(cost) · 상한(max) · 넣는 법. flag는 켜고 끄는 특성(값 고정)
+const T = (re, cost, max, put, get, flag) => ({ re, cost, max, put, get, flag });
+const mod = (k) => [(s, v) => { s.mods[k] = (s.mods[k] || 0) + v; }, (s) => Math.max(0, s.mods[k] || 0)], flg = (k) => [(s, v) => { s.flags[k] = v; }, (s) => s.flags[k] || 0];
+export const TRAITS = {
+  power: T(/강력|파괴|폭발|일격|강타|작열|분쇄|섬멸|powerful|destroy|explos|smash/i, 2.1, 8, ...mod("atk")), accuracy: T(/정확|정밀|조준|명중|겨냥|precise|accura/i, .4, 40, ...mod("hit")), critical: T(/급소|치명|필살|심장|암살|critical|lethal|vital/i, .5, 40, ...mod("crit")), speed: T(/재빠|신속|가속|민첩|순간|질주|swift|haste|quick/i, 2.6, 6, ...mod("spd")), evade: T(/회피|잔상|환영|흘려|피하|안개|evade|dodge|illusion/i, .6, 40, ...mod("avo")), armor: T(/방어|단단|갑옷|철벽|막아|수호|방패|결계|장막|ward|shield|protect|barrier/i, 3, 8, ...mod("def")), ward: T(/항마|마법\s?(?:방어|저항)|마력\s?장막|결계|정화|magic resist|dispel/i, 3, 8, ...mod("res")),
+  pierce: T(/관통|꿰뚫|무시|뚫|pierc|penetrat|ignore/i, .14, 75, ...flg("pierce")), drain: T(/흡수|흡혈|빨아|탈취|drain|absorb|steal life/i, .16, 75, ...flg("drain")), regen: T(/치유|회복|재생|되살|heal|regenerat|restore/i, 3, 10, ...flg("regen")), block: T(/경감|반감|튕겨|상쇄|deflect|reduce damage|parry/i, .22, 60, ...flg("block")),
+  multi: T(/연격|연속|난무|난사|두\s?번|연타|무수|쌍|combo|flurry|barrage|twice/i, 9, 1, ...flg("brave"), true), sure: T(/필중|반드시|추적|유도|빗나가지|homing|unerring/i, 6, 1, ...flg("sure"), true), ambush: T(/기습|암습|배후|은신|그림자\s?이동|반격.{0,6}(?:못|없|불)|틈을|ambush|stealth|backstab|no counter/i, 7, 1, ...flg("noCounter"), true), reach: T(/원거리|멀리|사거리|광역|하늘에서|저격|멀리서|ranged|distant|from afar/i, 4, 1, (s) => { s.range = [1, 3]; }, (s) => (s.range?.[1] >= 3 ? 1 : 0), true), amplify: T(/궁극|비기|오의|최강|필살기|전력|모든\s?(?:힘|것)|각성|ultimate|all.{0,5}power/i, 22, 1.2, (s, v) => { s.flags.mult = Math.round((1 + v) * 10) / 10; }, (s) => (s.flags.mult ? s.flags.mult - 1 : 0)),
+};
+const CD = 1.5; // 기본 2턴보다 길어질 때마다 돌려받는 점수
+/** 기술 하나가 쓴 점수. 깎인 능력(음수)과 긴 재사용은 그만큼 돌려준다 */
+export function costOf(s) {
+  let c = 0; for (const t of Object.values(TRAITS)) { const v = t.get(s); if (v > 0) c += t.flag ? t.cost : v * t.cost; }
+  for (const [k, w] of [["atk", 1.2], ["def", .8], ["res", .8], ["spd", .8], ["hit", .15], ["avo", .15], ["crit", .2]]) if (s.mods?.[k] < 0) c += s.mods[k] * w;
+  if (s.type === "art") c -= Math.max(0, (s.cd ?? 2) - 2) * CD; else if (s.type === "proc") c *= typeof s.rate === "number" ? Math.max(.25, s.rate / 100) : .4; else if (s.cond && s.cond !== "always") c *= .75;
+  return Math.round(c * 100) / 100;
+}
+/** 상한을 넘으면 비율대로 줄인다(값이 큰 켜고 끄는 특성부터 뺀다). 모자란 것은 건드리지 않는다 */
+export function fitBudget(s, rank) {
+  const cap = budgetOf(rank); for (let guard = 0; guard < 60 && costOf(s) > cap; guard++) {
+    const on = Object.entries(TRAITS).filter(([, t]) => t.get(s) > 0), soft = on.filter(([, t]) => !t.flag), k = cap / costOf(s);
+    let cut = false; for (const [n, t] of soft) { const v = t.get(s), nv = n === "amplify" ? Math.floor(v * k * 10) / 10 : Math.floor(v * k); if (nv < v) { cut = true; if (n === "amplify") { if (nv > 0) s.flags.mult = Math.round((1 + nv) * 10) / 10; else delete s.flags.mult; } else if (["pierce", "drain", "regen", "block"].includes(n)) { if (nv > 0) s.flags[n] = nv; else delete s.flags[n]; } else { const m = { power: "atk", accuracy: "hit", critical: "crit", speed: "spd", evade: "avo", armor: "def", ward: "res" }[n]; if (nv > 0) s.mods[m] = nv; else delete s.mods[m]; } } }
+    if (!cut || guard > 6) { const f = on.filter(([, t]) => t.flag).sort((a, b) => b[1].cost - a[1].cost)[0]; if (f) { if (f[0] === "reach") delete s.range; else delete s.flags[{ multi: "brave", sure: "sure", ambush: "noCounter" }[f[0]]]; } else if (!cut) break; }
+  }
+  return s;
+}
+/** 글에서 특성 비중. 많이 나올수록 무겁다 */
+export function traitsFromText(text) { const out = {}; for (const [k, t] of Object.entries(TRAITS)) { const n = (String(text).match(new RegExp(t.re.source, "gi")) ?? []).length; if (n) out[k] = Math.min(4, 1 + n); } return out; }
+/**
+ * 이야기·장기기억의 기술 하나 → 게임 기술. 이름은 봇의 것 그대로.
+ * o = { name, desc, grade, elem, traits:{power:3,…}(비중), type, cond }
+ */
 export function makeSpell(o, level = 1) {
-  const name = String(o?.name ?? "").trim().slice(0, 30); if (!name) return null; const desc = String(o?.desc ?? "").trim().slice(0, 160), text = name + " " + desc;
-  const form = FORM.some(([k]) => k === o?.form) ? o.form : FORM.find(([, re]) => re.test(text))[0], rank = rankOf(o?.grade) ?? rankFromText(text, level), elem = elemOf(o?.elem) || elemFromText(text), t = rank / RANK_MAX;
+  const name = String(o?.name ?? "").trim().slice(0, 30); if (!name) return null; const desc = String(o?.desc ?? "").trim().slice(0, 160), text = name + " " + desc, rank = rankOf(o?.grade) ?? rankFromText(text, level), elem = elemOf(o?.elem) || elemFromText(text), cap = budgetOf(rank);
+  const given = Object.fromEntries(Object.entries(o?.traits && typeof o.traits === "object" ? o.traits : {}).filter(([k, v]) => Object.prototype.hasOwnProperty.call(TRAITS, k) && Number(v) > 0).map(([k, v]) => [k, clamp(Number(v), .5, 10)])), w = Object.keys(given).length ? given : traitsFromText(text);
   const bodily = /검|칼|창|도끼|활|주먹|권|발차기|베기|찌르기|사격|참격|일섬|slash|strike|kick|punch|shot/i.test(text) && !/마법|주문|마력|spell|magic/i.test(text), magic = !bodily && (!!elem || /마법|주문|마력|술식|spell|magic/i.test(text));
-  const s = { id: "sp_" + hash(name).toString(36), name, desc, type: "art", cond: "always", mods: {}, flags: {}, cd: 2 + Math.round(t * 3), tier: "own", grade: rank, form }; if (elem) s.elem = elem; const pow = Math.round(1 + t * 6);
-  if (form === "heal") { s.type = "passive"; delete s.cd; s.flags.regen = clamp(Math.round(2 + t * 8), 2, 10); return s; }
-  if (form === "guard") { s.type = "passive"; delete s.cd; s.cond = "defending"; s.mods = { def: clamp(Math.round(1 + t * 4), 1, 5), res: clamp(Math.round(1 + t * 4), 1, 5) }; return s; }
-  if (form === "boost") { s.type = "passive"; delete s.cd; s.cond = "initiating"; s.mods = { atk: clamp(Math.round(1 + t * 4), 1, 5), spd: clamp(Math.round(t * 3), 0, 3) }; if (!s.mods.spd) delete s.mods.spd; return s; }
-  if (magic) { s.flags.magic = true; s.range = rank >= 15 ? [1, 3] : [1, 2]; }
-  if (form === "drain") { s.mods.atk = pow - 2; s.flags.drain = clamp(Math.round(25 + t * 50), 25, 75); } else if (form === "pierce") { s.mods.atk = Math.max(0, pow - 3); s.flags.pierce = clamp(Math.round(25 + t * 50), 25, 75); } else if (form === "multi") { s.mods.atk = Math.round(t * 4) - 4; s.flags.brave = true; s.cd++; } else if (form === "sure") { s.mods.atk = pow - 2; s.flags.sure = true; } else if (form === "ambush") { s.mods.atk = pow - 3; s.flags.noCounter = true; s.cd++; } else { s.mods.atk = pow; if (rank >= 18) s.flags.mult = rank >= 21 ? 1.6 : 1.3; }
-  for (const k in s.mods) if (!s.mods[k]) delete s.mods[k]; return s;
+  const support = ["regen", "armor", "ward", "evade", "speed"], keys = Object.keys(w), passive = ["passive", "proc", "art"].includes(o?.type) ? o.type !== "art" : keys.length > 0 && keys.every((k) => support.includes(k) || k === "block"), proc = passive && (o?.type === "proc" || (w.block && !w.armor && !w.ward));
+  const s = { id: "sp_" + hash(name + "|" + desc).toString(36), name, desc, type: proc ? "proc" : passive ? "passive" : "art", cond: ["always", "initiating", "defending", "hp_below_half", "hp_full", "adjacent_ally", "alone", "on_cover"].includes(o?.cond) ? o.cond : passive && (w.armor || w.ward) ? "defending" : "always", mods: {}, flags: {}, tier: "own", grade: rank };
+  if (elem) s.elem = elem; if (s.type === "art") { s.cd = 2 + Math.floor(rank / 8); if (magic) { s.flags.magic = true; s.range = [1, 2]; } if (!keys.some((k) => !support.includes(k))) w.power = Math.max(w.power ?? 0, 3); } else { for (const k of ["multi", "sure", "ambush", "reach", "amplify"]) delete w[k]; if (!Object.keys(w).length) w[support.includes(keys[0]) ? keys[0] : "power"] = 2; }
+  if (proc) { s.rate = 25 + rank; if (!w.block) delete w.regen; }
+  // 같은 이름은 늘 같은 분배: 비중에 작은 흔들림을 이름으로 준다
+  const L = Object.entries(w).map(([k, v]) => [k, v * (1 + ((hash(name + k) % 21) - 10) / 100)]).sort((a, b) => b[1] - a[1]), room = () => cap - costOf(s);
+  for (const [k] of L.filter(([k]) => TRAITS[k].flag)) { const save = JSON.stringify(s); TRAITS[k].put(s, 1 === 1 && k !== "reach" ? true : 1); if (costOf(s) > cap * (L.length > 1 ? .75 : 1)) Object.assign(s, { mods: {}, flags: {}, range: undefined }, JSON.parse(save)), (JSON.parse(save).range ? 0 : delete s.range); }
+  if (s.type === "art" && L.every(([k]) => TRAITS[k].flag)) L.push(["power", 2]);
+  const soft = L.filter(([k]) => !TRAITS[k].flag), total = soft.reduce((n, [, v]) => n + v, 0) || 1, pool = room(), sc = s.type === "passive" && s.cond !== "always" ? .75 : s.type === "proc" ? Math.max(.25, s.rate / 100) : 1;
+  for (const [k, v] of soft) { const t = TRAITS[k], raw = Math.min(t.max, pool * v / total / t.cost / sc), val = k === "amplify" ? Math.floor(raw * 10) / 10 : Math.floor(raw); if (val > 0) t.put(s, val); }
+  // 남은 점수: 공격은 위력·명중, 지원은 첫 특성
+  for (let i = 0; i < 40 && room() >= .2; i++) { const order = s.type === "art" ? ["power", "amplify", "accuracy", "critical"] : [...soft.map(([k]) => k), ...(s.type === "passive" ? w.armor || w.ward ? ["armor", "ward", "evade"] : w.regen ? ["ward", "armor"] : ["evade", "accuracy", "power"] : [])]; let put = false; for (const k of order) { const t = TRAITS[k]; if (!t) continue; const now = t.get(s); if (k === "amplify") { if (now + .1 > t.max || 2.2 > room()) continue; t.put(s, Math.round((now + .1) * 10) / 10); put = true; break; } if (now + 1 > t.max || t.cost * sc > room()) continue; if (["pierce", "drain", "regen", "block"].includes(k)) t.put(s, now + 1); else t.put(s, 1); put = true; break; } if (!put) break; }
+  return fitBudget(s, rank);
 }
 // ── 장기기억·로어북 글에서 무기와 기술 뽑기 ──
 const tidy = (s) => String(s ?? "").replace(/[*_`#"“”「」『』\[\]]/g, "").trim();

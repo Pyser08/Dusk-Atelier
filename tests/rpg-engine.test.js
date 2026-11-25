@@ -153,3 +153,10 @@ test("지형: 용암은 태우되 죽이지 않고 불 속성은 안 타며, 높
   const c = mk([".....", "..H..", ".....", "....."]), k = NEW.K(2, 1); assert.ok(!NEW.reach(c, c.battle.units.a).has(k), "절벽"); const g = mk([".....", ".hH..", ".....", "....."], {}); g.battle.units.b.x = 4; g.battle.units.b.y = 3; assert.ok(NEW.reach(g, g.battle.units.a).has(k)); const w = mk([".....", "..H..", ".....", "....."], { mtype: "fly" }); w.battle.units.b.x = 4; w.battle.units.b.y = 3; assert.ok(NEW.reach(w, w.battle.units.a).has(k));
   for (const m of Object.keys(NEW.MAPS).slice(-20)) { const s = mk(Array(6).fill("........")); NEW.loadEncounter(s, { name: m, mapPreset: m, units: [{ id: "a", preset: "병사" }, { id: "b", preset: "기병" }], place: [{ ref: "a", team: "ally", x: 2, y: 5 }, { ref: "b", team: "enemy", x: 11, y: 5 }] }); const ev2 = []; for (let i = 0; i < 12; i++) NEW.endTurn(s, ev2); }
 });
+
+test("적 도감: 프리셋이 모두 싸울 수 있고, 봇이 지은 이름도 알맞은 모형을 찾으며 사람은 사람으로 남는다", () => {
+  assert.ok(Object.keys(NEW.PRE).length >= 80); const names = Object.keys(NEW.PRE);
+  for (let i = 0; i < names.length; i++) { const S = NEW.fresh(); S.seed = i; NEW.loadEncounter(S, { name: "t", map: Array(6).fill("........"), units: [{ id: "a", preset: names[i], level: 8 }, { id: "b", preset: "병사", level: 8 }], place: [{ ref: "a", team: "ally", x: 3, y: 3 }, { ref: "b", team: "enemy", x: 5, y: 3 }] }); const ev = []; for (let t = 0; t < 4; t++) NEW.endTurn(S, ev); assert.ok(ev.length, names[i]); }
+  for (const [n, m] of [["서리 늑대왕", "wolf"], ["고대 화룡 이그니스", "dragon"], ["저주받은 갑옷", "armor"], ["거대 거미 여왕", "spider"], ["보물 상자", "mimic"], ["늑대 수인 카이", ""], ["드래곤 슬레이어 렌", ""], ["용병", ""], ["박쥐 사냥꾼", ""], ["왕국 병사", ""], ["뱀파이어 백작", ""], ["게일", ""], ["해골 병사", "skeleton"]]) assert.equal(NEW.modelOf({ name: n, cls: "" }), m, n);
+  assert.equal(NEW.modelOf({ name: "리나", cls: "마법사", race: "드래곤" }), ""); assert.equal(NEW.modelOf({ name: "아무개", model: "hydra" }), "hydra"); assert.equal(NEW.modelOf({ name: "아무개", model: "constructor" }), "");
+});

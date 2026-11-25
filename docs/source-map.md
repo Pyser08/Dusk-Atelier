@@ -466,25 +466,26 @@
 - `memorylink.js` (21줄) Dusk Saga → 장기기억 창구(memoryApi)만 쓴다. 장기기억이 없거나 꺼져 있으면 아무것… — createMemoryLink
 
 ### src/rpg/engine/
-- `ai.js` (64줄) Dusk Saga 엔진 — 적 AI (순수 함수, DOM·api 없음) — aiAct, runTeam
-- `board.js` (98줄) Dusk Saga 엔진 — 지형·이동·위협 범위·사격 시야 (순수 함수, DOM·api 없음) — living, alive, syncRears, pairBonus, est
+- `ai.js` (65줄) Dusk Saga 엔진 — 적 AI (순수 함수, DOM·api 없음) — aiAct, runTeam
+- `bestiary.js` (44줄) Dusk Saga 엔진 — 적 도감: 몸 모형과 프리셋. 봇이 만든 적도 이름·직업·꼬리표로 모형을 … — MODELS, modelOf, moveOf
+- `board.js` (102줄) Dusk Saga 엔진 — 지형·이동·위협 범위·사격 시야 (순수 함수, DOM·api 없음) — living, alive, syncRears, pairBonus, est
 - `classes.js` (78줄) Dusk Saga 엔진 — 직업 프리셋: 기본직 12, 상급직 24(Lv 21 전직, 두 갈래) — PROMOTE_LEVEL, CLASSES, jobOf, canUse, setJob
-- `combat.js` (253줄) Dusk Saga 엔진 — 전투 예측·해결·유닛 명령 (순수 함수, DOM·api 없음) — actWatch, actReload, snap, travel, cond
+- `combat.js` (254줄) Dusk Saga 엔진 — 전투 예측·해결·유닛 명령 (순수 함수, DOM·api 없음) — actWatch, actReload, snap, travel, cond
 - `demo.js` (36줄) Dusk Saga 엔진 — 예시 전장 (순수 함수, DOM·api 없음) — demo
 - `digest.js` (49줄) Dusk Saga 엔진 — 서술용 기록 요약 (순수 함수, DOM·api 없음) — digest, context, storyNote
 - `elements.js` (23줄) Dusk Saga 엔진 — 속성. 속성이 없는 공격은 예전 규칙 그대로다 — ELEMENTS, elemOf, elemFromText, elemOfUnit, elemMod
-- `gear.js` (80줄) Dusk Saga 엔진 — 이야기 속 무기·기술에 종류·등급·속성을 매긴다. 정해 둔 무기 목록 대신… — GRADES, RANK_MAX, gradeName, rankOf, rankFromText
+- `gear.js` (117줄) Dusk Saga 엔진 — 이야기 속 무기·기술에 종류·등급·속성을 매긴다. 정해 둔 무기 목록 대신… — GRADES, RANK_MAX, gradeName, rankOf, rankFromText
 - `growth.js` (97줄) Dusk Saga 엔진 — 경험치·레벨·RP 성장 (순수 함수, DOM·api 없음) — expRate, xp, reqLevel, relearn, rescale
-- `index.js` (22줄) Dusk Saga 엔진 공개 창구 — STATS, SL, TERRAIN, MT, MTL
-- `maps.js` (44줄) Dusk Saga 엔진 — 전장 프리셋 (순수 함수, DOM·api 없음) — MAPS, MAP_LINES
+- `index.js` (24줄) Dusk Saga 엔진 공개 창구 — STATS, SL, TERRAIN, MT, MTL
+- `maps.js` (48줄) Dusk Saga 엔진 — 전장 프리셋 (순수 함수, DOM·api 없음) — MAPS, MAP_LINES
 - `memlink.js` (102줄) Dusk Saga ↔ 장기기억: 폴더에 남길 전투 기록(folder.rpg)의 순수 로직. 장기기억 … — docFor, unitFor, prune, recordSheets, recordBattle
 - `migrate.js` (50줄) Dusk Saga 엔진 — Risu Tactics 저장(v2) 가져오기 — migrateSave
 - `names.js` (13줄) Dusk Saga 엔진 — 옛 이름 → 새 이름 (Tactics 저장 이전용) — OLD_NAMES, OLD_SKILL_IDS
 - `normalize.js` (170줄) Dusk Saga 엔진 — LLM 출력 정규화와 프리셋 적 (순수 함수, DOM·api 없음) — normSkill, BASE_VER, BASE_SKILLS, ensureBase, normWeapon
-- `phase.js` (119줄) Dusk Saga 엔진 — 턴·증원·전장 불러오기 (순수 함수, DOM·api 없음) — beginPhase, endTurn, allDone, enter, waiting
+- `phase.js` (121줄) Dusk Saga 엔진 — 턴·증원·전장 불러오기 (순수 함수, DOM·api 없음) — beginPhase, endTurn, allDone, enter, waiting
 - `prompts.js` (91줄) Dusk Saga 엔진 — 생성·성장·재생성 프롬프트 (순수 함수, DOM·api 없음) — skillLines, sheetLine, rosterText, skillText, GEN_PROMPT
 - `races.js` (76줄) Dusk Saga 엔진 — 종족 프리셋 (능력 보정·성장·꼬리표·종족 특성) — kindOf, RACES, raceById, RACE_SKILLS, raceOf
-- `rules.js` (83줄) Dusk Saga 엔진 — 기본 표·숫자·난수 (순수 함수, DOM·api 없음) — STATS, SL, GROW, MAXLV, TERRAIN
+- `rules.js` (89줄) Dusk Saga 엔진 — 기본 표·숫자·난수 (순수 함수, DOM·api 없음) — STATS, SL, GROW, MAXLV, TERRAIN
 - `saves.js` (72줄) Dusk Saga 엔진 — 저장 전장·되감기·재시작 (순수 함수, DOM·api 없음) — mapOf, endReplay, loadMap, snapshot, restart
 
 ### src/ui/

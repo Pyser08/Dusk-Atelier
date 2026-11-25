@@ -1,5 +1,5 @@
 // Dusk Saga 엔진 — LLM 출력 정규화와 프리셋 적 (순수 함수, DOM·api 없음)
-import { KINDS, makeSpell, makeWeapon, rankOf } from "./gear.js";
+import { KINDS, fitBudget, makeSpell, makeWeapon, rankOf } from "./gear.js";
 import { elemOf } from "./elements.js";
 import { mods } from "./combat.js";
 import { CAT, CONDS, GROW, GUNS, MAXLV, MOVE, MT, MTL, STATS, WT, arm, clamp, copy, idOf, int, txt } from "./rules.js";
@@ -88,7 +88,7 @@ export function tameSkill(s) {
   if (s.type === 'proc' && typeof s.rate === 'number') s.rate = Math.min(s.rate, 60);
   return s;
 }
-export const llmSkill = (o, i) => { if (o && o.name && !o.mods && !o.flags) { const sp = makeSpell(o, int(o.level, 1, MAXLV, 10)); if (sp) o = Object.assign(sp, o.id ? { id: o.id } : {}, o.faction ? { faction: o.faction } : {}); } const s = tameSkill(normSkill(o, i)); if (s.tier === 'common') s.tier = 'own'; return s; };
+export const llmSkill = (o, i) => { if (o && o.name && ((!o.mods && !o.flags) || o.traits)) { const sp = makeSpell(o, int(o.level, 1, MAXLV, 10)); if (sp) o = Object.assign(sp, o.id ? { id: o.id } : {}, o.faction ? { faction: o.faction } : {}); } const s = tameSkill(normSkill(o, i)); if (s.tier === 'common') s.tier = 'own'; return s.grade != null ? fitBudget(s, s.grade) : s; };
 // ready-made mobs: level-1 body, grown to the level asked for
 export const M = (set, emoji, cls, mtype, st, weapons, x) => Object.assign({ set, emoji, cls, mtype, stats: { hp: st[0], str: st[1], mag: st[2], skl: st[3], spd: st[4], lck: st[5], def: st[6], res: st[7] }, weapons }, x);
 export const PRE = {
@@ -122,7 +122,7 @@ export function presetUnit(name, level, o) {
   const src = copy(p); delete src.set;
   // basic gear keeps pace: iron by level 6, steel by 14, silver by 24
   src.weapons = src.weapons.map(w => { const m = /^(청동의|철의) (.+)$/.exec(w.name), n = m && (level >= 24 ? UPG[m[1]][2] : level >= 14 ? UPG[m[1]][1] : level >= 6 ? UPG[m[1]][0] : m[1]) + ' ' + (m ? m[2] : ''); return m && CAT[n] ? { name: n } : w; });
-  const over = {}; for (const k of ['cls', 'mtype', 'move', 'emoji', 'asset', 'tags', 'growth', 'sex', 'elem']) if (o[k] != null && o[k] !== '') over[k] = o[k];
+  const over = {}; for (const k of ['cls', 'mtype', 'move', 'emoji', 'asset', 'tags', 'growth', 'sex', 'elem', 'model']) if (o[k] != null && o[k] !== '') over[k] = o[k];
   for (const k of ['weapons', 'skills']) if (Array.isArray(o[k]) && o[k].length) over[k] = o[k];
   const u = normUnit(Object.assign(src, over, { id: o.id || name, name: txt(o.name, 30, name), level }), 0);
   for (const k of STATS) u.stats[k] = Math.min(k === 'hp' ? 120 : 60, u.stats[k] + Math.round(u.growth[k] * (level - 1) / 100));
@@ -147,7 +147,7 @@ export function normUnit(o, i) {
     history: (Array.isArray(o.history) ? o.history : []).filter(t => typeof t === 'string').map(t => t.slice(0, 120)).slice(-8),
   };
   if (typeof o.img === 'string' && /^(https?:|data:image\/)/.test(o.img)) u.img = o.img;
-  if (elemOf(o.elem)) u.elem = o.elem; if (o.sex === 'f' || o.sex === 'm') u.sex = o.sex; if (o.ally) u.ally = true; if (o.ally && o.away) u.away = true;
+  if (elemOf(o.elem)) u.elem = o.elem; if (typeof o.model === 'string' && /^[a-z]{2,12}$/.test(o.model)) u.model = o.model; if (o.sex === 'f' || o.sex === 'm') u.sex = o.sex; if (o.ally) u.ally = true; if (o.ally && o.away) u.away = true;
   if (Array.isArray(o.later) && o.later.length) u.later = o.later.filter(s => typeof s === 'string').map(s => idOf(s, '')).filter(Boolean).slice(0, 12);
   return u;
 }
