@@ -18,7 +18,7 @@ const ctx = await context({ entryPoints: [here + "app.js", here + "app3d.js"], o
   plugins: [{ name: "live", setup(b) { b.onEnd((r) => { err = r.errors.map((e) => e.text + " " + (e.location?.file ?? "") + ":" + (e.location?.line ?? "")).join("\n"); if (!err) js = Object.fromEntries(r.outputFiles.map((f) => ["/" + f.path.split("/").pop(), f.text])); ping(); }); } }] });
 await ctx.watch();
 watch(here, (_, f) => { if (f === "style.css") ping(); });
-const page = (mode) => `<!doctype html><html lang=ko><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Dusk Saga 미리보기</title><link rel=stylesheet href=/style.css><body data-mode=${mode}><div id=app></div><script src=/${mode === "3d" ? "app3d" : "app"}.js></script><script>new EventSource("/live").onmessage=()=>location.reload()</script>`;
+const page = (mode) => `<!doctype html><html lang=ko><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Dusk Saga 미리보기</title><link rel=stylesheet href=/font/noto-sans-kr/900.css><link rel=stylesheet href=/font/noto-sans-kr/500.css><link rel=stylesheet href=/font/noto-sans-kr/700.css><link rel=stylesheet href=/style.css><body data-mode=${mode}><div id=app></div><script src=/${mode === "3d" ? "app3d" : "app"}.js></script><script>new EventSource("/live").onmessage=()=>location.reload()</script>`;
 const compare = `<!doctype html><meta charset=utf-8><title>비교</title><body style="margin:16px;background:#111;display:flex;gap:16px"><iframe src="/?k=m" style="flex:none;width:390px;height:844px;border:0"></iframe><iframe src="/?k=d" style="flex:none;width:1280px;height:844px;border:0"></iframe>`;
 createServer((q, r) => {
   const p = q.url.split("?")[0], send = (t, b, c = 200) => { r.writeHead(c, { "content-type": t + "; charset=utf-8", "cache-control": "no-store" }); r.end(b); };
@@ -39,6 +39,8 @@ createServer((q, r) => {
   if (p === "/3d") return send("text/html", page("3d"));
   if (p === "/cutscene") return send("text/html", page("cutscene"));
   if (p === "/compare") return send("text/html", compare);
+  const font = /^\/font\/(noto-sans-kr)\/((?:files\/)?[\w.-]+)$/.exec(p);
+  if (font) { try { const b = readFileSync(here + "node_modules/@fontsource/" + font[1] + "/" + font[2]); r.writeHead(200, { "content-type": p.endsWith(".css") ? "text/css" : "font/woff2", "cache-control": "max-age=86400" }); return r.end(b); } catch { return send("text/plain", "없음", 404); } }
   if (p === "/style.css") return send("text/css", readFileSync(here + "style.css"));
   if (p === "/app.js" || p === "/app3d.js") return send("text/javascript", err ? `document.body.innerText=${JSON.stringify("빌드 오류\n" + err)}` : js[p] ?? "");
   send("text/plain", "없음", 404);

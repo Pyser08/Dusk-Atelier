@@ -1,1 +1,1 @@
-{"private":true,"type":"module","dependencies":{"three":"^0.170.0"}}
+{"private":true,"type":"module","dependencies":{"@fontsource/black-han-sans":"^5.3.0","@fontsource/noto-sans-kr":"^5.3.1","three":"^0.170.0"}}

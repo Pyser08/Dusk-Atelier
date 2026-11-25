@@ -1,6 +1,6 @@
 // 전장 안에서 벌어지는 3D 전투 연출: 카메라·돌진·투사체·타격 (규칙은 모름, 이벤트만 재생)
 export function fights({ THREE, scene, cam, ctl, view, units }) {
-  let on = false, skip = false, shot = null, home = null, kick = 0; const fx = new Set(), look = new THREE.Vector3(), tmp = new THREE.Vector3();
+  let pair = [], on = false, skip = false, shot = null, home = null, kick = 0; const fx = new Set(), look = new THREE.Vector3(), tmp = new THREE.Vector3();
   const hud = document.createElement("div"); hud.className = "fhud"; hud.hidden = true; view.append(hud); hud.onclick = () => { skip = true; };
   const nap = (ms) => new Promise((r) => setTimeout(r, skip ? 0 : ms));
   // 프레임마다 f(0..1). 건너뛰면 즉시 끝 상태
@@ -10,10 +10,16 @@ export function fights({ THREE, scene, cam, ctl, view, units }) {
   // 두 사람을 옆에서 잡는다. 지금 카메라와 가까운 쪽 옆면을 골라 시점이 뒤집히지 않게
   function frame(a, b, zoom, lift) {
     if (!home) { home = { p: cam.position.clone(), t: ctl.target.clone() }; look.copy(ctl.target); }
-    const p = a.g.position, q = b.g.position, mid = p.clone().add(q).multiplyScalar(.5); mid.y += .45; const dx = q.x - p.x, dz = q.z - p.z, len = Math.hypot(dx, dz) || 1; let nx = -dz / len, nz = dx / len;
+    const p = a.g.position, q = b.g.position, mid = p.clone().add(q).multiplyScalar(.5); mid.y += zoom > 1.5 ? (cam.aspect < 1 ? -.35 : .1) : .45; const dx = q.x - p.x, dz = q.z - p.z, len = Math.hypot(dx, dz) || 1; let nx = -dz / len, nz = dx / len;
     if (nx * (home.p.x - home.t.x) + nz * (home.p.z - home.t.z) < 0) { nx = -nx; nz = -nz; }
     const portrait = cam.aspect < 1, d = (2 + len * (portrait ? 1.25 : .8)) * zoom;
     shot = { p: new THREE.Vector3(mid.x + nx * d - dx / len * .6, mid.y + lift * d * .6 + .4, mid.z + nz * d - dz / len * .6), t: mid };
+  }
+  // 공격하는 사람 어깨 너머에서 상대를 본다
+  function shoulder(a, b) {
+    if (!home) { home = { p: cam.position.clone(), t: ctl.target.clone() }; look.copy(ctl.target); }
+    const p = a.g.position, d = b.g.position.clone().sub(p).setY(0).normalize(), back = cam.aspect < 1 ? 2.6 : 2.1, side = cam.aspect < 1 ? 1.5 : 1.25;
+    shot = { p: new THREE.Vector3(p.x - d.x * back - d.z * -side, p.y + 1.75, p.z - d.z * back - d.x * side), t: b.g.position.clone().setY(b.g.position.y + .55) };
   }
   function release() { if (!home) return; shot = { p: home.p, t: home.t, end: true }; }
   function spark(mesh, life, step) { scene.add(mesh); fx.add({ mesh, life, t: 0, step }); }
@@ -44,11 +50,11 @@ export function fights({ THREE, scene, cam, ctl, view, units }) {
   async function fight(info, hits, host) {
     const A = units.get(info.a), T = units.get(info.d); if (!A || !T) { hits.forEach(host.hit); return; }
     if (host.fast()) { for (const h of hits) { const a = units.get(h.from); if (a && h.to !== h.from) { face(a, units.get(h.to) ?? T); a.lunge = .3; } host.hit(h); await new Promise((r) => setTimeout(r, 110)); if (a) a.lunge = 0; } return; }
-    on = true; skip = false; ctl.enabled = false; const esc = (s) => { const n = document.createElement("i"); n.textContent = s; return n.innerHTML; }, hp = { [info.a]: info.who[info.a].hp, [info.d]: info.who[info.d].hp };
-    const plate = (id) => { const w = info.who[id]; return `<div class="fp ${w.team}" data-id="${esc(id)}"><b>${esc(w.name)}</b><small>${esc(w.weapon)}</small><div class=fhp><i></i></div><strong></strong></div>`; };
+    on = true; pair = Object.keys(info.who); skip = false; ctl.enabled = false; const esc = (s) => { const n = document.createElement("i"); n.textContent = s; return n.innerHTML; }, hp = { [info.a]: info.who[info.a].hp, [info.d]: info.who[info.d].hp };
+    const plate = (id) => { const w = info.who[id]; return `<div class="fp ${w.team}" data-id="${esc(id)}">${w.face ?? ""}<b>${esc(w.name)}</b><div class=fl><strong></strong><div class=fhp><i></i></div></div><small>${esc(w.weapon)}</small><div class=fn>${["위력", "명중", "필살"].map((t, i) => `<span><u>${t}</u>${w.nums?.[i] ?? "–"}</span>`).join("")}</div></div>`; };
     hud.innerHTML = `<div class=lb></div><div class=cutin>필살</div>${info.art ? `<div class=artn>${esc(info.art)}</div>` : ""}<div class=fps>${plate(info.a)}${plate(info.d)}</div>`; hud.hidden = false; document.body.classList.add("fighting"); bars(info.who, hp);
     try {
-      face(A, T); face(T, A); frame(A, T, 1, .55); await nap(380);
+      face(A, T); face(T, A); shoulder(A, T); await nap(620);
       for (const h of hits) { const a = units.get(h.from), b = units.get(h.to); const apply = (x) => { hp[x.to] = x.hp; if (x.hpFrom != null) hp[x.from] = x.hpFrom; host.hit(x); bars(info.who, hp); }; if (a && b && info.who[h.from]) await strike(a, b, info.who[h.from], h, apply); else apply(h); frame(A, T, 1, .55); await nap(60); }
       await nap(220);
     } finally { for (const o of units.values()) o.lunge = o.twist = o.lean = o.dodge = o.hop = 0; hud.hidden = true; document.body.classList.remove("fighting"); on = false; ctl.enabled = true; release(); }
@@ -61,5 +67,5 @@ export function fights({ THREE, scene, cam, ctl, view, units }) {
     if (shot.end && cam.position.distanceTo(shot.p) < .08) { cam.position.copy(home.p); ctl.target.copy(home.t); shot = home = null; kick = 0; }
     return true;
   }
-  return { fight, frame, face, release, tick, active: () => on };
+  return { fight, frame, face, release, tick, active: () => on, has: (id) => pair.includes(id) };
 }
