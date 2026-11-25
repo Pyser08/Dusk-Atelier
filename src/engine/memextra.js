@@ -131,7 +131,11 @@ export function applyExtra(f, reports, { turn = 0, when = "" } = {}) {
       const { kind: _k, ...c } = r; if (e.climate?.zone !== c.zone || e.climate?.region !== c.region || e.climate?.mdays !== c.mdays) changed.push(`기후 ${c.region || c.zone}`); e.climate = { ...c, at: turn };
     } else if (r.kind === "race") {
       const k = nk(r.name), old = e.race[k]; if (old?.manual) continue;
-      if (old?.id !== r.id || (old?.label ?? "") !== r.label) changed.push(`종족 ${r.name}: ${r.label || r.id}`); e.race[k] = { name: r.name, id: r.id, label: r.label, at: turn };
+      // 로어북·본문에서 찾은 값(src): 빈칸과 '인간'만 메운다. 같은 근거를 두 번 쓰지 않아 이야기 속 종족 변화를 되돌리지 않는다
+      if (r.src) { if (old && (old.found === r.id || !(old.id === "human" && !old.label))) { if (old.id === r.id) old.found = r.id; continue; } }
+      // 기록기가 근거 없이 흘린 '인간'은 이미 아는 종족을 덮지 못한다
+      else if (old && old.found && r.id === "human" && !r.label && old.id !== "human") continue;
+      if (old?.id !== r.id || (old?.label ?? "") !== r.label) changed.push(`종족 ${r.name}: ${r.label || r.id}`); e.race[k] = { name: r.name, id: r.id, label: r.label, at: turn, ...(r.src ? { found: r.id, src: r.src, why: r.why } : old?.found ? { found: old.found } : {}) };
     } else if (r.kind === "tie") {
       const c = applyTie(e.ties, r, turn); if (c) changed.push(c);
     } else if (r.kind === "cohabit") {

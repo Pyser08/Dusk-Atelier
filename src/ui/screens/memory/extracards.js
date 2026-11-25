@@ -125,7 +125,7 @@ export function outfitCard(env, card, doc) {
 
 // 0.3.22 종족: 기록기가 알려 준 종족(직접 고르면 그대로 고정) · 일반 체질 · NSFW 체질 · 지금 발정기
 const RACE_GROUPS = [["인간형", ["human", "highelf", "elf", "darkelf", "woodelf", "halfelf", "dwarf", "halfling", "gnome", "giant", "halfgiant", "ogre"]], ["수인(케모미미)", null], ["비인간 몸", ["harpy", "lizard", "lamia", "naga", "mermaid", "siren", "shark", "scylla", "bee", "butterfly", "arachne", "ant", "mantis", "centaur"]],
-  ["용·신비", ["dragon", "phoenix", "unicorn", "angel", "fallen", "valkyrie", "god", "demigod", "spirit_fire", "spirit_water", "spirit_wind", "spirit_earth", "pixie", "dryad", "nymph"]], ["마족·어둠", ["succubus", "incubus", "demon", "vampire", "dhampir", "werewolf", "undead", "orc", "goblin", "hobgoblin", "troll", "oni"]],
+  ["용·신비", ["dragon", "ryu", "phoenix", "unicorn", "angel", "fallen", "valkyrie", "god", "demigod", "spirit_fire", "spirit_water", "spirit_wind", "spirit_earth", "pixie", "dryad", "nymph"]], ["마족·어둠", ["succubus", "incubus", "demon", "vampire", "dhampir", "werewolf", "undead", "orc", "goblin", "hobgoblin", "troll", "oni"]],
   ["동양 요괴", ["gumiho", "yukionna", "kappa", "tengu", "nekomata", "imugi", "xian"]], ["인공·기타", ["android", "cyborg", "golem", "homunculus", "slime", "alraune", "ghost"]]];
 export function raceCard(env, card, doc) {
   if (!doc) return null;

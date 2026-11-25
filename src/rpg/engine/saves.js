@@ -40,7 +40,7 @@ export function snapshot(S) { for (const d of Object.values(S.defs)) for (const 
 export function restart(S) { if (!S.start) return false; const o = JSON.parse(S.start); S.defs = o.defs; S.skills = o.skills; S.battle = o.battle; S.log = o.log; S.sent = S.seq; pulseReset(S); return true; }
 // ── 시간 되감기: rewind points. Each holds the board, the dice seed and everyone's level/exp/stats at that moment. ──
 export const pulseMax = S => (S.pulseMax == null ? 3 : S.pulseMax);
-export const progOf = d => [d.level, d.exp, Object.assign({}, d.stats), copy(d.weapons), d.skills.slice(), (d.later || []).slice()];
+export const progOf = d => [d.level, d.exp, Object.assign({}, d.stats), copy(d.weapons), d.skills.slice(), (d.later || []).slice()].concat(d.job ? [[d.job, d.cls, d.mtype, d.move]] : []);
 export function mark(S, label) {
   const B = S.battle; if (!B) return; if (!S.hist) S.hist = [];
   const battle = JSON.stringify(B), last = S.hist[S.hist.length - 1];
@@ -54,7 +54,7 @@ export function pulse(S, i) {
   const h = S.hist && S.hist[i]; if (!h || !(S.pulse > 0)) return false;
   S.battle = JSON.parse(h.battle); S.seed = h.seed;
   for (const z of Object.values(S.battle.units)) if (!S.defs[z.ref]) { for (const o of Object.values(S.battle.units)) { if (o.rear === z.id) { o.rear = null; o.gauge = 0; } if (o.rearOf === z.id) o.rearOf = null; } delete S.battle.units[z.id]; }
-  for (const id in h.prog) { const d = S.defs[id]; if (d) { d.level = h.prog[id][0]; d.exp = h.prog[id][1]; d.stats = Object.assign({}, h.prog[id][2]); if (h.prog[id][3]) d.weapons = copy(h.prog[id][3]); if (h.prog[id][4]) { d.skills = h.prog[id][4].filter(k => S.skills[k]); if (d.later || h.prog[id][5].length) d.later = h.prog[id][5].slice(); } } }
+  for (const id in h.prog) { const d = S.defs[id]; if (d) { d.level = h.prog[id][0]; d.exp = h.prog[id][1]; d.stats = Object.assign({}, h.prog[id][2]); if (h.prog[id][6]) [d.job, d.cls, d.mtype, d.move] = h.prog[id][6]; if (h.prog[id][3]) d.weapons = copy(h.prog[id][3]); if (h.prog[id][4]) { d.skills = h.prog[id][4].filter(k => S.skills[k]); if (d.later || h.prog[id][5].length) d.later = h.prog[id][5].slice(); } } }
   S.log = S.log.filter(x => x.n <= h.seq); S.hist.length = i + 1; S.pulse--;
   return true;
 }

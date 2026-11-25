@@ -35,7 +35,7 @@ export function createCssMount(api) {
   return { ensureDoc, ready: () => state === "done" };
 }
 
-export function createNameLinks(memory, api = null, { thoughts = null } = {}) {   // thoughts: 속마음 보기 애드온 { rev(), tabFor(names) }(없으면 탭 없음)
+export function createNameLinks(memory, api = null, { thoughts = null, stats = null } = {}) {   // thoughts: 속마음 보기 애드온 { rev(), tabFor(names) }(없으면 탭 없음)
   const mount = createCssMount(api);
   let byId = new Map();
   // 2.2.28: 방식(화면 위/펼침)을 정하기 전에 응답을 그리면 펼침으로 남았다 → 권한 확인을 잠깐(최대 1.2초) 기다린다
@@ -64,7 +64,7 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
     if ((!links && !scene) || idx?.settings?.backend === "off") { cache = { off: true }; checked = Date.now(); return; }
     const cur = await memory?.switches?.currentChat?.().catch?.(() => null); if (!cur) { cache = { off: true }; checked = Date.now(); return; }
     // 같은 채팅·같은 기억 폴더(저장 시각)·같은 설정이면 만든 것을 그대로 쓴다(시간이 지나도). 바뀌었을 때만 폴더를 다시 읽는다
-    const key = `${cur.chaId}|${cur.chatId}|${idx?.folders?.[folderIdOf(cur.chaId, cur.chatId)]?.updatedAt ?? 0}|${links}|${scene}|${inj.status !== false}|${thoughts?.()?.rev?.() ?? 0}`;
+    const key = `${cur.chaId}|${cur.chatId}|${idx?.folders?.[folderIdOf(cur.chaId, cur.chatId)]?.updatedAt ?? 0}|${links}|${scene}|${inj.status !== false}|${thoughts?.()?.rev?.() ?? 0}|${stats?.() ? 1 : 0}`;
     if (cache && !cache.off && cache.key === key) { checked = Date.now(); return; }
     const f = await memory.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
     if (!f) { cache = { off: true }; checked = Date.now(); return; }
@@ -76,7 +76,7 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
     const thumbs = new Map();
     const thumb = (d) => { if (!api || !character) return Promise.resolve(); if (!thumbs.has(d.id)) thumbs.set(d.id, charThumb(api, character, [d.title, ...(d.aliases ?? [])]).catch(() => null).then((u) => { if (u) { imgs.set(d.id, u); htmls.delete(d.id); } })); return thumbs.get(d.id); };
     const thumbAll = () => Promise.all(docs.map(thumb));
-    const htmls = new Map(), cardOf = (d) => { if (!htmls.has(d.id)) htmls.set(d.id, statusCardHtml(f, d, { when, status: inj.status !== false, img: imgs.get(d.id) ?? null, thoughts: (() => { try { return thoughts?.()?.tabFor?.([d.title, ...(d.aliases ?? [])]) ?? ""; } catch { return ""; } })() })); return htmls.get(d.id); };
+    const htmls = new Map(), cardOf = (d) => { if (!htmls.has(d.id)) htmls.set(d.id, statusCardHtml(f, d, { when, status: inj.status !== false, img: imgs.get(d.id) ?? null, battle: (() => { try { return stats?.()?.tabFor?.(f, [d.title, ...(d.aliases ?? [])]) ?? ""; } catch { return ""; } })(), thoughts: (() => { try { return thoughts?.()?.tabFor?.([d.title, ...(d.aliases ?? [])]) ?? ""; } catch { return ""; } })() })); return htmls.get(d.id); };
     byId = new Map(docs.map((d) => [d.id, d]));
     const people = docs.map((d) => ({ id: d.id, names: [d.title, ...(d.aliases ?? [])].filter((n) => String(n ?? "").trim().length >= 2), get html() { return cardOf(d); } }));
     cache = { key, cur, links, scene, people, folder: f, cardOf, thumb, thumbAll, botName: character?.name ?? "", seed: `${cur.chaId}|${cur.chatId}`, hint: [character?.name, character?.desc].filter(Boolean).join(" ") };

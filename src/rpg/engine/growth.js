@@ -1,7 +1,9 @@
 // Dusk Saga 엔진 — 경험치·레벨·RP 성장 (순수 함수, DOM·api 없음)
+import { setJob } from "./classes.js";
 import { MAXLV, SL, STATS, arm, clamp, idOf, int, log, roll, txt } from "./rules.js";
 import { fitLevel, llmSkill, normUnit, normWeapon, tameWeapon } from "./normalize.js";
 import { retro } from "./saves.js";
+import { applyRace } from "./races.js";
 
 export const expRate = S => (S.expRate == null ? 1 : S.expRate);
 export const xp = (S, n) => (expRate(S) > 0 ? Math.max(1, Math.round(n * expRate(S))) : 0);
@@ -87,8 +89,8 @@ export function applyGrowth(S, plan) {
 export function regen(S, id, j) {
   const d = S.defs[id], o = j && typeof j.unit === 'object' && j.unit ? j.unit : null; if (!d || !o || !o.stats) throw new Error('응답에 유닛 정보가 없습니다.');
   (Array.isArray(j.skills) ? j.skills : []).slice(0, 8).forEach((x, i) => { const s = llmSkill(x, i); if (!S.skills[s.id]) S.skills[s.id] = s; });
-  const u = fitLevel(normUnit(Object.assign({}, o, { id: d.id, name: d.name, level: d.level, exp: d.exp, history: d.history, img: d.img, ally: d.ally, away: d.away, asset: txt(o.asset, 80, '') || d.asset }), 0));
-  u.id = d.id; u.skills = u.skills.filter(k => S.skills[k]); S.defs[id] = u;
+  const u = fitLevel(normUnit(Object.assign({}, o, { id: d.id, name: d.name, level: d.level, exp: d.exp, history: d.history, img: d.img, ally: d.ally, away: d.away, sex: d.sex || o.sex, asset: txt(o.asset, 80, '') || d.asset }), 0));
+  u.id = d.id; u.skills = u.skills.filter(k => S.skills[k]); applyRace(S, u, o.race || d.race, false); setJob(S, u, d.job || o.job); S.defs[id] = u;
   if (S.battle) for (const z of Object.values(S.battle.units)) if (z.ref === id) { if (z.hp > 0) z.hp = clamp(Math.round(z.hp * u.stats.hp / d.stats.hp), 1, u.stats.hp); z.wi = Math.max(0, u.weapons.findIndex(arm)); z.cd = {}; }
   retro(S, id); return u;
 }

@@ -1,4 +1,5 @@
 // Dusk Saga 엔진 — 적 AI (순수 함수, DOM·api 없음)
+import { canUse } from "./classes.js";
 import { alive, ammo, canShoot, canWatch, coverAt, gun, pathTo, reach, stops, uterr, wr } from "./board.js";
 import { DIRS, K, arm, dist, foe, log, unK } from "./rules.js";
 import { actReload, forecast, moveUnit, resolve, went } from "./combat.js";
@@ -19,7 +20,7 @@ export function aiAct(S, u, ev) {
   for (const k of cand) {
     const [x, y] = unK(k); u.x = x; u.y = y; const cover = uterr(S, u).avo / 10 - R.get(k).c * 0.01 + (S.xcom ? coverAt(S, u, foes) / 10 : 0);
     d.weapons.forEach((w, i) => {
-      if (!arm(w)) return; u.wi = i;
+      if (!arm(w) || !canUse(d, w)) return; u.wi = i;
       for (const f of foes) {
         if (!canShoot(S, u, w, f, x !== ox || y !== oy)) continue;
         const fc = forecast(S, u, f, null);

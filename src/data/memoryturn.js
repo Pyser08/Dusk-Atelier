@@ -17,6 +17,7 @@ import { logFailure, logEvent } from "./memlog.js";
 import { applyCycleEvents, syncCycles } from "./cyclesync.js";
 import { extraOf } from "../engine/memextra.js";
 import { raceFor } from "../engine/races.js";
+import { raceFinds } from "../engine/racefind.js";
 import { potState } from "../engine/memoryswitch.js";
 import { aiTask, describeAi, trackAi } from "../engine/aistop.js";
 import { folderIdOf } from "./memorystore.js";
@@ -63,6 +64,8 @@ import { parseWriterRun, recordTurn, buildEnvelope, buildDusk, summarize, record
 import { customPromptPlain } from "../engine/pot/custom-prompts.js";
 
 // 빈 응답이 출력 한도에 걸려 끊긴 것인가(호출층 오류 글의 finish_reason/stop_reason). 이유를 모르면 아니라고 본다.
+const raceText = (run) => [run?.user, run?.rp, run?.newest, run?.source].filter((x) => typeof x === "string").join("\n").slice(-12000);
+
 export const cutByLimit = (e) => /(finish_reason|stop_reason)\s+(length|max_tokens|MAX_TOKENS|max_output_tokens)\b/i.test(String(e?.message ?? ""));
 const READONLY = new Set(["writer_schema", "director_schema", "slots", "policies"]);
 export const promptKeysOf = (lib) => Object.entries(lib).flatMap(([id, parts]) => Object.keys(parts).filter((p) => !READONLY.has(p)).map((p) => `${id}:${p}`));
@@ -277,6 +280,13 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
         if (ev.length) cycleSync.push(...ev); } catch (e) { log("기록기: 월경 보고 변환 실패", e?.message ?? e); } }
       if (prep && !stash.has(prep.h)) { try { putStash(prep.h, buildDusk(rec, { ignore: prep.ignore, light, beliefs })); } catch (e) { log("기록기: Dusk 기록 변환 실패", e?.message ?? e); } }
       // 11-23 버그: 종류마다 합계 40·60개로 잘라 성인 줄을 넣을 때 앞서 넣은 정액·흔적 줄이 버려졌다 — 모두 넣고 한 번만, 넉넉히 자른다
+      // 종족 찾기(AI 호출 없음): 로어북·봇 설정·이번 본문에서. 로어북 새 인물만 만들기 설정과 상관없이 읽는다
+      if (s0.inject?.race !== false) { try {
+        const id = wiki.scope?.characterId ?? "", src = await readCast.sources(id), at = await userSpot().catch(() => null), f = at?.folder ?? null;
+        if (src && f) { const people = Object.values(f.wiki?.documents ?? {}).filter((d) => d?.type === "Character" && !/\{\{user\}\}/i.test(d.title ?? "")).map((d) => ({ names: [d.title, ...(d.aliases ?? [])] }));
+          for (const p of rec.people ?? []) if (p?.name && !/\{\{user\}\}/i.test(p.name) && !people.some((x) => x.names.includes(p.name))) people.push({ names: [p.name] });
+          const got = raceFinds(people, { ...src, text: raceText(run) }, f.extra?.race ?? {}); if (got.length) nsfwQueue.push(...got); }
+      } catch (e) { log("종족 찾기 건너뜀", e?.message ?? e); } }
       nsfwQueue.push(...(rec.stage1?.human ?? []), ...(rec.stage1?.extra ?? []), ...(rec.stage1?.nsfw ?? []));   // 0.3.22 소문·목표·세계·흔적
       while (nsfwQueue.length > NSFW_QUEUE_MAX) nsfwQueue.shift();
       if (rec.stage1?.drive) { driveQueue.push(rec.stage1.drive); while (driveQueue.length > 6) driveQueue.shift(); }   // 장면 판단 관찰(턴 하나 = 한 묶음)   // addon-rebuild: 채팅별 성인 프로필 변화(애드온이 턴 뒤 폴더에 반영)

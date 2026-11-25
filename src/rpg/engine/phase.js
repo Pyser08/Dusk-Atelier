@@ -1,4 +1,6 @@
 // Dusk Saga 엔진 — 턴·증원·전장 불러오기 (순수 함수, DOM·api 없음)
+import { setJob } from "./classes.js";
+import { applyRace } from "./races.js";
 import { alive, living, nearestFree, syncRears, uterr } from "./board.js";
 import { K, OBJ, SIDE, TN, arm, clamp, foe, idOf, int, log, objText, roll, txt } from "./rules.js";
 import { cond, hpOf, outcome } from "./combat.js";
@@ -54,14 +56,14 @@ export function loadEncounter(S, j) {
   if (!j || typeof j !== 'object') throw new Error('전투 데이터가 객체가 아닙니다.');
   endReplay(S); ensureBase(S);
   (Array.isArray(j.skills) ? j.skills : []).slice(0, 10).forEach((o, i) => { const s = llmSkill(o, i); if (!S.skills[s.id]) S.skills[s.id] = s; });
-  (Array.isArray(j.units) ? j.units : []).slice(0, 40).forEach((o, i) => { const u = o && PRE[o.preset] ? presetUnit(o.preset, o.level, Object.assign({}, o, { id: idOf(o.id, 'unit_' + i) })) : fitLevel(normUnit(o, i)); if (!(S.defs[u.id] && S.defs[u.id].ally)) S.defs[u.id] = u; });
+  (Array.isArray(j.units) ? j.units : []).slice(0, 40).forEach((o, i) => { const u = o && PRE[o.preset] ? presetUnit(o.preset, o.level, Object.assign({}, o, { id: idOf(o.id, 'unit_' + i) })) : fitLevel(normUnit(o, i)); if (o) { applyRace(S, u, o.race, !!PRE[o.preset]); setJob(S, u, o.job); } if (!(S.defs[u.id] && S.defs[u.id].ally)) S.defs[u.id] = u; });
   for (const d of Object.values(S.defs)) d.skills = d.skills.filter(id => S.skills[id]);
   const mp = MAPS[String(j.mapPreset || '').trim()];
   if (mp && !(Array.isArray(j.map) && j.map.length >= 4)) {
     const all = [mp.rows].concat(mp.alts || []), fh = roll(S) < 50, fv = roll(S) < 50; let rows = all[roll(S) % all.length];
     if (fh) rows = rows.map(r => r.split('').reverse().join('')); if (fv) rows = rows.slice().reverse();
     const W = rows[0].length, H = rows.length;
-    j = Object.assign({}, j, { map: rows, indoor: mp.indoor, place: (Array.isArray(j.place) ? j.place : []).map(p => (p && typeof p === 'object' ? Object.assign({}, p, { x: fh ? W + 1 - int(p.x, 1, W, 1) : p.x, y: fv ? H + 1 - int(p.y, 1, H, 1) : p.y }) : p)) });
+    j = Object.assign({}, j, { map: rows, indoor: mp.indoor, theme: mp.theme || j.theme, place: (Array.isArray(j.place) ? j.place : []).map(p => (p && typeof p === 'object' ? Object.assign({}, p, { x: fh ? W + 1 - int(p.x, 1, W, 1) : p.x, y: fv ? H + 1 - int(p.y, 1, H, 1) : p.y }) : p)) });
   }
   let rows = (Array.isArray(j.map) ? j.map : []).filter(r => typeof r === 'string').slice(0, 16);
   if (rows.length < 4) rows = Array.from({ length: 8 }, () => '..........');
@@ -70,6 +72,7 @@ export function loadEncounter(S, j) {
   if (j.indoor === true) rows = rows.map(r => r.replace(/[fm]/g, 'p')); // an interior has no woods or mountains, whatever the model drew
   const obj = j.objective && typeof j.objective === 'object' ? j.objective : {};
   const B = { name: txt(j.name, 60, '이름 없는 전장'), map: rows, w, h: rows.length, turn: 1, phase: 'ally', status: 'active', units: {}, obj: { type: OBJ[obj.type] ? obj.type : 'rout' } };
+  if (THEMES.includes(j.theme)) B.theme = j.theme;
   if (B.obj.type === 'survive') B.obj.turns = int(obj.turns, 1, 30, 6);
   if (B.obj.type === 'seize' && !rows.some(r => r.includes('T'))) B.obj.type = 'rout';
   const prev = S.battle; S.battle = B; const taken = new Set();
@@ -112,3 +115,4 @@ export function unspawn(S, uid) {
   if (u.boss && !Object.values(B.units).some(z => z.boss && z.hp > 0)) { B.hadBoss = false; if (B.obj.type === 'boss') B.obj.type = 'rout'; }
   return true; // a correction, not an event: nothing goes into the battle record
 }
+export const THEMES = ["snow", "desert", "lava", "swamp", "night"];

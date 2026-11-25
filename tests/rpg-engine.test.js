@@ -18,7 +18,7 @@ const rnd = (n) => () => { n = (n + 0x6d2b79f5) | 0; let t = Math.imul(n ^ (n >>
 
 function encounter(E, i) {
   if (i % 2 === 0) return E.demo();
-  const maps = Object.keys(E.MAPS), pre = Object.keys(E.PRE), d = E.demo();
+  const maps = Object.keys(OLD.MAPS), pre = Object.keys(OLD.PRE), d = E.demo();
   const foes = [0, 1, 2, 3, 4].map((n) => ({ id: "f" + n, preset: pre[(i * 3 + n * 5) % pre.length], level: 1 + ((i * 7 + n) % 30) }));
   const obj = ["rout", "boss", "survive", "seize"][i % 4];
   for (const id of ["ren", "mira"]) d.units.find((u) => u.id === id).weapons = [{ name: i % 4 === 1 ? "소총" : "산탄총" }, { name: "상처약" }];
@@ -98,4 +98,49 @@ test("프롬프트에 다른 게임의 작품명이 들어가지 않는다", () 
   const all = [NEW.GEN_PROMPT, NEW.GROWTH_PROMPT, NEW.REGEN_PROMPT, NEW.XCOM_PROMPT, NEW.LATER_PROMPT].join("\n");
   assert.doesNotMatch(all, /fire emblem|fates|xcom/i);
   for (const k of Object.keys(OLD_NAMES)) assert.ok(!Object.keys(NEW.CAT).includes(k), k);
+});
+
+test("모든 맵 프리셋은 12×9이고 걸어서 양쪽이 이어진다", () => {
+  for (const [name, m] of Object.entries(NEW.MAPS)) for (const rows of [m.rows, ...(m.alts ?? [])]) {
+    assert.ok(rows.length >= 7 && rows.every((r) => r.length === 12 && /^[.bfpmFTw#]+$/.test(r)), name);
+    const foot = []; rows.forEach((r, y) => [...r].forEach((c, x) => { if (NEW.TERRAIN[c].c[0] < 99) foot.push(x + "," + y); }));
+    const ok = new Set(foot), seen = new Set([foot[0]]), q = [foot[0]]; while (q.length) { const [x, y] = q.pop().split(",").map(Number); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = x + dx + "," + (y + dy); if (ok.has(k) && !seen.has(k)) { seen.add(k); q.push(k); } } }
+    assert.equal(seen.size, ok.size, name + " 끊긴 칸"); assert.ok(foot.length >= 40, name);
+    if (m.indoor) assert.ok(!rows.join("").match(/[fm]/), name);
+  }
+});
+
+test("종족: 능력은 한 번만 바뀌고 특성·꼬리표가 붙고 모든 종족으로 전투가 돈다", () => {
+  for (const [race, r] of Object.entries(NEW.RACES)) {
+    const sum = NEW.STATS.slice(1).reduce((n, k) => n + r.stats[k], 0) + r.stats.hp / 2; assert.ok(Math.abs(sum) <= 3.5, race + " 합 " + sum);
+    const S = NEW.fresh(); S.seed = 3; const j = { name: "t", mapPreset: "평원", units: [{ id: "a", preset: "병사", level: 5, race }, { id: "b", preset: "병사", level: 5 }], place: [{ ref: "a", team: "ally", x: 2, y: 5 }, { ref: "b", team: "enemy", x: 9, y: 5 }] };
+    NEW.loadEncounter(S, j); const d = S.defs.a, plain = S.defs.b; assert.equal(d.race, race); assert.ok(d.skills.includes(r.trait) && S.skills[r.trait]); for (const t of r.tags) assert.ok(d.tags.includes(t));
+    for (const k of ["str", "mag", "spd", "def"]) assert.equal(d.stats[k], Math.max(0, plain.stats[k] + r.stats[k]), race + k);
+    const before = JSON.stringify(d); NEW.applyRace(S, d, race, true); assert.equal(JSON.stringify(d), before);
+    const ev = []; for (let t = 0; t < 12; t++) NEW.endTurn(S, ev); assert.ok(ev.some((e) => e.t === "strike"), race);
+  }
+});
+
+test("무기 프리셋은 이름만으로 쓸 수 있고 특효가 실제로 먹힌다", () => {
+  for (const [n, w] of Object.entries(NEW.CAT)) { const x = NEW.normWeapon({ name: n }); assert.equal(x.type, w.type, n); assert.equal(x.mt, w.mt, n); }
+  assert.ok(Object.keys(NEW.CAT).length >= 90);
+  const S = NEW.fresh(); NEW.loadEncounter(S, { name: "t", mapPreset: "평원", units: [{ id: "a", preset: "병사", weapons: [{ name: "성검" }] }, { id: "b", preset: "병사", race: "흡혈귀" }], place: [{ ref: "a", team: "ally", x: 5, y: 5 }, { ref: "b", team: "enemy", x: 6, y: 5 }] });
+  assert.equal(NEW.forecast(S, S.battle.units.a, S.battle.units.b, null).a.eff, true);
+});
+
+test("성별은 준 값만 남고 다시 만들어도 유지된다", () => {
+  assert.equal(NEW.normUnit({ sex: "f" }, 0).sex, "f"); assert.equal(NEW.normUnit({ sex: "x" }, 0).sex, undefined); assert.equal(NEW.presetUnit("병사", 3, { sex: "m" }).sex, "m");
+  const S = NEW.fresh(); NEW.loadEncounter(S, { ...NEW.demo(), units: NEW.demo().units.map((u) => ({ ...u, sex: "f" })) }); assert.equal(NEW.regen(S, "ren", { unit: { stats: { hp: 20 }, sex: "m" } }).sex, "f");
+});
+
+test("종족 목록은 장기기억과 하나도 빠짐없이 같고, 옛 이름도 알아듣는다", async () => {
+  const M = await import("../src/engine/races.js"); assert.deepEqual(Object.values(NEW.RACES).map((r) => r.mem), M.RACES.map((r) => r.id)); assert.equal(Object.keys(NEW.RACES).length, M.RACES.length);
+  for (const r of M.RACES) { assert.equal(NEW.raceById(r.id), r.label); if (r.id !== "human") assert.notEqual(NEW.kindOf(r.id), "인간", r.id); }
+  assert.equal(NEW.raceOf("용인"), "드래곤"); assert.equal(NEW.raceOf("천족"), "천사"); assert.ok(NEW.RACES["용"] && NEW.RACES["드래곤"]);
+});
+test("장기기억: 용과 드래곤을 가르고, 이미 저장된 dragon 기록은 그대로 읽는다", async () => {
+  const M = await import("../src/engine/races.js");
+  for (const [t, id] of [["드래곤", "dragon"], ["용족", "dragon"], ["레드 드래곤", "dragon"], ["용", "ryu"], ["용 (청룡)", "ryu"], ["흑룡", "ryu"], ["용왕", "ryu"], ["이무기", "imugi"], ["공룡", ""], ["용병", ""], ["네코마타", "nekomata"]]) assert.equal(M.raceIdOf(t), id, t);
+  const f = { extra: { race: { a: { name: "리나", id: "dragon", label: "" }, b: { name: "청", id: "ryu", label: "" } } } }; assert.equal(M.raceFor(f, "리나").label, "드래곤"); assert.equal(M.raceFor(f, "청").label, "용");
+  assert.equal(NEW.seedFromMemory(f, "리나").race, "드래곤"); assert.equal(NEW.seedFromMemory(f, "청").race, "용");
 });

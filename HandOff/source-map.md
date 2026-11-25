@@ -41,7 +41,7 @@
 - `cardflow.js` (78줄) 카드 만들기 흐름(AI 호출 3회: 카드·연결·첫 메시지)과 에셋 고르기. 화면 코드 없이 api만 … — roleNamesOf, generateCard, generateLink, listBotImages, pickIllustrations
 - `cardoverlay.js` (150줄) 2.2.24: 캐릭터 상태창을 응답 안이 아니라 리스 화면 맨 위에 직접 띄운다. — mirrorName, mountNodes, wireTabs, xifyCss, createCardOverlay
 - `cardstore.js` (42줄) 카드 저장소: 카드 본문(dusk.mem.v2.card.<id>), 목록 인덱스, 카드 설정. 직렬 … — CARD_PREFIX, CARD_INDEX_KEY, CARD_CFG_KEY, DEFAULT_CARD_CFG, createCardStore
-- `castlore.js` (41줄) 지금 채팅에 걸린 로어북으로 '새로 만들어도 되는 인물' 판단기를 만든다(장기기억 애드온 전용). — createCastReader, castOfCard, modulesOf
+- `castlore.js` (46줄) 지금 채팅에 걸린 로어북으로 '새로 만들어도 되는 인물' 판단기를 만든다(장기기억 애드온 전용). — createCastReader, castOfCard, modulesOf, castSources
 - `cellar.js` (102줄) Dusk Cellar 연결 (1.8.3): 리스 서버 옆에서 도는 선택 서버(Pyser08/Dusk-… — CELLAR_URL_KEY, CELLAR_DEFAULT_URL, DOWN_AFTER, CELLAR_ON_KEY, loadCellarEnabled
 - `cellaranalysis.js` (127줄) Dusk Cellar 서버 분석 (1.9.3, Cellar 0.1.1~): '지난 대화 분석'을 서버… — slimMessages, clearStoppedChat, isStoppedJob, markStoppedJob, engineNotice
 - `cellarbackup.js` (45줄) Dusk Cellar 세이브 백업·복원 (1.8.3). 실제 일은 서버가 한다(바뀐 파일만 복사하는 … — createCellarBackups
@@ -65,7 +65,7 @@
 - `erosynctags.js` (39줄) 인물별 선호(페티시) 태그와 금기 태그. 직접 적은 글만 저장하고 AI는 부르지 않는다. — TAGS_KEY, MAX_TAGS, MAX_TAG_LEN, normTagList, normTags
 - `erosyncturn.js` (158줄) Dusk 2.2.0: Erosync 매 턴 계산(HandOff/EROSYNC-TURN.md). 장기기… — TURN_KEY, AUTO_KEY, TURN_DEFAULT, normalizeTurnSettings, seedBatch
 - `fairplay.js` (88줄) 공정한 전개 훅 (v1.6.8). 장기기억과 무관하게 설정에서 켜고 끈다. 기본 꺼짐. — FAIR_KEY, DICE_KEY, DICE_MODE_KEY, DICE_LEVEL_KEY, DICE_CUTS_KEY
-- `featurefill.js` (54줄) 2.2.25 장기기억: 새 기능 빈칸 채우기. 기능이 생기기 전에 기록한 채팅은 종족·기후·옷차림 같… — FILL_FEATURES, featureGaps, fillPrompt, fillFeatures
+- `featurefill.js` (60줄) 2.2.25 장기기억: 새 기능 빈칸 채우기. 기능이 생기기 전에 기록한 채팅은 종족·기후·옷차림 같… — FILL_FEATURES, featureGaps, fillPrompt, fillFeatures
 - `floatbtn.js` (96줄) 2.2.25: 채팅 위 떠 있는 버튼(인물 관계도)을 Dusk가 리스 화면에 직접 그린다 — 동그랗고… — FAB_POS_KEY, FAB_LOOK_KEY, FAB_LOOK_DEFAULT, FAB_SIZES, cleanLook
 - `gauge.js` (171줄) 게이지 서비스: 정의(idx.gauges[chaId]) · 값/이력(folder.gauge) 저장, … — createGaugeService
 - `gaugemult.js` (19줄) 게이지 배수 저장(pluginStorage 한 키). 장기 기억 기록기·위키 기록기·Erosync 매… — readGauge, saveGauge, peekGauge
@@ -100,7 +100,7 @@
 - `memorystore3.js` (214줄) 장기기억 v3 저장소: v2와 같은 메서드 + 채팅별 인물 위키(wiki) + 리수폿 가져오기. 직렬… — INDEX_KEY, FOLDER_PREFIX, createMemoryStoreV3
 - `memoryswitches.js` (80줄) v1.7.0 2단계: 화면이 쓰는 '기억 · 리수폿' 스위치 묶음. 저장은 인덱스(store.upda… — currentChat, createSwitches
 - `memorytools.js` (33줄) 인물 AI 도구(7단계 B): 리수폿 컨트롤러를 한 묶음으로 만든다. 턴 흐름이 켜져 있고 그 채팅이… — makeTools
-- `memoryturn.js` (549줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — cutByLimit, promptKeysOf, stageOf, createTurnFlow
+- `memoryturn.js` (559줄) 턴 흐름 (v1.6.4 4단계): 리수폿 인물 위키(고르기·정리 노트·기록하기)와 Dusk 기록을 한… — cutByLimit, promptKeysOf, stageOf, createTurnFlow
 - `modcompat.js` (267줄) 모듈 호환(애드온 modcompat 전용): 리스 훅 셋(output·display·process) … — DEFAULTS, createModCompat, stripOwnSetvars, overlaps
 - `modelhub.js` (98줄) 모델 허브 (v1.6.4 3단계): 모델 프리셋 저장·키 보관·내 API 호출·토큰 사용량. 화면은 … — getCfg, saveCfg, keyStore, pickForStage, getUsage
 - `modules.js` (248줄) — loadCharacters, readDb, entriesOf, loadModuleState, moduleCounts
@@ -265,7 +265,7 @@
 - `match.js` (60줄) — normalizeName, stripTrailingNumber, findCandidates
 - `medoc.js` (31줄) 장기기억 애드온: ‘나’(페르소나) 위키 문서(순수). 설정 inject.meDoc을 켜면 채팅마다 … — ME, ensureMeDoc, meVisible, findMeWikiDoc, ensureMeWikiDoc
 - `memedit.js` (56줄) 장기기억 애드온(인간다움 2단계): 공통 편집의 순수 부분 — 목록 고치기·추가·지우기와 무시 목록. — ignoreKeyOf, addIgnore, dropIgnore, isIgnored, filterIgnored
-- `memextra.js` (294줄) 장기기억 애드온(0.3.22): 새 기록 줄과 그 저장·주입(순수, 모델 호출 없음). — nk, EXTRA_STAGE1, CUM_STAGE1, MARK_STAGE1, STATUS_STAGE1
+- `memextra.js` (298줄) 장기기억 애드온(0.3.22): 새 기록 줄과 그 저장·주입(순수, 모델 호출 없음). — nk, EXTRA_STAGE1, CUM_STAGE1, MARK_STAGE1, STATUS_STAGE1
 - `memoryapply.js` (147줄) 분석 결과를 폴더에 반영하는 순수 함수. — findPersonKey, latestScene, applyAnalysis, DONE_MAX, doneHashes
 - `memorycompose.js` (91줄) 새 봇 합성: 기록 선택 → 상황 블록 → 로어북 후보 → 생성 프롬프트. 순수 함수. — selectRecords, sceneBlocks, pickLore, relationshipPrompt, descPrompt
 - `memorydelete.js` (27줄) 기록 삭제 연쇄 처리 (v1.6.5 4단계, 순수): 같은 응답에서 나온 관계 변화·떡밥 찾기, di… — TOMB_MAX, tombKey, isTombed, relatedOf, deleteRecord
@@ -318,7 +318,8 @@
 - `pot-dedupe.js` (36줄) 같은 이름 인물을 새 문서로 또 만들지 않게 하는 보정(Dusk 쪽 코드). 리스바드 BardWiki… — redirectDuplicateCreates
 - `promptimport.js` (46줄) 기억·리수폿 프롬프트 불러오기 (순수): JSON·리스 프리셋(.risup)에서 '프롬프트 후보'를 … — PROMPT_MAX, toJson, fromPreset, fromJson, fit
 - `protlink.js` (77줄) ProtLink+ 순수 로직: 파일 종류 분류 · 연결 후보 순위 · 변경 비교. api·화면 없음. — KIND_LABEL, KINDS, fileKinds, fitsKind, guessKind
-- `races.js` (304줄) 장기기억 애드온(0.3.22): 종족 표·계산(순수). 기록기 AI가 인물의 종족을 한 줄로 알려 주… — RACES, RACE_BY_ID, FRAMES, raceIdOf, RACE_STAGE1
+- `racefind.js` (77줄) 종족 찾기(순수, AI 호출 없음): 로어북·봇 설정·본문에서 인물의 종족을 근거와 함께 찾는다. — raceOfText, findRace, raceFinds
+- `races.js` (306줄) 장기기억 애드온(0.3.22): 종족 표·계산(순수). 기록기 AI가 인물의 종족을 한 줄로 알려 주… — RACES, RACE_BY_ID, FRAMES, raceIdOf, RACE_STAGE1
 - `rawrecall.js` (68줄) 2.2.2 원문 회상(순수 함수): 지난 대화 원문을 조각내고, 의미 순위와 글자 순위를 합쳐(RRF… — splitText, stripStatus, buildChunks, lexScores, rrf
 - `recall.js` (107줄) v1.6.4 회상(Recall, 순수): 리수폿이 고른 인물의 Dusk 기록을 골라 Director에… — RECALL_DEFAULTS, keywordBoost, scoreRecord, pickPeople, unknownFor
 - `recorder.js` (658줄) Dusk 기록기 (2.0.0) — 리수폿 '기록하기(Writer)'를 대신하는 짧은 단계별 기록. 순… — isNoneReply, RECENT_MAX, parseWriterRun, cardOf, RECORDER_OUTPUT
@@ -460,21 +461,29 @@
 ### src/protlink/
 - `protlink.js` (1367줄) ProtLink+ v1.0.0(원작자 제공 빌드물)에서 Proton Drive에 연결하는 부분(공유 … — loadProtLinkDriver
 
+### src/rpg/data/
+- `memorylink.js` (21줄) Dusk Saga → 장기기억 창구(memoryApi)만 쓴다. 장기기억이 없거나 꺼져 있으면 아무것… — createMemoryLink
+
 ### src/rpg/engine/
-- `ai.js` (63줄) Dusk Saga 엔진 — 적 AI (순수 함수, DOM·api 없음) — aiAct, runTeam
+- `ai.js` (64줄) Dusk Saga 엔진 — 적 AI (순수 함수, DOM·api 없음) — aiAct, runTeam
 - `board.js` (98줄) Dusk Saga 엔진 — 지형·이동·위협 범위·사격 시야 (순수 함수, DOM·api 없음) — living, alive, syncRears, pairBonus, est
-- `combat.js` (250줄) Dusk Saga 엔진 — 전투 예측·해결·유닛 명령 (순수 함수, DOM·api 없음) — actWatch, actReload, snap, travel, cond
+- `classes.js` (78줄) Dusk Saga 엔진 — 직업 프리셋: 기본직 12, 상급직 24(Lv 21 전직, 두 갈래) — PROMOTE_LEVEL, CLASSES, jobOf, canUse, setJob
+- `combat.js` (253줄) Dusk Saga 엔진 — 전투 예측·해결·유닛 명령 (순수 함수, DOM·api 없음) — actWatch, actReload, snap, travel, cond
 - `demo.js` (36줄) Dusk Saga 엔진 — 예시 전장 (순수 함수, DOM·api 없음) — demo
 - `digest.js` (49줄) Dusk Saga 엔진 — 서술용 기록 요약 (순수 함수, DOM·api 없음) — digest, context, storyNote
-- `growth.js` (95줄) Dusk Saga 엔진 — 경험치·레벨·RP 성장 (순수 함수, DOM·api 없음) — expRate, xp, reqLevel, relearn, rescale
-- `index.js` (15줄) Dusk Saga 엔진 공개 창구 — STATS, SL, TERRAIN, MT, MTL
-- `maps.js` (28줄) Dusk Saga 엔진 — 전장 프리셋 (순수 함수, DOM·api 없음) — MAPS, MAP_LINES
+- `elements.js` (23줄) Dusk Saga 엔진 — 속성. 속성이 없는 공격은 예전 규칙 그대로다 — ELEMENTS, elemOf, elemFromText, elemOfUnit, elemMod
+- `gear.js` (80줄) Dusk Saga 엔진 — 이야기 속 무기·기술에 종류·등급·속성을 매긴다. 정해 둔 무기 목록 대신… — GRADES, RANK_MAX, gradeName, rankOf, rankFromText
+- `growth.js` (97줄) Dusk Saga 엔진 — 경험치·레벨·RP 성장 (순수 함수, DOM·api 없음) — expRate, xp, reqLevel, relearn, rescale
+- `index.js` (22줄) Dusk Saga 엔진 공개 창구 — STATS, SL, TERRAIN, MT, MTL
+- `maps.js` (44줄) Dusk Saga 엔진 — 전장 프리셋 (순수 함수, DOM·api 없음) — MAPS, MAP_LINES
+- `memlink.js` (102줄) Dusk Saga ↔ 장기기억: 폴더에 남길 전투 기록(folder.rpg)의 순수 로직. 장기기억 … — docFor, unitFor, prune, recordSheets, recordBattle
 - `migrate.js` (50줄) Dusk Saga 엔진 — Risu Tactics 저장(v2) 가져오기 — migrateSave
 - `names.js` (13줄) Dusk Saga 엔진 — 옛 이름 → 새 이름 (Tactics 저장 이전용) — OLD_NAMES, OLD_SKILL_IDS
-- `normalize.js` (166줄) Dusk Saga 엔진 — LLM 출력 정규화와 프리셋 적 (순수 함수, DOM·api 없음) — normSkill, BASE_VER, BASE_SKILLS, ensureBase, normWeapon
-- `phase.js` (115줄) Dusk Saga 엔진 — 턴·증원·전장 불러오기 (순수 함수, DOM·api 없음) — beginPhase, endTurn, allDone, enter, waiting
-- `prompts.js` (80줄) Dusk Saga 엔진 — 생성·성장·재생성 프롬프트 (순수 함수, DOM·api 없음) — skillLines, sheetLine, rosterText, skillText, GEN_PROMPT
-- `rules.js` (74줄) Dusk Saga 엔진 — 기본 표·숫자·난수 (순수 함수, DOM·api 없음) — STATS, SL, GROW, MAXLV, TERRAIN
+- `normalize.js` (170줄) Dusk Saga 엔진 — LLM 출력 정규화와 프리셋 적 (순수 함수, DOM·api 없음) — normSkill, BASE_VER, BASE_SKILLS, ensureBase, normWeapon
+- `phase.js` (119줄) Dusk Saga 엔진 — 턴·증원·전장 불러오기 (순수 함수, DOM·api 없음) — beginPhase, endTurn, allDone, enter, waiting
+- `prompts.js` (91줄) Dusk Saga 엔진 — 생성·성장·재생성 프롬프트 (순수 함수, DOM·api 없음) — skillLines, sheetLine, rosterText, skillText, GEN_PROMPT
+- `races.js` (76줄) Dusk Saga 엔진 — 종족 프리셋 (능력 보정·성장·꼬리표·종족 특성) — kindOf, RACES, raceById, RACE_SKILLS, raceOf
+- `rules.js` (83줄) Dusk Saga 엔진 — 기본 표·숫자·난수 (순수 함수, DOM·api 없음) — STATS, SL, GROW, MAXLV, TERRAIN
 - `saves.js` (72줄) Dusk Saga 엔진 — 저장 전장·되감기·재시작 (순수 함수, DOM·api 없음) — mapOf, endReplay, loadMap, snapshot, restart
 
 ### src/ui/

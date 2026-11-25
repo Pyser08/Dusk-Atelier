@@ -20,7 +20,7 @@ const chip = (t, bg = "rgba(127,127,127,.12)", fg = "inherit") => `<span style="
 const sec = (t, body, { color = "inherit", right = "" } = {}) => body ? `<span style="display:block;margin-top:14px"><span style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><b style="font-size:10.5px;letter-spacing:.12em;color:${color};opacity:.85">${esc(t)}</b><i style="flex:1;height:1px;background:${HAIR}"></i>${right}</span>${body}</span>` : "";
 
 // 인물 하나의 캐릭터 상태창 HTML(안쪽만). img = 얼굴 사진 데이터 URL(없으면 이름 첫 글자)
-export function statusCardHtml(folder, doc, { turn = null, when = "", adult = true, status = true, img = null, thoughts = "" } = {}) {
+export function statusCardHtml(folder, doc, { turn = null, when = "", adult = true, status = true, img = null, thoughts = "", battle = "" } = {}) {
   if (!doc) return "";
   const t = Number.isInteger(turn) ? turn : Number.isInteger(folder?.cursor?.at) ? folder.cursor.at : 0;
   const names = new Set([doc.title, ...(doc.aliases ?? [])].map(nk)), mine = (n) => names.has(nk(n));
@@ -90,10 +90,10 @@ export function statusCardHtml(folder, doc, { turn = null, when = "", adult = tr
     + sec("옷차림", wear) + sec("요약", sum) + sec("나에게", emoRows)
     + sec("종족", showRace && rv.gen && `<span style="display:block;font-size:12px;line-height:1.6;opacity:.9">${esc(cut(rv.gen, 160))}</span>`, { color: C.teal });
   // 11-23 속마음 보기 애드온: 모은 속마음 탭(있을 때만)
-  const thTab = (g) => (thoughts ? tab(g, "t", "속마음", `<span style="display:block;margin-top:10px">${thoughts}</span>`, false) : "");
+  const thTab = (g) => (battle ? tab(g, "s", "스탯", `<span style="display:block;margin-top:10px">${battle}</span>`, false) : "") + (thoughts ? tab(g, "t", "속마음", `<span style="display:block;margin-top:10px">${thoughts}</span>`, false) : "");
   const tabBox = (inner) => head + `<span data-tabbox style="display:block;position:relative;height:min(50vh,400px);margin-top:12px">`
     + `<span data-dusk="tabhint" style="position:absolute;left:0;right:0;top:46px;text-align:center;font-size:11.5px;${MUTE}">위 탭을 눌러 보세요</span>` + inner + `</span>`;
-  if (!isAdult) { if (!thoughts) return head + grid + general; const g0 = `dkpc-${String(doc.id ?? "x").replace(/[^\w-]/g, "")}-${++tabSeq}`; return tabBox(tab(g0, "g", "일반", grid + general, true) + thTab(g0)); }
+  if (!isAdult) { if (!thoughts && !battle) return head + grid + general; const g0 = `dkpc-${String(doc.id ?? "x").replace(/[^\w-]/g, "")}-${++tabSeq}`; return tabBox(tab(g0, "g", "일반", grid + general, true) + thTab(g0)); }
   // 일반 / NSFW 탭: 같은 name의 <details>는 하나만 열림(지원 안 하는 곳은 NSFW 판이 위에 겹쳐 보임). 스크립트 없음
   const g = `dkpc-${String(doc.id ?? "x").replace(/[^\w-]/g, "")}-${++tabSeq}`;
   const raceNs = showRace ? [rv.heat?.label ? chip(rv.heat.on ? `🔥 ${rv.heat.label}` : rv.heat.label, rv.heat.on ? "rgba(232,87,142,.18)" : "rgba(127,127,127,.12)", rv.heat.on ? C.rose : "inherit") : "", rv.nsfw ? `<span style="display:block;font-size:12px;line-height:1.6;opacity:.9">${esc(cut(rv.nsfw, 160))}</span>` : ""].join("") : "";

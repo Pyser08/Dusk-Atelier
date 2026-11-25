@@ -11,7 +11,7 @@ const BEAST = { cycle: { k: "heat", every: 30, len: 5 }, heatK: 1.6, zones: [["e
 const beast = (id, label, re, ears, tail, o = {}) => B({ id, label, re, frame: "beast", ...BEAST, ...o, body: { ears, tail, ...(o.body ?? {}) }, zones: o.zones ?? BEAST.zones });
 export const RACES = Object.freeze([
   // ── 인간형 ──
-  B({ id: "human", label: "인간", re: /^인간|사람|human/i, frame: "human", cycle: { k: "menses" }, gen: "수명 70~90년. 모든 값의 기준이에요.", nsfw: "월경 주기 28일 안팎, 임신 약 40주." }),
+  B({ id: "human", label: "인간", re: /(?<!비)인간|(?:^|\s)사람|\bhuman\b|휴먼/i, frame: "human", cycle: { k: "menses" }, gen: "수명 70~90년. 모든 값의 기준이에요.", nsfw: "월경 주기 28일 안팎, 임신 약 40주." }),
   B({ id: "highelf", label: "하이엘프", re: /하이\s?엘프|high\s?elf/i, frame: "elf", life: 1000, cycle: { k: "menses", len: 75 }, lust: 0.6, preg: { p: 0.2, wk: 52 }, zones: [["ears", 3]], body: { ears: "elf" },
     gen: "수명 천 년 가까이, 외모가 20대에 멈춤. 길고 뾰족한 귀, 시력·청각이 좋음, 잠이 짧음(명상 4시간 정도). 마력이 매우 강함.", nsfw: "귀가 아주 예민함. 성욕은 천천히 오르고 오래 감. 임신이 드물고 임신 기간이 1년 정도." }),
   B({ id: "darkelf", label: "다크엘프", re: /다크\s?엘프|dark\s?elf|드로우/i, frame: "elf", life: 800, cycle: { k: "menses", len: 60 }, lust: 0.8, preg: { p: 0.25, wk: 50 }, zones: [["ears", 3], ["neck", 2]], body: { ears: "elf" }, wx: { sun: "강한 햇빛이 눈부셔서 그늘을 찾는 편" },
@@ -36,15 +36,15 @@ export const RACES = Object.freeze([
     gen: "키 2.5m 이상, 큰 몸과 작은 뿔, 힘이 매우 셈, 많이 먹음.", nsfw: "체격 차이가 큼. 성욕이 쉽게 오름." }),
 
   // ── 수인(케모미미) ──
-  beast("cat", "고양이 수인", /고양이|냥|캣|cat|neko|네코(?!마타)/i, "cat", "cat", { cycle: { k: "heat", months: [3, 4, 9, 10], len: 10 }, zones: [["ears", 2], ["tail", 3]], sleepy: true, preg: { p: 1, multi: true },
+  beast("cat", "고양이 수인", /고양이|냥|캣|cat|neko|네코(?!마타)|묘인|묘족|묘인족|냥인/i, "cat", "cat", { cycle: { k: "heat", months: [3, 4, 9, 10], len: 10 }, zones: [["ears", 2], ["tail", 3]], sleepy: true, preg: { p: 1, multi: true },
     gen: "고양이 귀·가는 꼬리. 밤눈이 밝고 낮잠이 많음, 높은 곳이 편함, 몸이 젖는 건 조금 꺼림.", nsfw: "봄·가을에 발정기(1~2주). 꼬리 뿌리가 아주 예민함. 관계 뒤 임신이 잘 되는 체질." }),
-  beast("dog", "개 수인", /^개|강아지|멍멍|도그|dog|inu/i, "dog", "dog", { cycle: { k: "heat", every: 180, len: 18 }, jeal: 1.3,
+  beast("dog", "개 수인", /^개|강아지|멍멍|도그|dog|inu|견인족|개족/i, "dog", "dog", { cycle: { k: "heat", every: 180, len: 18 }, jeal: 1.3,
     gen: "개 귀·꼬리(감정에 따라 흔들림). 후각이 아주 좋고 체력이 좋음.", nsfw: "1년에 두 번 발정기(약 3주). 쓰다듬기에 크게 반응함. 정한 상대에게 질투가 큰 편." }),
-  beast("wolf", "늑대 수인", /늑대(?!인간)|울프(?!맨)|wolf(?!man)/i, "wolf", "wolf", { cycle: { k: "heat", months: [12, 1, 2], len: 14 }, bond: true, moonK: 1.2,
+  beast("wolf", "늑대 수인", /늑대(?!인간)|울프(?!맨)|wolf(?!man)|늑대족|낭인족/i, "wolf", "wolf", { cycle: { k: "heat", months: [12, 1, 2], len: 14 }, bond: true, moonK: 1.2,
     gen: "늑대 귀·굵은 꼬리. 후각·지구력이 좋고 추위에 강함. 보름달 밤엔 몸이 들뜸.", nsfw: "겨울에 발정기(약 2주). 한 짝과 강하게 결속함. 보름 무렵 성욕이 오름." }),
-  beast("fox", "여우 수인", /여우(?!\s*요괴)|폭스|페넥|fox|kitsune/i, "fox", "fox", { cycle: { k: "heat", months: [12, 1, 2], len: 4 }, heatK: 1.9, zones: [["ears", 2], ["tail", 3]],
+  beast("fox", "여우 수인", /여우(?!\s*요괴)|폭스|페넥|fox|kitsune|호인족|여우족/i, "fox", "fox", { cycle: { k: "heat", months: [12, 1, 2], len: 4 }, heatK: 1.9, zones: [["ears", 2], ["tail", 3]],
     gen: "여우 귀·풍성한 꼬리, 청각이 좋고 몸이 날렵함.", nsfw: "겨울에 짧고 강한 발정기(며칠). 꼬리가 아주 예민해서 가까운 사이에게만 만지게 함." }),
-  beast("rabbit", "토끼 수인", /토끼|버니|rabbit|bunny|usagi/i, "rabbit", "puff", { cycle: { k: "heat", every: 7, len: 3 }, heatK: 1.4, lust: 1.3, preg: { p: 1, multi: true },
+  beast("rabbit", "토끼 수인", /토끼|버니|rabbit|bunny|usagi|토인족|토끼족/i, "rabbit", "puff", { cycle: { k: "heat", every: 7, len: 3 }, heatK: 1.4, lust: 1.3, preg: { p: 1, multi: true },
     gen: "긴 토끼 귀·동그란 꼬리. 소리에 아주 민감하고 다리 힘이 좋음, 채소·과일을 좋아함, 새벽·해질녘에 활발.", nsfw: "뚜렷한 주기 없이 자주 달아오름. 다태아(쌍둥이 이상)가 잘 생김. 오래 혼자면 성욕이 더 오름." }),
   beast("raccoon", "너구리 수인", /너구리|타누키|tanuki|raccoon/i, "round", "fluffy", { cycle: { k: "heat", months: [2, 3], len: 7 }, bond: true,
     gen: "둥근 귀·굵은 줄무늬 꼬리. 잘 먹고 몸이 통통한 편, 손재주가 좋음.", nsfw: "봄에 발정기. 짝과 결속이 강함." }),
@@ -118,8 +118,10 @@ export const RACES = Object.freeze([
     gen: "상반신 사람·하반신 말, 아주 빠르고 지구력이 좋음, 계단·좁은 실내가 불편함, 많이 먹음.", nsfw: "봄~여름에 3주마다 발정. 몸 구조가 달라 자세에 제약이 있음." }),
 
   // ── 용·신비계 ──
-  B({ id: "dragon", label: "용족", re: /용족|용인|드래곤|드라코|dragon|ryu/i, frame: "dragon", life: 3000, body: { horns: "dragon", tail: "dragon", wings: "bat" }, temp: "hot", cycle: { k: "heat", every: 365, len: 10 }, heatK: 2, bond: true, jeal: 1.4, egg: true, preg: { p: 0.3, wk: 60 }, zones: [["horns", 2], ["tail", 2], ["neck", 3]],
+  B({ id: "dragon", label: "드래곤", re: /용족|용인|드래곤|드래고니안|드라코|반룡|용혈|dragon/i, frame: "dragon", life: 3000, body: { horns: "dragon", tail: "dragon", wings: "bat" }, temp: "hot", cycle: { k: "heat", every: 365, len: 10 }, heatK: 2, bond: true, jeal: 1.4, egg: true, preg: { p: 0.3, wk: 60 }, zones: [["horns", 2], ["tail", 2], ["neck", 3]],
     gen: "뿔·꼬리·날개(일부만 비늘), 수명 수천 년, 체온이 높음. 브레스 속성에 맞는 추위·더위에 강함. 잠을 아주 길게 잘 때가 있음.", nsfw: "발정기가 드물지만(1년에 한 번 이하) 아주 강함. 한 번 정한 짝에게 강하게 결속함. 목 아래 거꾸로 난 비늘(역린)이 약점. 알을 낳음." }),
+  B({ id: "ryu", label: "용", re: /^용(?=$|[\s(,·/])|(?:청|흑|백|적|황|금|은|수|화|응|교|해|천)룡|응룡|동양\s?용|동방\s?용|용왕|용신|용녀|\bryu\b|\blong\s?dragon/i, frame: "dragon", life: 5000, body: { horns: "antler", tail: "dragon" }, temp: "cold", cycle: { k: "heat", every: 365, len: 10 }, heatK: 2, bond: true, egg: true, preg: { p: 0.3, wk: 60 }, zones: [["horns", 2], ["tail", 2], ["neck", 3]], wx: { hot: "메마른 더위에 지치고 비가 오면 기운이 남" },
+    gen: "사슴뿔 같은 뿔·긴 꼬리, 날개 없이 하늘을 난다는 전승, 수명 수천 년. 물·비·구름과 가깝고 여의주 전승이 있음.", nsfw: "발정기가 드묾(1년에 한 번 이하). 목 아래 역린이 약점. 알을 낳음." }),
   B({ id: "phoenix", label: "봉황", re: /봉황|주작|피닉스|불사조|phoenix/i, frame: "holy", life: 9999, body: { wings: "feather", tail: "bird" }, temp: "hot", cycle: { k: "heat", every: 365, len: 7 }, bond: true, egg: true, zones: [["wings", 3]], wx: { cold: "추위에 강함" },
     gen: "불꽃 같은 깃털 날개·꽁지, 체온이 높음, 죽어도 불 속에서 다시 태어난다는 전승.", nsfw: "평생 한 짝. 날개가 아주 예민함. 알을 낳음." }),
   B({ id: "unicorn", label: "유니콘", re: /유니콘|기린(?!\s*수인)|unicorn|qilin|kirin/i, frame: "holy", life: 1000, body: { horns: "unicorn", ears: "horse", tail: "horse" }, cycle: { k: "menses", len: 40 }, preg: { p: 0.5 }, zones: [["horns", 3]],
@@ -156,7 +158,7 @@ export const RACES = Object.freeze([
     gen: "뿔·박쥐 날개·꼬리(숨길 수 있음), 꿈에 들어갈 수 있음, 늙지 않음.", nsfw: "관계로 정기를 얻어 기운을 차림. 성욕이 높음. 상대의 임신도 본인이 정함." }),
   B({ id: "demon", label: "악마", re: /악마|마족|마인|데몬|demon|devil|fiend/i, frame: "demon", life: 5000, body: { horns: "demon", tail: "demon", wings: "bat" }, cycle: { k: "menses", len: 40 }, preg: { will: true }, zones: [["horns", 2], ["tail", 2]],
     gen: "뿔·꼬리(날개는 종류마다), 마력이 강하고 늙지 않거나 아주 천천히 늙음.", nsfw: "뿔·꼬리가 예민함. 임신은 본인이 원할 때만." }),
-  B({ id: "vampire", label: "흡혈귀", re: /흡혈귀|뱀파이어|vampire/i, frame: "vampire", life: 9999, temp: "cold", cycle: { k: "none" }, preg: { none: true }, thirst: true, night: true, zones: [["neck", 3]], wx: { sun: "강한 햇빛이 불편해서 그늘·양산을 찾음(위험할 정도는 아님)" }, body: { ears: "halfelf" },
+  B({ id: "vampire", label: "흡혈귀", re: /흡혈귀|흡혈종|흡혈족|뱀파이어|vampire|nosferatu/i, frame: "vampire", life: 9999, temp: "cold", cycle: { k: "none" }, preg: { none: true }, thirst: true, night: true, zones: [["neck", 3]], wx: { sun: "강한 햇빛이 불편해서 그늘·양산을 찾음(위험할 정도는 아님)" }, body: { ears: "halfelf" },
     gen: "늙지 않음, 체온이 낮음, 밤에 힘이 남. 피를 즐겨 마시지만 보통 음식도 먹을 수 있음. 강한 햇빛은 불편해서 피하는 편.", nsfw: "피를 마실 때 쾌감이 있고, 물리는 쪽도 쾌감을 느낄 수 있음. 목이 아주 예민함. 임신은 하지 않음." }),
   B({ id: "dhampir", label: "담피르", re: /담피르|다크\s?스토커|dhampir|dhampyr/i, frame: "vampire", life: 400, cycle: { k: "menses" }, preg: { p: 0.5 }, zones: [["neck", 2]], body: { ears: "halfelf" },
     gen: "흡혈귀와 인간의 혼혈, 낮에도 문제없이 다님, 가끔 피가 당김, 수명이 김.", nsfw: "목이 예민함. 임신은 인간보다 조금 어려움." }),

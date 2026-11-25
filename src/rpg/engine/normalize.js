@@ -1,4 +1,6 @@
 // Dusk Saga 엔진 — LLM 출력 정규화와 프리셋 적 (순수 함수, DOM·api 없음)
+import { KINDS, makeSpell, makeWeapon, rankOf } from "./gear.js";
+import { elemOf } from "./elements.js";
 import { mods } from "./combat.js";
 import { CAT, CONDS, GROW, GUNS, MAXLV, MOVE, MT, MTL, STATS, WT, arm, clamp, copy, idOf, int, txt } from "./rules.js";
 
@@ -16,6 +18,7 @@ export function normSkill(o, i) {
   const s = { id: idOf(o.id, 'skill_' + i), name: txt(o.name, 30, '이름 없는 기술'), desc: txt(o.desc, 160, ''), type, cond: CONDS[o.cond] ? o.cond : 'always', mods, flags };
   if (type === 'proc') s.rate = STATS.includes(o.rate) ? o.rate : int(o.rate, 1, 100, 25);
   if (type === 'art') { s.cd = int(o.cd, 0, 9, 2); if (Array.isArray(o.range)) { const a = int(o.range[0], 1, 3, 1); s.range = [a, int(o.range[1], a, 4, a)]; } }
+  if (elemOf(o.elem)) s.elem = o.elem; { const rk = rankOf(o.grade); if (rk != null) s.grade = rk; }
   s.tier = ['common', 'faction', 'own'].includes(o.tier) ? o.tier : (txt(o.faction, 20, '') ? 'faction' : 'own');
   if (s.tier === 'faction') s.faction = txt(o.faction, 20, '세력');
   return s;
@@ -56,6 +59,7 @@ export function ensureBase(S) { if (S.baseVer === BASE_VER) return; for (const o
 // a skill a model defines is never "common": it is a faction skill or somebody's own
 export function normWeapon(o) {
   o = o && typeof o === 'object' ? o : {};
+  if (o.mt == null && (o.kind || o.grade != null || o.desc || o.elem) && !CAT[txt(o.name, 30, '')]) o = Object.assign({}, makeWeapon(o, o.level), { uses: undefined }); // 이야기 속 무기: 종류·등급·속성으로 성능을 매긴다
   const c = CAT[txt(o.name, 30, '')]; if (c) { const m = Object.assign({}, c); for (const k in o) if (o[k] != null && o[k] !== '') m[k] = o[k]; o = m; }
   const type = WT[o.type] ? o.type : 'sword', r = WT[type].r;
   const rmin = int(o.rmin, 1, 3, r[0]);
@@ -64,7 +68,7 @@ export function normWeapon(o) {
   if (type === 'item') { w.rmin = w.rmax = 0; w.hit = 0; w.crit = 0; }
   // only staves and items have uses
   w.max = arm(w) ? 0 : int(o.max, 0, 99, int(o.uses, 1, 99, WT[type].u)); w.uses = w.max ? int(o.uses, 1, w.max, w.max) : 0;
-  if (o.brave === true || o.brave === 'true') w.brave = true; if (type === 'claw' && GUNS[o.gun]) w.gun = o.gun; if (o.magic === true || o.magic === 'true') w.magic = true; const dr = int(o.drain, 0, 100, 0); if (dr) w.drain = dr;
+  if (KINDS[o.kind]) w.kind = o.kind; { const rk = rankOf(o.grade); if (rk != null) w.grade = rk; } if (elemOf(o.elem)) w.elem = o.elem; if (o.brave === true || o.brave === 'true') w.brave = true; if (type === 'claw' && GUNS[o.gun]) w.gun = o.gun; if (o.magic === true || o.magic === 'true') w.magic = true; const dr = int(o.drain, 0, 100, 0); if (dr) w.drain = dr;
   if (Array.isArray(o.eff)) { const e = o.eff.filter(t => typeof t === 'string').map(t => t.slice(0, 16)).slice(0, 4); if (e.length) w.eff = e; }
   return w;
 }
@@ -84,7 +88,7 @@ export function tameSkill(s) {
   if (s.type === 'proc' && typeof s.rate === 'number') s.rate = Math.min(s.rate, 60);
   return s;
 }
-export const llmSkill = (o, i) => { const s = tameSkill(normSkill(o, i)); if (s.tier === 'common') s.tier = 'own'; return s; };
+export const llmSkill = (o, i) => { if (o && o.name && !o.mods && !o.flags) { const sp = makeSpell(o, int(o.level, 1, MAXLV, 10)); if (sp) o = Object.assign(sp, o.id ? { id: o.id } : {}, o.faction ? { faction: o.faction } : {}); } const s = tameSkill(normSkill(o, i)); if (s.tier === 'common') s.tier = 'own'; return s; };
 // ready-made mobs: level-1 body, grown to the level asked for
 export const M = (set, emoji, cls, mtype, st, weapons, x) => Object.assign({ set, emoji, cls, mtype, stats: { hp: st[0], str: st[1], mag: st[2], skl: st[3], spd: st[4], lck: st[5], def: st[6], res: st[7] }, weapons }, x);
 export const PRE = {
@@ -118,7 +122,7 @@ export function presetUnit(name, level, o) {
   const src = copy(p); delete src.set;
   // basic gear keeps pace: iron by level 6, steel by 14, silver by 24
   src.weapons = src.weapons.map(w => { const m = /^(청동의|철의) (.+)$/.exec(w.name), n = m && (level >= 24 ? UPG[m[1]][2] : level >= 14 ? UPG[m[1]][1] : level >= 6 ? UPG[m[1]][0] : m[1]) + ' ' + (m ? m[2] : ''); return m && CAT[n] ? { name: n } : w; });
-  const over = {}; for (const k of ['cls', 'mtype', 'move', 'emoji', 'asset', 'tags', 'growth']) if (o[k] != null && o[k] !== '') over[k] = o[k];
+  const over = {}; for (const k of ['cls', 'mtype', 'move', 'emoji', 'asset', 'tags', 'growth', 'sex', 'elem']) if (o[k] != null && o[k] !== '') over[k] = o[k];
   for (const k of ['weapons', 'skills']) if (Array.isArray(o[k]) && o[k].length) over[k] = o[k];
   const u = normUnit(Object.assign(src, over, { id: o.id || name, name: txt(o.name, 30, name), level }), 0);
   for (const k of STATS) u.stats[k] = Math.min(k === 'hp' ? 120 : 60, u.stats[k] + Math.round(u.growth[k] * (level - 1) / 100));
@@ -132,7 +136,7 @@ export function normUnit(o, i) {
   const stats = { hp: int(st.hp, 1, 120, 20) }; for (const k of STATS.slice(1)) stats[k] = int(st[k], 0, 60, 4);
   const g0 = growthFor(stats), gi = o.growth && typeof o.growth === 'object' ? o.growth : {}, growth = {};
   for (const k of STATS) growth[k] = int(gi[k], 0, 150, g0[k]);
-  const weapons = (Array.isArray(o.weapons) ? o.weapons : []).slice(0, 5).map(normWeapon);
+  const weapons = (Array.isArray(o.weapons) ? o.weapons : []).slice(0, 5).map((w) => normWeapon(w && typeof w === 'object' ? Object.assign({ level: o.level }, w) : w));
   if (!weapons.length) weapons.push(normWeapon({ name: stats.mag > stats.str ? '불씨의 서' : '철의 검', type: stats.mag > stats.str ? 'tome' : 'sword' }));
   const u = {
     id: idOf(o.id, 'unit_' + i), name: txt(o.name, 30, '이름 없음'), emoji: txt(o.emoji, 8, '🙂'), cls: txt(o.cls, 20, MTL[mtype]), mtype,
@@ -143,7 +147,7 @@ export function normUnit(o, i) {
     history: (Array.isArray(o.history) ? o.history : []).filter(t => typeof t === 'string').map(t => t.slice(0, 120)).slice(-8),
   };
   if (typeof o.img === 'string' && /^(https?:|data:image\/)/.test(o.img)) u.img = o.img;
-  if (o.ally) u.ally = true; if (o.ally && o.away) u.away = true;
+  if (elemOf(o.elem)) u.elem = o.elem; if (o.sex === 'f' || o.sex === 'm') u.sex = o.sex; if (o.ally) u.ally = true; if (o.ally && o.away) u.away = true;
   if (Array.isArray(o.later) && o.later.length) u.later = o.later.filter(s => typeof s === 'string').map(s => idOf(s, '')).filter(Boolean).slice(0, 12);
   return u;
 }

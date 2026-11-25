@@ -5,6 +5,8 @@ import { runAITask } from "../engine/runai.js";
 import { pickForStage } from "./modelhub.js";
 import { extraOf, extraFrom, applyExtra, nk, OUTFIT_STAGE1 } from "../engine/memextra.js";
 import { RACE_STAGE1 } from "../engine/races.js";
+import { raceFinds } from "../engine/racefind.js";
+import { castSources } from "./castlore.js";
 import { CLIMATE_STAGE1 } from "../engine/weather.js";
 import { TIE_STAGE1 } from "../engine/ties.js";
 import { extractMessageText, isUserMessage } from "../engine/chattext.js";
@@ -44,6 +46,10 @@ export async function fillFeatures(api, store, { chaId, chatId, chat, folder, ga
   const keys = new Set(gaps.map((g) => g.key));
   const reports = extraFrom(String(raw ?? "").replace(/<think>[\s\S]*?<\/think>/gi, ""), canon, { race: keys.has("race"), weather: keys.has("climate"), outfit: keys.has("outfit"), tie: keys.has("tie"), world: false, status: false })
     .filter((r) => (r.kind === "race" && keys.has("race")) || (r.kind === "climate" && keys.has("climate")) || ((r.kind === "wear" || r.kind === "strip") && keys.has("outfit")) || (r.kind === "tie" && keys.has("tie")));
+  if (keys.has("race")) { try { // 로어북·봇 설정·이야기에서 직접 찾은 것이 AI 답보다 먼저
+    const src = await castSources(api, chaId), found = src ? raceFinds(known.map((d) => ({ names: [d.title, ...(d.aliases ?? [])] })), { ...src, text: recent }, extraOf(folder).race) : [];
+    for (const r of found) { const i = reports.findIndex((x) => x.kind === "race" && nk(x.name) === nk(r.name)); if (i >= 0) reports.splice(i, 1); reports.push(r); }
+  } catch { /* 로어북을 못 읽으면 AI 답만 */ } }
   let changed = [];
   await store.updateFolder(chaId, chatId, (f) => {
     changed = applyExtra(f, reports, { turn: Number.isInteger(f?.cursor?.at) ? f.cursor.at : 0 });

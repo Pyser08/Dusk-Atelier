@@ -40,7 +40,7 @@ export function fights({ THREE, scene, cam, ctl, view, units }) {
     await tween(melee ? 150 : 190, (k) => { const e = ease(k); a.lunge = -.16 * e; a.twist = -.7 * e; a.lean = heavy ? -.35 * e : -.12 * e; });
     if (!melee) { a.twist = .3; await shoot(a, b, w.type === "bow" ? "bow" : w.type === "dagger" ? "dagger" : w.type === "tome" || w.magic ? "tome" : "bow"); }
     else await tween(95, (k) => { const e = k * k; a.lunge = -.16 + (gap - .3) * e; a.twist = -.7 + 1.5 * e; a.lean = .3 * e; if (heavy) a.hop = Math.sin(k * Math.PI) * .25; });
-    a.hop = 0; const at = chest(b), color = h.crit ? 0xffd27a : w.type === "tome" || w.magic ? 0xb58cff : 0xfff0d8;
+    a.hop = 0; const at = chest(b), color = h.crit ? 0xffd27a : w.glow ? new THREE.Color(w.glow).getHex() : w.type === "tome" || w.magic ? 0xb58cff : 0xfff0d8;
     if (h.miss) { apply(h); await tween(150, (k) => { b.dodge = Math.sin(k * Math.PI / 2) * .42; }); }
     else if (h.guard) { shock(at, 0x7cc0ff, 1.3); kick = .06; apply(h); }
     else { if (melee) { slash(at, color, h.crit, w.type === "lance" ? 1.2 : 0); if (h.crit) slash(at, color, true, 2.2); } burst(at, color, h.crit ? 34 : 14, h.crit ? 1.2 : .8); shock(at, color, h.crit ? 2 : 1); kick = h.crit ? .22 : h.dmg ? .09 : .03; apply(h); await nap(h.crit ? 130 : 55); await tween(110, (k) => { b.lunge = -.22 * Math.sin(k * Math.PI); b.lean = -.35 * Math.sin(k * Math.PI); }); }

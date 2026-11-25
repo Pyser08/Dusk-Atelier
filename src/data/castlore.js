@@ -6,7 +6,7 @@ import { loreCast, inCast } from "../engine/castfilter.js";
 export function createCastReader(api, { now = () => Date.now(), ttl = 60_000 } = {}) {
   let memo = null;
   // characterId: 기록 중인 위키의 봇(chaId). 지금 열린 봇과 다르면(기록 도중 채팅을 옮김) 판단하지 않는다(null = 막지 않음).
-  return async function castFor(characterId = "") {
+  const read = async function castFor(characterId = "") {
     let ci, ti;
     try { ci = await api.getCurrentCharacterIndex(); ti = await api.getCurrentChatIndex(); } catch { return null; }
     if (!(ci >= 0)) return null;
@@ -18,12 +18,15 @@ export function createCastReader(api, { now = () => Date.now(), ttl = 60_000 } =
       chat = ch.chats?.[ti] ?? null;
       if (!chat && ti >= 0) { try { chat = await api.getChatFromIndex?.(ci, ti); } catch { chat = null; } }
       mods = await modulesOf(api, ch, chat);
-      memo = { key, at: now(), chaId: String(ch.chaId ?? ""), cast: castOfCard(ch, chat, mods) };
+      memo = { key, at: now(), chaId: String(ch.chaId ?? ""), cast: castOfCard(ch, chat, mods), src: { botName: ch.name ?? "", description: [ch.desc, ch.personality].filter(Boolean).join("\n"), entries: [...(ch.globalLore ?? []), ...(chat?.localLore ?? []), ...(mods ?? []).flatMap((m) => m?.lorebook ?? [])] } };
     }
     if (characterId && memo.chaId && String(characterId) !== memo.chaId) return null;
     const cast = memo.cast;
     return cast.empty ? null : (name, aliases = []) => inCast(cast, name, aliases);
   };
+  // 종족 찾기 재료(로어북·봇 설정). 다른 봇으로 옮겼으면 null
+  read.sources = async (characterId = "") => { await read(characterId); return memo && (!characterId || !memo.chaId || String(characterId) === memo.chaId) ? memo.src : null; };
+  return read;
 }
 
 // 봇 카드 + 채팅 + 켜진 모듈 → 판단 재료(loreCast). 인물 화면의 '로어북에 없는 인물 지우기'도 같은 것을 쓴다.
@@ -38,3 +41,5 @@ export async function modulesOf(api, ch, chat) {
     return (db?.modules ?? []).filter((m) => ids.has(m?.id));
   } catch { return []; }
 }
+// 한 번만 읽는 곳(빈칸 채우기)용
+export const castSources = (api, chaId = "") => createCastReader(api).sources(chaId);

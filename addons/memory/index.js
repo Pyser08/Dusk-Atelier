@@ -96,7 +96,7 @@ export async function activate(api, ctx) {
   const gaugeShow = memory.gauge?.onDisplay;
   // 0.3.22 본문 인물 이름 → 상태창 링크: 본문(t)에만 달고, 게이지 박스·일기는 그 뒤에 그대로 붙인다(일기·게이지 매칭은 원래 글로)
   // 0.3.22 장면 상태창은 그 아래(로어북 버튼 바로 위)에 붙인다
-  const names = createNameLinks(memory, api, { thoughts: () => ext.get?.("svc", "innerthought") ?? null });   // 11-23 속마음 보기 애드온이 있으면 상태창에 ‘속마음’ 탭
+  const names = createNameLinks(memory, api, { thoughts: () => ext.get?.("svc", "innerthought") ?? null, stats: () => ext.get?.("svc", "rpgStats") ?? null });   // 11-23 속마음 보기 애드온이 있으면 상태창에 ‘속마음’ 탭
   memory.nameLinks = names;
   memory.meDoc = { sync: (o) => syncMeDoc(memory, api, o) };   // 설정에서 켤 때 지금 채팅에 바로 만들기
   setTimeout(() => { names.prepare?.().catch(() => {}); }, 1500);   // 2.2.25 응답을 그리기 전에 상태창 방식(화면 위/펼침)을 정한다

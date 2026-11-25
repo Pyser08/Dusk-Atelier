@@ -1,4 +1,6 @@
 // Dusk Saga 엔진 — 전투 예측·해결·유닛 명령 (순수 함수, DOM·api 없음)
+import { elemMod } from "./elements.js";
+import { canUse } from "./classes.js";
 import { DIRS, GUNS, INF, K, MT, SIDE, T0, WT, arm, clamp, dist, foe, gunOf, log, roll, utags } from "./rules.js";
 import { grantExp, xp } from "./growth.js";
 import { alive, ammo, canShoot, canWatch, coverFrom, est, fireOk, gun, line, living, occMap, pathTo, syncRears, terr, unitAt, uterr, wr } from "./board.js";
@@ -77,7 +79,7 @@ export function side(S, A, D, init, art, free, dart) {
   const atk = (magic ? sa.mag : sa.str) + w.mt * (eff ? 3 : 1) + tri + am.m.atk + gm.d;
   let df = (magic ? sd.res + dm.m.res : sd.def + dm.m.def) + tt.def; out.df0 = df;
   if (am.fl.pierce) df = Math.floor(df * (100 - am.fl.pierce) / 100);
-  out.mul = am.fl.mult || 1; out.blk = dm.fl.block || 0; out.dmg = Math.floor(Math.floor(Math.max(0, atk - df) * out.mul) * (100 - out.blk) / 100); out.atk = atk; out.eff = eff; out.tri = tri; out.magic = magic;
+  out.elem = (ask && ask.elem) || w.elem || ''; out.em = out.elem ? elemMod(out.elem, dd, (S.battle.map[D.y] || '')[D.x]) : 1; out.mul = (am.fl.mult || 1) * out.em; out.blk = dm.fl.block || 0; out.dmg = Math.floor(Math.floor(Math.max(0, atk - df) * out.mul) * (100 - out.blk) / 100); out.atk = atk; out.eff = eff; out.tri = tri; out.magic = magic;
   const pt = free ? null : partnerOf(S, A, D, dart); out.partner = pt;
   out.hit = am.fl.sure ? 100 : clamp(gm.h - cv.v + w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri * 15 + am.m.hit + (pt ? 10 : 0) - ((sd.spd + dm.m.spd) * 2 + sd.lck + tt.avo + dm.m.avo + (wd && wd.type === 'claw' && w.type !== 'claw' ? 15 : 0)), 0, 100);
   out.crit = clamp(gm.c + (open ? 10 : 0) + w.crit + Math.floor(sa.skl / 2) + am.m.crit - sd.lck - (D.rear ? 5 : 0), 0, 100);
@@ -226,10 +228,11 @@ export function options(S, u, from) {
   const d = S.defs[u.ref], foes = alive(S.battle).filter(z => foe(z, u)), mates = alive(S.battle).filter(z => !foe(z, u) && z.id !== u.id), out = [];
   d.weapons.forEach((w, i) => {
     if (w.type === 'staff') { const t = mates.filter(z => { const ds = dist(u, z); return ds >= w.rmin && ds <= w.rmax && z.hp < S.defs[z.ref].stats.hp; }); out.push({ kind: 'heal', wi: i, label: w.name, targets: t.map(z => z.id) }); return; }
+    if (!canUse(d, w)) return;
     if (w.type === 'item') { out.push({ kind: 'item', wi: i, label: w.name, targets: u.hp < d.stats.hp ? [u.id] : [] }); return; }
     out.push({ kind: 'attack', wi: i, label: w.name, targets: foes.filter(z => canShoot(S, u, w, z, moved)).map(z => z.id) });
   });
-  const ew = arm(d.weapons[u.wi]) ? u.wi : d.weapons.findIndex(arm);
+  const ew = arm(d.weapons[u.wi]) && canUse(d, d.weapons[u.wi]) ? u.wi : d.weapons.findIndex((w) => arm(w) && canUse(d, w));
   if (ew >= 0) for (const id of d.skills) {
     const sk = S.skills[id]; if (!sk || sk.type !== 'art') continue; const w = d.weapons[ew], r = sk.range || wr(S, w);
     out.push({ kind: 'attack', wi: ew, art: id, label: sk.name, cd: u.cd[id] || 0, targets: (u.cd[id] || 0) > 0 ? [] : foes.filter(z => { const ds = dist(u, z); return ds >= r[0] && ds <= r[1] && fireOk(S, u, w, z, moved); }).map(z => z.id) });
