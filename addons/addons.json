@@ -41,8 +41,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/provider.js",
-      "sha256": "ab915cf0ec3d83fb25c93da00869826030b118e361e2f6577beb2f50886ddc8b",
-      "size": 162824
+      "sha256": "5fb67a6071934ee9d4861fdc857a002e2e751a23f7b86b91d982f2ea65118502",
+      "size": 163328
     },
     {
       "id": "chattheme",
@@ -96,11 +96,16 @@
       "id": "memory",
       "name": "장기기억·관계도",
       "category": "memory",
-      "version": "0.3.65",
+      "version": "0.3.66",
       "minCore": "2.2.45",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "notes": [
+        {
+          "v": "0.3.66",
+          "date": "",
+          "body": "- 분기한 채팅을 다시 분기하면 원본이 사본으로 잘못 잡혀 기억이 분기로 넘어가던 문제를 고쳤어요(신고 #13).\n- 인물 위키를 꺼 둔 봇에서도 복사·분기한 채팅의 기억을 원본과 나눠 기록해요."
+        },
         {
           "v": "0.3.65",
           "date": "",
@@ -115,16 +120,11 @@
           "v": "0.3.63",
           "date": "",
           "body": "- 기록 검색에서 한글을 적으면 첫 글자만 남던 문제를 고쳤어요.\n- 첫 표시 때 다른 봇의 게이지 기록을 모두 읽느라 기다리던 것을 줄였어요.\n- 관계도는 가만히 있을 때 그리기를 멈추고, 다시 열 때 만든 화면을 먼저 보여 줘요.\n- 바뀐 것이 없는 시작 상태는 저장하지 않아요.\n- 남자로 시작해 여자가 된(TS) 인물도 월경 주기를 따라가요. 다시 남자가 되면 멈추고, 성별 변화 기록을 관계로 잘못 읽던 문제도 고쳤어요.\n- 내 몸이 여성이거나 여성으로 바뀌면(TS) 나의 월경·임신도 따라가요(‘월경·임신 기록’이 켜져 있을 때).\n- 나의 성인 탭에도 ‘성적 욕망 · 이상성향’이 생겼어요(직접 추가·무작위 뽑기·잠금).\n- 궁합 카드에 ‘null’ 글자가 보이던 문제를 고쳤어요."
-        },
-        {
-          "v": "0.3.62",
-          "date": "",
-          "body": "- 기록 모델이 JSON으로 답하면 성인 기록(관계 횟수·달아오름·성감대 등)과 말버릇·기분·몸 흔적·장면 계획이 하나도 남지 않던 문제를 고쳤어요(신고 #10).\n- 기억 분석 전 첫 응답이나 기억 분석을 끈 채팅에서도 관계·몸 상태 기록이 버려지지 않아요."
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "968b3ee369ae06f29b03cad0455d6a3fb0ff2a965e04fcd9a5ec60ea17fbbf70",
-      "size": 2444698
+      "sha256": "890992c00a6c01350ab54dd8446ae9a87e11dfe97a0a92f3a5f8932da3d63801",
+      "size": 2445568
     },
     {
       "id": "cards",
@@ -155,8 +155,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/cards.js",
-      "sha256": "30021c91c49b7b65d9893b7e0584e7028d07a88c08016138d4974884caa11a2f",
-      "size": 685681
+      "sha256": "dce48fb24587b41cc8187eafd3c50691c7a45a4e5431be891ab1a2a3e476dd47",
+      "size": 686193
     },
     {
       "id": "protlink",
@@ -292,8 +292,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/innerthought.js",
-      "sha256": "c0c1205e03363c174cbc247e262c466600796f79ebc8cccd724c178dede2f49b",
-      "size": 15591
+      "sha256": "9e45a747d241db36b6ed7c112b110feeb27a2d54427d855403b93f81dad885cb",
+      "size": 16101
     }
   ]
 }
