@@ -1,3 +1,12 @@
+## fix/report-18 · 11-25 장면 상태창 이름 → 장기기억 0.3.67(미배포)
+- linkHtml chip/pid: 알약은 summary에만, 펼침 summary에도 data-pid·dusk-pid → cardoverlay가 화면 위 창으로 띄우고 펼침 칸(dusk-pcb-)은 감춤. namelinks checkSpans 5·10·20초, 이름을 찾으면 화면 위로 복귀, 내용 없음(null)은 실패로 안 봄. ::before 고정 막은 리스 메시지 층에 갇혀 쓰지 않음.
+
+## fix/report-18 · 11-25 신고 #18 → 인물 속마음 0.1.3(미배포)
+- innerthought.js fix(): 값 안의 <img="…">·'>'·굽은 따옴표·&lt;·dusk_thought·안 닫힌 태그를 바로잡아 읽음. 신고자의 실제 응답은 못 봄. 체내 정액량은 다시 보내 준다고 해서 안 고침(위키 문서 없는 인물은 기록 안 됨 — 확인 거리). 테스트 tests/report18.test.js.
+
+## fix/erosync-retire · 11-25 → v2.2.61
+- addons.js RETIRED: boot에서 erosync 코드·인덱스 삭제(저장 값 erosync_*·dusk.erosync.* 유지, 커스텀 애드온은 안 건드림). publish-addons: 버전이 그대로인 애드온은 직전 공개본 유지(heldAddons).
+
 ## chore/addons-keep3 · 11-25 jsDelivr 50MB 초과
 - addons 브랜치가 220MB라 jsDelivr가 새 파일을 403으로 거부. tools/addons-prune.mjs: 애드온마다 .mjs 최근 3개(addons/history.json 순서), 45MB 넘으면 배포 중단. 손으로 addons 브랜치에 올릴 때도 pruneModules를 쓸 것.
 

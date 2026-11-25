@@ -214,8 +214,10 @@ export function scenePanelHtml({ date = "", time = "", place = "", weather = "",
   const chips = people.map((p) => {
     const init = esc([...String(p.name ?? "?")][0] ?? "?");
     const dot = `<span style="display:inline-grid;place-items:center;width:18px;height:18px;margin-right:5px;border-radius:50%;background:linear-gradient(140deg,#8b6fe0,#e8578e);color:#fff;font-size:10px;font-weight:700;vertical-align:-4px">${init}</span>`;
-    return p.card || p.pid
-      ? `<span style="display:inline-block;margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(139,111,224,.14);border:1px solid rgba(139,111,224,.3)">${dot}${p.pid ? nameSpan(p.name, p.pid) : linkHtml(p.name, p.card)}</span>`
+    const pill = "margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(139,111,224,.14);border:1px solid rgba(139,111,224,.3)";
+    if (!p.pid && p.card) return linkHtml(p.name, p.card, { chip: pill, head: dot, pid: p.id ?? "" });
+    return p.pid
+      ? `<span style="display:inline-block;${pill}">${dot}${nameSpan(p.name, p.pid)}</span>`
       : `<span style="display:inline-block;margin:0 5px 0 0;padding:3px 10px 3px 4px;border-radius:999px;background:rgba(127,127,127,.12);opacity:.85">${dot}${esc(p.name)}</span>`;
   }).join("");
   const up = (d) => `animation:dkUp .55s cubic-bezier(.22,1,.36,1) both ${d}s`;

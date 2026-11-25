@@ -42,9 +42,23 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
   // 2.2.30: 화면 위 방식으로 이름만 넣었는데 리스 화면에서 그 이름을 하나도 못 찾으면(판에 따라 응답이 다른 문서·막힌 곳에 그려짐)
   // 이름을 눌러도 아무 일이 없다 → 펼침 방식으로 바꾸고 기록에 남긴다
   let spanMode = true, probe = null;
-  const checkSpans = () => { if (probe || !spanMode) return; probe = setTimeout(async () => { probe = null; try { await overlay.hook(); } catch { /* 아래서 판단 */ } if (overlay.total() === 0 && spanMode) { spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "리스 화면에서 이름을 찾지 못해 상태창을 이름 아래 펼침으로 바꿨어요(이름을 다시 누르면 닫혀요)" }); } }, 5000); };
-  const decided = async () => { if (!spanMode) return false; if (mount.ready()) return true; await Promise.race([mount.ensureDoc().catch(() => null), new Promise((r) => setTimeout(r, 1200))]); return mount.ready() && spanMode; };
-  const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: async (pid) => { const c = cache ?? await ready().catch(() => null); const d = byId.get(pid); if (!d || !c?.cardOf) return ""; await Promise.race([c.thumb?.(d), new Promise((r) => setTimeout(r, 700))]); return c.cardOf(d); }, onFail: () => { if (!spanMode) return; spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title: "상태창 창을 띄우지 못해 이름 아래 펼침으로 바꿨어요(다음 응답부터)" }); }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
+  // 11-25 제보: 한 번(5초) 못 찾으면 그 뒤로 계속 펼침이었다 → 5·10·20초 세 번 다 못 찾아야 바꾸고, 펼침 이름을 찾으면 화면 위 방식으로 돌아온다
+  let tries = 0, broken = false;
+  const toInline = (title) => { if (!spanMode) return; spanMode = false; cache = null; logEvent({ area: "캐릭터 상태창", title }); };
+  const checkSpans = () => {
+    if (probe || !spanMode || overlay.total() > 0) return;
+    probe = setTimeout(async () => {
+      probe = null; try { await overlay.hook(); } catch { /* 아래서 판단 */ }
+      if (overlay.total() > 0 || !spanMode) { tries = 0; return; }
+      if (++tries < 3) return checkSpans();
+      toInline("리스 화면에서 이름을 찾지 못해 상태창을 이름 아래 펼침으로 바꿨어요(이름을 다시 누르면 닫혀요)");
+    }, 5000 * 2 ** tries);
+    probe?.unref?.();
+  };
+  // 펼침으로 그릴 때: 화면에 붙으면 클릭을 달아 창으로 띄운다
+  const inlineSoon = () => { if (!broken) overlay.soon(); };
+  const decided = async () => { if (!spanMode && !broken && overlay.total() > 0) { spanMode = true; tries = 0; } if (!spanMode) return false; if (mount.ready()) return true; await Promise.race([mount.ensureDoc().catch(() => null), new Promise((r) => setTimeout(r, 1200))]); return mount.ready() && spanMode; };
+  const overlay = createCardOverlay({ ensureDoc: mount.ensureDoc, pids: () => [...byId.keys()], cardOf: async (pid) => { const c = cache ?? await ready().catch(() => null); const d = byId.get(pid); if (!d || !c?.cardOf) return ""; await Promise.race([c.thumb?.(d), new Promise((r) => setTimeout(r, 700))]); return c.cardOf(d); }, onFail: () => { broken = true; toInline("상태창 창을 띄우지 못해 이름 아래 펼침으로 바꿨어요(다음 응답부터)"); }, log: (...a) => { console.log("[Dusk 상태창]", ...a); try { logEvent({ area: "캐릭터 상태창", title: a.map(String).join(" ").slice(0, 160) }); } catch { /* 기록 실패 무시 */ } } });
   let cache = null, checked = 0, loading = null;
   // 2.2.22 성능: 캐릭터 통째(채팅 전체 포함, 큰 채팅은 수십 MB)는 봇이 바뀔 때만 한 번 읽고, 이름·설명·이미지 목록만 남긴다
   let charMemo = null, users = null, usersAt = 0;
@@ -113,7 +127,7 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
     },
     // 본문 글에만 링크(뒤에 붙는 게이지·일기·로어북 상자는 호출하는 쪽이 따로 붙인다)
     async link(text) {
-      try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = await decided(); if (!ov) await c.thumbAll(); const out = linkNames(text, c.people, { overlay: ov }); if (ov && out !== text) { overlay.soon(); checkSpans(); } return out; } catch { return text; }
+      try { if (typeof text !== "string" || !text) return text; const c = await ready(); if (!(c?.links && c.people.length)) return text; const ov = await decided(); if (!ov) await c.thumbAll(); const out = linkNames(text, c.people, { overlay: ov }); if (out !== text) { if (ov) { overlay.soon(); checkSpans(); } else inlineSoon(); } return out; } catch { return text; }
     },
     // 장면 상태창 HTML(없으면 ""). 상태 줄이 있는 응답, 또는 등장인물이 나온 긴 응답에만
     async scene(text) {
@@ -129,8 +143,8 @@ export function createNameLinks(memory, api = null, { thoughts = null } = {}) { 
         if (!s.fromLine && !(ppl.length && text.length >= 300)) return "";
         if (await userish(text)) return "";
         const ov = await decided(); if (ov && c.links && ppl.some((p) => p.doc)) { overlay.soon(); checkSpans(); }
-        if (!ov && c.links && ppl.some((p) => p.doc)) await c.thumbAll();
-        return scenePanelHtml({ ...s, force: true, people: ppl.map((p) => (p.doc && c.links ? (ov ? { name: p.name, pid: p.doc.id } : { name: p.name, card: c.cardOf(p.doc) }) : { name: p.name })) });
+        if (!ov && c.links && ppl.some((p) => p.doc)) { await c.thumbAll(); inlineSoon(); }
+        return scenePanelHtml({ ...s, force: true, people: ppl.map((p) => (p.doc && c.links ? (ov ? { name: p.name, pid: p.doc.id } : { name: p.name, card: c.cardOf(p.doc), id: p.doc.id }) : { name: p.name })) });
       } catch { return ""; }
   }
 }
