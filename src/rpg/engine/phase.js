@@ -70,7 +70,7 @@ export function loadEncounter(S, j) {
   let rows = (Array.isArray(j.map) ? j.map : []).filter(r => typeof r === 'string').slice(0, 16);
   if (rows.length < 4) rows = Array.from({ length: 8 }, () => '..........');
   const w = clamp(Math.max(...rows.map(r => r.length)), 5, 20);
-  rows = rows.map(r => r.padEnd(w, '.').slice(0, w).replace(/[^.bfpmFTw#lsihHv]/g, '.'));
+  rows = rows.map(r => r.padEnd(w, '.').slice(0, w).replace(/[^.bfpmFTw#lsihHvdnorkuqc]/g, '.'));
   if (j.indoor === true) rows = rows.map(r => r.replace(/[fm]/g, 'p')); // an interior has no woods or mountains, whatever the model drew
   const obj = j.objective && typeof j.objective === 'object' ? j.objective : {};
   const B = { name: txt(j.name, 60, '이름 없는 전장'), map: rows, w, h: rows.length, turn: 1, phase: 'ally', status: 'active', units: {}, obj: { type: OBJ[obj.type] ? obj.type : 'rout' } };
@@ -117,4 +117,4 @@ export function unspawn(S, uid) {
   if (u.boss && !Object.values(B.units).some(z => z.boss && z.hp > 0)) { B.hadBoss = false; if (B.obj.type === 'boss') B.obj.type = 'rout'; }
   return true; // a correction, not an event: nothing goes into the battle record
 }
-export const THEMES = ["snow", "desert", "lava", "swamp", "night"];
+export const THEMES = ["snow", "desert", "lava", "swamp", "night", "cave", "sea", "city", "sky", "autumn"];

@@ -1,5 +1,5 @@
 // Dusk Saga 엔진 — 전투 예측·해결·유닛 명령 (순수 함수, DOM·api 없음)
-import { elemMod } from "./elements.js";
+import { elemMod, typeMod, physMod, elemsOfUnit } from "./elements.js";
 import { canUse } from "./classes.js";
 import { DIRS, GUNS, INF, K, MT, SIDE, T0, WT, arm, clamp, dist, foe, gunOf, log, roll, utags } from "./rules.js";
 import { grantExp, xp } from "./growth.js";
@@ -79,7 +79,7 @@ export function side(S, A, D, init, art, free, dart) {
   const atk = (magic ? sa.mag : sa.str) + w.mt * (eff ? 3 : 1) + tri + am.m.atk + gm.d + (up(S.battle, A.x, A.y) > up(S.battle, D.x, D.y) ? 1 : 0);
   let df = (magic ? sd.res + dm.m.res : sd.def + dm.m.def) + tt.def; out.df0 = df;
   if (am.fl.pierce) df = Math.floor(df * (100 - am.fl.pierce) / 100);
-  out.elem = (ask && ask.elem) || w.elem || ''; out.em = out.elem ? elemMod(out.elem, dd, (S.battle.map[D.y] || '')[D.x]) : 1; out.mul = (am.fl.mult || 1) * out.em; out.blk = dm.fl.block || 0; out.dmg = Math.floor(Math.floor(Math.max(0, atk - df) * out.mul) * (100 - out.blk) / 100); out.atk = atk; out.eff = eff; out.tri = tri; out.magic = magic;
+  out.elem = (ask && ask.elem) || w.elem || ''; out.em = out.elem ? elemMod(out.elem, dd, (S.battle.map[D.y] || '')[D.x], da) : 1; out.type = out.elem ? typeMod(out.elem, dd) : physMod(dd); out.stab = !!out.elem && elemsOfUnit(da).includes(out.elem); out.mul = (am.fl.mult || 1) * out.em; out.blk = dm.fl.block || 0; out.dmg = Math.floor(Math.floor(Math.max(0, atk - df) * out.mul) * (100 - out.blk) / 100); out.atk = atk; out.eff = eff; out.tri = tri; out.magic = magic;
   const pt = free ? null : partnerOf(S, A, D, dart); out.partner = pt;
   out.hit = am.fl.sure ? 100 : clamp(gm.h - cv.v + w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri * 15 + am.m.hit + (pt ? 10 : 0) - ((sd.spd + dm.m.spd) * 2 + sd.lck + tt.avo + dm.m.avo + (wd && wd.type === 'claw' && w.type !== 'claw' ? 15 : 0)), 0, 100);
   out.crit = clamp(gm.c + (open ? 10 : 0) + w.crit + Math.floor(sa.skl / 2) + am.m.crit - sd.lck - (D.rear ? 5 : 0), 0, 100);
@@ -251,3 +251,6 @@ export function options(S, u, from) {
   out.push({ kind: 'trade', label: '교환', targets: mates.filter(z => z.team === u.team && dist(z, u) === 1 && z.ref !== u.ref).map(z => z.id) });
   return out;
 }
+
+/** 도주: 아군이 전장을 버리고 물러난다. 결과는 다음 입력에 실린다 */
+export function actRetreat(S, ev = []) { const B = S.battle; if (!B || B.status !== 'active') return false; B.status = 'retreat'; log(S, '아군이 전장에서 물러났다'); ev.push({ t: 'end', status: 'retreat' }); return true; }

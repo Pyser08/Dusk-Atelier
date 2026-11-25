@@ -20,7 +20,7 @@ test("이야기 무기는 저장·불러오기를 거쳐도 그대로이고, 옛
 });
 test("속성 상성·지형이 피해에 반영되고 무속성은 그대로다", () => {
   const w = (elem) => ({ name: "검", kind: "sword", grade: "영웅", ...(elem ? { elem } : {}) }), base = fc(duel(w("")));
-  assert.equal(base.em, 1); assert.ok(fc(duel(w("fire"), { race: "설녀" })).dmg > base.dmg); assert.ok(fc(duel(w("fire"), { race: "불의 정령" })).em < 1); assert.equal(fc(duel(w("light"), { race: "악마" })).em, 1.3); assert.equal(fc(duel(w("dark"), { elem: "light" })).em, 1.3);
+  assert.equal(base.em, 1); assert.ok(fc(duel(w("fire"), { race: "설녀" })).dmg > base.dmg); assert.ok(fc(duel(w("fire"), { race: "불의 정령" })).em < 1); assert.equal(fc(duel(w("light"), { race: "악마" })).em, 1.5); assert.equal(E.typeMod("fire", { elem: "plant", elem2: "ice" }), 1.8); assert.equal(E.typeMod("fire", { elem: "water", elem2: "fire" }), .6); assert.equal(E.elemMod("fire", { elem: "plant" }, "", { elem: "fire" }), 1.8); assert.equal(E.elemMod("", { model: "ghost" }), .55); assert.equal(E.elemMod("light", { model: "ghost" }), 1.5); assert.equal(E.elemMod("water", { model: "golem", race: "" }), 1.5); assert.equal(E.elemMod("", { name: "회색 늑대" }), 1); assert.equal(E.typeWord(1.8), "큰 약점"); assert.equal(fc(duel(w("dark"), { elem: "light" })).em, 1.5); for (const k of ["arcane", "sound", "blood", "gravity"]) assert.ok(E.ELEMENTS[k] && E.elemFromText({ arcane: "룬 검", sound: "음파의 칼", blood: "피의 낫", gravity: "중력 망치" }[k]) === k, k);
   assert.ok(fc(duel(w("thunder"), {}, Array(8).fill("bbbbbbbbbb"))).em > 1); for (const [k, v] of Object.entries(E.ELEMENTS)) for (const b of v.beats) assert.ok(E.ELEMENTS[b], k);
 });
 test("기술: 이름은 그대로, 등급이 정한 총합 안에서 특성대로 나눈다", () => {

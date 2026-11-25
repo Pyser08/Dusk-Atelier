@@ -147,7 +147,7 @@ export function normUnit(o, i) {
     history: (Array.isArray(o.history) ? o.history : []).filter(t => typeof t === 'string').map(t => t.slice(0, 120)).slice(-8),
   };
   if (typeof o.img === 'string' && /^(https?:|data:image\/)/.test(o.img)) u.img = o.img;
-  if (elemOf(o.elem)) u.elem = o.elem; if (typeof o.model === 'string' && /^[a-z]{2,12}$/.test(o.model)) u.model = o.model; if (o.sex === 'f' || o.sex === 'm') u.sex = o.sex; if (o.ally) u.ally = true; if (o.ally && o.away) u.away = true;
+  if (elemOf(o.elem)) u.elem = o.elem; if (elemOf(o.elem2) && o.elem2 !== o.elem) u.elem2 = o.elem2; if (typeof o.model === 'string' && /^[a-z]{2,12}$/.test(o.model)) u.model = o.model; if (o.sex === 'f' || o.sex === 'm') u.sex = o.sex; if (o.ally) u.ally = true; if (o.ally && o.away) u.away = true;
   if (Array.isArray(o.later) && o.later.length) u.later = o.later.filter(s => typeof s === 'string').map(s => idOf(s, '')).filter(Boolean).slice(0, 12);
   return u;
 }

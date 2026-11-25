@@ -112,5 +112,5 @@ export function gearInProse(text, names) {
   const out = []; for (const n of names) { if (String(n).length < 2) continue; const re = new RegExp(`${String(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:은|는|이|가|의)\\s+(?:[^.!?\\n]{0,24}?\\s)?((?:[^\\s.,!?]{1,10}\\s){0,2}[^\\s.,!?]{1,12}?)(?:을|를)\\s+(?:뽑|휘두르|휘둘|쥐|쥔|들고|들었|겨누|겨눴|꺼내|꺼냈|내리|치켜|장전|당기)`, "g"); let m; while ((m = re.exec(String(text ?? "")))) { const name = tidy(m[1]); if (kindFromText(name) && !out.some((x) => x.name === name)) out.push({ type: "weapon", name, desc: "" }); } } return out.slice(-3);
 }
 /** 무기 겉모습(3D·아이콘용): 모양·등급 단계·속성 색 */
-export const lookOf = (w) => ({ shape: KINDS[w?.kind]?.shape ?? { sword: "sword", lance: "lance", axe: "axe", bow: "bow", tome: "book", dagger: "dagger", staff: "staff", claw: "fist" }[w?.type] ?? "", tier: w?.grade == null ? 1 : Math.floor(w.grade / 3), glow: ELEMENTS[w?.elem]?.c ?? "" });
+export const lookOf = (w) => ({ shape: KINDS[w?.kind]?.shape ?? { sword: "sword", lance: "lance", axe: "axe", bow: "bow", tome: "book", dagger: "dagger", staff: "staff", claw: "fist" }[w?.type] ?? "", tier: w?.grade == null ? 1 : Math.floor(w.grade / 3), glow: ELEMENTS[w?.elem]?.c ?? "", kind: w?.kind ?? "", name: w?.name ?? "", elem: ELEMENTS[w?.elem] ? w.elem : "" });
 export const KIND_LINES = Object.entries(KINDS).map(([k, v]) => k + "(" + v.n + ")").join(" ");

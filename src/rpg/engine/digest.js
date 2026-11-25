@@ -24,7 +24,7 @@ export function context(S) {
   const B = S.battle; if (!B) return '';
   if (B.status !== 'active' && S.seq <= S.sent) return '';
   const lines = ['[Dusk Saga — 게임 엔진이 확정한 전투 결과]',
-    '전장: ' + B.name + ' / 목표: ' + objText(B) + ' / ' + B.turn + '턴 / ' + (B.status === 'active' ? '진행 중' : B.status === 'victory' ? '아군 승리' : '아군 패배')];
+    '전장: ' + B.name + ' / 목표: ' + objText(B) + ' / ' + B.turn + '턴 / ' + (B.status === 'active' ? '진행 중' : B.status === 'victory' ? '아군 승리' : B.status === 'retreat' ? '아군 도주(전장을 벗어남)' : '아군 패배')];
   if (B.later) lines.push('이 전투는 직전 장면에서 시간이 흐른 뒤에 벌어졌다.' + (B.premise ? ' 배경: ' + B.premise : ''));
   for (const u of Object.values(B.units)) { const d = S.defs[u.ref]; lines.push('- ' + TN[u.team] + ' ' + d.name + ' (Lv ' + d.level + ' ' + d.cls + ') ' + (u.hp > 0 ? 'HP ' + u.hp + '/' + d.stats.hp : '전투불능') + (u.rearOf && B.units[u.rearOf] ? ' — ' + S.defs[B.units[u.rearOf].ref].name + '의 후위(호위진)' : '')); }
   const all = digest(S.log.filter(e => e.n > S.sent)), fresh = all.slice(-30); if (all.length > 30) fresh.unshift('(이보다 앞선 ' + (all.length - 30) + '개 턴의 기록은 길어서 생략)');

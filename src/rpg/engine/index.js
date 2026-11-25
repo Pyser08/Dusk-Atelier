@@ -2,7 +2,7 @@
 export { STATS, SL, TERRAIN, MT, MTL, WT, CONDS, OBJ, MAXLV, K, unK, clamp, copy, dist, fresh, log, objText, GUNS, COVER, SIDE, TN, foe, gunOf, utags, idOf, arm, CAT } from "./rules.js";
 export { normSkill, llmSkill, fitLevel, normUnit, normWeapon, importModule, PRE, presetUnit, ensureBase } from "./normalize.js";
 export { alive, terr, uterr, unitAt, reach, pathTo, stops, threat, danger, standable, wr, ammo, canShoot, coverFrom, living, est, pairBonus, syncRears } from "./board.js";
-export { forecast, options, healAmount, actAttack, actHeal, actWait, actSeize, canSeize, outcome, travel, actWatch, actReload, actItem, actGive, actPair, actSwitch, actDrop } from "./combat.js";
+export { forecast, options, healAmount, actAttack, actHeal, actWait, actSeize, canSeize, outcome, travel, actWatch, actReload, actItem, actGive, actPair, actSwitch, actDrop, actRetreat } from "./combat.js";
 export { allDone, endTurn, loadEncounter, spawn, unspawn } from "./phase.js";
 export { runTeam } from "./ai.js";
 export { planGrowth, applyGrowth, regen, expRate, reqLevel, rescale } from "./growth.js";
@@ -16,8 +16,9 @@ export { RACES, RACE_SKILLS, applyRace, raceOf, raceById, kindOf } from "./races
 export { THEMES } from "./phase.js";
 export { CLASSES, CLASS_LINES, PROMOTE_LEVEL, jobOf, canUse, setJob, promotions, promote } from "./classes.js";
 export { recordSheets, recordBattle, unitView, rpgSection, seedFromMemory, raceFromText, prune, statTabHtml } from "./memlink.js";
-export { ELEMENTS, elemOf, elemMod, elemFromText, elemOfUnit } from "./elements.js";
+export { ELEMENTS, elemOf, elemMod, elemFromText, elemOfUnit, elemsOfUnit, chart, typeMod, typeWord, physMod, PHYS, WEAK, RESIST, STAB } from "./elements.js";
 export { GRADES, KINDS, RANK_MAX, gradeName, rankOf, rankFromText, kindFromText, makeWeapon, makeSpell, TRAITS, budgetOf, costOf, fitBudget, traitsFromText, parseGear, gearInProse, lookOf } from "./gear.js";
 export { storyKit, applyKit } from "./memlink.js";
 export { up } from "./board.js";
 export { MODELS, modelOf, moveOf } from "./bestiary.js";
+export { STAT_MAX, draftOf, editRace, editJob, editLevel, editStat, editMtype, editName, editWeapon, dropWeapon, firstWeapon, editSkill, commitEdit } from "./edit.js";

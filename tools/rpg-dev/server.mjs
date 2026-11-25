@@ -1,7 +1,7 @@
 // Dusk Saga 실시간 미리보기: node tools/rpg-dev/server.mjs [포트=5180] (127.0.0.1 전용, 앞단은 nginx)
 import { context } from "esbuild";
 import { createServer } from "node:http";
-import { readFileSync, watch } from "node:fs";
+import { existsSync, readFileSync, watch } from "node:fs";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 // 비밀번호 한 칸 로그인: 리스바드 비밀번호 해시(sha256)와 비교만 한다. 파일이 없거나 이상하면 아무도 못 들어온다.
 const PASS = process.env.RPG_PASS_FILE ?? "/home/ubuntu/RisuBard/save/__password";
@@ -49,6 +49,7 @@ createServer((q, r) => {
   const font = /^\/font\/(noto-sans-kr)\/((?:files\/)?[\w.-]+)$/.exec(p);
   if (font) { try { const b = readFileSync(here + "node_modules/@fontsource/" + font[1] + "/" + font[2]); r.writeHead(200, { "content-type": p.endsWith(".css") ? "text/css" : "font/woff2", "cache-control": "max-age=86400" }); return r.end(b); } catch { return send("text/plain", "없음", 404); } }
   if (p === "/style.css") return send("text/css", readFileSync(here + "style.css"));
+  if (p === "/addon") { const f = here + "../../test-addons/rpg-test.dka"; if (!existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { "content-type": "application/octet-stream", "content-disposition": "attachment; filename=rpg-test-0.1.0.dka", "cache-control": "no-store" }); return r.end(readFileSync(f)); }
   if (p === "/app.js" || p === "/app3d.js" || p === "/pack3d.js" || p === "/pick3d.js" || p === "/vox.js") return send("text/javascript", err ? `document.body.innerText=${JSON.stringify("빌드 오류\n" + err)}` : js[p] ?? "");
   send("text/plain", "없음", 404);
 }).listen(port, "127.0.0.1", () => console.log("Dusk Saga preview " + port));

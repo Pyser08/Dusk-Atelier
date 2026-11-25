@@ -1,0 +1,27 @@
+// 게임식 고르기: 기본 선택 상자·라디오·접기 대신 쓰는 부품(타일판 · 좌우 고르기 · 나눠 고르기 · 능력치 막대)
+import { BODY } from "./env.js";
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const el = (c, h = "") => { const n = document.createElement("div"); n.className = c; n.innerHTML = h; return n; };
+/** 전체 화면 고르기판. items = [{k,t,sub,g,img()}] → 고른 k(닫으면 null). 많으면 묶음 탭과 찾기가 생긴다 */
+export function pick({ title, items, cur, big = false }) {
+  return new Promise((done) => {
+    const gs = [...new Set(items.map((i) => i.g).filter(Boolean))], n = el("gp", `<div class=gph><button class=gpx aria-label=닫기>‹</button><h3>${esc(title)}</h3>${items.length > 20 ? "<input class=gpq placeholder=찾기 aria-label=찾기>" : ""}</div>${gs.length > 1 ? `<div class=gpt role=tablist>${["", ...gs].map((g) => `<button role=tab data-g="${esc(g)}">${esc(g || "모두")}</button>`).join("")}</div>` : ""}<div class="gpl ${big ? "lg" : ""}" role=listbox></div><div class=gpi aria-live=polite></div>`), list = n.querySelector(".gpl"), info = n.querySelector(".gpi"), q = n.querySelector(".gpq"); let g = "";
+    const back = document.activeElement, out = (v) => { n.classList.add("bye"); setTimeout(() => n.remove(), 160); io?.disconnect(); back?.focus?.(); done(v); };
+    const io = typeof IntersectionObserver === "function" ? new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { io.unobserve(e.target); const it = items[+e.target.dataset.i], src = it.img?.(); if (src) e.target.querySelector("i").style.backgroundImage = `url(${src})`; } }, { root: list, rootMargin: "120px" }) : null;
+    const say = (it) => { info.innerHTML = it ? `<b>${esc(it.t)}</b> ${esc(it.sub ?? "")}` : ""; };
+    const paint = () => { const w = (q?.value ?? "").trim(), l = items.filter((i) => (!g || i.g === g || w) && (!w || (i.t + (i.sub ?? "")).includes(w))); n.querySelectorAll("[data-g]").forEach((b) => b.setAttribute("aria-selected", b.dataset.g === g && !w)); list.innerHTML = l.map((i) => `<button role=option data-i=${items.indexOf(i)} aria-selected=${i.k === cur} class="${i.img ? "pic" : ""}">${i.img ? "<i></i>" : i.ic ? `<em>${i.ic}</em>` : ""}<b>${esc(i.t)}</b>${i.tag ? `<u style="${i.tc ? `background:${i.tc}` : ""}">${esc(i.tag)}</u>` : ""}</button>`).join("") || "<p>찾는 것이 없어요</p>"; list.querySelectorAll("button").forEach((b) => items[+b.dataset.i].img && io?.observe(b)); };
+    paint(); say(items.find((i) => i.k === cur)); BODY.append(n); n.tabIndex = -1; n.focus(); list.querySelector("[aria-selected=true]")?.scrollIntoView?.({ block: "center" });
+    if (q) q.oninput = paint; list.onpointerover = list.onfocusin = (e) => { const b = e.target.closest("[data-i]"); if (b) say(items[+b.dataset.i]); };
+    n.onclick = (e) => { e.stopPropagation(); const b = e.target.closest("button"); if (!b) return; if (b.classList.contains("gpx")) return out(null); if (b.dataset.g != null) { g = b.dataset.g; if (q) q.value = ""; return paint(); } if (b.dataset.i) out(items[+b.dataset.i].k); };
+    n.onkeydown = (e) => { e.stopPropagation(); if (e.key === "Escape") return out(null); if (!/^Arrow/.test(e.key) || e.target === q) return; const bs = [...list.querySelectorAll("button")], i = bs.indexOf(n.getRootNode().activeElement), per = Math.max(1, Math.round(list.clientWidth / (bs[0]?.offsetWidth + 6 || 100))); e.preventDefault(); bs[Math.max(0, Math.min(bs.length - 1, i + { ArrowRight: 1, ArrowLeft: -1, ArrowDown: per, ArrowUp: -per }[e.key]))]?.focus(); };
+  });
+}
+/** 좌우 고르기 줄(◀ 값 ▶, 값을 누르면 전체 판) */
+export const wheel = (key, label, text, sub = "") => `<div class=gw data-w="${esc(key)}"><small>${esc(label)}</small><button data-s=-1 aria-label="${esc(label)} 앞">◀</button><button class=gv data-s=0><b>${esc(text)}</b>${sub ? `<u>${esc(sub)}</u>` : ""}</button><button data-s=1 aria-label="${esc(label)} 다음">▶</button></div>`;
+/** 2~4개 나눠 고르기 */
+export const seg = (key, label, opts, cur) => `<div class=gg data-w="${esc(key)}" role=radiogroup aria-label="${esc(label)}"><small>${esc(label)}</small>${opts.map(([k, t]) => `<button role=radio data-v="${esc(k)}" aria-checked=${k === cur}>${esc(t)}</button>`).join("")}</div>`;
+/** 능력치 막대: − 막대 + (꾹 누르면 이어서) */
+export const bar = (key, label, v, max, base) => `<div class=gb data-w="${esc(key)}"><small>${esc(label)}</small><button data-n=-1 aria-label="${esc(label)} 낮추기">−</button><span role=meter aria-valuenow=${v} aria-valuemax=${max} aria-label="${esc(label)}"><i style="width:${v * 100 / max}%"></i><b>${v}</b>${base != null && v !== base ? `<u class="${v > base ? "up" : "dn"}">${v > base ? "+" : ""}${v - base}</u>` : ""}</span><button data-n=1 aria-label="${esc(label)} 올리기">+</button></div>`;
+/** 꾹 누르면 빨라지는 반복 */
+export function holds(root, sel, fn) { let t = 0, k = 0; const stop = () => { clearTimeout(t); t = 0; }; root.addEventListener("pointerdown", (e) => { const b = e.target.closest?.(sel); if (!b) return; k = 0; const key = b.closest("[data-w]").dataset.w, n = +b.dataset.n, go = () => { k++; fn(key, n, k); t = setTimeout(go, k < 2 ? 380 : k < 10 ? 110 : 45); }; go(); }); for (const ev of ["pointerup", "pointercancel", "pointerleave"]) root.addEventListener(ev, stop); root.addEventListener("keydown", (e) => { const b = e.target.closest?.(sel); if (b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); fn(b.closest("[data-w]").dataset.w, +b.dataset.n, 1); } }); }
+export { esc };

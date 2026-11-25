@@ -21,6 +21,14 @@ export const TERRAIN = {
   'h': { n: '언덕', c: [2, 2, 2, 1], avo: 10, def: 1, up: 1 },
   'H': { n: '고지', c: [2, 3, 3, 1], avo: 10, def: 1, up: 2 },
   'v': { n: '허공', c: [INF, INF, INF, 1], avo: 0, def: 0 },
+  'd': { n: '모래', c: [2, 2, 3, 1], avo: 5, def: 0 },
+  'n': { n: '눈밭', c: [2, 3, 3, 1], avo: 0, def: 0 },
+  'o': { n: '덤불', c: [2, 3, 3, 1], avo: 15, def: 0 },
+  'r': { n: '길', c: [1, 1, 1, 1], avo: -5, def: 0 },
+  'k': { n: '가시밭', c: [2, 2, 3, 1], avo: 0, def: 0, burn: 8 },
+  'u': { n: '독늪', c: [3, 4, 4, 1], avo: -10, def: 0, burn: 10 },
+  'q': { n: '성역', c: [1, 1, 1, 1], avo: 10, def: 1, heal: 15 },
+  'c': { n: '수정', c: [2, 2, 3, 1], avo: 20, def: 1 },
   '#': { n: '벽', c: [INF, INF, INF, INF], avo: 0, def: 0 },
 };
 export const T0 = TERRAIN['.'];
@@ -84,5 +92,5 @@ export function gunOf(w) {
   if (/저격|스나이퍼/.test(n)) return 'sniper'; if (/산탄|샷건/.test(n)) return 'shotgun'; if (/기관|머신|연발|개틀링/.test(n)) return 'auto'; if (/권총|리볼버|피스톨|핸드건/.test(n)) return 'pistol'; if (/소총|라이플|머스킷|카빈/.test(n)) return 'rifle';
   return w.rmax < 2 ? null : w.rmin >= 2 ? 'sniper' : w.rmax >= 3 ? 'rifle' : 'pistol';
 }
-export const COVER = { '#': 40, p: 20, m: 20, F: 20 };
+export const COVER = { '#': 40, p: 20, m: 20, F: 20, c: 20, o: 10 };
 export const objText = B => OBJ[B.obj.type] + (B.obj.turns ? ' ' + B.obj.turns + '턴' : '');
