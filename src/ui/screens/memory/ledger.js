@@ -51,5 +51,5 @@ export async function editSceneWhen(env, id, when = "") {
   const v = await promptDialog(env.ctx.win, { title: "이야기 속 날짜·시각", label: "예: 0316년 11월 6일 아침 (40자, 비우면 시간선에서 빠져요)", value: when ?? "", ok: "저장" });
   if (v == null) return;
   const next = String(v).trim().slice(0, 40);
-  editFolder(env, (f) => { const s = (f.scenes ?? []).find((y) => y.id === id); if (!s) return; if (next) { s.when = next; s.whenBy = "user"; } else { delete s.when; delete s.whenBy; } });
+  editFolder(env, (f) => { const s = (f.scenes ?? []).find((y) => y.id === id); if (!s) return; delete s.nowWhen; if (next) { s.when = next; s.whenBy = "user"; } else { delete s.when; delete s.whenBy; } });
 }

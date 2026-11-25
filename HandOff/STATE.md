@@ -1,3 +1,6 @@
+## fix/report-19 · 11-25 신고 #19 → 장기기억 0.3.68
+- scenenow.js: 이어지는 장면(changed=false)의 sc.when을 버려 시간이 멈췄다 → scene.nowWhen(when은 시작 시각 그대로). sceneOf·previousScene.when이 nowWhen 먼저, 뒤로는 안 감(자정 넘김만). 손으로 고치면 nowWhen 지움. 리롤·삭제해도 nowWhen은 안 되돌림. 테스트 tests/report19.test.js.
+
 ## fix/report-18 · 11-25 장면 상태창 이름 → 장기기억 0.3.67(미배포)
 - linkHtml chip/pid: 알약은 summary에만, 펼침 summary에도 data-pid·dusk-pid → cardoverlay가 화면 위 창으로 띄우고 펼침 칸(dusk-pcb-)은 감춤. namelinks checkSpans 5·10·20초, 이름을 찾으면 화면 위로 복귀, 내용 없음(null)은 실패로 안 봄. ::before 고정 막은 리스 메시지 층에 갇혀 쓰지 않음.
 
