@@ -105,7 +105,7 @@ const tab = (g, k, label, body, open) => `<details x-dusk="tab" data-dusk="tab" 
 // 2.2.25: 응답 안 상태창(리스 화면 권한이 없을 때만)은 떠 있는 창 대신 이름 아래 펼침 칸 — 메시지 겹침 층에 갇혀 다른 UI가 뚫고 나왔다.
 // 리스 화면 권한이 있으면 cardoverlay가 화면 맨 위에 띄운다(바깥 누르면 닫힘).
 // 2.2.24: 이 CSS는 응답 안 <style>로 넣지 않고 리스 화면에 한 번만 넣는다(namelinks.ensureCss). 응답 안 <style>은 리스가 바꿔 해석하다 ‘CSS ERROR’를 띄웠다.
-export const PC_OPEN_CSS = "details[data-dusk=pc]>summary::-webkit-details-marker{display:none}details[data-dusk=pc][open]>summary{background:rgba(138,99,210,.12);border-radius:4px}";
+export const PC_OPEN_CSS = "details[data-dusk=pc]>summary::-webkit-details-marker{display:none}details[data-dusk=pc][open]>summary{background:rgba(138,99,210,.12)}";
 export const TAB_CSS = "details[data-dusk=tab]>summary::-webkit-details-marker{display:none}details[data-dusk=tab][open]>summary{color:#fff!important;border-color:transparent!important;background:linear-gradient(135deg,#8b6fe0,#a77bf0);box-shadow:0 4px 14px rgba(139,111,224,.35)}details[data-tab=n][open]>summary{background:linear-gradient(135deg,#e8578e,#f07aa4);box-shadow:0 4px 14px rgba(232,87,142,.35)}@keyframes dkTabIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}"
   // 2.2.22 휴대폰: 상태창이 화면을 다 덮던 문제 → 더 작게
   + "@media (max-width:600px){details[data-dusk=pc]>span{max-height:60vh!important;padding:10px 10px 8px!important;font-size:12px!important;border-radius:16px!important}details[data-dusk=pc] [data-tabbox]{height:min(36vh,300px)!important}details[data-dusk=pc] [data-face]{width:48px!important;height:48px!important;font-size:19px!important}}";
@@ -151,7 +151,7 @@ export function linkNames(text, people, { max = LINK_MAX, overlay = false } = {}
       const p = map.get(name);
       if (count >= max || done.has(p)) return name;
       count++; done.add(p);
-      return overlay && p.id ? nameSpan(name, p.id) : linkHtml(name, p.html);
+      return overlay && p.id ? nameSpan(name, p.id) : linkHtml(name, p.html, { pid: p.id ?? "" });
     });
   }
   return out;
@@ -161,9 +161,12 @@ export const NAMECARD_CSS = TAB_CSS + "@keyframes dkPcIn{from{opacity:0;transfor
 // 11-23: 인물 id → 클래스·선택자에 쓸 안전한 글자. 영문 밖 글자(한글 id 등)는 지워져 빈 클래스가 되고 클릭이 안 달렸다 → 코드값으로
 export const pidKey = (pid) => String(pid ?? "").replace(/[^A-Za-z0-9_-]/g, (c) => `_${c.codePointAt(0).toString(36)}`);
 export const nameSpan = (name, pid) => `<span data-dusk="nm" data-pid="${esc(pid)}" class="dusk-pid-${pidKey(pid)}" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(139,111,224,.55);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</span>`;
-export function linkHtml(name, inner) {
+// chip: 장면 상태창의 등장인물 칸 — 알약 모양은 이름(summary)에만 준다. 상태창까지 알약 안에 들어가 둥글게 찌그러지던 것(11-25 제보)
+export function linkHtml(name, inner, { chip = "", head = "", pid = "" } = {}) {
+  // pid: 리스 화면에서 이 이름을 찾으면(cardoverlay) 펼치는 대신 화면 위 창으로 띄운다(바깥 눌러 닫기)
+  const k = pid ? pidKey(pid) : "";
   // 이름은 수수하게: 글자색·굵기는 그대로, 아주 옅은 밑줄만. 누르면 화면 가운데 상태창이 바로 뜬다(살짝 떠오르는 움직임)
-  return `<details x-dusk="pc" data-dusk="pc" data-name="${esc(name)}" style="display:inline-block;vertical-align:baseline;margin:0;padding:0"><summary style="display:inline;cursor:pointer;list-style:none;color:inherit;font:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.38);text-decoration-thickness:1px;text-underline-offset:3px">${esc(name)}</summary>`
-    + `<span style="display:block;position:relative;margin:6px 0 4px;width:min(360px,86vw);max-height:min(70vh,560px);overflow:auto;overscroll-behavior:contain;padding:14px 14px 10px;border-radius:20px;background:var(--risu-theme-bgcolor,#1b1a24);color:var(--risu-theme-textcolor,#eee);border:1px solid rgba(139,111,224,.32);box-shadow:0 24px 60px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;line-height:1.5;text-align:left;font-style:normal;font-weight:400;white-space:normal;text-decoration:none">`
+  return `<details x-dusk="pc" data-dusk="pc" data-name="${esc(name)}" style="display:inline-block;max-width:100%;vertical-align:${chip ? "top" : "baseline"};margin:0;padding:0"><summary${k ? ` data-pid="${esc(pid)}" class="dusk-pid-${k}"` : ""} style="display:${chip ? "inline-block" : "inline"};cursor:pointer;list-style:none;color:inherit;font:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.38);text-decoration-thickness:1px;text-underline-offset:3px${chip ? `;${chip}` : ""}">${head}${esc(name)}</summary>`
+    + `<span${k ? ` class="dusk-pcb-${k}"` : ""} style="display:block;position:relative;margin:6px 0 4px;width:min(360px,86vw);max-width:100%;box-sizing:border-box;max-height:min(70vh,560px);overflow:auto;overscroll-behavior:contain;padding:14px 14px 10px;border-radius:20px;background:var(--risu-theme-bgcolor,#1b1a24);color:var(--risu-theme-textcolor,#eee);border:1px solid rgba(139,111,224,.32);box-shadow:0 24px 60px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;line-height:1.5;text-align:left;font-style:normal;font-weight:400;white-space:normal;text-decoration:none">`
     + `${inner}<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">이름을 다시 누르면 닫혀요 · Dusk 캐릭터 상태창</span></span></details>`;
 }

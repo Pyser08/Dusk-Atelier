@@ -1,3 +1,6 @@
+## fix/report-18 · 11-25 장면 상태창 이름 → 장기기억 0.3.67(미배포)
+- linkHtml chip/pid: 알약은 summary에만, 펼침 summary에도 data-pid·dusk-pid → cardoverlay가 화면 위 창으로 띄우고 펼침 칸(dusk-pcb-)은 감춤. namelinks checkSpans 5·10·20초, 이름을 찾으면 화면 위로 복귀, 내용 없음(null)은 실패로 안 봄. ::before 고정 막은 리스 메시지 층에 갇혀 쓰지 않음.
+
 ## fix/report-18 · 11-25 신고 #18 → 인물 속마음 0.1.3(미배포)
 - innerthought.js fix(): 값 안의 <img="…">·'>'·굽은 따옴표·&lt;·dusk_thought·안 닫힌 태그를 바로잡아 읽음. 신고자의 실제 응답은 못 봄. 체내 정액량은 다시 보내 준다고 해서 안 고침(위키 문서 없는 인물은 기록 안 됨 — 확인 거리). 테스트 tests/report18.test.js.
 
