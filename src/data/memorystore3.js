@@ -126,7 +126,7 @@ export function createMemoryStoreV3(api, { storage } = {}) {
       for (const [k, ov] of Object.entries(old)) {
         if (["v", "chaId", "chatId", "adoptedFrom"].includes(k) || empty(ov)) continue;
         const cv = cur[k];
-        if (empty(cv)) { cur[k] = ov; moved = true; continue; }
+        if (empty(cv)) { cur[k] = k === "wiki" && ov.scope ? { ...ov, scope: { ...ov.scope, chatKey: String(toChatId) } } : ov; moved = true; continue; }   // 위키 범위 정보도 새 키로(안 맞으면 쓰기가 잠긴다)
         if (k === "wiki") continue;
         if (plain(cv) && plain(ov)) for (const [sk, sv] of Object.entries(ov)) if (!(sk in cv)) { cv[sk] = sv; moved = true; }
       }

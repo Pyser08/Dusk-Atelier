@@ -1,3 +1,8 @@
+## fix/report-13 · 11-25 신고 #13·#14 → v2.2.60 + 장기기억 0.3.66
+- #13: chat-scope scopeIsCopy(분기 표식 → 목록 위쪽이 사본), 갈라진 범위 키 = chat.id(겹치면 새 id), memoryrunner splitCopy(위키 꺼진 봇도 기록 전에 가름), adoptFolder가 위키 scope.chatKey도 바꿈. 이미 섞이거나 빠진 기록은 자동으로 되돌리지 않음.
+- #14: turninfo 표시 훅이 배경 HTML에도 불려 claimDice가 주사위를 줌 → 지금 채팅의 글인지 확인(inChat). 저장된 잘못된 기록도 안 보임.
+- #15~17: 신고자가 안 고쳐도 된다고 함(페르소나 없는 장면의 AI 오판) — 안 고침. 테스트 tests/report13-14.test.js.
+
 ## fix/report-11-p2 · 11-24 신고 #11 남은 P2 → 장기기억 0.3.65(애드온만)
 - peekIndex(읽기 전용 — 고치면 안 됨) · scenes bySit · affhud 캐릭터 공유(3초) · cardoverlay 키 해제 · settings 숫자 조용히 저장 · personv2 acc 지연 부착 · relmap glow. 테스트 tests/report11-p2.test.js.
 - 보류: 요청 직전 위키 가드(다른 채팅 기록 위험, 호스트 범위 조회 API 확인 전), watch·위치 메타(호스트 API 필요), 훅 순서·Cellar·bridge(이득 미측정), mdetail 직렬, subtabs·icons 지연, 글꼴, scenes 점진 생성·레거시 해시. Android Firefox 두 번째 글자 재현 못 함.

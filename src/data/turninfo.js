@@ -33,6 +33,26 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
   // RisuBard: 주사위 결과 표시만 쓴다(요청 순서 바꾸기·캐시 알림·호출 표시는 안 씀). 출력 훅이 안 불리는 호스트면 화면에 처음 뜨는 새 응답에 마지막 주사위를 붙인다
   const bard = () => isBardHost(api), supported = () => true;
   let outputSeen = false; const claimed = new Set();
+  // 신고 #14: 표시 훅은 메시지가 아닌 글(배경 HTML 등)에도 불린다. 지금 채팅에 있는 글인지 확인하고 붙인다. 못 읽는 호스트면 null(모름).
+  const trusted = new Set(); let seenChat = null;
+  async function chatTexts(fresh) {
+    try {
+      if (typeof api.getChatFromIndex !== "function") return null;
+      const ci = await api.getCurrentCharacterIndex(), ti = await api.getCurrentChatIndex();
+      const k = `${ci}:${ti}`;   // apiread.js를 쓰지 않는다(본체에 들어가면 애드온 minCore가 올라간다)
+      if (fresh || !seenChat || seenChat.k !== k || now() - seenChat.t > 2000) { const p = api.getChatFromIndex(ci, ti); seenChat = { k, t: now(), p }; p.catch?.(() => { seenChat = null; }); }
+      const list = (await seenChat.p)?.message;
+      return Array.isArray(list) ? list.filter((m) => m && m.role !== "user").map((m) => String(m.data ?? "")) : null;
+    } catch { return null; }
+  }
+  async function inChat(rec) {
+    if (trusted.has(rec)) return true;
+    for (const fresh of [false, true]) {   // 막 온 응답이 아직 안 들어 있을 수 있어 한 번 더 새로 읽는다
+      const list = await chatTexts(fresh); if (!list) return true;
+      if (list.some((t) => matchRecord([rec], t))) { trusted.add(rec); return true; }
+    }
+    return false;
+  }
 
   const ensure = async () => {
     if (recs) return recs;
@@ -155,7 +175,7 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
       const t = now(), rec = pending;
       if (!rec.firstAt) rec.firstAt = t;
       rec.lastAt = t; rec.outTok = estimateTokens(text);
-      if (!rec.id) commit(rec, head, text);
+      if (!rec.id) { commit(rec, head, text); trusted.add(rec); }
       else if (head.startsWith(rec.head) || rec.head.startsWith(head)) { rec.head = head; rec.tail = tailKey(text); rec.mid = midKey(text); }
       else return text;
       clearTimeout(quiet); quiet = setTimeout(settle, quietMs); save();
@@ -172,8 +192,8 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
       if (!supported() || typeof text !== "string" || text.includes('x-dusk="turn"') || text.includes('x-dusk="dice"')) return text;
       if (!diceShow && !callShow) return text;
       await ensure(); let rec = matchRecord(recs, text);
-      if (!rec && diceShow && !outputSeen) rec = claimDice(text);
-      if (!rec) return text;
+      if (!rec && diceShow && !outputSeen) rec = await claimDice(text);
+      if (!rec || !(await inChat(rec))) return text;
       let out = text;
       if (diceShow && rec.dice) out += diceHtml(rec, parseRollMarks(text));
       if (callShow && !bard()) out += callHtml(rec, await loreFor?.(text));
@@ -182,9 +202,10 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
   }
 
   // 출력 훅이 안 불리는 호스트(RisuBard 등): 아직 어느 응답에도 안 붙은 최근 주사위(10분 안)를 처음 뜨는 새 응답에 붙인다
-  function claimDice(text) {
+  async function claimDice(text) {
     const d = diceSource?.(); if (!d || claimed.has(d.at) || now() - d.at > 600e3) return null;
     const head = headKey(text); if (head.length < 4 || (recs ?? []).some((r) => r.dice && r.at >= d.at - 2000)) return null;
+    if (!(await inChat({ head, tail: tailKey(text), mid: midKey(text) })) || claimed.has(d.at)) return null;   // 배경 HTML 같은 글이 주사위를 가져가지 않게
     claimed.add(d.at);
     const rec = pending && pending.at <= d.at + 2000 ? pending : { at: d.at, startAt: d.at, aux: false, model: "", inTok: 0, firstAt: 0, lastAt: 0 };
     pending = null; commit(rec, head, text); rec.done = true; save();
