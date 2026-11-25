@@ -1,3 +1,6 @@
+## fix/report-18 · 11-25 신고 #18 → 인물 속마음 0.1.3(미배포)
+- innerthought.js fix(): 값 안의 <img="…">·'>'·굽은 따옴표·&lt;·dusk_thought·안 닫힌 태그를 바로잡아 읽음. 신고자의 실제 응답은 못 봄. 체내 정액량은 다시 보내 준다고 해서 안 고침(위키 문서 없는 인물은 기록 안 됨 — 확인 거리). 테스트 tests/report18.test.js.
+
 ## fix/erosync-retire · 11-25 → v2.2.61
 - addons.js RETIRED: boot에서 erosync 코드·인덱스 삭제(저장 값 erosync_*·dusk.erosync.* 유지, 커스텀 애드온은 안 건드림). publish-addons: 버전이 그대로인 애드온은 직전 공개본 유지(heldAddons).
 
