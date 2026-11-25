@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { pruneModules } from "./addons-prune.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dry = process.argv.includes("--dry");
 const git = (args, cwd = root) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -21,6 +22,7 @@ try {
   catch { git(["worktree", "add", "--force", "--detach", dir]); git(["checkout", "--orphan", "addons"], dir); git(["rm", "-rf", "--quiet", "."], dir); }
   // 내용 주소 모듈(.mjs)은 지난 것도 남겨 둔다(옛 목록을 가진 기기가 아직 받을 수 있게)
   const keep = {};
+  const histPath = path.join(dir, "addons/history.json"), hist = fs.existsSync(histPath) ? fs.readFileSync(histPath) : null;
   const oldDist = path.join(dir, "addons/dist");
   if (fs.existsSync(oldDist)) for (const f of fs.readdirSync(oldDist)) if (f.endsWith(".mjs")) keep[f] = fs.readFileSync(path.join(oldDist, f));
   fs.rmSync(path.join(dir, "addons"), { recursive: true, force: true });
@@ -34,6 +36,9 @@ try {
     const code = fs.readFileSync(path.join(root, "addons/dist", `${a.id}.js`), "utf8");
     fs.writeFileSync(path.join(dir, "addons/dist", `${a.id}.${a.sha256.slice(0, 12)}.mjs`), `export default ${JSON.stringify(code)};\n`);
   }
+  if (hist) fs.writeFileSync(histPath, hist);
+  const cut = pruneModules(dir, mani);
+  console.log(`옛 모듈 ${cut.removed.length}개 정리 · 브랜치 ${(cut.bytes / 1048576).toFixed(1)}MB`);
   fs.writeFileSync(path.join(dir, "addons/addons.json.mjs"), `export default ${JSON.stringify(fs.readFileSync(path.join(root, "addons/addons.json"), "utf8"))};\n`);
   fs.writeFileSync(path.join(dir, "README.md"), "# Dusk Atelier 애드온 배포 브랜치\n\n빌드 결과만 있어요. 소스는 본체 저장소의 `addons/`이고, `node tools/publish-addons.mjs`로 올려요. 직접 고치지 마세요.\n");
   git(["add", "-A"], dir);

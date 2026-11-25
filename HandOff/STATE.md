@@ -1,3 +1,6 @@
+## chore/addons-keep3 · 11-25 jsDelivr 50MB 초과
+- addons 브랜치가 220MB라 jsDelivr가 새 파일을 403으로 거부. tools/addons-prune.mjs: 애드온마다 .mjs 최근 3개(addons/history.json 순서), 45MB 넘으면 배포 중단. 손으로 addons 브랜치에 올릴 때도 pruneModules를 쓸 것.
+
 ## fix/report-13 · 11-25 신고 #13·#14 → v2.2.60 + 장기기억 0.3.66
 - #13: chat-scope scopeIsCopy(분기 표식 → 목록 위쪽이 사본), 갈라진 범위 키 = chat.id(겹치면 새 id), memoryrunner splitCopy(위키 꺼진 봇도 기록 전에 가름), adoptFolder가 위키 scope.chatKey도 바꿈. 이미 섞이거나 빠진 기록은 자동으로 되돌리지 않음.
 - #14: turninfo 표시 훅이 배경 HTML에도 불려 claimDice가 주사위를 줌 → 지금 채팅의 글인지 확인(inChat). 저장된 잘못된 기록도 안 보임.
