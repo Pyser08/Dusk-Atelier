@@ -66,15 +66,21 @@ export function resultLine(S) {
   return ['[전투 결과 — ' + f.name + ' · ' + f.st + ' · ' + f.turn + '턴' + (f.wx ? ' · ' + f.wx : '') + ']', row('활약', f.mvp ? f.mvp + (f.top ? ' (가장 큰 한 방: ' + f.top + ')' : '') : ''), row('쓰러뜨림', f.beaten), row('남은 적', f.left), row('부순 부위', f.parts), row('포획', f.caught), row('설득해 합류', f.turned), row('탈출', f.out), row('난입', f.raids), f.duo ? '합체기: ' + f.duo + '번' : '',
     row('동료', f.allies.map((a) => a.n + ' ' + a.s + (a.inj ? '·' + a.inj : '')).join(', ')), row('얻은 것', f.got), row('의뢰', f.quests)].filter(Boolean).join('\n');
 }
-/** 채팅에 넣을 꾸민 상자(HTML, 인라인 스타일만). 글은 resultLine과 같은 내용 */
+/** 채팅에 넣을 결과 카드(HTML, 인라인 스타일, 안쪽은 span만 — 인카운터 카드와 같은 방식). 모델에게는 카드 대신 안에 숨긴 글(dsg-plain)만 간다 */
 export function resultCard(S) {
   const f = resultFacts(S); if (!f) return ''; const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-  const C = { victory: ['#ffd35a', '#3a2a08', '⚔ 승리'], defeat: ['#e8444f', '#2a080c', '✖ 패배'], retreat: ['#9ab8d8', '#141c28', '↩ 후퇴'] }[f.status] || ['#ccc', '#222', f.st];
-  const row = (k, v) => (v ? `<div style="display:flex;gap:8px;padding:3px 0;border-top:1px solid #ffffff14"><span style="flex:none;width:5.2em;opacity:.65">${k}</span><span>${esc(v)}</span></div>` : '');
-  const ally = f.allies.map((a) => `<span style="display:inline-block;margin:2px 4px 2px 0;padding:1px 7px;border-radius:9px;background:${a.s === '쓰러짐' ? '#5a1a20' : a.s === '크게 다침' ? '#5a3a1a' : '#ffffff18'}">${esc(a.n)} · ${a.s}${a.inj ? '·' + a.inj : ''}</span>`).join('');
-  return `<div style="margin:4px 0;padding:12px 14px;border-radius:10px;border:1px solid ${C[0]}66;border-left:5px solid ${C[0]};background:linear-gradient(135deg,${C[1]},#16121c);color:#efe6d4;font-size:.93em;line-height:1.5">`
-    + `<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px"><b style="font-size:1.25em;color:${C[0]};letter-spacing:.05em">${C[2]}</b><b>${esc(f.name)}</b><span style="opacity:.6">${f.turn}턴${f.wx ? ' · ' + esc(f.wx) : ''}</span></div>`
+  const C = { victory: ['#ffd35a', '#2a1c04', 'VICTORY', '승리', '#f2c230', '#5a3a00'], defeat: ['#ff5a5a', '#1c0508', 'DEFEAT', '패배', '#e0283a', '#111'], retreat: ['#9ab8d8', '#0e141e', 'RETREAT', '후퇴', '#7aa0c8', '#1a2230'] }[f.status] || ['#ccc', '#222', '', f.st, '#888', '#333'];
+  const stripe = `display:block;height:8px;background:repeating-linear-gradient(-60deg,${C[5]} 0 12px,${C[4]} 12px 24px)`;
+  const row = (k, v) => (v ? `<span style="display:flex;gap:8px;padding:3px 0;border-top:1px solid #ffffff14"><span style="flex:none;width:5.2em;opacity:.65">${k}</span><span style="flex:1;min-width:0">${esc(v)}</span></span>` : '');
+  const ally = f.allies.map((a) => `<span style="display:inline-block;margin:2px 4px 2px 0;padding:1px 8px;border-radius:9px;background:${a.s === '쓰러짐' ? '#5a1a20' : a.s === '크게 다침' ? '#5a3a1a' : '#ffffff18'}">${esc(a.n)} · ${a.s}${a.inj ? '·' + a.inj : ''}</span>`).join('');
+  return `<div class="dsg-res" style="display:block;margin:6px 0;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,${C[1]},#16121c);border-top:3px solid ${C[0]};border-bottom:3px solid ${C[0]};color:#efe6d4;font-size:.93em;line-height:1.5;box-shadow:0 6px 18px #0008">`
+    + `<span style="${stripe}"></span><span style="display:block;padding:10px 14px 12px">`
+    + `<span style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px"><span style="font:900 1.5em/1 serif;letter-spacing:.14em;color:${C[0]};text-shadow:0 0 12px ${C[0]}88">${C[2]}</span><b>${C[3]} · ${esc(f.name)}</b><span style="opacity:.6">${f.turn}턴${f.wx ? ' · ' + esc(f.wx) : ''}</span></span>`
     + row('활약', f.mvp ? f.mvp + (f.top ? ` (가장 큰 한 방 ${f.top})` : '') : '') + row('쓰러뜨림', f.beaten) + row('남은 적', f.left) + row('부순 부위', f.parts) + row('포획', f.caught) + row('합류', f.turned) + row('탈출', f.out) + row('난입', f.raids) + (f.duo ? row('합체기', f.duo + '번') : '')
-    + (ally ? `<div style="padding:5px 0 2px;border-top:1px solid #ffffff14">${ally}</div>` : '') + row('얻은 것', f.got) + row('의뢰', f.quests) + `</div>`;
+    + (ally ? `<span style="display:block;padding:5px 0 2px;border-top:1px solid #ffffff14">${ally}</span>` : '') + row('얻은 것', f.got) + row('의뢰', f.quests)
+    + `<span class="dsg-plain" style="display:none">${esc(resultLine(S))}</span></span><span style="${stripe}"></span></div>`;
 }
+/** 모델에게 보낼 때: 결과 카드 → 숨긴 글만 */
+export const RES_RE = /<div class="(?:x-risu-)?dsg-res[^"]*"[^>]*>[\s\S]*?<\/div>/g;
+export function plainResults(text) { return String(text).replace(RES_RE, (m) => (/dsg-plain[^>]*>([\s\S]*?)<\/span>/.exec(m)?.[1] || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')); }
 const summ = (l) => { const m = new Map(); for (const x of l) m.set(x, (m.get(x) || 0) + 1); return [...m].map(([k, n]) => k + (n > 1 ? ' ×' + n : '')).join(', '); };

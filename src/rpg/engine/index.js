@@ -6,7 +6,7 @@ export { forecast, options, healAmount, actAttack, actHeal, actSupport, actWait,
 export { allDone, endTurn, loadEncounter, spawn, unspawn } from "./phase.js";
 export { runTeam } from "./ai.js";
 export { planGrowth, applyGrowth, regen, expRate, reqLevel, rescale } from "./growth.js";
-export { context, storyNote, digest, resultLine, resultCard, resultFacts } from "./digest.js";
+export { context, storyNote, digest, resultLine, resultCard, resultFacts, plainResults, RES_RE } from "./digest.js";
 export { mapOf, loadMap, endReplay, snapshot, restart, mark, pulse, pulseMax, pulseReset, retro, rename } from "./saves.js";
 export { MAPS } from "./maps.js";
 export { XCOM_PROMPT, rosterText, skillText, GEN_PROMPT, LATER_PROMPT, GROWTH_PROMPT, REGEN_PROMPT, sheetText } from "./prompts.js";

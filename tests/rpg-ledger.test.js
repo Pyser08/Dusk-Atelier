@@ -29,6 +29,6 @@ test("정비·제작이 동료 장비에 실제로 반영된다", () => {
   assert.ok(E.WORKSHOP.test("마을 대장간에 들렀다")); assert.ok(!E.WORKSHOP.test("숲길을 걸었다"));
 });
 test("결과 한 줄 요약: 채팅 입력으로 넣을 짧은 글", () => {
-  const S = won(), t = E.resultLine(S); assert.ok(t.startsWith("[전투 결과 — 화룡 사냥 · 승리 · ")); assert.ok(t.includes("동료: ")); assert.match(E.resultCard(S), /<div style=.*⚔ 승리/); assert.ok(t.includes("부순 부위: 화룡의 머리")); assert.ok(t.includes("쓰러뜨림"));
+  const S = won(), t = E.resultLine(S); assert.ok(t.startsWith("[전투 결과 — 화룡 사냥 · 승리 · ")); assert.ok(t.includes("동료: ")); const card = E.resultCard(S); assert.match(card, /class="dsg-res".*VICTORY/); assert.equal(E.plainResults("앞 " + card).trim(), "앞 " + t); assert.ok(t.includes("부순 부위: 화룡의 머리")); assert.ok(t.includes("쓰러뜨림"));
   S.battle.status = "active"; assert.equal(E.resultLine(S), "");
 });

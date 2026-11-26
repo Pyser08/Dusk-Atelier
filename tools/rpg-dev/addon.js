@@ -5,7 +5,7 @@ const GEAR_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 import { statTabHtml } from "../../src/rpg/engine/memlink.js";
 import { createMemoryLink } from "../../src/rpg/data/memorylink.js";
 import { compactPrompt, parseCompact } from "../../src/rpg/engine/compact.js";
-import { storyNote } from "../../src/rpg/engine/digest.js";
+import { storyNote, plainResults } from "../../src/rpg/engine/digest.js";
 import { ledgerOf, ledgerNote, partyLine } from "../../src/rpg/engine/ledger.js";
 import { QUEST_PROMPT, parseQuests, addQuests, questLine, worldLine, worldOf, applyMoneyMarks, MONEY_RE } from "../../src/rpg/engine/world.js";
 const css = CSS.replace(/:root/g, ":host").replace(/(^|[\s,}>])body(?=[[{:.,\s])/g, "$1.sbody");
@@ -42,7 +42,7 @@ export async function activate(api, ctx) {
   let questBusy = false, outCount = 0; const questTry = async (why) => { if (questBusy || !lastKey) return; const L = ledgerOf(cget(lastKey)); if ((L.quests || []).filter((q) => q.status === "open").length >= 3) return; if (Date.now() - (L.questAt || 0) < 6e5) return; questBusy = true; try { const t = await ask(QUEST_PROMPT(L, 3), "위 세계와 지금 장면에 맞는 의뢰를 정해진 줄 형식으로만."), qs = parseQuests(L, t); if (qs.length) { const L2 = ledgerOf(cget(lastKey)); addQuests(L2, qs); L2.questAt = Date.now(); cset(lastKey, JSON.stringify(L2)); later(); ctx.toast?.(`새 의뢰 ${qs.length}건이 게시판에 올라왔어요 — 가방 › 길드`, { seconds: 6 }); } } catch (e) { console.log("[Dusk Saga] 의뢰 만들기 실패", why, e?.message ?? e); } finally { questBusy = false; } };
   const QUEST_WORD = /길드|게시판|의뢰|퀘스트|협회|용병|조합|현상금|수배|표국|자경단/;
   // 끝난 전투의 결과를 다음 입력 끝에 한 번만 붙인다(지금 방식: storyNote)
-  const KEY = "dusk-saga-dev"; let offRep = null; try { offRep = await api.addRisuReplacer?.("beforeRequest", (messages, type) => { try { if (type !== "model" || !Array.isArray(messages)) return messages; messages = messages.map((m) => (typeof m?.content === "string" && m.content.includes("dsg-enc") ? { ...m, content: m.content.replace(CARD_RE, "").replace(/\s+$/, "") } : m)); CARD_RE.lastIndex = 0; const raw = data[KEY], S = raw ? JSON.parse(raw) : null, parts = []; if (S && S.battle && S.battle.status !== "active" && S.seq > S.sent) { const n = storyNote(S); if (n) { parts.push(n); S.sent = S.seq; data[KEY] = JSON.stringify(S); } }
+  const KEY = "dusk-saga-dev"; let offRep = null; try { offRep = await api.addRisuReplacer?.("beforeRequest", (messages, type) => { try { if (type !== "model" || !Array.isArray(messages)) return messages; messages = messages.map((m) => (typeof m?.content === "string" && /dsg-(enc|res)/.test(m.content) ? { ...m, content: plainResults(m.content.replace(CARD_RE, "")).replace(/\s+$/, "") } : m)); CARD_RE.lastIndex = 0; const raw = data[KEY], S = raw ? JSON.parse(raw) : null, parts = []; if (S && S.battle && S.battle.status !== "active" && S.seq > S.sent) { const n = storyNote(S); if (n) { parts.push(n); S.sent = S.seq; data[KEY] = JSON.stringify(S); } }
       // 장부 기록(전리품·정비·제작)도 이 채팅 것만 한 번 싣는다
       if (lastKey && cget(lastKey)) { const L = ledgerOf(cget(lastKey)), t = ledgerNote(L), pl = partyLine(L), wl = worldLine(L); if (pl) parts.push(pl); if (wl) parts.push(wl); if (data["money-auto"] === "1") parts.push(`(이야기 속에서 일행이 돈을 받거나 쓰면 답 마지막 줄에 [[돈: +금액 이유]] 또는 [[돈: -금액 이유]]. 단위: ${worldOf(L).money.units.map((u) => u.n).join("·")})`); if (t) { parts.push(t); cset(lastKey, JSON.stringify(L)); } }
       // 자동 전투 감지: 켜져 있으면 모델에게 싸움이 터질 때만 표시 한 줄을 달게 한다(짧은 지시 한 줄)

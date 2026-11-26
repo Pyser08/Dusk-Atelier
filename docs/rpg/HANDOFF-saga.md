@@ -112,3 +112,4 @@
 - 정비: 강화·속성 입히기 때 matUse로 쓸 수 있는 소재만 밝게·나머지 회색, 소재 밑에 바뀌는 값(등급·위력 / 속성·강한 상대). 능력치 고치기(range 막대 드래그, 저장 지연, '다 고쳤어요' 때 기록 메모).
 - 본체 runai.drainStream: 중지하면 다음 조각을 기다리지 않고 바로 reader.cancel(v2.2.67, fix/ai-stop-v2.2.67). runLLMModel 자체에는 취소 수단이 없어 스트리밍이 아닌 응답은 리스 쪽이 끝날 때까지 돈다(화면은 바로 멈춤).
 - 2026-11-26 본문 카드 → 답 본문 안에 실제로(HTML, 인라인 스타일, 안쪽 span만): scan이 [[전투:…]]를 지우고 encCard(brief)를 끝에 붙여 저장(채팅과 함께 동기화). 버튼은 class dsg-go/dsg-skip + dsg-id-<id>(리스가 x-risu- 접두를 붙임), encSync가 화면에서 찾아 눌림만 연결(x-dsgb). encClick: 그 메시지의 카드를 '⚔️ 전투로 이어짐'/'↩ 넘김' 표시로 바꿔 setChatToIndex. beforeRequest가 카드(CARD_RE)를 지우고 보냄. 채팅별 값(장부·brief·enc-idx)은 dusk.storage 'c:<키>'로 따로 저장·3초마다 다시 읽음(cget/cset/cpull, 예전 'game' 덩어리 값은 읽어서 옮김) — 기기 간 덮어쓰기 방지.
+- 결과 카드도 같은 방식: digest.resultCard = <div class="dsg-res"> 인라인 스타일·span만·줄무늬 띠·VICTORY/DEFEAT/RETREAT, 안에 숨긴 dsg-plain(resultLine). beforeRequest가 plainResults로 카드 → 글만 바꿔 보냄.
