@@ -88,7 +88,9 @@ const summ = (l) => { const m = new Map(); for (const x of l) m.set(x, (m.get(x)
 /** 저장된 결과 글([전투 결과 — …] 블록) → 화면용 카드 HTML(표시할 때만 쓴다. 본문에는 글만 남는다) */
 export const RESULT_BLOCK_RE = /\[전투 결과 — ([^\]\n]+)\](?:\n[^\n\[]{1,40}: [^\n]*)*/g;
 export function cardFromPlain(block) {
-  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  // 다른 기능이 먼저 붙인 안전한 태그(Dusk 인물 이름 링크 <span data-dusk=…>이름</span>)는 살리고, 나머지만 글자로 바꾼다
+  const keep = []; block = String(block).replace(/<span data-dusk="[^"]*"[^>]*>[^<]{0,60}<\/span>/g, (m) => { keep.push(m); return '\u0001' + (keep.length - 1) + '\u0002'; });
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]).replace(/\u0001(\d+)\u0002/g, (m, i) => keep[+i] ?? '');
   const lines = String(block).split('\n'), head = /\[전투 결과 — ([^\]]+)\]/.exec(lines[0])?.[1] || '', hp = head.split(' · '), name = hp[0] || '', st = hp[1] || '', rest = hp.slice(2).join(' · ');
   const C = { 승리: ['#ffd35a', '#2a1c04', 'VICTORY', '#f2c230', '#5a3a00'], 패배: ['#ff5a5a', '#1c0508', 'DEFEAT', '#e0283a', '#111'], 후퇴: ['#9ab8d8', '#0e141e', 'RETREAT', '#7aa0c8', '#1a2230'] }[st] || ['#ccc', '#222', st, '#888', '#333'];
   const stripe = `display:block;height:8px;background:repeating-linear-gradient(-60deg,${C[4]} 0 12px,${C[3]} 12px 24px)`;
