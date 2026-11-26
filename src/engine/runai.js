@@ -10,17 +10,21 @@ const isStream = (v) => v && typeof v === "object" && typeof v.getReader === "fu
 export async function drainStream(stream, signal) {
   const reader = stream.getReader();
   let text = "", whole = "";
+  // 중지하면 다음 조각을 기다리지 않고 바로 스트림을 끊는다(리스 쪽 생성도 함께 멈춘다)
+  let stop = null; const stopped = new Promise((_, rej) => { stop = () => { try { reader.cancel(); } catch {} rej(new Error("AI 작업을 취소했어요.")); }; }); stopped.catch(() => {});
+  if (signal) { if (signal.aborted) stop(); else signal.addEventListener?.("abort", stop, { once: true }); }
   try {
     for (;;) {
       if (signal?.aborted) { try { await reader.cancel(); } catch {} throw new Error("AI 작업을 취소했어요."); }
-      const { done, value } = await reader.read();
+      const { done, value } = await Promise.race([reader.read(), stopped]);
+      if (signal?.aborted) throw new Error("AI 작업을 취소했어요.");
       if (value != null) {
         if (typeof value === "string") text += value;
         else if (typeof value === "object") { const k = Object.keys(value)[0]; if (k != null && typeof value[k] === "string") whole = value[k]; }
       }
       if (done) break;
     }
-  } finally { try { reader.releaseLock(); } catch {} }
+  } finally { signal?.removeEventListener?.("abort", stop); try { reader.releaseLock(); } catch {} }
   return (whole || text).trim();
 }
 export async function settleResponse(res, signal) {

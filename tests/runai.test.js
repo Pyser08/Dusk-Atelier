@@ -39,3 +39,9 @@ test("보조 모델에 키가 없다는 오류엔 고칠 곳 안내를 붙임", 
   const api = { runLLMModel: async () => ({ type: "fail", result: "요청 에러:You didn't provide an API key. You need to provide your API key in an Authorization header" }) };
   await assert.rejects(runAI(api, [{ role: "user", content: "t" }], { mode: "submodel", noUserPrompts: true }), /보조 모델/);
 });
+test("스트림: 중지하면 다음 조각을 기다리지 않고 바로 끊는다", async () => {
+  const { drainStream } = await import("../src/engine/runai.js"); let cancelled = false;
+  const stream = new ReadableStream({ pull() { return new Promise(() => {}); }, cancel() { cancelled = true; } }), ac = new AbortController();
+  const p = drainStream(stream, ac.signal); setTimeout(() => ac.abort(), 20); const t0 = Date.now();
+  await assert.rejects(p, /취소/); assert.ok(Date.now() - t0 < 500); assert.ok(cancelled);
+});
