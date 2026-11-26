@@ -49,6 +49,7 @@ export function createChatMenu(api, { fairPlay, turnInfo, openMemory, openRegres
     // 여러 개를 한 번에 붙일 수 있다(addLink([a, b, c])). 끼운 자리부터 뒤만 떼었다 다시 붙여 순서를 지킨다(리스 왕복 최소)
     addLink(item) {
       const list = (Array.isArray(item) ? item : [item]).map((x) => ({ link: true, ...x }));
+      const L = (globalThis.__duskChatLinks ||= {}); for (const x of list) if (x.key && typeof x.open === "function") L[x.key] = x.open;   // 2.2.66 떠 있는 막대가 같은 바로가기를 부른다
       const done = serial(async () => {
         const at = items.filter((i) => i.link).length;
         items.splice(at, 0, ...list);

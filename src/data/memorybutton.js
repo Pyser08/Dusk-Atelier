@@ -4,10 +4,14 @@ export { MEMORY_BUTTON_KEY, loadMemoryButtonOn };   // 재수출만 하면 이 �
 import { createFloatButton } from "./floatbtn.js";
 // 2.2.25: ensureDoc(리스 화면 문서, 권한 있을 때)가 있으면 Dusk가 직접 그린 동그란 반투명 버튼(끌어서 옮김)을 쓰고, 없으면 리스 버튼
 export function createMemoryButton(api, { name, icon, open, log, ensureDoc = null }) {
-  let part = null, on = false;
+  let part = null, on = false, hubOff = null;
   const fab = ensureDoc ? createFloatButton(api, { ensureDoc, icon, title: name, open, log }) : null;
+  // 2.2.66: 코어 막대(fabhub)가 있으면 동그란 버튼 대신 막대에 '인물 관계도'·'채팅 옮기기' 칸을 붙인다(Dusk Saga 칸과 한 막대)
+  const hub = () => globalThis.__duskFab;
+  const hubShow = async () => { const H = hub(); if (!H) return false; const a = await H.add({ key: "relmap", title: name, open, order: 10 }); if (!a) return false; const b = await H.add({ key: "regress", title: "회귀 / 채팅 옮기기", order: 20, open: () => globalThis.__duskChatLinks?.regress?.() }); hubOff = async () => { await a(); await b?.(); }; return true; };
   async function show() {
     if (on) return true;
+    try { if (await hubShow()) { on = true; return true; } } catch (e) { log?.(`막대 칸 붙이기 실패 ${e?.message ?? e}`); }
     try { if (fab && await fab.show()) { on = true; return true; } } catch (e) { log?.(`떠 있는 버튼 그리기 실패 ${e?.message ?? e}`); }
     try {
       part = await api.registerButton({ name, icon, iconType: "html", location: "action", id: "dusk-memory-button" }, open);   // id가 있어야 포켓리스가 떠 있는 버튼 위치를 옮기고 기억해요
@@ -20,6 +24,7 @@ export function createMemoryButton(api, { name, icon, open, log, ensureDoc = nul
   }
   async function hide() {
     if (!on) return true;
+    if (hubOff) { const f = hubOff; hubOff = null; await f(); on = false; return true; }
     if (fab?.isOn()) { await fab.hide(); on = false; return true; }
     const id = part?.id ?? part;
     try {
@@ -44,6 +49,6 @@ export function createMemoryButton(api, { name, icon, open, log, ensureDoc = nul
     },
     hide,   // 애드온을 끌 때 버튼만 내린다(설정값은 그대로)
     // 2.2.50: 크기·투명도 바로 반영(Dusk가 그린 동그란 버튼일 때만. 리스 버튼이면 false)
-    setLook: async (look) => (fab?.isOn() ? fab.setLook(look) : false)
+    setLook: async (look) => (hubOff ? hub()?.setLook(look) : fab?.isOn() ? fab.setLook(look) : false)
   };
 }
