@@ -114,7 +114,8 @@ test("서버 엔진 버전이 플러그인과 다르면 알림 문구, 같거나
   assert.equal(engineNotice("2.2.10", { ok: false }), null);
   assert.equal(engineNotice("2.2.10", { ok: true, features: ["mem"] }), null, "분석 기능 없으면 상관없음");
   assert.equal(engineNotice("2.2.10", { ok: true, features: ["analysis"], engine: "2.2.10" }), null);
-  assert.match(engineNotice("2.2.10", { ok: true, features: ["analysis"], engine: "2.2.4" }), /2\.2\.4.*2\.2\.10/);
+  assert.match(engineNotice("2.2.10", { ok: true, features: ["analysis"], engine: "2.2.4" }), /2\.2\.4.*2\.2\.41/);
+  assert.equal(engineNotice("2.2.63", { ok: true, features: ["analysis"], engine: "2.2.41" }), null, "신고 #25: 최신 Cellar 엔진이면 조용히");
   assert.match(engineNotice("2.2.10", { ok: true, features: ["analysis"] }), /오래된|업데이트/);
   assert.equal(engineNotice("", { ok: true, features: ["analysis"], engine: "2.2.4" }), null, "플러그인 버전을 모르면(시험) 조용히");
 });

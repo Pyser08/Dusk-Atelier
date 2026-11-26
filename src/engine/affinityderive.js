@@ -20,7 +20,10 @@ export const AFF_MIN = -100, AFF_MAX = 300;
 export function deriveAffinity({ affection = 0, attraction = 0, trust = 0, hostility = 0, fear = 0, intim = 0, first = 0 } = {}) {
   const warm = 0.45 * affection + 0.2 * attraction + 0.15 * trust + 0.2 * intim;   // 0~10
   const firstBias = first * 30 * (1 - Math.min(10, intim) / 10);   // 첫인상은 처음엔 ±30, 가까워질수록 0에 가깝게
-  const v = warm * 30 + firstBias - hostility * 15 - fear * 5;
+  // 신고 #26: 적대·두려움 감점이 호감과 상관없이 그대로라, 적대감이 쌓인 뒤엔 호감이 꽤 올라도 플러스로 못 돌아왔다(적대감은 30%가 원한으로 남음).
+  //   호감·신뢰가 쌓일수록 감점을 줄인다(따뜻함 10이면 40%만). 호감이 없을 때의 감점은 그대로.
+  const penalty = (hostility * 15 + fear * 5) * (1 - 0.6 * Math.min(10, warm) / 10);
+  const v = warm * 30 + firstBias - penalty;
   return Math.max(AFF_MIN, Math.min(AFF_MAX, Math.round(v)));
 }
 const sectionText = (doc, slot) => (doc?.sections ?? []).find((s) => s?.provenance?.slotId === slot && (s.provenance?.targetRefs ?? [])[0] === "actor:user")?.body ?? "";

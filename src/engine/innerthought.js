@@ -87,6 +87,8 @@ const SYN = [["기쁨", "happy", "joy", "smile", "웃음", "행복"], ["슬픔",
   ["당황", "confused", "panic", "flustered"], ["질투", "jealous", "pout", "삐짐"]];
 const isEmo = (w) => { const k = nz(w); return !!k && SYN.some((g) => g.some((x) => nz(x) === k)); };
 const TOK = /[\s_\-.]+/;
+// 신고 #25: 해시·UUID 조각(764ac8fb, f2b6)·번호는 감정 낱말이 아니다
+const junk = (t) => /^\d+$/.test(t) || (/^[0-9a-f]{4,}$/i.test(t) && /\d/.test(t));
 const synOf = (e) => { const k = nz(e); return SYN.find((g) => g.some((w) => nz(w) === k)) ?? [e]; };
 export function pickImage({ emotions = [], assets = [] } = {}, name, emo, { botName = "" } = {}) {
   const words = synOf(emo).map(nz).filter(Boolean), who = nz(name), bot = nz(botName);
@@ -125,13 +127,14 @@ const DOT = (l, b, s) => `<span style="position:absolute;left:${l}px;bottom:${b}
 // 신고 #20: 화면 이름표의 감정에서 에셋·인물 이름을 떼어 낸다(저장된 글은 그대로). 감정이 안 남으면 빈 글.
 export function cleanEmo(emo, name = "", { idx = null, emos = [] } = {}) {
   const raw = String(emo ?? "").trim(); if (!raw) return "";
-  if (emos.some((e) => nz(e) === nz(raw))) return raw;
+  if (emos.some((e) => nz(e) === nz(raw)) && !raw.split(TOK).some(junk)) return raw;
+  if (raw.split(TOK).every((t) => !t || junk(t))) return "";
   const people = new Set([nz(name)].filter(Boolean));
   for (const c of idx?.chars?.values?.() ?? []) if (nz(c.name)) people.add(nz(c.name));
-  const all = raw.split(TOK).filter(Boolean), known = all.find(isEmo);
+  const all = raw.split(TOK).filter((t) => t && !junk(t)), known = all.find(isEmo);
   if (known && all.length > 1 && (people.has(nz(all[0])) || people.has(nz(all.at(-1))))) return known;
   const rest = all.filter((t) => !people.has(nz(t)) || isEmo(t));
-  if (rest.length === all.length && !people.has(nz(raw))) return raw;
+  if (rest.length === all.length && !people.has(nz(raw))) return raw.split(TOK).some(junk) ? rest.join(" ") : raw;
   return rest.every((t) => /^\d+$/.test(t)) || (people.has(nz(raw)) && !isEmo(raw)) ? "" : rest.join(" ");
 }
 export function bubbleHtml(t, img = "", side = false) {
@@ -188,7 +191,7 @@ export function emotionWords(emotions = [], names = []) {
   const strip = names.map(nz).filter(Boolean), seen = new Set(), out = [];
   for (const e of emotions) {
     let k = String(e ?? "").trim(); for (const n of strip) k = k.replace(new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig"), "");
-    k = k.replace(/^[\s_\-.]+|[\s_\-.]+$/g, "").replace(/[\s_\-.]+/g, " ").trim();
+    k = k.split(TOK).filter((t) => t && !junk(t)).join(" ").trim();
     if (k && !seen.has(k.toLowerCase())) { seen.add(k.toLowerCase()); out.push(k); }
   }
   return out;
@@ -198,7 +201,7 @@ export function assetEmotions(idx, names = []) {
   const people = new Set([...(idx?.chars?.values?.() ?? [])].map((c) => nz(c.name)).concat(names.map(nz)).filter(Boolean)), out = [], seen = new Set();
   for (const e of idx?.entries ?? []) {
     const known = String(e.bare ?? e.name).replace(/\.(?:png|apng|jpe?g|webp|gif|avif)$/i, "").split(TOK).find(isEmo);
-    const kw = known ?? String(e.kw ?? "").split(TOK).filter((t) => t && !/^\d+$/.test(t) && !people.has(nz(t))).join(" ");
+    const kw = known ?? String(e.kw ?? "").split(TOK).filter((t) => t && !junk(t) && !people.has(nz(t))).join(" ");
     const k = kw.toLowerCase(); if (kw && !seen.has(k)) { seen.add(k); out.push(kw); }
   }
   return out;
