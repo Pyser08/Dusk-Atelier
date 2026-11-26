@@ -208,3 +208,9 @@ u.gr,u.el{text-decoration:none;display:inline-block;margin-left:6px;padding:0 6p
 .wl b{min-width:0;font-size:13px}.wl b span,.wl b i{font-size:11px}.wl small{flex:none;font-size:14px;white-space:nowrap}
 .wl button{border-left:4px solid var(--g,#555)}.wtag{display:inline-block;margin-right:4px;padding:0 4px;border-radius:3px;background:#c08a50;color:#1a1008;font:900 10px/15px sans-serif;font-style:normal}.wtag.s{background:#5aa8ff}
 .wl b{color:var(--g,#fff)}.wl .on b{color:var(--ink)}
+/* 공격 수단 패널(2차): 넓게, 화면 안에, 이름 두 줄까지, 선택해도 흔들리지 않게(스크롤바 깜빡임) */
+.wpanel{right:8px!important;left:auto!important;width:min(300px,calc(100vw - 16px))!important;max-width:calc(100vw - 16px);clip-path:none!important;border-radius:10px 0 0 10px}
+.wl{overflow-x:hidden!important;overflow-y:auto;scrollbar-gutter:stable;max-height:min(40vh,220px)!important}
+.wl .on{animation:none!important}.wl button{padding:6px 10px 6px 12px!important;min-height:44px}
+.wl b{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+.bars3.wpanel{right:8px!important;width:min(300px,calc(100vw - 16px))!important;clip-path:none!important;overflow:hidden}.bars3.wpanel h4{padding:6px 12px 2px;margin:0}.bars3.wpanel .ell{padding-left:12px}.bars3.wpanel .wt{padding-left:6px}

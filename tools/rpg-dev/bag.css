@@ -97,3 +97,7 @@
 .bg-stats[hidden]{display:none}
 /* 무기·방어구 이름을 등급 색으로 */
 .bg-slot b,.bg-aslot b{color:var(--g,#efe6d4)}.bg-slot.main b{text-shadow:0 0 8px color-mix(in srgb,var(--g) 50%,transparent)}
+/* PC: 내용을 가운데 760px로 모은다 */
+.bg-top,.bg-page,.bg-chips,.bg-inv{padding-left:max(14px,calc((100% - 760px) / 2))!important;padding-right:max(14px,calc((100% - 760px) / 2))!important}
+.bg-paper{grid-template-columns:minmax(0,1fr) 120px minmax(0,1fr)}
+@media (min-width:700px){.bg-paper{grid-template-columns:minmax(0,1fr) 170px minmax(0,1fr)}.bg-3d{max-height:340px}}

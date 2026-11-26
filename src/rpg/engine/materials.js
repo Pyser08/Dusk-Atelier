@@ -159,10 +159,12 @@ export function partMaterial(src, part, model = "", elem = "") {
 // ── 아이콘(SVG 문자열) ──
 const OUT = "#1a1420", W = "#ffffff";
 /** 소재·아이템 아이콘. it = 장부 항목(shape·pal) 또는 도감 항목. size px */
+const ICON_CACHE = new Map();
 export function iconSvg(it, size = 32) {
+  const ck = (it.shape || "") + "|" + (it.pal || "") + "|" + (it.elem || "") + "|" + size, hit = ICON_CACHE.get(ck); if (hit) return hit; if (ICON_CACHE.size > 3000) ICON_CACHE.clear();
   const shape = SHAPES[it.shape] || SHAPES.ore, pal = PAL[it.pal] || PAL[ELEM_PAL[it.elem]] || PAL.stone, col = { o: OUT, d: pal[0], b: pal[1], l: pal[2], a: pal[3], w: W };
   let r = ""; shape.forEach((row, y) => { for (let x = 0; x < 12; x++) { const c = row[x]; if (c && c !== "." && col[c]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${col[c]}"/>`; } });
-  return `<svg viewBox="0 0 12 12" width="${size}" height="${size}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+  const out = `<svg viewBox="0 0 12 12" width="${size}" height="${size}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`; ICON_CACHE.set(ck, out); return out;
 }
 /** 장비(무기) 아이콘 모양: 종류 → 도트 모양 */
 const WSHAPE = { sword: "w_sword", dagger: "w_dagger", lance: "w_lance", axe: "w_axe", bow: "w_bow", tome: "w_tome", staff: "w_staff", claw: "w_fist", item: "potion" };

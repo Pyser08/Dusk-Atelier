@@ -5,7 +5,7 @@ import { gearOf } from "./voxbattle.js";
 import { raceOpt, SIZE } from "./voxrace.js";
 
 export function createPreview() {
-  const gl = new THREE.WebGLRenderer({ antialias: true, alpha: true }); gl.setPixelRatio(Math.min(2, globalThis.devicePixelRatio || 1)); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 0.95;
+  const gl = new THREE.WebGLRenderer({ antialias: true, alpha: true }); gl.setPixelRatio(Math.min(1.5, globalThis.devicePixelRatio || 1)); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 0.95;
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(26, 0.7, 0.1, 40);
   scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x3a2a40, 1.25)); const sun = new THREE.DirectionalLight(0xffe2bd, 2.2); sun.position.set(-2, 5, 4); scene.add(sun); const rim = new THREE.DirectionalLight(0x8ab8ff, 1.6); rim.position.set(3, 3, -4); scene.add(rim);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(0.62, 40), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
@@ -16,10 +16,10 @@ export function createPreview() {
   el.addEventListener("pointermove", (e) => { if (drag) ang = drag.a + (e.clientX - drag.x) * 0.012; });
   const up = () => { if (drag) { drag = null; spin = 0.35; } }; el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
   function size() { if (!box) return; const w = box.clientWidth || 120, hh = box.clientHeight || 180; gl.setSize(w, hh, false); cam.aspect = w / hh; cam.updateProjectionMatrix(); }
-  function loop(t) { raf = requestAnimationFrame(loop); if (!box?.isConnected) return; const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t; if (!drag) ang += spin * dt; if (fig) fig.rotation.y = ang; player?.tick(dt); cam.position.set(0, h * 0.6, h * 2.6); cam.lookAt(0, h * 0.47, 0); gl.render(scene, cam); }
+  let vis = true, io = null; function loop(t) { raf = requestAnimationFrame(loop); if (!box?.isConnected || !vis || document.hidden) { last = t; return; } if (t - last < 33) return; const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t; if (!drag) ang += spin * dt; if (fig) fig.rotation.y = ang; player?.tick(dt); cam.position.set(0, h * 0.6, h * 2.6); cam.lookAt(0, h * 0.47, 0); gl.render(scene, cam); }
   return {
     /** 화면 칸에 붙이기(다시 그려도 같은 캔버스를 옮겨 단다) */
-    mount(node) { box = node; node.append(el); size(); if (!raf) raf = requestAnimationFrame(loop); },
+    mount(node) { box = node; node.append(el); size(); io?.disconnect(); if (typeof IntersectionObserver === "function") { io = new IntersectionObserver((es) => { vis = es.some((e) => e.isIntersecting); }); io.observe(node); } if (!raf) raf = requestAnimationFrame(loop); },
     /** info = { outfit, dye, hair, sex, race, w, look, tier, elem } */
     set(info) {
       const k = JSON.stringify(info); if (k === sig) return; sig = k; if (fig) scene.remove(fig);

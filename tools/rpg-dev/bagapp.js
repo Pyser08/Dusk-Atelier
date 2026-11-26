@@ -28,7 +28,7 @@ export async function mountBag(root, host) {
     el.innerHTML = `<header class=bg-top><button class=bg-x data-a=close aria-label=닫기>${ICO.back}</button><h2>가방</h2><nav class=bg-tabs><button data-tab=0>${ICO.craft} 가방</button><button data-tab=1>${ICO.gear} 정비</button><button data-tab=2>${px("w_tome", "gold")} 길드</button><button data-tab=3>${px("powder", "gold")} 상점</button><i class=bg-ind></i></nav></header>
       <div class=bg-pages><section class="bg-page pc"></section><section class="bg-page pg"></section><section class="bg-page pq"></section><section class="bg-page ps"></section></div>
       <div class=bg-drawer><button class=bg-handle data-a=drawer><i></i><span class=bg-dh></span></button><div class=bg-chips></div><div class=bg-inv></div></div><div class=bg-toast></div><div class=bg-pop hidden></div>`;
-    const pages = el.querySelector(".bg-pages"); pages.addEventListener("scroll", () => { const p = Math.round(pages.scrollLeft / pages.clientWidth); if (p !== V.page) { V.page = p; V.brush = null; tabs(); drawer(); } el.querySelector(".bg-ind").style.transform = `translateX(${(pages.scrollLeft / pages.clientWidth) * 100}%)`; if (p >= 2) readWorld(); }, { passive: true });
+    const pages = el.querySelector(".bg-pages"); pages.addEventListener("scroll", () => { const p = Math.round(pages.scrollLeft / pages.clientWidth); if (p !== V.page) { V.page = p; V.brush = null; for (const q of [p - 1, p, p + 1]) if (dirty.has(q)) page(q); tabs(); drawer(); } el.querySelector(".bg-ind").style.transform = `translateX(${(pages.scrollLeft / pages.clientWidth) * 100}%)`; if (p >= 2) readWorld(); }, { passive: true });
   }
   const tabs = () => { el.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", +b.dataset.tab === V.page)); const h = el.querySelector(".bg-top h2"); if (h) h.textContent = ["가방", "정비", "길드", "상점"][V.page]; };
   function craft() {
@@ -121,7 +121,10 @@ export async function mountBag(root, host) {
     el.querySelector(".bg-chips").innerHTML = FILTERS.filter(([k]) => k === "all" || L.bag.some((b) => catOf(b) === k)).map(([k, t]) => `<button data-f=${k} class="${k === f ? "on" : ""}">${t}</button>`).join("");
     el.querySelector(".bg-inv").innerHTML = list.length ? list.map((b) => { const left = (b.n || 1) - used(b.id), mu = V.page === 1 && (V.pending === "temper" || V.pending === "imbue") ? matUse(b) : null; return `<button class="bg-it ${V.brush === b.id ? "sel" : ""} ${(left <= 0 && V.page === 0) || (mu && !mu.ok) ? "out" : ""} ${mu?.ok ? "use" : ""}" ${mu ? `data-eff="${esc(mu.eff)}"` : ""} data-it="${b.id}" style="--g:${GC[gradeOf(b)] || "#888"}" title="${esc(b.name)}">${icon(b, 30)}${(b.n || 1) > 1 || used(b.id) ? `<b>${V.page === 0 ? left : b.n}</b>` : ""}<span>${esc(b.name)}</span>${mu ? `<em class=bg-eff>${esc(mu.eff)}</em>` : ""}</button>`; }).join("") : `<p class=bg-none>비어 있어요</p>`;
   }
-  const draw = () => { craft(); gear(); guild(); shop(); drawer(); tabs(); };
+  // 그리기는 지금 쪽과 옆 쪽만(밀어 넘길 때 보이게). 나머지는 넘어갈 때 그린다 — 휴대폰에서 가볍게
+  const PAGES = [() => craft(), () => gear(), () => guild(), () => shop()], dirty = new Set();
+  const page = (p) => { if (p < 0 || p > 3) return; dirty.delete(p); PAGES[p](); };
+  const draw = () => { for (let p = 0; p < 4; p++) dirty.add(p); for (const p of [V.page - 1, V.page, V.page + 1]) page(p); drawer(); tabs(); };
 
   // ── 동작 ──
   const place = (i, id) => { if (!id) { V.grid[i] = null; return; } const it = item(id); if (!it || (it.n || 1) - used(id) <= 0 || it.kind !== "소재") { toast(it && it.kind !== "소재" ? "제작대에는 소재만 놓을 수 있어요" : "남은 게 없어요"); return; } V.grid[i] = id; };
