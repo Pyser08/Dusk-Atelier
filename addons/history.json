@@ -20,9 +20,9 @@
   "aibuild.a4d3287659da.mjs"
  ],
  "memory": [
+  "memory.5d6b3316e734.mjs",
   "memory.16e7f9f6549d.mjs",
-  "memory.8b07413d994d.mjs",
-  "memory.1af250ec3fdb.mjs"
+  "memory.8b07413d994d.mjs"
  ],
  "cards": [
   "cards.30021c91c49b.mjs",
@@ -56,9 +56,9 @@
   "easylore.687a0ef88c2e.mjs"
  ],
  "innerthought": [
+  "innerthought.ba98c1db2a3e.mjs",
   "innerthought.951de2d9e2a8.mjs",
-  "innerthought.47dcb4159de8.mjs",
-  "innerthought.c0c1205e0336.mjs"
+  "innerthought.47dcb4159de8.mjs"
  ],
  "erosync": [
   "erosync.01a150628e4e.mjs",
