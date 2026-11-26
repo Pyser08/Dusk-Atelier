@@ -118,3 +118,4 @@
 - 공격 수단 패널 2차(폭 min(300px,100vw-16px), 오른쪽 8px, 잘림 clip-path 제거, 이름 두 줄, 선택 흔들림 끔). 가방 PC 폭 760px 가운데.
 - 2026-11-26 효과음 tools/rpg-dev/sfx.js: Web Audio 합성(파일 없음). SOUNDS 34종 + MAGIC 속성 11종, sfx.hit(h, w)(무기 종류·속성·필살·막기·빗나감·부위 파괴), 첫 터치에 unlock, 설정 dusk-saga-sfx·dusk-saga-vol(전투 설정 '효과음'·'소리 크기'). 전투: hooks.fight의 hit 콜백·간이 경로·phase·heal·die·level·blast·boom·tele·pattern·duo·포획/설득·raid·escape·encounter·over(승패), 버튼 click. 가방: 탭·놓기·제작·장착·강화·사고팔기·의뢰.
 - 전투 감지 지침 강화: 싸움 직전이면 그 순간에서 끝내고 한 줄도 더 진행 금지(첫 공격·경과·결말·장면 전환·회피 비틀기 금지), 마지막 줄 [[전투: …]] → ENCOUNTER 카드.
+- 2026-11-26 카드 버튼 연결 수정: 메인 DOM은 x- 속성만 읽힘(style·class getAttribute가 Access denied → 연결 실패·encDenied로 꺼짐). 이제 채팅 본문에서 카드 id를 모아 선택자([data-dsg=go-id] / [style*=--dsg:go-id] / 클래스)로 직접 찾고, 속성은 읽지 않음. 오류로 영구 꺼지지 않음. 리스·포켓리스·RisuBard 공통.
