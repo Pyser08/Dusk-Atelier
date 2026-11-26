@@ -3,7 +3,7 @@
 // 빨리 뜨게: 같은 채팅이면 만든 화면을 그대로 다시 붙이고(ctx.state.relmap), 뒤에서 데이터만 새로 읽어 바뀐 때만 다시 그린다.
 // 탭이 안 보이면 그리기 루프는 알아서 멈춘다(canvas.js).
 import { loadUserName, watchUserName, userLabel } from "./memory/username.js";
-import { loadUserNames } from "../../data/usernames.js";
+import { loadLiveUserNames } from "../../data/liveusernames.js";
 import { userAliasesFor } from "../../engine/useralias.js";
 import { setPastPersonas, withoutPast } from "../../engine/pastpersona.js";
 import { personaNames } from "../../engine/personas.js";
@@ -47,7 +47,7 @@ export async function renderRelMap(ctx) {
   let folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => null);
   // 페르소나 이름으로 따로 쌓인 옛 기록은 {{user}}로 자동으로 합친다. 가운데에는 그 채팅의 페르소나 이름을 보여 준다.
   setPastPersonas(personaNames(folder));   // 11-23 옛 페르소나는 나로 합치지 않는다
-  const unames = withoutPast([...await loadUserNames(ctx.api), ...userAliasesFor(uname ? [uname] : [], folder).filter((n) => !botNamed(n))]);
+  const unames = withoutPast([...await loadLiveUserNames(ctx.api), ...userAliasesFor(uname ? [uname] : [], folder).filter((n) => !botNamed(n))]);
   try {
     const merged = await autoMergeUser(M.store, cur.chaId, cur.chatId, folder, unames);
     if (merged) { folder = await M.store.getFolder(cur.chaId, cur.chatId).catch(() => folder); ctx.toast?.(`'${merged.names.join("', '") || "다른 이름"}' 기록을 {{user}}(${uname})로 합쳤어요.`); }
