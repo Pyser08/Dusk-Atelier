@@ -96,7 +96,7 @@
       "id": "memory",
       "name": "장기기억·관계도",
       "category": "memory",
-      "version": "0.3.70",
+      "version": "0.3.71",
       "minCore": "2.2.45",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
@@ -123,8 +123,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "16e7f9f6549d345c8e3ea885a592faf9fb8a327bc1905d63a65ad9e8ae395f77",
-      "size": 2449371
+      "sha256": "0e1ac3d2468151ecefcc1a504eb66a4b24138097a88b34995ba7d18e4706f82d",
+      "size": 2449578
     },
     {
       "id": "cards",
@@ -275,7 +275,7 @@
       "id": "innerthought",
       "name": "인물 속마음 보기",
       "category": "memory",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "minCore": "2.2.42",
       "hooks": true,
       "desc": "메인 모델이 본문과 함께 인물의 속마음을 써요. 그 인물의 행동·대사 옆에 생각풍선 아이콘이 뜨고, 누르면 본문 옆에 반투명 생각 풍선과 그 감정의 봇 이미지가 펼쳐져요. 인물당 최소·최대 횟수를 정하고, 모은 속마음은 캐릭터 상태창(장기기억)의 ‘속마음’ 탭에서 봐요. AI 호출은 늘지 않아요.",
@@ -302,8 +302,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/innerthought.js",
-      "sha256": "951de2d9e2a883981c2e781b351773d639402d499b7f493cb7bee84764ce6858",
-      "size": 18478
+      "sha256": "ba98c1db2a3e00da3b0df86aae66293957cc10ccd4599cda04525c9760a51b1a",
+      "size": 18606
     }
   ]
 }
