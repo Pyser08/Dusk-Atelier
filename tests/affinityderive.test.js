@@ -20,7 +20,7 @@ test("호감도 계산: 감정이 클수록 오르고, 적대는 깎고, 첫인�
   assert.equal(z, 0);
   const warm = deriveAffinity({ affection: 8, attraction: 6, trust: 7, intim: 6 });
   assert.ok(warm > 150 && warm <= 300, String(warm));
-  assert.ok(deriveAffinity({ affection: 8, attraction: 6, trust: 7, intim: 6, hostility: 6 }) < warm - 60);
+  assert.ok(deriveAffinity({ affection: 8, attraction: 6, trust: 7, intim: 6, hostility: 6 }) < warm - 40, "적대는 깎는다(호감이 크면 덜, 신고 #26)");
   assert.equal(deriveAffinity({ hostility: 10, fear: 10 }), -100, "바닥");
   assert.ok(deriveAffinity({ affection: 10, attraction: 10, trust: 10, intim: 10 }) <= 300, "천장");
   const early = deriveAffinity({ first: 1 }) - deriveAffinity({}), late = deriveAffinity({ first: 1, intim: 8 }) - deriveAffinity({ intim: 8 });
@@ -40,4 +40,10 @@ test("위키 호감도 맞추기: 감정 있는 인물만, 값이 같으면 그�
   assert.equal(aff(r.scope, "유나"), 40, "감정 기록이 없으면 그대로");
   assert.equal(r.changed.length, 1);
   assert.equal(syncAffinity(r.scope, { feelOf, intimOf: () => 4, policy: POLICY }).changed.length, 0, "같으면 안 바꿈");
+});
+
+test("신고 #26: 적대감이 남아도 호감이 다시 쌓이면 플러스로 돌아온다", () => {
+  assert.ok(deriveAffinity({ hostility: 8 }) < 0, "호감 없으면 마이너스");
+  assert.ok(deriveAffinity({ affection: 5, attraction: 2, trust: 3, intim: 3, hostility: 8 }) > 0);
+  assert.ok(deriveAffinity({ affection: 6, trust: 5, intim: 4, hostility: 3 }) > deriveAffinity({ affection: 6, trust: 5, intim: 4, hostility: 6 }), "적대가 클수록 낮다");
 });
