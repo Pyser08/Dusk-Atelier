@@ -1,6 +1,7 @@
 // Dusk Saga 가방 — 전투 화면과 따로 뜨는 독립 화면. [제작] ↔ [정비]는 옆으로 밀거나 눌러서 넘긴다.
 // 아래 서랍(가방 속 소재)은 끌어올리거나 손잡이를 눌러 펼친다. 바꾼 것은 곧바로 장부에 저장되고, 다음 답부터 ‘일행 장비’ 줄로 실린다.
 import * as E from "../../src/rpg/engine/index.js";
+import { sfx } from "./sfx.js";
 
 const GC = { 조악: "#7a7680", 보통: "#d8d2c4", 양질: "#6fd08a", 정예: "#5aa8ff", 희귀: "#b07aff", 영웅: "#ffa040", 전설: "#ffd35a", 신화: "#ff5a7a" };
 const gradeOf = (it) => String(it?.grade != null && typeof it.grade === "number" ? E.gradeName(it.grade) : it?.grade || "보통").replace(/[+-]$/, "");
@@ -16,7 +17,7 @@ export async function mountBag(root, host) {
   const ledger = host.ledger; let L = await ledger.get(); if (E.ensureStarter(L)) await ledger.put(L);
   const talk = (await ledger.recent?.().catch(() => "")) || "", shopHere = E.WORKSHOP.test(talk);
   const V = { page: host.start === "gear" ? 1 : 0, aslot: null, size: 3, grid: Array(9).fill(null), brush: null, filter: "all", open: false, who: Object.keys(L.party.defs)[0] || "", slot: null, pending: null, msg: "", flash: "" };
-  const el = document.createElement("div"); el.className = "bg"; root.append(el);
+  const el = document.createElement("div"); el.className = "bg"; root.append(el); sfx.init(host.store || globalThis.localStorage); sfx.unlock(el);
   let saveT = 0; const save = () => { clearTimeout(saveT); saveT = setTimeout(async () => { await ledger.put(L); toast("저장됨 · 다음 답부터 반영돼요"); }, 120); };
   const toast = (t) => { const n = el.querySelector(".bg-toast"); if (!n) return; n.textContent = t; n.classList.remove("on"); void n.offsetWidth; n.classList.add("on"); };
   const item = (id) => L.bag.find((b) => b.id === id);
@@ -127,16 +128,16 @@ export async function mountBag(root, host) {
   const draw = () => { for (let p = 0; p < 4; p++) dirty.add(p); for (const p of [V.page - 1, V.page, V.page + 1]) page(p); drawer(); tabs(); };
 
   // ── 동작 ──
-  const place = (i, id) => { if (!id) { V.grid[i] = null; return; } const it = item(id); if (!it || (it.n || 1) - used(id) <= 0 || it.kind !== "소재") { toast(it && it.kind !== "소재" ? "제작대에는 소재만 놓을 수 있어요" : "남은 게 없어요"); return; } V.grid[i] = id; };
+  const place = (i, id) => { if (!id) { V.grid[i] = null; sfx.play("click"); return; } sfx.play("place"); const it = item(id); if (!it || (it.n || 1) - used(id) <= 0 || it.kind !== "소재") { toast(it && it.kind !== "소재" ? "제작대에는 소재만 놓을 수 있어요" : "남은 게 없어요"); return; } V.grid[i] = id; };
   function pickItem(id) {
     const it = item(id); if (!it) return;
-    if (V.page === 3) { if (!V.near) return toast("상점에 있을 때만 팔 수 있어요"); const pr = E.sellPrice(L, it); if (confirm(`${it.name} 하나를 ${E.fmtMoney(L, pr)}에 팔까요?`)) { E.discard(L, id, 1); E.earn(L, pr); L.notes.push(`${it.name} 판매 — ${E.fmtMoney(L, pr)}`); save(); draw(); } return; }
+    if (V.page === 3) { if (!V.near) return toast("상점에 있을 때만 팔 수 있어요"); const pr = E.sellPrice(L, it); if (confirm(`${it.name} 하나를 ${E.fmtMoney(L, pr)}에 팔까요?`)) { E.discard(L, id, 1); E.earn(L, pr); sfx.play("coin"); L.notes.push(`${it.name} 판매 — ${E.fmtMoney(L, pr)}`); save(); draw(); } return; }
     if (V.page === 0) { V.brush = V.brush === id ? null : id; if (!V.grid.some(Boolean) && V.brush) toast("칸을 눌러 놓아요"); return draw(); }
     const d = D(); if (!d) return;
-    if (V.pending === "temper" || V.pending === "imbue") { const ok = V.pending === "temper" ? E.temper(L, d.id, V.slot, id) : E.imbue(L, d.id, V.slot, id); toast(ok ? (V.pending === "temper" ? "강화했어요" : "속성을 입혔어요") : V.pending === "temper" ? "이 소재로는 더 못 올려요" : "속성이 없거나 같은 속성이에요"); if (ok) { V.pending = null; save(); } return draw(); }
-    if (it.charm) { E.equipCharm(L, id, d.id); save(); return draw(); }
-    if (it.a) { if (!E.equipArmor(L, id, d.id)) return toast(`${E.GROUPS[it.a.group].n} 방어구는 ${E.GROUPS[E.groupOf(d)].n} 직업군이 못 입어요`); save(); return draw(); }
-    if (it.w) { if (d.weapons.length >= 5) return toast("칸이 가득 찼어요"); E.equip(L, id, d.id); save(); return draw(); }
+    if (V.pending === "temper" || V.pending === "imbue") { const ok = V.pending === "temper" ? E.temper(L, d.id, V.slot, id) : E.imbue(L, d.id, V.slot, id); sfx.play(ok ? "temper" : "fail"); toast(ok ? (V.pending === "temper" ? "강화했어요" : "속성을 입혔어요") : V.pending === "temper" ? "이 소재로는 더 못 올려요" : "속성이 없거나 같은 속성이에요"); if (ok) { V.pending = null; save(); } return draw(); }
+    if (it.charm) { E.equipCharm(L, id, d.id); sfx.play("equip"); save(); return draw(); }
+    if (it.a) { if (!E.equipArmor(L, id, d.id)) { sfx.play("fail"); return toast(`${E.GROUPS[it.a.group].n} 방어구는 ${E.GROUPS[E.groupOf(d)].n} 직업군이 못 입어요`); } sfx.play("equip"); save(); return draw(); }
+    if (it.w) { if (d.weapons.length >= 5) return toast("칸이 가득 찼어요"); E.equip(L, id, d.id); sfx.play("equip"); save(); return draw(); }
     pop(it);
   }
   function pop(it) { const n = el.querySelector(".bg-pop"), c = E.CATS[catOf(it)] || ""; n.innerHTML = `<div class=bg-pc style="--g:${GC[gradeOf(it)]}">${icon(it, 64)}<div><b>${esc(it.name)}</b><small>${esc(c)} · ${esc(gradeOf(it))}${it.elem ? " · " + E.ELEM_NAME[it.elem] : ""} · ${it.n || 1}개</small><p>${esc(desc(it))}</p></div><button data-a=popx>닫기</button><button data-a=drop>하나 버리기</button></div>`; n.hidden = false; n.dataset.id = it.id; }
@@ -198,7 +199,7 @@ export async function mountBag(root, host) {
     if (drag?.skipClick) return; const b = e.target.closest("button"); if (!b) { if (e.target.classList.contains("bg-pop")) e.target.hidden = true; return; }
     const a = b.dataset.a;
     if (a === "close") return host.close?.();
-    if (b.dataset.tab != null) { const pages = el.querySelector(".bg-pages"); pages.scrollTo({ left: +b.dataset.tab * pages.clientWidth, behavior: "smooth" }); return; }
+    if (b.dataset.tab != null) { sfx.play("tab"); const pages = el.querySelector(".bg-pages"); pages.scrollTo({ left: +b.dataset.tab * pages.clientWidth, behavior: "smooth" }); return; }
     if (b.dataset.size) { const n = +b.dataset.size; if (n !== V.size) { V.size = n; V.grid = Array(n * n).fill(null); } return draw(); }
     if (b.dataset.cell != null) { const i = +b.dataset.cell; if (V.brush) place(i, V.grid[i] === V.brush ? null : V.brush); else V.grid[i] = null; craft(); drawer(); return; }
     if (b.dataset.it) return pickItem(b.dataset.it);
@@ -210,11 +211,11 @@ export async function mountBag(root, host) {
     if (b.dataset.learn) { if (!E.learnSkill(L, V.who, b.dataset.learn)) toast("기술 칸(6)이 가득해요"); else save(); return draw(); }
     if (b.dataset.sset != null) { E.loadSkillSet(L, V.who, +b.dataset.sset); save(); toast("기술 세트를 바꿨어요"); return draw(); }
     if (b.dataset.g) return gearAct(b.dataset.g);
-    if (b.dataset.qt) { if (!E.takeQuest(L, b.dataset.qt)) toast("수락한 의뢰는 3개까지예요"); else { toast("수락했어요 — 다음 답부터 이야기에 실려요"); save(); } return draw(); }
+    if (b.dataset.qt) { if (!E.takeQuest(L, b.dataset.qt)) toast("수락한 의뢰는 3개까지예요"); else { sfx.play("quest"); toast("수락했어요 — 다음 답부터 이야기에 실려요"); save(); } return draw(); }
     if (b.dataset.qx) { if (confirm("이 의뢰를 포기할까요? 평판이 조금 깎여요.")) { E.dropQuest(L, b.dataset.qx); save(); draw(); } return; }
-    if (b.dataset.qd) { if (E.deliver(L, b.dataset.qd)) { toast("의뢰 완료!"); save(); } else toast("가방에 대상 소재가 모자라요"); return draw(); }
+    if (b.dataset.qd) { if (E.deliver(L, b.dataset.qd)) { sfx.play("quest"); toast("의뢰 완료!"); save(); } else toast("가방에 대상 소재가 모자라요"); return draw(); }
     if (b.dataset.shop) { V.shop = b.dataset.shop; return shop(); }
-    if (b.dataset.buy != null) { const x = V.stock[+b.dataset.buy]; if (!x || !E.pay(L, x.price)) return toast("돈이 모자라요"); if (x.mid) E.addMat(L, x.mid); else if (x.w) E.addItem(L, { kind: "장비", name: x.w.name || E.KINDS[x.w.kind]?.n, w: { ...x.w, name: x.w.name || E.KINDS[x.w.kind]?.n }, n: 1 }); else E.addItem(L, { kind: "장비", name: x.potion, w: { name: x.potion, type: "item", mt: x.potion === "해독제" ? 5 : 10, hit: 0, crit: 0, rmin: 0, rmax: 0, max: 3, uses: 3 }, n: 1, shape: "potion", pal: x.potion === "해독제" ? "emerald" : "ruby" }); L.notes.push(`${V.shop}에서 ${x.mid ? E.BY_ID[x.mid].name : x.w?.name || x.potion} 구입 — ${E.fmtMoney(L, x.price)}`); toast("샀어요"); save(); return draw(); }
+    if (b.dataset.buy != null) { const x = V.stock[+b.dataset.buy]; if (!x || !E.pay(L, x.price)) return toast("돈이 모자라요"); if (x.mid) E.addMat(L, x.mid); else if (x.w) E.addItem(L, { kind: "장비", name: x.w.name || E.KINDS[x.w.kind]?.n, w: { ...x.w, name: x.w.name || E.KINDS[x.w.kind]?.n }, n: 1 }); else E.addItem(L, { kind: "장비", name: x.potion, w: { name: x.potion, type: "item", mt: x.potion === "해독제" ? 5 : 10, hit: 0, crit: 0, rmin: 0, rmax: 0, max: 3, uses: 3 }, n: 1, shape: "potion", pal: x.potion === "해독제" ? "emerald" : "ruby" }); L.notes.push(`${V.shop}에서 ${x.mid ? E.BY_ID[x.mid].name : x.w?.name || x.potion} 구입 — ${E.fmtMoney(L, x.price)}`); sfx.play("coin"); toast("샀어요"); save(); return draw(); }
     if (b.dataset.rc) { const r = E.RECIPES.find((x) => x.id === b.dataset.rc), n = Math.max(V.size, r.size); if (r.shop && !shopHere && !V.unlock) return toast("대장간·아틀리에에서만 만들 수 있어요"); const g = E.autoFill(r, L.bag, n); if (!g) return toast("재료가 모자라요"); V.size = n; V.grid = g; el.querySelector(".bg-pop").hidden = true; return draw(); }
     if (a === "drawer") { V.open = !V.open; return drawer(); } if (a === "clear") { V.grid = V.grid.map(() => null); V.brush = null; return draw(); }
     if (a === "newq") { if (!host.ask) return; toast("의뢰를 받는 중…"); try { const t = await host.ask(E.QUEST_PROMPT(L, 3), "위 세계와 지금 장면에 맞는 의뢰를 정해진 줄 형식으로만.", { stage: "의뢰" }); const qs = E.parseQuests(L, t); E.addQuests(L, qs); L.questAt = Date.now(); toast(qs.length ? `의뢰 ${qs.length}건이 올라왔어요` : "의뢰를 못 읽었어요"); save(); draw(); } catch (e) { toast("의뢰를 못 받았어요: " + (e?.message ?? e)); } return; }
@@ -224,7 +225,7 @@ export async function mountBag(root, host) {
     if (a === "make") {
       const p = E.craftGrid(L, V.grid, V.size, { workshop: shopHere || V.unlock, level: Math.max(1, ...Object.values(L.party.defs).map((d) => d.level || 1)), addItem: E.addItem, note: (L0, t) => { L0.notes.push(t); L0.log.push({ at: Date.now(), text: t }); } });
       if (!p) return toast("만들 수 없어요"); const left = new Map(); V.grid = V.grid.map((g) => { if (!g || !item(g)) return null; const k = left.has(g) ? left.get(g) : item(g).n || 1; if (k <= 0) return null; left.set(g, k - 1); return g; });
-      const o = el.querySelector(".bg-out"); o?.classList.add("pop"); save(); toast(`${p.name} 완성!`); setTimeout(draw, 380); return;
+      const o = el.querySelector(".bg-out"); o?.classList.add("pop"); sfx.play("craft"); save(); toast(`${p.name} 완성!`); setTimeout(draw, 380); return;
     }
   });
   frame(); V.unlock = !!host.unlock5; draw(); if (V.page) { const pg0 = el.querySelector(".bg-pages"); requestAnimationFrame(() => { pg0.scrollLeft = pg0.clientWidth; }); }

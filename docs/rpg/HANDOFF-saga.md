@@ -116,3 +116,5 @@
 - 2026-11-26 본문 카드 3차: RisuBard는 메시지 속 HTML을 그리지 않음 → 본문에는 표식만 저장 [[ENCOUNTER#id: 상황]](누르면 '#id 이어짐'/'#id 넘김'으로 바꿔 저장), 결과는 글 그대로([전투 결과 — …] 블록). addRisuScriptHandler("display")의 toCards가 화면에 보일 때만 카드로(digest.cardFromPlain, RESULT_BLOCK_RE). 예전 HTML 카드도 표시 때 다시 그림. 버튼 찾기: style 안 --dsg:go-<id>(클래스가 지워져도). beforeRequest가 표식·예전 HTML을 지우고 보냄.
 - 성능: app3d 루프가 매 프레임 보드 DOM 전체를 훑던 것 → MutationObserver로 바뀔 때만 refreshBoard(TS·UN 캐시), 이름표 위치는 바뀔 때만 씀, 가만히 있으면 30fps. 가방은 지금 쪽±1만 그림, 3D 미리보기는 보일 때만·30fps·픽셀비 1.5, 아이콘 SVG 캐시. 애드온 주기 작업: 카드 확인 평소 6초(카드 생긴 뒤 40초만 1.5초), 장부 다시 읽기 6초·숨겨진 탭 건너뜀.
 - 공격 수단 패널 2차(폭 min(300px,100vw-16px), 오른쪽 8px, 잘림 clip-path 제거, 이름 두 줄, 선택 흔들림 끔). 가방 PC 폭 760px 가운데.
+- 2026-11-26 효과음 tools/rpg-dev/sfx.js: Web Audio 합성(파일 없음). SOUNDS 34종 + MAGIC 속성 11종, sfx.hit(h, w)(무기 종류·속성·필살·막기·빗나감·부위 파괴), 첫 터치에 unlock, 설정 dusk-saga-sfx·dusk-saga-vol(전투 설정 '효과음'·'소리 크기'). 전투: hooks.fight의 hit 콜백·간이 경로·phase·heal·die·level·blast·boom·tele·pattern·duo·포획/설득·raid·escape·encounter·over(승패), 버튼 click. 가방: 탭·놓기·제작·장착·강화·사고팔기·의뢰.
+- 전투 감지 지침 강화: 싸움 직전이면 그 순간에서 끝내고 한 줄도 더 진행 금지(첫 공격·경과·결말·장면 전환·회피 비틀기 금지), 마지막 줄 [[전투: …]] → ENCOUNTER 카드.
