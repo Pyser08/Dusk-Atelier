@@ -23,11 +23,16 @@ function readStopped() { try { return JSON.parse(globalThis.localStorage?.getIte
 export function isStoppedJob(j) { const k = jobKey(j); return !!k && (stoppedMem.has(k) || readStopped().includes(k)); }
 export function markStoppedJob(j) { const k = jobKey(j); if (!k) return; stoppedMem.add(k);
   try { globalThis.localStorage?.setItem(STOPPED_KEY, JSON.stringify([...readStopped().filter((x) => x !== k), k].slice(-20))); } catch { /* 이 실행 동안만 */ } }
+// 지금 나와 있는 최신 Cellar(v0.1.0)에 든 분석 엔진 버전. Cellar를 새로 내면 올린다
+export const ENGINE_MIN = "2.2.41";
+const verCmp = (a, b) => { const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number);
+  for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
 export function engineNotice(pluginVer, status) {
   if (!pluginVer || !status?.ok || !status.features?.includes("analysis")) return null;
   const eng = String(status.engine ?? "");
-  if (eng === pluginVer) return null;
-  return eng ? `Dusk Cellar의 분석 엔진(v${eng})이 플러그인(v${pluginVer})과 달라요. 서버 분석 결과가 기기 분석과 다를 수 있으니 Cellar를 업데이트해 주세요.`
+  // 신고 #25: Cellar는 플러그인만큼 자주 나오지 않는다. 최신 Cellar에 든 엔진(ENGINE_MIN) 이상이면 알리지 않는다(업데이트할 게 없는데 매번 뜨던 문제)
+  if (eng === pluginVer || (eng && verCmp(eng, ENGINE_MIN) >= 0)) return null;
+  return eng ? `Dusk Cellar의 분석 엔진(v${eng})이 오래됐어요(최신 Cellar는 v${ENGINE_MIN} 이상). 서버 분석 결과가 기기 분석과 다를 수 있으니 Cellar를 업데이트해 주세요.`
     : `Dusk Cellar의 분석 엔진이 오래된 버전이에요(플러그인 v${pluginVer}). 서버 분석에서 실패가 잦을 수 있으니 Cellar를 업데이트해 주세요.`;
 }
 

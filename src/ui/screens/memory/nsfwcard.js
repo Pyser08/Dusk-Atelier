@@ -104,7 +104,7 @@ export function openNsfwEditor(env, doc, n0) {
   const numIn = (k, v) => h("input", { type: "number", min: 0, max: 100, step: 1, value: Number.isFinite(v) ? v : "", "data-k": k, class: "rb-input", style: "width:72px" });
   const row = (label, el) => h("label", { style: "display:flex;align-items:center;justify-content:space-between;gap:8px" }, h("span", null, label), el);
   const kindOf = (p) => p.kind || posKind("", p.label), join = (pref, g) => n.positions.filter((p) => p.preference === pref && posGroup(kindOf(p)) === g).map((p) => cleanPosLabel(p.label)).join(", ");
-  const ta = (k, v, ph) => h("textarea", { class: "rb-input", rows: 2, "data-k": k, placeholder: ph, style: "width:100%" }, v);
+  const ta = (k, v, ph) => h("textarea", { class: "rb-input", rows: 2, "data-k": k, placeholder: ph, style: "width:100%;min-height:3.2em;flex-shrink:0;resize:vertical" }, v);
   return modal(env.ctx.win, (done) => {
     const box = h("div", { class: "rb-dialog", id: "rb-nsfw-editor", role: "dialog", "aria-modal": "true", "aria-label": "성인 프로필 고치기", style: "width:min(560px,94vw);max-height:86vh;overflow:auto;display:flex;flex-direction:column;gap:10px" },
       h("h3", { class: "rb-h3" }, `${doc.title} · 성인 프로필 고치기`),

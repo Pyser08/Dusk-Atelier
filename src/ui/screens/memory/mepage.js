@@ -8,14 +8,14 @@ import { EMO_TAGS, EMO_LABEL, GAUGE_MAX } from "../../../engine/memoryemo.js";
 import { meView, userMergePlan, mergeIntoUser, TONE_LABEL, USER } from "../../../engine/memoryuser.js";
 import { setTag } from "../../../engine/memoryemo.js";
 import { setTalk } from "../../../engine/memoryhuman.js";
-import { loadUserNames } from "../../../data/usernames.js";
+import { loadLiveUserNames } from "../../../data/liveusernames.js";
 import { userAliasesFor, setUserAliases } from "../../../engine/useralias.js";
 import { withoutPast } from "../../../engine/pastpersona.js";
 import { loadUserName } from "./username.js";
 import { autoMergeUser } from "../../../data/usermerge.js";
 
 async function personaNames(ctx) {
-  return loadUserNames(ctx.api);
+  return loadLiveUserNames(ctx.api);
 }
 const bar = (t, val) => h("div", { class: "rb-wk2-bar" }, h("i", { class: `dot e-${t}`, "aria-hidden": "true" }), h("span", null, EMO_LABEL[t]),
   h("span", { class: "track", role: "progressbar", "aria-label": EMO_LABEL[t], "aria-valuemin": 0, "aria-valuemax": GAUGE_MAX, "aria-valuenow": val }, h("i", { class: `e-${t}`, style: { width: `${(val / GAUGE_MAX) * 100}%` } })),

@@ -363,6 +363,7 @@ export function createTurnFlow(api, { store, runner, injector, embedder = null, 
       } else toast.hide().catch(() => {});
     });
     const main = new MainWikiHook(api, settings, wiki, keys, libFor("fast"), auto, null, trace);
+    main.position = async () => (await store.getIndex())?.settings?.inject?.wikiPosition;   // 신고 #21
     // 2.0.0 Dusk 정리 노트: 리수폿 정리 노트 지침(8만 자 안팎)을 보내지 않고, 저장된 위키 값으로 인물 정리표를 프로그램이 만든다(늘 같은 값).
     // 연출 모드면 짧은 질문 1번으로 '이번 응답 방향'만 덧붙인다. 해석이 안 되면 예전 길로.
     const routerSeen = new Map(), dirSeen = new Map(); let lastCast = null;   // 다시 요청 때 재사용(retrycache.js)

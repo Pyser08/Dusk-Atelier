@@ -4,3 +4,13 @@ let past = new Set();
 const k = (n) => String(n ?? "").trim().toLowerCase();
 export function setPastPersonas(names) { past = new Set((names ?? []).map(k).filter(Boolean)); }
 export const withoutPast = (list) => (list ?? []).filter((n) => !past.has(k(n)));
+// 신고 #22: 리스의 '모든 페르소나 이름'을 나로 묶으면, NPC와 같은 이름의 페르소나(예: 분기 채팅에서 잠깐 쓴 것)가 있을 때
+// 그 NPC 기록이 '나'로 합쳐졌다. 장기기억은 지금 고른 페르소나·username(과 여러 단어 이름의 첫 단어)만 나로 본다.
+export function liveUserNames(db) {
+  const out = [], ok = (n) => typeof n === "string" && n.trim().length >= 1;
+  const add = (n) => { if (ok(n) && !out.some((x) => k(x) === k(n))) out.push(n.trim()); };
+  const list = Array.isArray(db?.personas) ? db.personas : [];
+  add(db?.username); add(list[db?.selectedPersona ?? 0]?.name);
+  for (const n of [...out]) { const w = n.split(/\s+/); if (w.length > 1 && w[0].length >= 2) add(w[0]); }
+  return withoutPast(out);
+}

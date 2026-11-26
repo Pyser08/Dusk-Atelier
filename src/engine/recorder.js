@@ -1,3 +1,4 @@
+import { refusalText, blockedError, isCensored, censorMessage } from "./refusal.js";
 // Dusk 기록기 (2.0.0) — 리수폿 '기록하기(Writer)'를 대신하는 짧은 단계별 기록. 순수 함수만 둔다.
 //
 // 왜: 리수폿 Writer 지침은 빈 위키에서도 11만 자가 넘고(규칙 묶음 20여 개가 같은 무게), 출력은 entry_ref·target_refs·evidence_refs를
@@ -83,11 +84,13 @@ export { stripThoughts } from "./memorylines.js";   // 2.2.4 공용으로 옮김
 // 3.0.8: 호출층(llm-client)은 빈 응답을 예외(code empty-model-response)로 던진다 — 추론만 하다 끝난 경우라 다시 묻는다(다른 오류는 그대로 던짐).
 // tries: 최대 호출 횟수(1단계 3, 인물 2 — 추론 모델이 실패할 때마다 수만 토큰을 쓰므로 인물 단계는 한 번만 다시 묻는다).
 async function ask(call, msgs, parse, { minimal = null, tries = 3 } = {}) {
-  const once = async (m) => { try { return stripThoughts(await call(m)); } catch (e) { if (e?.code === "empty-model-response") return ""; throw e; } };
+  const once = async (m) => { try { return stripThoughts(await call(m)); } catch (e) { if (e?.code === "empty-model-response") return ""; if (blockedError(e) && !isCensored(e)) throw Object.assign(new Error(censorMessage(`모델 제공사가 요청을 막았어요 — ${cut(e?.message ?? e, 160)}`)), { code: "recorder-refused", cause: e }); throw e; } };
   let raw = await once(msgs);
   for (let k = 0; k < tries; k++) {
     const got = parse(raw);
     if (got) return got;
+    const no = refusalText(raw);   // 신고 #23: 거절 문장은 형식 오류가 아니라 검열 — 다시 묻지 않는다
+    if (no) throw Object.assign(new Error(censorMessage(`모델이 기록을 거절했어요 — ${no}`)), { code: "recorder-refused" });
     if (k === tries - 1) break;
     const kind = failureKind(raw);
     const next = (k === 1 || kind === "truncated") && minimal ? [{ role: "system", content: minimal }, msgs[1]] : [...msgs, ...(kind === "empty" ? [] : [{ role: "assistant", content: String(raw ?? "").slice(0, 1500) }]), { role: "user", content: RETRY_NOTE[kind] }];

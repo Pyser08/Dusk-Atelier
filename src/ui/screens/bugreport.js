@@ -19,13 +19,14 @@ export async function openBugReport(ctx) {
       sendBtn.disabled = true; status.replaceChildren(note("info", "보내는 중이에요…"));
       try {
         const no = await hub.sendReport(await build());
-        status.replaceChildren(note("ok", no ? `보냈어요. 신고 번호는 #${no} 이에요. 문의할 때 이 번호를 알려 주세요.` : "보냈어요. 고마워요!"));
+        status.replaceChildren(note("ok", no ? `보냈어요. 신고 번호는 #${no} 이에요. 해결되면 연락받고 싶다면 아카에 다른 내용 없이 #${no} 리폿했다고만 남겨 주세요.` : "보냈어요. 고마워요!"));
         sendBtn.remove();
       } catch (e) { sendBtn.disabled = false; status.replaceChildren(note("err", e?.message ?? String(e))); }
     } });
     return h("div", { class: "rb-dialog", role: "dialog", "aria-label": "버그 신고", style: "max-width:560px;display:flex;flex-direction:column;gap:10px" },
       h("h3", { class: "rb-h3" }, "버그 신고"),
       h("p", { class: "rb-muted", style: "margin:0" }, "개발자 서버로 바로 보내요. 대화 내용·봇·API 키는 보내지 않고, 키처럼 보이는 글은 가려요."),
+      h("p", { class: "rb-muted", style: "margin:0" }, "보낸 뒤 아카에 다른 내용 없이 #(번호)만 적어 리폿했다고 남겨 주시면, 해결한 뒤 연락받을 수 있어요. 번호는 보내면 알려 드려요."),
       text, contact,
       h("label", { style: "display:flex;gap:8px;align-items:center" }, withLogs, h("span", null, "버전·애드온·환경과 최근 오류 기록을 함께 보내기 (원인 찾기에 큰 도움이 돼요)")),
       preview, status,
