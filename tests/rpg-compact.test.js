@@ -66,3 +66,10 @@ test("밸런스: 적이 너무 많으면 졸개부터 빼고, 직업 이름은 �
   const mj = S.defs[us.find((u) => S.defs[u.ref].name === "최민준").ref]; assert.equal(mj.cls, "탱커"); assert.equal(mj.job, "중기사"); assert.equal(mj.weapons[0].name, "강철 대방패검", "이야기 무기가 주무기");
   assert.ok(mj.skills.some((k) => S.skills[k].flags.area), "광역기");
 });
+test("프리셋 없는 몬스터 이름 → 가장 가까운 몬스터(사람형으로 안 떨어짐)·속성·몸집", () => {
+  const S = E.fresh(); S.hunt = true; S.noBalance = true; E.ensureBase(S);
+  E.loadCompact(S, `전장 동굴 | 맵 ${Object.keys(E.MAPS)[0]} | 목표 rout\n아군 "미오" 마도사 Lv10\n적 "거대 화염 도마뱀" 검사 Lv12 보스\n적 "동굴 트롤" Lv9\n적 "도적 두목" 도적 Lv8`);
+  const by = (n) => Object.values(S.defs).find((d) => d.name === n);
+  assert.equal(E.modelOf(by("거대 화염 도마뱀")), "lizard"); assert.equal(E.elemOfUnit(by("거대 화염 도마뱀")), "fire"); assert.equal(by("거대 화염 도마뱀").size, 2);
+  assert.equal(E.modelOf(by("동굴 트롤")), "cyclops"); assert.equal(by("도적 두목").cls, "도적");
+});

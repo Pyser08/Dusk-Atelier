@@ -1,6 +1,7 @@
 // Dusk Saga 엔진 — 적은 토큰 전투 생성: 짧은 프롬프트 + 한 줄 형식(사가 줄) → loadEncounter용 전투 (순수 함수)
 import { hairFromText } from "./armor.js";
 import { personalize, sigName } from "./naming.js";
+import { guessMonster } from "./monguess.js";
 // 모델은 이름표만 고르고(맵 프리셋·몬스터 프리셋·직업·종족), 능력치·크기·부위·버팀은 엔진이 채운다.
 import { PRE } from "./normalize.js";
 import { MAPS } from "./maps.js";
@@ -31,7 +32,7 @@ export function compactPrompt(set, later, roster) {
   return `Design one battle for an original grid tactics RPG from the roleplay. Reply ONLY with lines in this format (Korean names, no JSON, no prose):
 전장 <이름> | 맵 <map> | 목표 <rout|boss|survive N|seize|호위 N|탈출|탈취 <물건>|부위파괴 <곳 수> <턴>> [| 테마 <theme>] [| 날씨 <맑음|비|눈|안개|폭풍|모래바람>] [| 시간 <낮|황혼|밤>]
 아군 "<이름>" <직업(이야기 속 이름 그대로, 예: 탱커·성녀·검호)> [종족] Lv<n> [m|f] 무기 <고유 이름>/<kind>/<등급>/<속성> 익힘 "<기술>" [머리 <금발|은발|흑발|갈색|빨간|파란|분홍…>] [상태 <부상|중상|피로|몸살|취기|겁먹음|격앙>] [@x,y]
-적 <프리셋 or "<이름>" 직업> Lv<n> [x<수>] [보스] [hold|guard] [턴<n>] [@x,y]
+적 <프리셋 or "<이름>" 직업 or "<몬스터 이름>" 몬스터프리셋> Lv<n> [x<수>] [보스] [hold|guard] [턴<n>] [@x,y]
 우군 ... / 제3 ...   (same as 적)
 관계 "<이름>" "<이름>" <연인|가족|친구|전우|사제|주종|라이벌> [합체기 "<둘만의 합동 공격 이름>"]   (allies whose bond the story shows; 1-3 lines)
 난입 제3 ... / 난입 우군 ...   (optional: who MIGHT burst in mid-fight by chance — a beast of this place, a rival, a patrol, or a person from [로어북 인물] who fits the scene: a 제3 attacks everyone, a 우군 helps; give them their real name, rank and signature weapon; not on the field at first)
@@ -43,6 +44,7 @@ Area skill: every character who attacks also has one 공격 skill hitting an are
 Faithful to the story: Lv shows rank (rookie 3-8, veteran 10-18, famous/A-rank 20-28, legend/S-rank 30+, 1-3 ★ for the truly exceptional) and stat tweaks show what the text says (a famed archer 기술+5, a brute 힘+5 속도-2).
 Objectives: 호위 = one 우군 line marked 호위대상 must live N turns; 탈출 = the party flees off the far edge; 탈취 = one 적 marked 보물 carries the thing, the party takes it and escapes; 부위파괴 = break N parts of a big monster within T turns. Pick what the scene is about, not always 전멸. 날씨/시간 follow the story. 상태 only when the story shows that person hurt, drunk, exhausted etc.
 Balance: the fight should be winnable — usually as many foes as allies (bosses count as two or three); give minions lower Lv than the party, a boss about party Lv +2.
+Monsters: a creature (beast, dragon, lizard, slime, undead, golem, spirit, machine …) MUST be written with its name and then the closest monster preset from the list, e.g. 적 "거대 화염 도마뱀" 늪 악어 Lv12 or 적 "그림자 늑대" 회색 늑대 Lv8 x3 — never with a human job, or it will be drawn as a person.
 Unit extras: ★/★★/★★★ = clearly stronger than the level suggests (a legend, a dragon lord, the story's monster); stat tweaks like 힘+4 속도+3 수비-2 for who they are. Use them when the story shows someone exceptional, not by default.
 Rules: one unit per line (x3 = three copies). The story's own people are 아군 (usually 2-5). Pick the map whose layout fits the place; coordinates are optional (x 1-12 west→east, y 1-9 north→south; allies default west, foes east). 보스 marks the leader (목표 boss). Monsters: use a preset name exactly; big beasts (dragons, golems, bears…) are sized automatically. Humans: "이름" + 직업 (+ 종족); no stats, the engine fills them. 무기 only for a named or special weapon.
 ${roster ? `Saved party (reuse: 아군 #id [@x,y]; do not recreate them):\n${roster}\nAfter the battle-relevant lines you may add, only for what the story really showed:\n성장 #id 힘+1 속도+1 [경험 30] [배움 skill_id] [무기 이름/kind/등급/속성] | 이유\n이탈 #id   (left the party)\n` : ""}maps: ${Object.keys(MAPS).join(", ")}
@@ -107,12 +109,12 @@ export function parseCompact(text, set, o) {
     const nm = take(/"([^"]{1,30})"|“([^”]{1,30})”/), lv = take(/\bLv\.?\s*(\d{1,2})\b/i), cnt = take(/\s[x×](\d)\b/), at = take(/@\s*(\d{1,2})\s*,\s*(\d{1,2})/), turn = take(/\s턴\s*(\d{1,2})\b/), isBoss = !!take(/\s보스(?=\s)/), ai = take(/\s(charge|hold|guard|돌격|대기|수비)(?=\s)/), sex = take(/\s(m|f|남|여)(?=\s)/);
     const weps = []; let wm; while ((wm = take(/\s무기\s+([^@|]+?)(?=\s(?:무기|@|Lv|보스|hold|guard|턴)|\s*$)/))) { const [name, kind, grade, elem] = wm[1].trim().split("/").map((x) => x.trim()); if (name) weps.push({ name, ...(kind ? { kind } : {}), ...(grade ? { grade } : {}), ...(elem ? { elem } : {}) }); }
     const race = races.find((k) => s.includes(k)), jt0 = /["“][^"”]+["”]\s+([^\s@]+)/.exec(sm[2]), jt = jt0 && !races.includes(jt0[1]) && !/^(Lv|★|익힘|무기|보스|[mf]$|남$|여$)/i.test(jt0[1]) ? jt0[1] : "";
-    const pr = pre.find((k) => s.includes(" " + k + " ") || s.includes(" " + k)), job = jobs.find((k) => s.includes(k)) || jobLike(jt);
+    const pr = pre.find((k) => s.includes(" " + k + " ") || s.includes(" " + k)), gm = !pr && team !== "ally" ? guessMonster((nm ? nm[1] || nm[2] : "") + " " + sm[2], PRE) : null, job = gm ? "" : jobs.find((k) => s.includes(k)) || jobLike(jt);
     if (!pr && !job && !nm) continue;
-    const base = pr || (set === "현대" ? "경비원" : "병사"), level = Math.max(1, Math.min(40, lv ? +lv[1] : 5)), copies = Math.max(1, Math.min(6, cnt ? +cnt[1] : 1));
+    const base = pr || gm?.preset || (set === "현대" ? "경비원" : "병사"), level = Math.max(1, Math.min(40, lv ? +lv[1] : 5)), copies = Math.max(1, Math.min(6, cnt ? +cnt[1] : 1));
     for (let c = 0; c < copies; c++) {
       let id = (team === "ally" ? "a" : "u") + n++; while (saved[id] != null || (o && o.taken && o.taken.has(id))) id = (team === "ally" ? "a" : "u") + n++;
-      const name = nm ? (nm[1] || nm[2]) : null, u = { id, preset: base, level, ...(name ? { name: copies > 1 ? name + " " + (c + 1) : name } : {}), ...(pr ? {} : job ? { job } : {}), ...(race && !pr ? { race } : {}), ...(sex ? { sex: /m|남/.test(sex[1]) ? "m" : "f" } : {}), ...(weps.length ? { weapons: weps } : {}), ...(star ? { boost: Math.min(3, star) } : {}), ...(Object.keys(plus).length ? { plus } : {}), ...(learn ? { skills: learn } : {}), ...(cnd ? { cond: cnd[1].split(/\s*,\s*/).slice(0, 4) } : {}), ...(hairFromText(sm[2]) ? { hair: hairFromText(sm[2]) } : {}) };
+      const name = nm ? (nm[1] || nm[2]) : null, u = { id, preset: base, level, ...(name ? { name: copies > 1 ? name + " " + (c + 1) : name } : {}), ...(pr ? {} : job ? { job } : {}), ...(race && !pr && !gm ? { race } : {}), ...(gm?.elem ? { elem: gm.elem } : {}), ...(gm?.size ? { size: gm.size } : {}), ...(sex ? { sex: /m|남/.test(sex[1]) ? "m" : "f" } : {}), ...(weps.length ? { weapons: weps } : {}), ...(star ? { boost: Math.min(3, star) } : {}), ...(Object.keys(plus).length ? { plus } : {}), ...(learn ? { skills: learn } : {}), ...(cnd ? { cond: cnd[1].split(/\s*,\s*/).slice(0, 4) } : {}), ...(hairFromText(sm[2]) ? { hair: hairFromText(sm[2]) } : {}) };
       if (pr && job) u.job = job; if (!pr && job) { u.fitJob = true; if (jt && jt !== job) u.clsName = jt.slice(0, 12); } if (!weps.length && !pr && job && name) { const k = { 중기사: ["sword", "방패검"], 사제: ["holystaff", "성장"], 마도사: ["tome", "마도서"], 궁수: ["bow", "활"], 도적: ["dagger", "단검"], 창병: ["lance", "창"], 도끼전사: ["axe", "도끼"], 격투가: ["fist", "건틀릿"], 총사: ["pistol", "권총"], 기병: ["lance", "기병창"], 비행병: ["lance", "창"], 검사: ["sword", "검"] }[job]; if (k) { u.weapons = [{ name: (name.length > 6 ? name.slice(-3) : name) + "의 " + k[1], kind: k[0], grade: level >= 20 ? "희귀" : level >= 10 ? "정예" : "양질" }]; u.storyW = true; } }
       if (weps.length || u.storyW) u.storyW = true; out.units.push(u);
       const p = { ref: id, team, ...(at ? { x: +at[1] + (c % 2), y: +at[2] + Math.floor(c / 2) } : {}), ...(ai ? { ai: AI[ai[1]] } : {}), ...(isBoss && c === 0 && team !== "ally" ? { boss: true } : {}), ...(turn ? { turn: +turn[1] } : {}), ...(vip && c === 0 ? { vip: true } : {}), ...(carry && c === 0 ? { carry: true } : {}), ...(rd && (team === "friend" || team === "third") ? { pool: true } : {}) };
