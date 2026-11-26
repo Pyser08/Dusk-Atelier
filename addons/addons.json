@@ -24,11 +24,16 @@
       "id": "provider",
       "name": "프로바이더 (실험)",
       "category": "lab",
-      "version": "0.2.10",
+      "version": "0.2.11",
       "minCore": "2.2.3",
       "hooks": true,
       "desc": "리스 모델 목록에 ‘Dusk 자동’과 내 프로필을 등록하고, API 키 보관·모델 고르기·리스 도구 확인을 해요. 설정 → 실험 기능을 켜야 써요.",
       "notes": [
+        {
+          "v": "0.2.11",
+          "date": "",
+          "body": "- v2.2.63 이후 본체에서 프로바이더를 켜면 ‘Dusk 코어에 src/data/apiread.js가 없어요’로 멈추던 문제를 고쳤어요. 기능 변화는 없어요(신고 #27)."
+        },
         {
           "v": "0.2.10",
           "date": "2026-11-23",
@@ -41,8 +46,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/provider.js",
-      "sha256": "ab915cf0ec3d83fb25c93da00869826030b118e361e2f6577beb2f50886ddc8b",
-      "size": 162824
+      "sha256": "bcddc313fd8096c43e1a1d3cf0927d15c65385f4a642b28f188e910da9b4f896",
+      "size": 163328
     },
     {
       "id": "chattheme",

@@ -5,9 +5,9 @@
   "manage.81605a11bd54.mjs"
  ],
  "provider": [
+  "provider.bcddc313fd80.mjs",
   "provider.ab915cf0ec3d.mjs",
-  "provider.ee006b745fe7.mjs",
-  "provider.ccb5966545e6.mjs"
+  "provider.ee006b745fe7.mjs"
  ],
  "chattheme": [
   "chattheme.083f1674910f.mjs",
