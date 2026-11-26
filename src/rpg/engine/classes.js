@@ -51,7 +51,7 @@ export const CLASSES = {
   "속사 총사": A("총사", ["claw", "dagger"], [2, 2, 0, 2, 4, 2, 0, 0], s("quickdraw", "선제 사격", "먼저 공격할 때 명중·필살 +10", { cond: "initiating", mods: { hit: 10, crit: 10 } }), "먼저 쏘기"),
 };
 export const jobOf = (v) => (typeof v === "string" && Object.prototype.hasOwnProperty.call(CLASSES, v.trim()) ? v.trim() : "");
-export const canUse = (d, w) => !d.job || !arm(w) || CLASSES[d.job].weapons.includes(w.type);
+export const canUse = (d, w) => !d.job || !arm(w) || CLASSES[d.job].weapons.includes(w.type) || (Array.isArray(d.wok) && d.wok.includes(w.type)); // wok: 이야기가 준 무기 종류(직업 밖이라도 쓴다)
 const learn = (S, d, sk) => { if (!S.skills[sk.id]) S.skills[sk.id] = normSkill({ ...sk, tier: "common" }, 0); if (!d.skills.includes(sk.id)) { if (d.skills.length < 6) d.skills.push(sk.id); else (d.later ||= []).push(sk.id); } };
 function mount(d, mtype) { if (!mtype || d.mtype === mtype) return; d.mtype = mtype; d.move = MOVE[mtype]; }
 // 쓸 수 있는 무기가 하나도 없으면 기본 무기를 쥐여 준다
@@ -75,3 +75,11 @@ export function promote(S, id, to) {
   log(S, d.name + ": " + from + " → " + to + " 전직"); retro(S, id); return { from, to, gain, skill: c.skill.name };
 }
 export const CLASS_LINES = Object.keys(CLASSES).filter((k) => CLASSES[k].tier === 1).map((k) => `- ${k} (${CLASSES[k].weapons.join("/")}, ${CLASSES[k].mtype}) → ${CLASSES[k].adv.join(" | ")}`).join("\n");
+
+// 아무 직업 이름(탱커·성녀·검호…) → 규칙상 가장 비슷한 직업. 화면에는 원래 이름을 쓴다
+const LIKE = [[/탱커|탱|방패|수호|가디언|팔라딘|성기사|중장|철벽|guard|tank|paladin|knight/i, "중기사"], [/힐러|치유|사제|성녀|신관|수녀|프리스트|클레릭|무녀|heal|priest|cleric/i, "사제"],
+  [/마법|마도|위자드|위저드|소서|술사|흑마|백마|정령사|소환사|마녀|메이지|mage|wizard|sorcer|witch|summon/i, "마도사"], [/궁|사수|레인저|헌터|저격|archer|ranger|hunter|bow/i, "궁수"],
+  [/총|건|사격|gun|pistol|rifle/i, "총사"], [/도적|암살|닌자|시프|어쌔신|로그|척후|도둑|thief|rogue|assassin|ninja/i, "도적"], [/창|랜서|스피어|lancer|spear/i, "창병"],
+  [/도끼|버서커|광전|바바리안|axe|berserk|barbar/i, "도끼전사"], [/권|격투|몽크|무투|주먹|파이터|monk|brawl|fist/i, "격투가"], [/기병|기마|라이더|cavalry|rider/i, "기병"],
+  [/비행|천마|용기사|하늘|wyvern|pegasus|flyer/i, "비행병"], [/바드|음유|가수|댄서|무희|bard|dancer|singer/i, "사제"], [/검|칼|사무라이|검호|소드|세이버|blade|sword|samurai|fencer/i, "검사"]];
+export function jobLike(name) { const t = String(name || "").trim(); if (!t) return ""; if (Object.prototype.hasOwnProperty.call(CLASSES, t)) return t; for (const [re, id] of LIKE) if (re.test(t)) return id; return ""; }

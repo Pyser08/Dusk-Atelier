@@ -30,6 +30,7 @@ export const TERRAIN = {
   'q': { n: '성역', c: [1, 1, 1, 1], avo: 10, def: 1, heal: 15 },
   'c': { n: '수정', c: [2, 2, 3, 1], avo: 20, def: 1 },
   '#': { n: '벽', c: [INF, INF, INF, INF], avo: 0, def: 0 },
+  'x': { n: '폭약통', c: [INF, INF, INF, INF], avo: 0, def: 0, boom: true },
 };
 export const T0 = TERRAIN['.'];
 export const MT = { foot: 0, armor: 1, horse: 2, fly: 3 };
@@ -66,7 +67,7 @@ export const CAT = {
   '상처약': G('item', 10, 0, 3), '특효약': G('item', 99, 0, 3),
 };
 export const CONDS = { always: '항상', initiating: '공격 시', defending: '방어 시', hp_below_half: 'HP 절반 이하', hp_full: 'HP 최대', adjacent_ally: '아군 인접', alone: '주변 2칸에 아군 없음', on_cover: '엄폐 지형 위' };
-export const OBJ = { rout: '적 전멸', boss: '보스 격파', survive: '생존', seize: '옥좌 제압' };
+export const OBJ = { rout: '적 전멸', boss: '보스 격파', survive: '생존', seize: '옥좌 제압', escort: '호위', escape: '탈출', steal: '탈취', hunt: '부위 파괴' };
 export const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 export const SIDE = { ally: 0, friend: 0, enemy: 1, third: 2 }, TN = { ally: '아군', friend: '우군', enemy: '적', third: '제3세력' };
 export const foe = (a, b) => SIDE[a.team] !== SIDE[b.team];
@@ -76,7 +77,8 @@ export const int = (v, lo, hi, d) => { v = Math.round(Number(v)); return Number.
 export const txt = (v, max, d) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : d);
 export const idOf = (v, d) => { v = String(v == null ? '' : v).trim().replace(/[^\w\-가-힣]/g, '_').slice(0, 40); return v || d; };
 export const copy = o => JSON.parse(JSON.stringify(o));
-export const dist = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+// 칸 거리. 큰 몸(sz 2·3, 왼쪽 위 칸이 x·y)은 몸 가장자리끼리 잰다. sz가 없으면 예전과 같다
+export const dist = (a, b) => { const p = a.sz || 1, q = b.sz || 1; if (p === 1 && q === 1) return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); return Math.max(0, a.x - (b.x + q - 1), b.x - (a.x + p - 1)) + Math.max(0, a.y - (b.y + q - 1), b.y - (a.y + p - 1)); };
 export function rng(S) { let t = (S.seed = (S.seed + 0x6D2B79F5) | 0); t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
 export const roll = S => Math.floor(rng(S) * 100);
 export function fresh() { return { v: 3, seed: (Date.now() & 0x7fffffff) || 1, defs: {}, skills: {}, battle: null, log: [], seq: 0, sent: 0, flat: false, zoom: 1, autoEnd: true }; }
@@ -92,5 +94,5 @@ export function gunOf(w) {
   if (/저격|스나이퍼/.test(n)) return 'sniper'; if (/산탄|샷건/.test(n)) return 'shotgun'; if (/기관|머신|연발|개틀링/.test(n)) return 'auto'; if (/권총|리볼버|피스톨|핸드건/.test(n)) return 'pistol'; if (/소총|라이플|머스킷|카빈/.test(n)) return 'rifle';
   return w.rmax < 2 ? null : w.rmin >= 2 ? 'sniper' : w.rmax >= 3 ? 'rifle' : 'pistol';
 }
-export const COVER = { '#': 40, p: 20, m: 20, F: 20, c: 20, o: 10 };
-export const objText = B => OBJ[B.obj.type] + (B.obj.turns ? ' ' + B.obj.turns + '턴' : '');
+export const COVER = { x: 20, '#': 40, p: 20, m: 20, F: 20, c: 20, o: 10 };
+export const objText = B => { const o = B.obj; return OBJ[o.type] + (o.type === 'hunt' ? ' ' + (o.need || 2) + '곳' : '') + (o.turns ? ' ' + o.turns + '턴' : '') + (o.type === 'steal' ? ' · ' + (o.item || '보물') : ''); };

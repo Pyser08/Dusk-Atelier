@@ -46,3 +46,35 @@ export function storyNote(S) {
     active ? '- 전투는 아직 끝나지 않았다. 긴장을 남겨 두고, 결말로 몰아가지 않는다.' : '- 전투가 끝난 바로 그 순간부터, 인물들의 반응과 그 뒤의 이야기로 이어 쓴다.',
   ].join('\n');
 }
+
+/** 채팅에 유저 입력으로 남길 결과(사람이 읽는 꼴): 결말·활약·쓰러뜨린 적·부순 부위·동료 상태·얻은 것·의뢰. 자세한 기록·서술 지침은 storyNote가 따로 싣는다 */
+export function resultFacts(S) {
+  const B = S.battle; if (!B || B.status === 'active') return null;
+  const st = { victory: '승리', defeat: '패배', retreat: '후퇴' }[B.status] || B.status, us = Object.values(B.units), name = (u) => S.defs[u.ref].name;
+  const foes = us.filter((u) => u.team !== 'ally' && u.team !== 'friend'), beaten = foes.filter((u) => u.hp <= 0).map(name), left = foes.filter((u) => u.hp > 0).map(name);
+  const parts = []; for (const u of us) if (u.parts) for (const [k, p] of Object.entries(u.parts)) if (p.broken) parts.push(name(u) + '의 ' + ({ head: '머리', legs: '다리', tail: '꼬리', wings: '날개' }[k] || k));
+  const T = Object.entries(B.tally || {}).sort((a, b) => b[1].kills * 30 + b[1].dmg - (a[1].kills * 30 + a[1].dmg)), mvp = T[0] && S.defs[T[0][0]] ? S.defs[T[0][0]].name : '';
+  const allies = us.filter((u) => u.team === 'ally').map((u) => { const d = S.defs[u.ref], r = u.hp / d.stats.hp; return { n: d.name, s: u.hp <= 0 ? '쓰러짐' : r <= 1 / 3 ? '크게 다침' : r < 0.75 ? '가벼운 상처' : '멀쩡함', inj: d.injury ? (d.injury.k === 'wound' ? '중상' : '부상') : '' }; });
+  const wx = [B.wx && B.wx !== 'clear' ? { rain: '비', snow: '눈', fog: '안개', storm: '폭풍', sand: '모래바람' }[B.wx] : '', B.time && B.time !== 'day' ? { dusk: '황혼', night: '밤' }[B.time] : ''].filter(Boolean).join(' · ');
+  return { st, status: B.status, name: B.name, turn: B.turn, wx, mvp, top: B.top ? B.top.name + ' ' + B.top.dmg : '', beaten: summ(beaten), left: B.status === 'victory' ? '' : summ(left), parts: parts.join(', '),
+    caught: (B.caught || []).map((c) => c.name + (c.tame ? '(길들임)' : '(포로)')).join(', '), turned: (B.turned || []).join(', '), raids: (B.raids || []).map((r) => r.turn + '턴 ' + (r.team === 'friend' ? '우군 ' : '제3세력 ') + r.names).join(', '),
+    out: (B.out || []).map((o) => S.defs[o.ref].name + (o.carry ? ' (' + (B.obj.item || '보물') + ' 확보)' : '')).join(', '), duo: (B.duoUsed || []).length, allies, got: summ(B.got || []), quests: (B.questDone || []).join(', ') };
+}
+export function resultLine(S) {
+  const f = resultFacts(S); if (!f) return '';
+  const row = (k, v) => (v ? k + ': ' + v : '');
+  return ['[전투 결과 — ' + f.name + ' · ' + f.st + ' · ' + f.turn + '턴' + (f.wx ? ' · ' + f.wx : '') + ']', row('활약', f.mvp ? f.mvp + (f.top ? ' (가장 큰 한 방: ' + f.top + ')' : '') : ''), row('쓰러뜨림', f.beaten), row('남은 적', f.left), row('부순 부위', f.parts), row('포획', f.caught), row('설득해 합류', f.turned), row('탈출', f.out), row('난입', f.raids), f.duo ? '합체기: ' + f.duo + '번' : '',
+    row('동료', f.allies.map((a) => a.n + ' ' + a.s + (a.inj ? '·' + a.inj : '')).join(', ')), row('얻은 것', f.got), row('의뢰', f.quests)].filter(Boolean).join('\n');
+}
+/** 채팅에 넣을 꾸민 상자(HTML, 인라인 스타일만). 글은 resultLine과 같은 내용 */
+export function resultCard(S) {
+  const f = resultFacts(S); if (!f) return ''; const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const C = { victory: ['#ffd35a', '#3a2a08', '⚔ 승리'], defeat: ['#e8444f', '#2a080c', '✖ 패배'], retreat: ['#9ab8d8', '#141c28', '↩ 후퇴'] }[f.status] || ['#ccc', '#222', f.st];
+  const row = (k, v) => (v ? `<div style="display:flex;gap:8px;padding:3px 0;border-top:1px solid #ffffff14"><span style="flex:none;width:5.2em;opacity:.65">${k}</span><span>${esc(v)}</span></div>` : '');
+  const ally = f.allies.map((a) => `<span style="display:inline-block;margin:2px 4px 2px 0;padding:1px 7px;border-radius:9px;background:${a.s === '쓰러짐' ? '#5a1a20' : a.s === '크게 다침' ? '#5a3a1a' : '#ffffff18'}">${esc(a.n)} · ${a.s}${a.inj ? '·' + a.inj : ''}</span>`).join('');
+  return `<div style="margin:4px 0;padding:12px 14px;border-radius:10px;border:1px solid ${C[0]}66;border-left:5px solid ${C[0]};background:linear-gradient(135deg,${C[1]},#16121c);color:#efe6d4;font-size:.93em;line-height:1.5">`
+    + `<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px"><b style="font-size:1.25em;color:${C[0]};letter-spacing:.05em">${C[2]}</b><b>${esc(f.name)}</b><span style="opacity:.6">${f.turn}턴${f.wx ? ' · ' + esc(f.wx) : ''}</span></div>`
+    + row('활약', f.mvp ? f.mvp + (f.top ? ` (가장 큰 한 방 ${f.top})` : '') : '') + row('쓰러뜨림', f.beaten) + row('남은 적', f.left) + row('부순 부위', f.parts) + row('포획', f.caught) + row('합류', f.turned) + row('탈출', f.out) + row('난입', f.raids) + (f.duo ? row('합체기', f.duo + '번') : '')
+    + (ally ? `<div style="padding:5px 0 2px;border-top:1px solid #ffffff14">${ally}</div>` : '') + row('얻은 것', f.got) + row('의뢰', f.quests) + `</div>`;
+}
+const summ = (l) => { const m = new Map(); for (const x of l) m.set(x, (m.get(x) || 0) + 1); return [...m].map(([k, n]) => k + (n > 1 ? ' ×' + n : '')).join(', '); };

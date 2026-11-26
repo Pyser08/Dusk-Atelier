@@ -14,7 +14,7 @@ const loginPage = (msg) => `<!doctype html><meta charset=utf-8><meta name=viewpo
 const port = Number(process.argv[2] ?? 5180), here = new URL(".", import.meta.url).pathname;
 let js = {}, err = ""; const clients = new Set();
 const ping = () => { for (const r of clients) r.write("data: reload\n\n"); };
-const ctx = await context({ entryPoints: [here + "app.js", here + "app3d.js", here + "pack3d.js", here + "pick3d.js", here + "vox.js"], outdir: "/out", minify: true, bundle: true, format: "esm", write: false, logLevel: "silent",
+const ctx = await context({ entryPoints: [here + "app.js", here + "app3d.js", here + "pack3d.js", here + "pick3d.js", here + "vox.js", here + "bagdev.js", here + "armorydev.js"], outdir: "/out", minify: true, bundle: true, format: "esm", write: false, logLevel: "silent",
   plugins: [{ name: "live", setup(b) { b.onEnd((r) => { err = r.errors.map((e) => e.text + " " + (e.location?.file ?? "") + ":" + (e.location?.line ?? "")).join("\n"); if (!err) js = Object.fromEntries(r.outputFiles.map((f) => ["/" + f.path.split("/").pop(), f.text])); ping(); }); } }] });
 await ctx.watch();
 watch(here, (_, f) => { if (f === "style.css") ping(); });
@@ -50,7 +50,10 @@ createServer((q, r) => {
   if (font) { try { const b = readFileSync(here + "node_modules/@fontsource/" + font[1] + "/" + font[2]); r.writeHead(200, { "content-type": p.endsWith(".css") ? "text/css" : "font/woff2", "cache-control": "max-age=86400" }); return r.end(b); } catch { return send("text/plain", "없음", 404); } }
   if (p === "/style.css") return send("text/css", readFileSync(here + "style.css"));
   if (p === "/addon") { const f = here + "../../test-addons/rpg-test.dka"; if (!existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { "content-type": "application/octet-stream", "content-disposition": "attachment; filename=rpg-test-0.1.0.dka", "cache-control": "no-store" }); return r.end(readFileSync(f)); }
-  if (p === "/app.js" || p === "/app3d.js" || p === "/pack3d.js" || p === "/pick3d.js" || p === "/vox.js") return send("text/javascript", err ? `document.body.innerText=${JSON.stringify("빌드 오류\n" + err)}` : js[p] ?? "");
+  if (p === "/armory") return send("text/html", `<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#1a1420;color:#eee;font:12px sans-serif}#g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:6px}.c{text-align:center}.v{height:260px;background:radial-gradient(ellipse at 50% 85%,#4a3a5a,#1e1824 70%);border-radius:8px}</style><div id=g></div><script type=module src="/armorydev.js"></script>`);
+  if (p === "/bag") return send("text/html", `<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><link rel=stylesheet href="/bag.css"><body style="margin:0"><div id=bag style="position:fixed;inset:0"></div><script type=module src="/bagdev.js"></script>`);
+  if (p === "/bag.css") return send("text/css", readFileSync(here + "bag.css"));
+  if (p === "/armorydev.js" || p === "/bagdev.js" || p === "/app.js" || p === "/app3d.js" || p === "/pack3d.js" || p === "/pick3d.js" || p === "/vox.js") return send("text/javascript", err ? `document.body.innerText=${JSON.stringify("빌드 오류\n" + err)}` : js[p] ?? "");
   send("text/plain", "없음", 404);
 }).listen(port, "127.0.0.1", () => console.log("Dusk Saga preview " + port));
 setInterval(() => { for (const r of clients) r.write(": .\n\n"); }, 25000);

@@ -5,6 +5,7 @@ import { ELEMENTS } from "./elements.js";
 import { KINDS, fitBudget, gearInProse, gradeName, kindFromText, makeSpell, makeWeapon, parseGear } from "./gear.js";
 import { normSkill, normWeapon, tameSkill } from "./normalize.js";
 import { raceById, raceFromText } from "./races.js";
+import { hairFromText } from "./armor.js";
 
 const nk = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
 const clean = (v, n) => String(v ?? "").replace(/[\r\n<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, n);
@@ -98,4 +99,41 @@ export function applyKit(S, id, kit) {
   if (kit.weapons?.length) { const items = d.weapons.filter((w) => w.type === "item"), ws = kit.weapons.map(normWeapon).slice(0, 5 - Math.min(1, items.length)); d.weapons = [...ws, ...items].slice(0, 5); out.push(...ws.map((w) => w.name)); if (S.battle) for (const u of Object.values(S.battle.units)) if (u.ref === id) u.wi = 0; }
   for (const s of kit.skills ?? []) { const k = tameSkill(normSkill(s, 0)); if (k.grade != null) fitBudget(k, k.grade); if (!S.skills[k.id]) S.skills[k.id] = k; if (!d.skills.includes(k.id) && d.skills.length < 6) { d.skills.push(k.id); out.push(k.name); } }
   return out;
+}
+
+/** 장부(가방·최근 기록)를 폴더에 남긴다. 장기기억 원본 칸은 건드리지 않는다 */
+export function recordLedger(f, L) {
+  const b = box(f); b.bag = (L.bag || []).slice(0, 60).map((x) => ({ name: clean(x.name, 40), kind: x.kind, n: x.n, grade: x.grade || "", elem: x.elem || "" })); b.log = (L.log || []).slice(-20).map((x) => ({ at: x.at, text: clean(x.text, 160) })); return true;
+}
+/** 프롬프트용: 가방에 든 것(짧게) */
+export function bagSection(f, max = 8) { const bag = f?.rpg?.bag ?? []; if (!bag.length) return ""; return "[파티 소지품 — 게임이 확정한 값]\n" + bag.slice(0, max).map((x) => `- ${x.name}${x.n > 1 ? " ×" + x.n : ""}`).join("\n"); }
+
+// ── 전투에 실을 몸 상태·관계(장기기억이 있을 때만 더 풍부해짐) ──
+const dayNo = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || "")); if (!m) return NaN; const t = new Date(Date.UTC(2000, +m[2] - 1, +m[3])); t.setUTCFullYear(+m[1], +m[2] - 1, +m[3]); return t.getTime() / 86400000; };
+const isCycle = (s) => s?.provenance?.slotId === "cycle.state" || s?.heading === "월경·임신";
+const isNow = (s) => s?.provenance?.slotId === "core.current_state" || /현재 ?상태|current state/i.test(s?.heading ?? "");
+/** 월경·임신 칸 → 상태 키(약하게만) */
+export function cycleCond(body) {
+  const t = String(body || ""), len = +(/주기:\s*(\d{2})일/.exec(t)?.[1] || 0), start = /기준일:\s*(\d{4}-\d{2}-\d{2})/.exec(t)?.[1], date = /날짜:\s*(\d{4}-\d{2}-\d{2})/.exec(t)?.[1], conc = /임신:\s*(\d{4}-\d{2}-\d{2}) 수정/.exec(t)?.[1];
+  if (!date) return null;
+  if (conc) { const w = (dayNo(date) - dayNo(conc)) / 7; return !(w >= 0) ? null : w < 13 ? (w >= 5 ? "preg1" : null) : w < 27 ? "preg2" : "preg3"; }
+  if (!(len >= 21 && len <= 45) || !start) return null; const diff = dayNo(date) - dayNo(start); if (!(diff >= 0)) return null; const day = (diff % len) + 1;
+  return day <= 2 ? "period2" : day <= 5 ? "period" : day > len - 3 ? "pms" : null;
+}
+const NOW_RE = [[/중상|큰 ?부상|골절|뼈가 부러|피투성이|빈사/, "wound"], [/부상|다친|다쳐|상처|베였|찔렸|삐었/, "injury"], [/피로|지쳐|녹초|기진맥진|밤샘|탈진/, "tired"], [/몸살|감기|열이|고열|앓/, "sick"], [/술에|취한|취해|취기|숙취|만취/, "drunk"], [/중독|독에/, "poison"], [/출혈|피를 흘/, "bleed"]];
+/** names: 판에 선 인물 이름들. { conds: {이름:[키]}, bonds: [{a,b,kind}] } — 원본은 읽기만 */
+export function memState(f, names = []) {
+  const conds = {}, bonds = [], hair = {}, want = new Set(names.map(nk));
+  for (const n of names) {
+    const d = docFor(f, n); if (!d) continue; const ks = [];
+    const cy = (d.sections ?? []).find(isCycle); const c = cy && cycleCond(cy.body); if (c) ks.push(c);
+    const now = (d.sections ?? []).filter(isNow).map((s) => s.body).join(" "); for (const [re, k] of NOW_RE) if (re.test(now) && !ks.includes(k)) ks.push(k);
+    if (ks.includes("wound")) ks.splice(ks.indexOf("injury") >>> 0, ks.includes("injury") ? 1 : 0);
+    if (ks.length) conds[n] = ks; const hc = hairFromText((d.sections ?? []).filter((s) => /외모|머리|appearance|hair/i.test(s.heading ?? "") || /머리/.test(s.body ?? "")).map((s) => s.body).join(" ").slice(0, 2000)); if (hc) hair[n] = hc;
+  }
+  const alias = (x) => { const d = docFor(f, x); return d ? names.find((n) => docFor(f, n)?.id === d.id) : names.find((n) => nk(n) === nk(x)); };
+  const seen = new Set(), add = (a, b, kind) => { const A = alias(a), B = alias(b); if (!A || !B || A === B) return; const k = [A, B].sort().join("|"); if (seen.has(k)) return; seen.add(k); bonds.push({ a: A, b: B, kind }); };
+  for (const [, v] of Object.entries(f?.lovers ?? {})) if (v && typeof v === "object" && v.on) add(v.a, v.b, "dating");
+  for (const t of Object.values(f?.ties ?? {})) { const x = !t?.orphan ? t : t.prev && !t.prevOrphan ? { a: t.a, b: t.b, ...t.prev } : null; if (x?.a && x?.b && x.kind) add(x.a, x.b, x.kind); }
+  void want; return { conds, bonds, hair };
 }

@@ -7,17 +7,18 @@ import { CAT, CONDS, GROW, GUNS, MAXLV, MOVE, MT, MTL, STATS, WT, arm, clamp, co
 // ── normalizers: clamp instead of reject, so one odd number from the model does not kill a battle ──
 export function normSkill(o, i) {
   o = o && typeof o === 'object' ? o : {};
-  const type = ['art', 'passive', 'proc'].includes(o.type) ? o.type : 'passive';
+  const type = ['art', 'passive', 'proc', 'support'].includes(o.type) ? o.type : 'passive';
   const m = o.mods && typeof o.mods === 'object' ? o.mods : {}, f = o.flags && typeof o.flags === 'object' ? o.flags : {};
   const mods = {}; for (const k of ['atk', 'def', 'res', 'spd']) { const v = int(m[k], -20, 20, 0); if (v) mods[k] = v; }
   for (const k of ['hit', 'avo', 'crit']) { const v = int(m[k], -50, 50, 0); if (v) mods[k] = v; }
   const flags = {};
-  if (f.brave) flags.brave = true; if (f.noCounter) flags.noCounter = true; if (f.sure) flags.sure = true; if (f.magic) flags.magic = true;
+  if (f.area) flags.area = 1; if (f.brave) flags.brave = true; if (f.noCounter) flags.noCounter = true; if (f.sure) flags.sure = true; if (f.magic) flags.magic = true;
   for (const [k, hi] of [['drain', 100], ['pierce', 100], ['block', 90], ['regen', 20]]) { const v = int(f[k], 0, hi, 0); if (v) flags[k] = v; }
   const mult = Number(f.mult); if (Number.isFinite(mult) && mult > 1) flags.mult = clamp(Math.round(mult * 10) / 10, 1.1, 3);
   const s = { id: idOf(o.id, 'skill_' + i), name: txt(o.name, 30, '이름 없는 기술'), desc: txt(o.desc, 160, ''), type, cond: CONDS[o.cond] ? o.cond : 'always', mods, flags };
   if (type === 'proc') s.rate = STATS.includes(o.rate) ? o.rate : int(o.rate, 1, 100, 25);
   if (type === 'art') { s.cd = int(o.cd, 0, 9, 2); if (Array.isArray(o.range)) { const a = int(o.range[0], 1, 3, 1); s.range = [a, int(o.range[1], a, 4, a)]; } }
+  if (type === 'support') { s.eff = typeof o.eff === 'string' ? o.eff : 'heal'; s.on = o.on === 'foe' ? 'foe' : 'ally'; s.cd = int(o.cd, 1, 9, 2); const a = int(Array.isArray(o.range) ? o.range[0] : 1, 0, 3, 1); s.range = [a, int(Array.isArray(o.range) ? o.range[1] : 2, a, 4, Math.max(a, 2))]; }
   if (elemOf(o.elem)) s.elem = o.elem; { const rk = rankOf(o.grade); if (rk != null) s.grade = rk; }
   s.tier = ['common', 'faction', 'own'].includes(o.tier) ? o.tier : (txt(o.faction, 20, '') ? 'faction' : 'own');
   if (s.tier === 'faction') s.faction = txt(o.faction, 20, '세력');
@@ -88,7 +89,7 @@ export function tameSkill(s) {
   if (s.type === 'proc' && typeof s.rate === 'number') s.rate = Math.min(s.rate, 60);
   return s;
 }
-export const llmSkill = (o, i) => { if (o && o.name && ((!o.mods && !o.flags) || o.traits)) { const sp = makeSpell(o, int(o.level, 1, MAXLV, 10)); if (sp) o = Object.assign(sp, o.id ? { id: o.id } : {}, o.faction ? { faction: o.faction } : {}); } const s = tameSkill(normSkill(o, i)); if (s.tier === 'common') s.tier = 'own'; return s.grade != null ? fitBudget(s, s.grade) : s; };
+export const llmSkill = (o, i) => { if (o && o.type === 'support') { const s = normSkill(o, i); s.tier = 'own'; return s; } const area = !!(o && (o.area || (o.flags && o.flags.area))); if (o && o.name && ((!o.mods && !o.flags) || o.traits)) { const sp = makeSpell(o, int(o.level, 1, MAXLV, 10)); if (sp) o = Object.assign(sp, o.id ? { id: o.id } : {}, o.faction ? { faction: o.faction } : {}); } const s = tameSkill(normSkill(o, i)); if (s.tier === 'common') s.tier = 'own'; const r = s.grade != null ? fitBudget(s, s.grade) : s; if (area && r.type === 'art') { r.flags.area = 1; if (!r.range) r.range = [1, 2]; } return r; };
 // ready-made mobs: level-1 body, grown to the level asked for
 export const M = (set, emoji, cls, mtype, st, weapons, x) => Object.assign({ set, emoji, cls, mtype, stats: { hp: st[0], str: st[1], mag: st[2], skl: st[3], spd: st[4], lck: st[5], def: st[6], res: st[7] }, weapons }, x);
 export const PRE = {

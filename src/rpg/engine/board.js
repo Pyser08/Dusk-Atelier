@@ -1,4 +1,5 @@
 // Dusk Saga 엔진 — 지형·이동·위협 범위·사격 시야 (순수 함수, DOM·api 없음)
+import { fxMove } from "./status.js";
 import { COVER, DIRS, GUNS, INF, K, MT, SIDE, STATS, T0, TERRAIN, arm, dist, foe, gunOf, unK } from "./rules.js";
 
 // ── board helpers ──
@@ -14,9 +15,14 @@ export function pairBonus(S, u) {
 }
 export function est(S, u) { const d = S.defs[u.ref].stats; if (!u.rear) return d; const b = pairBonus(S, u), o = { hp: d.hp }; for (const k of STATS.slice(1)) o[k] = d[k] + (b[k] || 0); return o; }
 export const terr = (B, x, y) => TERRAIN[(B.map[y] || '')[x]] || T0;
-export const uterr = (S, u) => (S.defs[u.ref].mtype === 'fly' ? T0 : terr(S.battle, u.x, u.y));
-export function occMap(B) { const m = new Map(); for (const u of alive(B)) m.set(K(u.x, u.y), u); return m; }
-export const unitAt = (B, x, y) => alive(B).find(u => u.x === x && u.y === y) || null;
+export const uterr = (S, u) => (S.defs[u.ref].mtype === 'fly' && !u.grounded ? T0 : terr(S.battle, u.x, u.y));
+// 몸이 차지하는 칸(사냥 규칙의 큰 몬스터는 2×2·3×3, x·y는 왼쪽 위)
+export function cells(u, x, y) { const s = u.sz || 1; x = x == null ? u.x : x; y = y == null ? u.y : y; if (s === 1) return [[x, y]]; const o = []; for (let j = 0; j < s; j++) for (let i = 0; i < s; i++) o.push([x + i, y + j]); return o; }
+export const covers = (u, x, y) => x >= u.x && y >= u.y && x < u.x + (u.sz || 1) && y < u.y + (u.sz || 1);
+export function occMap(B) { const m = new Map(); for (const u of alive(B)) for (const [x, y] of cells(u)) m.set(K(x, y), u); return m; }
+export const unitAt = (B, x, y) => alive(B).find(u => covers(u, x, y)) || null;
+// 큰 몸이 x·y(왼쪽 위)에 설 수 있나: 판 안, 지나갈 수 있는 땅. 가장 비싼 칸 값을 돌려준다
+export function bigCost(B, s, mt, x, y) { if (x < 0 || y < 0 || x + s > B.w || y + s > B.h) return INF; let c = 0; for (let j = 0; j < s; j++) for (let i = 0; i < s; i++) { const t = terr(B, x + i, y + j); let v = t.c[mt]; if (v < INF && v > 1) v = Math.max(1, v - 1); c = Math.max(c, v); } return c; }
 // binary heap ordered by [cost, insertion]; ties pop first-in first-out so paths never depend on heap shape
 export function heap() {
   const a = []; let seq = 0; const lt = (p, q) => p[0] < q[0] || (p[0] === q[0] && p[1] < q[1]);
@@ -30,12 +36,17 @@ export function heap() {
   };
 }
 export function reach(S, u, o) {
-  o = o || {}; const B = S.battle, d = S.defs[u.ref], mt = MT[d.mtype] || 0, max = o.unlimited ? 999 : d.move, occ = occMap(B);
+  o = o || {}; const B = S.battle, d = S.defs[u.ref], mt = u.grounded && d.mtype === 'fly' ? 0 : MT[d.mtype] || 0, max = o.unlimited ? 999 : u.slow || u.fx || u.mvAdj || B.wxMove ? Math.max(1, d.move - (u.slow || 0) + fxMove(u) + (u.mvAdj || 0) + ((B.wxMove || {})[d.mtype] || 0)) : d.move, occ = occMap(B), sz = u.sz || 1;
   const R = new Map([[K(u.x, u.y), { c: 0, p: null }]]), q = heap(); q.push(0, u.x, u.y);
   for (let n = q.pop(); n; n = q.pop()) {
     const [c, , x, y] = n; if (c > R.get(K(x, y)).c) continue;
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= B.w || ny >= B.h) continue;
+      if (sz > 1) { // 큰 몸: 몸 전체가 들어가야 하고, 덤불·숲은 밟고 지나가며(값 −1) 높이 차는 따지지 않는다
+        const tc = bigCost(B, sz, mt, nx, ny), nc = c + tc; if (tc >= INF || nc > max) continue;
+        if (!o.ignoreUnits && cells(u, nx, ny).some(([a, b]) => { const z = occ.get(K(a, b)); return z && z.id !== u.id && foe(z, u); })) continue;
+        const cur = R.get(K(nx, ny)); if (!cur || nc < cur.c) { R.set(K(nx, ny), { c: nc, p: K(x, y) }); q.push(nc, nx, ny); } continue;
+      }
       const tc = terr(B, nx, ny).c[mt], nc = c + tc; if (tc >= INF || nc > max) continue;
       if (mt !== 3 && Math.abs(up(B, nx, ny) - up(B, x, y)) > 1) continue; // 두 층 차이는 걸어서 못 오르내린다
       const z = occ.get(K(nx, ny)); if (z && foe(z, u) && !o.ignoreUnits) continue;
@@ -45,7 +56,7 @@ export function reach(S, u, o) {
   return R;
 }
 export function pathTo(R, key) { const p = []; while (key != null && R.has(key)) { const [x, y] = unK(key); p.unshift({ x, y }); key = R.get(key).p; } return p; }
-export function stops(S, u, R) { const occ = occMap(S.battle); return [...R.keys()].filter(k => { const z = occ.get(k); return !z || z.id === u.id; }); }
+export function stops(S, u, R) { const occ = occMap(S.battle); return [...R.keys()].filter(k => { const [x, y] = unK(k); return cells(u, x, y).every(([a, b]) => { const z = occ.get(K(a, b)); return !z || z.id === u.id; }); }); }
 export function ranges(S, d) { let lo = 9, hi = 0; for (const w of d.weapons) if (arm(w)) { const r = wr(S, w); lo = Math.min(lo, r[0]); hi = Math.max(hi, r[1]); } return hi ? [lo, hi] : null; }
 // every tile a unit could hit after moving (the red zone)
 export function threat(S, u, R) {
@@ -54,8 +65,8 @@ export function threat(S, u, R) {
     const [x, y] = unK(k), here = { x, y }, moved = x !== u.x || y !== u.y;
     for (const w of ws) {
       if (S.xcom && gunOf(w) === 'sniper' && moved) continue; const r = wr(S, w);
-      for (let dy = -r[1]; dy <= r[1]; dy++) for (let dx = -r[1]; dx <= r[1]; dx++) {
-        const m = Math.abs(dx) + Math.abs(dy), nx = x + dx, ny = y + dy; if (m < r[0] || m > r[1] || nx < 0 || ny < 0 || nx >= B.w || ny >= B.h || B.map[ny][nx] === '#' || out.has(K(nx, ny))) continue;
+      const s = u.sz || 1; for (let dy = -r[1]; dy <= r[1] + s - 1; dy++) for (let dx = -r[1]; dx <= r[1] + s - 1; dx++) {
+        const nx = x + dx, ny = y + dy, m = s === 1 ? Math.abs(dx) + Math.abs(dy) : dist({ x, y, sz: s }, { x: nx, y: ny }); if (m < r[0] || m > r[1] || nx < 0 || ny < 0 || nx >= B.w || ny >= B.h || B.map[ny][nx] === '#' || out.has(K(nx, ny))) continue;
         if (!S.xcom || m < 2 || sees(B, here, { x: nx, y: ny })) out.add(K(nx, ny));
       }
     }
@@ -91,9 +102,9 @@ export const coverAt = (S, u, foes) => (foes.length ? foes.reduce((n, f) => n + 
 export const canWatch = (S, u, w, moved) => !!S.xcom && arm(w) && wr(S, w)[1] >= 2 && ammo(S, u, w) > 0 && !(gunOf(w) === 'sniper' && moved);
 export const standable = (S, u, x, y) => terr(S.battle, x, y).c[MT[S.defs[u.ref].mtype] || 0] < INF;
 // ── encounters ──
-export function nearestFree(S, def, x, y, taken) {
-  const B = S.battle, mt = MT[def.mtype] || 0, seen = new Set([K(x, y)]), q = [[x, y]];
-  while (q.length) { const [cx, cy] = q.shift(); if (terr(B, cx, cy).c[mt] < INF && !taken.has(K(cx, cy))) return [cx, cy]; for (const [dx, dy] of DIRS) { const nx = cx + dx, ny = cy + dy, k = K(nx, ny); if (nx >= 0 && ny >= 0 && nx < B.w && ny < B.h && !seen.has(k)) { seen.add(k); q.push([nx, ny]); } } }
+export function nearestFree(S, def, x, y, taken, sz) {
+  const B = S.battle, mt = MT[def.mtype] || 0, s = sz || 1; if (s > 1) { x = Math.max(0, Math.min(B.w - s, x)); y = Math.max(0, Math.min(B.h - s, y)); } const seen = new Set([K(x, y)]), q = [[x, y]];
+  while (q.length) { const [cx, cy] = q.shift(); if (s > 1 ? bigCost(B, s, mt, cx, cy) < INF && cells({ sz: s }, cx, cy).every(([a, b]) => !taken.has(K(a, b))) : terr(B, cx, cy).c[mt] < INF && !taken.has(K(cx, cy))) return [cx, cy]; for (const [dx, dy] of DIRS) { const nx = cx + dx, ny = cy + dy, k = K(nx, ny); if (nx >= 0 && ny >= 0 && nx < B.w && ny < B.h && !seen.has(k)) { seen.add(k); q.push([nx, ny]); } } }
   return null;
 }
 // 땅 높이(0 평지 · 1 언덕 · 2 고지). 산은 예전 규칙대로 높이를 치지 않는다

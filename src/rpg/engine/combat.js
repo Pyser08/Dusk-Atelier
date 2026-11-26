@@ -3,6 +3,10 @@ import { elemMod, typeMod, physMod, elemsOfUnit } from "./elements.js";
 import { canUse } from "./classes.js";
 import { DIRS, GUNS, INF, K, MT, SIDE, T0, WT, arm, clamp, dist, foe, gunOf, log, roll, utags } from "./rules.js";
 import { grantExp, xp } from "./growth.js";
+import { fxMods, inflict, onFoe, silenced, useSupport, weaponFx } from "./status.js";
+import { bumpCombo, comboOf, AIM_HIT, AIM_HIT0, AIM_PART, BREAK_NOTE, CUT, FLANK, cutOf, hitCell, hurtPart, partName, pushes, turnTo, wearBreak, zoneOf } from "./hunt.js";
+import { armorResist, armorBoost } from "./armor.js";
+import { sagaMods, wxElem, wxHit, objOutcome, settleInjury, dropLoot } from "./saga.js";
 import { alive, ammo, canShoot, canWatch, coverFrom, est, fireOk, gun, line, living, occMap, pathTo, syncRears, terr, unitAt, up, uterr, wr } from "./board.js";
 
 export function actWatch(S, u) { const mv = went(S, u); u.ow = true; u.done = true; log(S, S.defs[u.ref].name + ': ' + (mv ? mv + ', ' : '') + '경계', 'ow'); }
@@ -28,7 +32,7 @@ export function travel(S, u, path, ev) {
     }
   }
   if (u.hp <= 0) return false;
-  const last = path[path.length - 1]; u.x = last.x; u.y = last.y; syncRears(B); if (path.length - 1 > from) ev.push({ t: 'move', id: u.id, path: path.slice(from) });
+  const last = path[path.length - 1]; u.x = last.x; u.y = last.y; if (S.hunt && path.length > 1) { const p = path[path.length - 2]; u.face = [Math.sign(last.x - p.x), Math.sign(last.y - p.y)]; } syncRears(B); if (path.length - 1 > from) ev.push({ t: 'move', id: u.id, path: path.slice(from) });
   return true;
 }
 // ── combat ──
@@ -48,6 +52,7 @@ export function mods(S, u, ctx) {
     const sk = S.skills[id]; if (!sk) continue;
     if ((sk.type === 'passive' && cond(S, u, sk.cond, ctx)) || (sk.type === 'art' && ctx.art === id)) { for (const k in sk.mods) m[k] += sk.mods[k]; Object.assign(fl, sk.flags); }
   }
+  if (S.hunt) sagaMods(S, u, m, fl);
   return { m, fl };
 }
 // attack stance: an adjacent, unpaired ally joins each opening attack for half damage (no crit, no skills)
@@ -64,6 +69,7 @@ export function partnerOf(S, x, y, dart) {
 export function side(S, A, D, init, art, free, dart) {
   const da = S.defs[A.ref], dd = S.defs[D.ref], sa = est(S, A), sd = est(S, D), w = da.weapons[A.wi] || da.weapons[0], ds = dist(A, D);
   const am = mods(S, A, { init, art: init ? art : null }), dm = mods(S, D, { init: !init, art: dart || null });
+  if (S.hunt) { fxMods(A, am.m); fxMods(D, dm.m); const wf = weaponFx(da.weapons[A.wi] || da.weapons[0]); for (const k of ['atk', 'hit', 'crit']) if (wf[k]) am.m[k] += wf[k]; }
   const ask = init && art ? S.skills[art] : null;
   let [rmin, rmax] = w ? wr(S, w) : [0, 0]; if (ask && ask.range) { rmin = ask.range[0]; rmax = ask.range[1]; }
   const out = { can: arm(w) && (free || (ds >= rmin && ds <= rmax)), w, dmg: 0, hit: 0, crit: 0, hits: 0, fl: am.fl, as: sa.spd + am.m.spd };
@@ -76,18 +82,32 @@ export function side(S, A, D, init, art, free, dart) {
   if (gk === 'shotgun') { gm.h = ds <= 1 ? 20 : ds === 2 ? 0 : -20; gm.d = ds <= 1 ? 3 : ds === 2 ? 0 : -3; } else if (gk === 'rifle' && ds <= 1) gm.h = -10; else if (gk === 'sniper') gm.c = 10; else if (gk === 'auto') gm.h = -10;
   const cv = S.xcom && free !== true && ds >= 2 ? coverFrom(S, D, A) : { v: 0 }, open = !!S.xcom && free !== true && ds >= 2 && !cv.v;
   out.cover = cv.v >= 40 ? '완전엄폐' : cv.v ? '반엄폐' : cv.flank ? '측면' : '';
-  const atk = (magic ? sa.mag : sa.str) + w.mt * (eff ? 3 : 1) + tri + am.m.atk + gm.d + (up(S.battle, A.x, A.y) > up(S.battle, D.x, D.y) ? 1 : 0);
+  const atk = (magic ? sa.mag : sa.str) + w.mt * (eff ? 3 : 1) + tri + am.m.atk + gm.d + (up(S.battle, A.x, A.y) > up(S.battle, D.x, D.y) ? 1 : 0) - (A.tailcut ? 3 : 0) + (A.rage ? 3 : 0);
   let df = (magic ? sd.res + dm.m.res : sd.def + dm.m.def) + tt.def; out.df0 = df;
   if (am.fl.pierce) df = Math.floor(df * (100 - am.fl.pierce) / 100);
-  out.elem = (ask && ask.elem) || w.elem || ''; out.em = out.elem ? elemMod(out.elem, dd, (S.battle.map[D.y] || '')[D.x], da) : 1; out.type = out.elem ? typeMod(out.elem, dd) : physMod(dd); out.stab = !!out.elem && elemsOfUnit(da).includes(out.elem); out.mul = (am.fl.mult || 1) * out.em; out.blk = dm.fl.block || 0; out.dmg = Math.floor(Math.floor(Math.max(0, atk - df) * out.mul) * (100 - out.blk) / 100); out.atk = atk; out.eff = eff; out.tri = tri; out.magic = magic;
+  out.elem = (ask && ask.elem) || w.elem || ''; out.em = (out.elem ? elemMod(out.elem, dd, (S.battle.map[D.y] || '')[D.x], da) : 1) * (S.hunt ? wxElem(S, out.elem) * armorResist(S, dd, out.elem) * armorBoost(S, da, out.elem) : 1); out.type = out.elem ? typeMod(out.elem, dd) : physMod(dd); out.stab = !!out.elem && elemsOfUnit(da).includes(out.elem); out.mul = (am.fl.mult || 1) * out.em; out.blk = dm.fl.block || 0; out.dmg = Math.floor(Math.floor(Math.max(0, atk - df) * out.mul) * (100 - out.blk) / 100); out.atk = atk; out.eff = eff; out.tri = tri; out.magic = magic;
   const pt = free ? null : partnerOf(S, A, D, dart); out.partner = pt;
   out.hit = am.fl.sure ? 100 : clamp(gm.h - cv.v + w.hit + sa.skl * 2 + Math.floor(sa.lck / 2) + tri * 15 + am.m.hit + (pt ? 10 : 0) - ((sd.spd + dm.m.spd) * 2 + sd.lck + tt.avo + dm.m.avo + (wd && wd.type === 'claw' && w.type !== 'claw' ? 15 : 0)), 0, 100);
   out.crit = clamp(gm.c + (open ? 10 : 0) + w.crit + Math.floor(sa.skl / 2) + am.m.crit - sd.lck - (D.rear ? 5 : 0), 0, 100);
+  if (S.hunt && !am.fl.sure) out.hit = clamp(out.hit + wxHit(S, w, ds), 0, 100);
   const hi = up(S.battle, A.x, A.y) - up(S.battle, D.x, D.y); out.hi = Math.sign(hi); if (hi && !am.fl.sure) out.hit = clamp(out.hit + (hi > 0 ? 15 : -10), 0, 100);
+  if (S.hunt && init && free !== true) { const zn = zoneOf(S, A, D); out.flank = zn; if (!am.fl.sure) out.hit = clamp(out.hit + FLANK[zn].hit, 0, 100); out.crit = clamp(out.crit + FLANK[zn].crit, 0, 100); }
+  if (S.hunt && D.down) { out.dmg = Math.floor(out.dmg * 1.5); out.downed = true; }
+  const hc = init && S.hunt ? hitCell(S, A, D, [rmin, rmax]) : null; if (hc) { out.part = hc.part; out.cell = [hc.x, hc.y]; out.aimed = hc.aimed; out.cut = cutOf(w); out.pmul = (CUT[out.cut][hc.part] || 1) * (hc.aimed ? AIM_PART : 1); if (hc.aimed && !am.fl.sure) out.hit = clamp(out.hit + (AIM_HIT[hc.part] ?? AIM_HIT0), 0, 100); const cb = hc.part !== 'body' ? comboOf(S, D, hc.part) : 0; if (cb) { out.combo = cb; out.pmul *= 1 + cb * .25; if (!am.fl.sure) out.hit = clamp(out.hit + cb * 5, 0, 100); } }
   out.init = init; out.hits = gk === 'auto' ? (init ? clamp(ammo(S, A, w), 1, 2) : 1) : am.fl.brave || (init && w.brave) ? 2 : 1; if (gk) out.hits = clamp(ammo(S, A, w), 1, out.hits);
   return out;
 }
+// 보조무기: 지금 든 무기가 공격해 온 상대에게 닿지 않고 보조무기는 닿으면, 반격할 때 보조무기를 든다(사냥 규칙)
+export function subFor(S, d, a) {
+  if (!S.hunt) return -1; const dd = S.defs[d.ref]; if (!dd?.sub) return -1; const si = dd.weapons.findIndex((w) => w.name === dd.sub); if (si < 0 || si === d.wi) return -1;
+  const ds = dist(a, d), reach = (w) => { if (!arm(w) || !canUse(dd, w)) return false; const r = wr(S, w); return ds >= r[0] && ds <= r[1]; };
+  return !reach(dd.weapons[d.wi]) && reach(dd.weapons[si]) ? si : -1;
+}
 export function forecast(S, a, d, art) {
+  const si = subFor(S, d, a), w0 = d.wi; if (si >= 0) d.wi = si;
+  try { const r = forecast0(S, a, d, art); if (si >= 0) r.d.sub = S.defs[d.ref].weapons[si].name; return r; } finally { d.wi = w0; }
+}
+function forecast0(S, a, d, art) {
   const A = side(S, a, d, true, art), D = side(S, d, a, false, null, false, art);
   if (A.fl.noCounter || (S.xcom && (dist(a, d) >= 2 || gunOf(D.w)))) D.can = false;
   A.x2 = A.can && A.as - D.as >= 4; D.x2 = D.can && D.as - A.as >= 4; if (S.xcom && gunOf(A.w)) A.x2 = false;
@@ -120,7 +140,7 @@ export function strike(S, x, y, f, ev) {
   }
   if (roll(S) < f.crit) { dmg *= 3; e.crit = true; }
   for (const id of dy.skills) { const sk = S.skills[id]; if (sk && sk.type === 'proc' && sk.flags.block && cond(S, y, sk.cond, { init: !f.init }) && roll(S) < (typeof sk.rate === 'string' ? sty[sk.rate] : sk.rate)) { dmg = Math.floor(dmg * (100 - sk.flags.block) / 100); e.block = sk.name; break; } }
-  dmg = clamp(dmg, 0, y.hp); y.hp -= dmg; e.dmg = dmg; e.hp = y.hp; if (names.length) e.proc = names.join(', ');
+  dmg = clamp(dmg, 0, y.hp); y.hp -= dmg; e.dmg = dmg; e.hp = y.hp; if (S.hunt && dmg > 0 && y.hp > 0) inflict(S, x, y, f.w, e); if (S.hunt) drain = Math.max(drain, weaponFx(f.w).drain || 0); if (f.part && f.part !== 'body') hurtPart(S, y, f.part, Math.floor(dmg * (f.pmul || 1)), e, dy); if (S.hunt && dmg > 0) wearBreak(S, y, f, e); if (names.length) e.proc = names.join(', ');
   if (drain && dmg > 0) { const h = Math.min(dx.stats.hp - x.hp, Math.ceil(dmg * drain / 100)); if (h > 0) { x.hp += h; e.heal = h; e.hpFrom = x.hp; } }
   ev.push(e); return dmg;
 }
@@ -137,6 +157,29 @@ export function dualStrike(S, pt, y, ev, yInit) {
   else e.miss = true;
   ev.push(e); return e;
 }
+// 밀치기: a에게서 멀어지는 쪽으로 한 칸. 판 끝·벽·사람에 막히면 부딪혀 3, 낮은 곳으로 떨어지면 층마다 3, 타는 땅이면 바로 한 번 탄다
+export function knock(S, a, d, ev) {
+  const B = S.battle, s = d.sz || 1, cx = d.x + (s - 1) / 2 - a.x - ((a.sz || 1) - 1) / 2, cy = d.y + (s - 1) / 2 - a.y - ((a.sz || 1) - 1) / 2, dx = Math.abs(cx) >= Math.abs(cy) ? Math.sign(cx) : 0, dy = dx ? 0 : Math.sign(cy);
+  if (!dx && !dy) return ''; const nx = d.x + dx, ny = d.y + dy, mt = MT[S.defs[d.ref].mtype] || 0, occ = occMap(B), nm = S.defs[d.ref].name, max = S.defs[d.ref].stats.hp;
+  const hurt = (n, why) => { n = Math.min(n, d.hp); d.hp -= n; ev.push({ t: 'strike', from: a.id, to: d.id, dmg: n, hp: d.hp, push: true }); return ', ' + nm + ' ' + why + ' ' + n + hpOf(S, d); };
+  let ok = nx >= 0 && ny >= 0 && nx + s <= B.w && ny + s <= B.h, by = '', boom = null;
+  if (ok) for (let j = 0; j < s && ok; j++) for (let i = 0; i < s; i++) { const x = nx + i, y = ny + j, z = occ.get(K(x, y)); if (z && z.id !== d.id) { ok = false; by = '부딪힘'; break; } if (terr(B, x, y).boom) { ok = false; boom = [x, y]; break; } if (terr(B, x, y).c[mt] >= INF && !(mt === 3)) { ok = false; break; } }
+  if (!ok) { let t = ' (밀쳐냄' + hurt(s > 1 && !by ? 6 : 3, by || (boom ? '폭약통에 부딪힘' : '벽에 부딪힘')); if (s > 1 && !by && d.hp > 0) { d.stun = 1; delete d.tele; t += ', 기절'; } if (boom) t += explode(S, boom[0], boom[1], ev); return t + ')'; }
+  const h0 = up(B, d.x, d.y), path = [{ x: d.x, y: d.y }, { x: nx, y: ny }]; d.x = nx; d.y = ny; ev.push({ t: 'move', id: d.id, path }); let t = ' (밀쳐냄';
+  const drop = s === 1 && mt !== 3 ? h0 - up(B, nx, ny) : 0; if (drop > 0) t += hurt(3 * drop, '떨어짐');
+  const tt = terr(B, nx, ny); if (tt.burn && d.hp > 0 && mt !== 3) t += hurt(Math.ceil(max * tt.burn / 100), tt.n + '에 빠짐');
+  return t + ')';
+}
+// 폭약통: 터지면 둘레 3×3에 8 피해, 옆 폭약통도 따라 터진다. 통 자리는 평지가 된다
+export function explode(S, x, y, ev, seen = new Set()) {
+  const B = S.battle, k = K(x, y); if (seen.has(k) || (B.map[y] || '')[x] !== 'x') return ''; seen.add(k);
+  B.map[y] = B.map[y].slice(0, x) + '.' + B.map[y].slice(x + 1); ev.push({ t: 'boom', x, y }); const hit = [];
+  for (const z of alive(B)) { if (!cellsOfU(z).some(([a, b]) => Math.abs(a - x) <= 1 && Math.abs(b - y) <= 1)) continue; const n = Math.min(8, z.hp); z.hp -= n; hit.push(S.defs[z.ref].name + ' ' + n); ev.push({ t: 'strike', to: z.id, from: z.id, dmg: n, hp: z.hp, boom: true }); if (z.hp <= 0) fall(S, z, ev); }
+  let t = ', 폭발' + (hit.length ? ' — ' + hit.join(', ') : '');
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (i || j) t += explode(S, x + i, y + j, ev, seen);
+  return t;
+}
+const cellsOfU = (z) => { const s = z.sz || 1, o = []; for (let j = 0; j < s; j++) for (let i = 0; i < s; i++) o.push([z.x + i, z.y + j]); return o; };
 export function expFor(S, a, d, kill, dealt) {
   const diff = S.defs[d.ref].level - S.defs[a.ref].level;
   if (kill) return xp(S, clamp(12 + diff * 3, 3, 40) + (d.boss ? 10 : 0));
@@ -149,29 +192,34 @@ export function went(S, u) {
 }
 export const hpOf = (S, u) => ' (' + u.hp + '/' + S.defs[u.ref].stats.hp + ')';
 export function fall(S, u, ev) {
-  const B = S.battle; ev.push({ t: 'die', id: u.id });
+  const B = S.battle; ev.push({ t: 'die', id: u.id }); if (u.carry) dropLoot(S, u);
   if (u.rear && B.units[u.rear]) { const r = B.units[u.rear]; r.rearOf = null; r.x = u.x; r.y = u.y; r.done = true; u.rear = null; ev.push({ t: 'front', id: r.id }); log(S, S.defs[r.ref].name + ': 후위에서 전위로 나섬'); }
 }
 export function resolve(S, a, d, art, ev) {
-  syncRears(S.battle);
+  syncRears(S.battle); { const si = subFor(S, d, a); if (si >= 0) { d.wi = si; log(S, S.defs[d.ref].name + ': 보조무기 ' + S.defs[d.ref].weapons[si].name + '을(를) 든다'); ev.push({ t: 'sub', id: d.id }); } }
   const fc = forecast(S, a, d, art), na = S.defs[a.ref].name, nd = S.defs[d.ref].name, hp0 = { a: a.hp, d: d.hp };
   const order = [[a, d, fc.a, true]]; if (fc.d.can) order.push([d, a, fc.d, true]); if (fc.a.x2) order.push([a, d, fc.a, false]); else if (fc.d.x2) order.push([d, a, fc.d, false]);
   ev.push({ t: 'combat', a: a.id, d: d.id, art: art ? S.skills[art].name : null });
   let crit = false; const notes = [], broke = new Map(), cnt = { [a.id]: [0, 0], [d.id]: [0, 0] };
   for (const [x, y, f, first] of order) {
-    for (let i = 0; i < f.hits; i++) { if (x.hp <= 0 || y.hp <= 0 || broke.has(x.id) || (gun(S, f.w) && ammo(S, x, f.w) <= 0)) break; const n = ev.length; strike(S, x, y, f, ev); const e = ev[n]; cnt[x.id][0]++; if (!e.miss && !e.guard) cnt[x.id][1]++; if (e.guard) cnt[x.id][2] = 1; if (e.brk) broke.set(x.id, f.w); if (e.crit) crit = true; if (e.proc) notes.push(e.proc); if (e.guard) notes.push('호위진 방어'); }
+    for (let i = 0; i < f.hits; i++) { if (x.hp <= 0 || y.hp <= 0 || broke.has(x.id) || (gun(S, f.w) && ammo(S, x, f.w) <= 0)) break; const n = ev.length; strike(S, x, y, f, ev); const e = ev[n]; cnt[x.id][0]++; if (!e.miss && !e.guard) cnt[x.id][1]++; if (e.guard) cnt[x.id][2] = 1; if (e.brk) broke.set(x.id, f.w); if (e.crit) crit = true; if (e.proc) notes.push(e.proc); if (e.down) notes.push('브레이크 — 쓰러짐'); if (e.fx) notes.push(S.defs[y.ref].name + ' ' + e.fx.join('·')); if (e.pbreak) notes.push(partName(y, e.pbreak, S.defs[y.ref]) + ' 파괴 — ' + BREAK_NOTE[e.pbreak]); if (e.guard) notes.push('호위진 방어'); }
     if (first && f.partner && x.hp > 0) for (let k = 0; k < (f.partner.n || 1) && y.hp > 0; k++) { const e = dualStrike(S, f.partner, y, ev, y.id === a.id); notes.push(e.guard ? '협동 공격 차단' : f.partner.name + ' 협동 공격' + (e.miss ? ' 빗나감' : ' ' + e.dmg)); }
   }
+  // 광역 기술: 목표에 맞닿은 다른 적에게 60% 피해(반격 없음, 명중은 같은 확률로)
+  if (S.hunt && art && S.skills[art] && S.skills[art].flags.area && a.hp > 0 && fc.a.dmg > 0) { const hit = []; for (const z of alive(S.battle)) { if (z.id === d.id || !foe(z, a) || z.rearOf || dist(z, d) > 1) continue; if ((roll(S) + roll(S)) / 2 >= fc.a.hit) { hit.push(S.defs[z.ref].name + ' 빗나감'); continue; } const n = Math.min(z.hp, Math.max(1, Math.floor(fc.a.dmg * .6))); z.hp -= n; ev.push({ t: 'strike', from: a.id, to: z.id, dmg: n, hp: z.hp, area: true }); hit.push(S.defs[z.ref].name + ' ' + n + (z.hp <= 0 ? ' 격파' : '')); if (z.hp <= 0) fall(S, z, ev); } if (hit.length) notes.push('광역 — ' + hit.join(', ')); }
   if (fc.a.cover) notes.push(fc.a.cover);
   const mv = went(S, a), tally = c => (c[0] > 1 && c[1] > 0 && c[1] < c[0] ? ' (' + c[0] + '회 중 ' + c[1] + '회 명중)' : ''), ca = cnt[a.id], cd = cnt[d.id];
   let line = na + ' (' + [fc.a.w && fc.a.w.name, mv].filter(Boolean).join(', ') + ')' + (art ? ' [' + S.skills[art].name + ']' : '') + ' → ' + nd + ': ' + (ca[0] && !ca[1] && hp0.d === d.hp ? (ca[2] ? '막힘' : '빗나감') : (hp0.d - d.hp) + ' 피해' + hpOf(S, d) + tally(ca));
   if (fc.d.can && cd[0]) line += !cd[1] ? (cd[2] ? ', 반격 막힘' : ', 반격 빗나감') : ', 반격으로 ' + Math.max(0, hp0.a - a.hp) + ' 피해' + hpOf(S, a) + tally(cd); if (crit) line += ' (필살)'; if (notes.length) line += ' (' + [...new Set(notes)].join(', ') + ')';
   for (const u of [d, a]) if (u.hp <= 0) line += ' — ' + S.defs[u.ref].name + ' 격파';
   for (const [id, w] of broke) line += ' — ' + S.defs[S.battle.units[id].ref].name + '의 ' + w.name + ' 부서짐';
+  if (S.hunt && fc.a.part) { if (fc.a.combo) notes.push('연계 ' + (fc.a.combo + 1) + '타'); bumpCombo(S, d, fc.a.part, ca[1] > 0); }
+  if (S.hunt && a.hp > 0 && d.hp > 0 && ca[1] > 0 && dist(a, d) === 1 && !d.rear && pushes(fc.a.w, cutOf(fc.a.w)) && ((d.sz || 1) === 1 || d.down)) line += knock(S, a, d, ev);
   log(S, line);
   for (const [id, w] of broke) { discard(S, S.battle.units[id], w); ev.push({ t: 'break', id, name: w.name }); }
   for (const u of [d, a]) if (u.hp <= 0) fall(S, u, ev);
   if (art) { a.cd[art] = (S.skills[art].cd || 0) + 1; }
+  if (S.hunt && a.hp > 0) turnTo(a, d);
   for (const [u, z, h0] of [[a, d, hp0.d], [d, a, hp0.a]]) if (u.team === 'friend' && u.hp > 0) S.battle.pool = (S.battle.pool || 0) + expFor(S, u, z, z.hp <= 0, h0 - z.hp);
   for (const [u, z, h0] of [[a, d, hp0.d], [d, a, hp0.a]]) if (u.team === 'ally' && u.hp > 0) {
     const amount = expFor(S, u, z, z.hp <= 0, h0 - z.hp); grantExp(S, S.defs[u.ref], amount, ev, u.id);
@@ -198,7 +246,8 @@ export function actGive(S, a, b, i) { const da = S.defs[a.ref], db = S.defs[b.re
 export function outcome(S, ev) {
   const B = S.battle; if (!B || B.status !== 'active') return;
   const us = alive(B), allies = us.filter(u => u.team === 'ally'), foes = us.filter(u => SIDE[u.team] !== 0);
-  let st = null;
+  let st = S.hunt ? objOutcome(S) : null;
+  if (st) return finish(S, st, ev);
   if (!allies.length) st = 'defeat';
   else if (!foes.length) st = 'victory';
   else if (B.obj.type === 'boss' && B.hadBoss && !foes.some(u => u.boss)) st = 'victory';
@@ -207,6 +256,8 @@ export function outcome(S, ev) {
 }
 export function finish(S, st, ev) {
   const B = S.battle; B.status = st; log(S, st === 'victory' ? '전투 승리' : '전투 패배'); ev.push({ t: 'end', status: st });
+  if (S.hunt) { const inj = settleInjury(S); if (inj.length) log(S, '부상: ' + inj.join(', ')); }
+  if (st === 'victory') for (const u of Object.values(B.units)) if (u.team === 'friend' && u.hp > 0 && S.defs[u.ref].recruit) S.defs[u.ref].ally = true;
   if (st !== 'victory') return;
   const party = living(B).filter(u => u.team === 'ally'), share = party.length ? Math.floor((B.pool || 0) / party.length) : 0;
   if (share > 0) log(S, '우군이 얻은 경험치 ' + B.pool + ' → 아군 ' + party.length + '명에게 ' + share + '씩');
@@ -217,6 +268,7 @@ export function moveUnit(S, u, x, y, R, ev) { if (u.x === x && u.y === y) return
 // player commands; each returns nothing and pushes events
 export function actAttack(S, u, z, art, ev) { resolve(S, u, z, art, ev); u.done = true; }
 export function actHeal(S, u, z, ev) { heal(S, u, z, ev); u.done = true; }
+export function actSupport(S, u, z, id, ev) { const sk = S.skills[id]; if (!sk) return; const mv = went(S, u); void mv; useSupport(S, u, z, sk, ev); u.done = true; }
 export function actWait(S, u) { const mv = went(S, u); u.done = true; log(S, S.defs[u.ref].name + ': ' + (mv || '제자리 대기'), mv ? 'mv' : 'wait'); }
 // guard stance commands: the acting unit steps into an adjacent ally's tile as the rear partner
 export function actPair(S, u, z) { u.rearOf = z.id; z.rear = u.id; z.gauge = 0; u.ow = false; u.x = z.x; u.y = z.y; u.done = true; delete u.mv; log(S, '호위진 편성: 전위 ' + S.defs[z.ref].name + ' / 후위 ' + S.defs[u.ref].name); }
@@ -228,13 +280,14 @@ export function options(S, u, from) {
   const moved = !!from && (from.x !== u.x || from.y !== u.y);
   const d = S.defs[u.ref], foes = alive(S.battle).filter(z => foe(z, u)), mates = alive(S.battle).filter(z => !foe(z, u) && z.id !== u.id), out = [];
   d.weapons.forEach((w, i) => {
-    if (w.type === 'staff') { const t = mates.filter(z => { const ds = dist(u, z); return ds >= w.rmin && ds <= w.rmax && z.hp < S.defs[z.ref].stats.hp; }); out.push({ kind: 'heal', wi: i, label: w.name, targets: t.map(z => z.id) }); return; }
+    if (w.type === 'staff') { if (S.hunt && silenced(u)) return; const t = mates.filter(z => { const ds = dist(u, z); return ds >= w.rmin && ds <= w.rmax && z.hp < S.defs[z.ref].stats.hp; }); out.push({ kind: 'heal', wi: i, label: w.name, targets: t.map(z => z.id) }); return; }
     if (!canUse(d, w)) return;
     if (w.type === 'item') { out.push({ kind: 'item', wi: i, label: w.name, targets: u.hp < d.stats.hp ? [u.id] : [] }); return; }
     out.push({ kind: 'attack', wi: i, label: w.name, targets: foes.filter(z => canShoot(S, u, w, z, moved)).map(z => z.id) });
   });
   const ew = arm(d.weapons[u.wi]) && canUse(d, d.weapons[u.wi]) ? u.wi : d.weapons.findIndex((w) => arm(w) && canUse(d, w));
-  if (ew >= 0) for (const id of d.skills) {
+  if (S.hunt && !silenced(u)) for (const id of d.skills) { const sk = S.skills[id]; if (!sk || sk.type !== 'support') continue; const pool = sk.on === 'foe' ? foes : mates.concat([u]); out.push({ kind: 'support', art: id, label: sk.name, cd: u.cd[id] || 0, targets: (u.cd[id] || 0) > 0 ? [] : pool.filter(z => { const ds = dist(u, z); return ds >= sk.range[0] && ds <= sk.range[1]; }).map(z => z.id) }); }
+  if (ew >= 0 && !(S.hunt && silenced(u))) for (const id of d.skills) {
     const sk = S.skills[id]; if (!sk || sk.type !== 'art') continue; const w = d.weapons[ew], r = sk.range || wr(S, w);
     out.push({ kind: 'attack', wi: ew, art: id, label: sk.name, cd: u.cd[id] || 0, targets: (u.cd[id] || 0) > 0 ? [] : foes.filter(z => { const ds = dist(u, z); return ds >= r[0] && ds <= r[1] && fireOk(S, u, w, z, moved); }).map(z => z.id) });
   }
@@ -248,9 +301,11 @@ export function options(S, u, from) {
     d.weapons.forEach((w, i) => { const g = gun(S, w); if (g && ammo(S, u, w) < GUNS[g].mag) out.push({ kind: 'reload', wi: i, label: w.name + ' 재장전', small: ammo(S, u, w) + '/' + GUNS[g].mag, targets: [u.id] }); });
     if (canWatch(S, u, d.weapons[u.wi], moved)) out.push({ kind: 'watch', label: '경계', small: d.weapons[u.wi].name, targets: [u.id] });
   }
+  if (S.hunt) out.push(...sagaOptions(S, u, from));
   out.push({ kind: 'trade', label: '교환', targets: mates.filter(z => z.team === u.team && dist(z, u) === 1 && z.ref !== u.ref).map(z => z.id) });
   return out;
 }
 
 /** 도주: 아군이 전장을 버리고 물러난다. 결과는 다음 입력에 실린다 */
 export function actRetreat(S, ev = []) { const B = S.battle; if (!B || B.status !== 'active') return false; B.status = 'retreat'; log(S, '아군이 전장에서 물러났다'); ev.push({ t: 'end', status: 'retreat' }); return true; }
+import { sagaOptions } from "./acts.js";

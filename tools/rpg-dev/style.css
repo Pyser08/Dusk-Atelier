@@ -95,3 +95,116 @@ u.gr,u.el{text-decoration:none;display:inline-block;margin-left:6px;padding:0 6p
 .tchart{overflow:auto}.tchart table{border-collapse:collapse;font-size:12px;color:#fff}.tchart th,.tchart td{min-width:34px;height:32px;text-align:center;border:1px solid #2c2438}.tchart th u{margin:0}.tchart .m2{background:#3f8a4a;font-weight:900}.tchart .m05{background:#7a3a3a}.tchart .m0{background:#0e0a14;color:#ff7a7a;font-weight:900}
 .top [data-a=topcam]{padding:0 10px;font-weight:900}.top [data-a=topcam].on{background:var(--lamp);color:var(--ink)}
 .td{background:#e6cf8e}.tn{background:#f2f6fb}.to{background:#7f9a52}.tr{background:#c9b48e}.tk{background:#8a7a5a}.tu{background:#6a4a7a}.tq{background:#f0e2b0}.tc{background:#a8b4d8}
+/* 사냥 규칙: 부위 고르기 */
+.parts{position:absolute;left:0;right:0;top:calc(196px + var(--st));max-width:640px;margin:auto;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;pointer-events:auto}.parts button{position:relative;min-width:92px;padding:6px 10px 9px;border:0;background:var(--ink);color:var(--bone);font:inherit;text-align:left;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);overflow:hidden;cursor:pointer}.parts button b{display:block;font:900 14px var(--serif)}.parts button small{font-size:11px;opacity:.85}.parts button.on{background:var(--lamp);color:var(--ink)}.parts button:disabled{opacity:.4;cursor:default}.parts button i{position:absolute;left:0;bottom:0;height:3px;background:#ff9a5c}.parts button em{position:absolute;right:10px;top:5px;font:900 11px var(--sans);font-style:normal;color:#ff6a5a}.parts button.broke b{text-decoration:line-through}
+@media(max-height:520px){.parts{left:0;right:auto;width:54%;top:176px}.parts button{min-width:70px;padding:4px 8px 7px}}
+.parts .pnow{position:relative;min-width:120px;padding:6px 12px 9px;background:#000a;color:var(--bone);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);overflow:hidden}.parts .pnow b{display:block;font:900 15px var(--serif);color:#ffe08a}.parts .pnow small{display:block;font-size:11px;opacity:.85}.parts .pnow i{position:absolute;left:0;bottom:0;height:3px;background:#ff9a5c}.parts .pnow em{position:absolute;right:10px;top:5px;font:900 11px var(--sans);font-style:normal;color:#ff6a5a}
+.htags{position:absolute;left:0;right:0;top:calc(194px + var(--st));max-width:640px;margin:auto;display:flex;gap:5px;justify-content:center;flex-wrap:wrap;pointer-events:none}.htags span{padding:3px 9px;background:var(--ink);color:var(--bone);font:700 12px var(--sans)}.htags .up{color:#8ce29b}.htags .dn{color:#ff9a90}
+.htags+.parts{top:calc(226px + var(--st))}
+@media(max-height:520px){.htags{left:0;right:auto;width:54%;top:150px}.htags+.parts{top:182px}}
+/* 가방·정비·제작 */
+.bagw .btabs{display:flex;gap:4px;padding:8px 14px 0;background:#0e0a14}.btabs button,.bchips button,.brow button{border:0;padding:7px 12px;background:#2a2236;color:#f2ead8;font:700 13px var(--sans);cursor:pointer}.btabs button.on,.bchips button.on{background:var(--lamp,#ffd27a);color:#17121f}.bchips{display:flex;gap:6px;flex-wrap:wrap}.bchips small{margin-left:6px;opacity:.7}.brow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid #ffffff14}.brow small{opacity:.7}.bw{flex:1;min-width:150px}.bw b{display:block}.brow select,.brow input:not([type]){background:#221b2c;color:#fff;border:1px solid #ffffff22;padding:6px}.blog{font-size:12px;opacity:.8;padding:3px 0}.bmsg{margin:8px 14px 0;padding:8px 12px;background:#2f4a2f;color:#d8ffd0;font-weight:700}.bagw h4{margin:12px 0 4px;font:900 14px var(--serif)}.brow button:disabled,.full>button:disabled{opacity:.4}.full>button{border:0;padding:10px 16px;background:var(--lamp,#ffd27a);color:#17121f;font:900 14px var(--sans);margin-top:8px;cursor:pointer}
+.full.bchips>button{background:#2a2236;color:#f2ead8;margin:0;padding:7px 12px;font:700 13px var(--sans)}.full.bchips>button.on{background:var(--lamp,#ffd27a);color:#17121f}
+.resl{white-space:pre-wrap;font:600 13px/1.5 var(--sans);background:#0003;padding:8px 10px;margin:6px 0;text-align:left}
+
+/* 결과 상자: 승리(금빛 햇살) · 패배(붉은 금·흔들림) · 도주(푸른 잿빛 바람) */
+.resbox{position:relative;overflow:hidden;margin:-4px -4px 10px;padding:22px 12px 18px;border-radius:12px;text-align:center;color:#fff;animation:rsIn .55s cubic-bezier(.2,1.3,.4,1) both}
+.resbox .rs-big{position:relative;font:900 34px/1 var(--serif,serif);letter-spacing:.16em;animation:rsSlam .6s cubic-bezier(.3,1.6,.5,1) .1s both}
+.resbox .rs-t{position:relative;font:900 18px var(--sans);margin-top:6px}.resbox .rs-sub{position:relative;font-size:12px;opacity:.85;margin-top:2px}
+.rs-stripe{position:absolute;left:0;right:0;top:0;height:8px;background-size:24px 100%;animation:rsRun .7s linear infinite}.rs-stripe.low{top:auto;bottom:0;animation-direction:reverse}
+.rs-rays{position:absolute;left:50%;top:50%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;opacity:.5;animation:rsSpin 9s linear infinite}
+.r-victory{background:radial-gradient(circle at 50% 45%,#7a5a12,#2a1d08 70%);box-shadow:0 0 0 2px #f2c230,0 0 30px #f2c23066}.r-victory .rs-big{color:#ffe07a;text-shadow:0 0 14px #ffb800,0 3px 0 #6a4a00}.r-victory .rs-stripe{background-image:repeating-linear-gradient(-60deg,#f2c230 0 10px,#fff1b0 10px 20px)}.r-victory .rs-rays{background:repeating-conic-gradient(#ffd86a33 0 10deg,transparent 10deg 20deg)}
+.r-defeat{background:radial-gradient(circle at 50% 45%,#4a0d14,#120406 70%);box-shadow:0 0 0 2px #e0283a,0 0 30px #e0283a55;animation:rsIn .55s both,rsShake .5s .15s}.r-defeat .rs-big{color:#ff5a5a;text-shadow:0 0 12px #ff1a2a,0 3px 0 #3a0006;filter:saturate(.8)}.r-defeat .rs-stripe{background-image:repeating-linear-gradient(-60deg,#111 0 10px,#e0283a 10px 20px)}.r-defeat .rs-rays{background:repeating-conic-gradient(#00000055 0 6deg,transparent 6deg 30deg);animation-duration:24s;opacity:.7}
+.r-retreat{background:radial-gradient(circle at 50% 45%,#22344a,#0c121c 70%);box-shadow:0 0 0 2px #7aa0c8,0 0 24px #7aa0c844}.r-retreat .rs-big{color:#cfe2ff;text-shadow:0 0 10px #6a9ad8;animation:rsSlam .6s .1s both,rsDrift 3s ease-in-out .7s infinite}.r-retreat .rs-stripe{background-image:repeating-linear-gradient(-60deg,#1a2230 0 10px,#7aa0c8 10px 20px)}.r-retreat .rs-rays{background:repeating-conic-gradient(#9ab8d822 0 4deg,transparent 4deg 16deg)}
+@keyframes rsIn{from{opacity:0;transform:scale(.8)}}@keyframes rsSlam{from{opacity:0;transform:scale(2.6)}}@keyframes rsRun{to{background-position:24px 0}}@keyframes rsSpin{to{rotate:360deg}}@keyframes rsShake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}@keyframes rsDrift{50%{transform:translateX(4px);opacity:.8}}
+@media (prefers-reduced-motion:reduce){.resbox,.resbox *{animation:none!important}}
+.panel:has(.resbox){background:#17121f;color:#f2ead8;border-top-color:#f2c230}.panel:has(.r-defeat){border-top-color:#e0283a}.panel:has(.r-retreat){border-top-color:#7aa0c8}.panel:has(.resbox) .resl{background:#ffffff0d;color:#f2ead8;border-left:3px solid #f2c230}.panel:has(.r-defeat) .resl{border-left-color:#e0283a}.panel:has(.r-retreat) .resl{border-left-color:#7aa0c8}.panel:has(.resbox) small{color:#cfc6b6}
+/* 이야기 규칙·편의 */
+.t.ex{box-shadow:inset 0 0 0 3px rgba(120,230,160,.55)}.t.ex::after{content:"⇲";position:absolute;right:2px;bottom:0;font-size:11px;color:#8ee3a8;opacity:.8}
+.t.lt::after{content:"◆";position:absolute;inset:0;display:grid;place-items:center;color:#ffd35a;font-size:18px;text-shadow:0 0 6px #000;animation:boing 1s infinite alternate}
+.u.best{filter:drop-shadow(0 0 6px #ffd35a)}.u.best::before{content:"추천";white-space:nowrap;position:absolute;top:-14px;left:50%;transform:translateX(-50%);font:700 10px sans-serif;color:#1a1a1a;background:#ffd35a;padding:0 4px;z-index:3}
+.u.vip::after{content:"♛";position:absolute;top:-6px;right:-4px;color:#ffd35a;font-size:14px;text-shadow:0 0 4px #000}.u.carry::after{content:"◆";position:absolute;top:-6px;right:-4px;color:#ffd35a;font-size:13px;text-shadow:0 0 4px #000}
+.htags.warn span.dn{background:rgba(255,80,70,.22);color:#ffb3ab}.htags.warn span.up{background:rgba(120,230,160,.2)}
+.row.tools button{font-size:12px;opacity:.9}.row.tools button[disabled]{opacity:.35}
+.goal .wx{margin-left:6px;padding:1px 6px;border-radius:9px;background:rgba(255,255,255,.12);font-size:11px}
+.sumcard{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin:10px 0}.sumcard .sc{padding:6px 9px;background:rgba(255,255,255,.07);border-left:3px solid #e9a95f}.sumcard small{display:block;font-size:10.5px;opacity:.65}.sumcard b{font-size:13px}
+/* ── 전투 끝 연출 ── */
+.endfx{position:absolute;inset:0;z-index:40;display:grid;place-items:center;overflow:hidden;color:#fff;font-family:var(--sans)}
+.endfx .ef-bg{position:absolute;inset:0;animation:efBg .6s ease-out both}
+.endfx .ef-rays{position:absolute;left:50%;top:32%;width:1400px;height:1400px;margin:-700px 0 0 -700px;border-radius:50%;opacity:0;animation:efRays 1.2s .2s ease-out forwards,rsSpin 30s linear infinite}
+.endfx .ef-parts{position:absolute;inset:0;pointer-events:none}.endfx .ef-parts i{position:absolute;left:var(--x);top:-20px;width:calc(8px*var(--s));height:calc(14px*var(--s));animation:efFall var(--d) linear var(--w) infinite}
+.endfx .ef-core{position:relative;width:min(560px,94%);max-height:94%;overflow:auto;text-align:center;padding:18px 16px 16px;scrollbar-width:thin}
+.endfx .ef-emb{width:110px;height:110px;margin:0 auto 4px;animation:efEmb .9s cubic-bezier(.2,1.5,.4,1) .15s both}.endfx .ef-emb svg{width:100%;height:100%}
+.endfx .ef-word{font:900 clamp(40px,11vw,76px)/1 var(--serif,serif);letter-spacing:.12em;white-space:nowrap}
+.endfx .ef-word span{display:inline-block;animation:efLetter .7s cubic-bezier(.2,1.6,.4,1) calc(.35s + var(--i)*.07s) both}
+.endfx .ef-line{height:2px;margin:12px auto 8px;width:0;animation:efLine .7s 1s ease-out forwards}
+.endfx .ef-ko{font:900 22px var(--sans);letter-spacing:.3em;animation:efUp .5s 1.1s both}.endfx .ef-sub{font-size:12.5px;opacity:.8;margin-top:4px;animation:efUp .5s 1.2s both}
+.endfx .ef-body{margin-top:14px;animation:efUp .6s 1.4s both;text-align:left}.endfx .ef-body .resl{background:#0006;border-left:3px solid currentColor;padding:10px 12px;white-space:pre-wrap;font-size:12.5px;color:#f2ead8}
+.endfx .ef-body small{color:#d8cfc0}.endfx .ef-body button{display:block;width:100%;margin-top:8px}
+.endfx .sumcard .sc{background:#ffffff12}
+/* 승리 */
+.e-victory .ef-bg{background:radial-gradient(ellipse at 50% 30%,#5a3d06 0%,#1d1405 55%,#07050a 100%)}
+.e-victory .ef-rays{background:repeating-conic-gradient(#ffd86a40 0 6deg,transparent 6deg 18deg);mask:radial-gradient(circle,#000 0 25%,transparent 60%)}
+.e-victory .ef-emb{color:#ffd35a;filter:drop-shadow(0 0 18px #ffb800)}
+.e-victory .ef-word span{background:linear-gradient(180deg,#fff7c8 0%,#ffd35a 45%,#c98a00 55%,#ffe58a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #5a3a00) drop-shadow(0 0 14px #ffb80088)}
+.e-victory .ef-word span{background-size:100% 100%}
+.e-victory .ef-line{background:linear-gradient(90deg,transparent,#ffd35a,transparent)}.e-victory .ef-ko{color:#ffe7a0}
+.e-victory .ef-parts i{background:hsl(var(--h) 90% 62%);border-radius:2px}
+/* 패배 */
+.e-defeat .ef-bg{background:radial-gradient(ellipse at 50% 35%,#3a0610 0%,#12030a 60%,#000 100%);animation:efBg .6s ease-out both,efPulse 3s 1s ease-in-out infinite}
+.e-defeat .ef-rays{display:none}
+.e-defeat .ef-crack{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#ffffff30;stroke-width:.25;stroke-dasharray:120;stroke-dashoffset:120;animation:efCrack .5s .25s ease-out forwards}
+.e-defeat .ef-emb{color:#c9343f;filter:drop-shadow(0 0 14px #ff1a2a88);animation:efEmb .9s .15s both,efShake .4s .2s}
+.e-defeat .ef-word span{color:#e8444f;text-shadow:0 0 18px #ff1a2a,0 4px 0 #2a0006;animation:efSlamD .55s cubic-bezier(.5,0,.6,1.6) calc(.3s + var(--i)*.06s) both}
+.e-defeat .ef-line{background:linear-gradient(90deg,transparent,#c9343f,transparent)}.e-defeat .ef-ko{color:#ff9a9f}
+.e-defeat .ef-parts i{top:auto;bottom:-20px;width:calc(4px*var(--s));height:calc(4px*var(--s));border-radius:50%;background:#ff7a2a;box-shadow:0 0 8px #ff4a00;animation-name:efEmber}
+/* 후퇴 */
+.e-retreat .ef-bg{background:linear-gradient(180deg,#1c2533 0%,#0d1219 70%,#06080c 100%)}
+.e-retreat .ef-rays{display:none}
+.e-retreat .ef-fog{position:absolute;left:-50%;right:-50%;top:30%;height:40%;background:radial-gradient(ellipse at center,#9ab8d82a 0%,transparent 65%);animation:efFog 9s linear infinite}.e-retreat .ef-fog.f2{top:55%;animation-duration:13s;animation-direction:reverse;opacity:.7}
+.e-retreat .ef-emb{color:#9ab8d8;filter:drop-shadow(0 0 12px #6a9ad8)}
+.e-retreat .ef-word span{color:#cfe2ff;text-shadow:0 0 12px #6a9ad8;animation:efSlide .8s cubic-bezier(.2,1,.3,1) calc(.3s + var(--i)*.06s) both}
+.e-retreat .ef-line{background:linear-gradient(90deg,transparent,#9ab8d8,transparent)}.e-retreat .ef-ko{color:#cfe2ff}
+.e-retreat .ef-parts i{width:calc(60px*var(--s));height:1px;background:linear-gradient(90deg,transparent,#cfe2ff55,transparent);top:auto;left:-80px;bottom:var(--x);animation-name:efWind}
+@keyframes efBg{from{opacity:0}to{opacity:1}}@keyframes efRays{to{opacity:1}}
+@keyframes efFall{from{transform:translateY(-20px) rotate(0)}to{transform:translateY(110vh) rotate(720deg)}}
+@keyframes efEmber{from{transform:translateY(0);opacity:1}to{transform:translateY(-100vh) translateX(40px);opacity:0}}
+@keyframes efWind{from{transform:translateX(0);opacity:0}20%{opacity:1}to{transform:translateX(130vw);opacity:0}}
+@keyframes efEmb{from{transform:scale(.2) rotate(-30deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes efLetter{from{transform:translateY(-80px) scale(1.8);opacity:0}to{transform:none;opacity:1}}
+@keyframes efSlamD{0%{transform:scale(3);opacity:0;filter:blur(6px)}70%{transform:scale(.92);opacity:1;filter:none}100%{transform:none}}
+@keyframes efSlide{from{transform:translateX(60px);opacity:0;filter:blur(4px)}to{transform:none;opacity:1;filter:none}}
+@keyframes efLine{to{width:80%}}@keyframes efUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes efShine{0%{transform:translateX(-120%)}60%,100%{transform:translateX(120%)}}
+@keyframes efCrack{to{stroke-dashoffset:0}}@keyframes efShake{0%,100%{translate:0}25%{translate:-6px 3px}50%{translate:5px -2px}75%{translate:-3px 1px}}
+@keyframes efPulse{50%{filter:brightness(1.35)}}@keyframes efFog{from{transform:translateX(-15%)}to{transform:translateX(15%)}}
+/* ── 전투 생성 중 ── */
+.genload .gsx{display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#2a2440,#0c0a14)}
+.gl{width:min(440px,92%);text-align:center;color:#f2ead8;padding:12px}
+.gl-stage{position:relative;width:150px;height:150px;margin:0 auto 10px}
+.gl-ring{position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:#e9a95f;border-right-color:#e9a95f55;animation:rsSpin 1.4s linear infinite}
+.gl-ring.r2{inset:18px;border-top-color:#8fb8ff;border-left-color:#8fb8ff55;animation-duration:2.2s;animation-direction:reverse}
+.gl-sw{position:absolute;inset:0;display:grid;place-items:center;font-size:52px;filter:drop-shadow(0 0 12px #e9a95f);animation:glBeat 1.1s ease-in-out infinite}
+.gl-sparks b{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:#ffd35a;box-shadow:0 0 6px #ffb800;animation:glSpark 1.6s ease-out infinite}
+.gl-sparks b:nth-child(n){--a:calc(var(--n,0)*36deg)}
+.gl-sparks b:nth-child(1){--a:0deg}.gl-sparks b:nth-child(2){--a:36deg;animation-delay:.16s}.gl-sparks b:nth-child(3){--a:72deg;animation-delay:.32s}.gl-sparks b:nth-child(4){--a:108deg;animation-delay:.48s}.gl-sparks b:nth-child(5){--a:144deg;animation-delay:.64s}.gl-sparks b:nth-child(6){--a:180deg;animation-delay:.8s}.gl-sparks b:nth-child(7){--a:216deg;animation-delay:.96s}.gl-sparks b:nth-child(8){--a:252deg;animation-delay:1.12s}.gl-sparks b:nth-child(9){--a:288deg;animation-delay:1.28s}.gl-sparks b:nth-child(10){--a:324deg;animation-delay:1.44s}
+.gl-t{font:900 26px var(--serif,serif);letter-spacing:.2em;margin:6px 0 4px;background:linear-gradient(90deg,#f2ead8 0%,#ffd35a 50%,#f2ead8 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:glText 2.4s linear infinite}
+.gl-step{font-size:14px;min-height:20px;margin:4px 0}.gl-tip{font-size:12px;opacity:.65;min-height:34px;margin:4px 0 12px}
+.gl-bar{position:relative;height:14px;border-radius:7px;background:#ffffff14;overflow:hidden;box-shadow:inset 0 0 0 1px #ffffff22}
+.gl-bar i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:7px;background:linear-gradient(90deg,#c97a2a,#ffd35a);transition:width .25s linear}
+.gl-bar i::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(-45deg,#ffffff33 0 8px,transparent 8px 16px);animation:glStripe .8s linear infinite}
+.gl-bar em{position:absolute;inset:0;font:700 10px/14px var(--sans);font-style:normal;color:#fff;text-shadow:0 1px 2px #000}
+.gl-meta{font-size:11px;opacity:.55;margin:8px 0}.gl-btns{display:flex;gap:8px;justify-content:center}.gl-btns button{flex:1;max-width:160px}
+.gl.err .gl-ring{border-top-color:#e8444f;animation-play-state:paused}.gl.err .gl-sw{filter:grayscale(1);animation:none}.gl.err .gl-t{background:none;color:#ff9a9f}
+@keyframes glBeat{50%{transform:scale(1.12) rotate(-6deg)}}@keyframes glText{to{background-position:-200% 0}}@keyframes glStripe{to{background-position:16px 0}}
+@keyframes glSpark{from{transform:rotate(var(--a)) translateY(-30px);opacity:1}to{transform:rotate(var(--a)) translateY(-80px);opacity:0}}
+.endfx .ef-body button{padding:12px;border:1px solid #ffffff30;background:#ffffff12;color:#fff;font:700 14px var(--sans);border-radius:8px;cursor:pointer}.endfx .ef-body button.main{border-color:transparent}
+.e-victory .ef-body button.main{background:linear-gradient(180deg,#ffd35a,#c98a00);color:#2a1a00}.e-defeat .ef-body button.main{background:#c9343f}.e-retreat .ef-body button.main{background:#4a6a90}
+.endfx .ef-parts{z-index:0}.endfx .ef-core{z-index:1}
+.wsrow{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #ffffff14}.wsrow span{flex:1;display:flex;align-items:center;gap:6px;min-width:0}.wsrow small{opacity:.7}.wsrow button{padding:6px 10px}.wsrow button.on{outline:2px solid #5aa8ff}
+/* 공격 수단 패널: 무기 그림 크기 고정(휴대폰에서 이름을 밀어내 잘리던 문제), 화면 밖으로 안 나가게 */
+.wpanel{max-width:calc(100vw - 8px);box-sizing:border-box}
+.wl button{min-height:40px;overflow:hidden}.wl button>svg,.wl .gl{flex:none;width:18px!important;height:18px!important}
+.wl b{min-width:0;font-size:13px}.wl b span,.wl b i{font-size:11px}.wl small{flex:none;font-size:14px;white-space:nowrap}
+.wl button{border-left:4px solid var(--g,#555)}.wtag{display:inline-block;margin-right:4px;padding:0 4px;border-radius:3px;background:#c08a50;color:#1a1008;font:900 10px/15px sans-serif;font-style:normal}.wtag.s{background:#5aa8ff}
+.wl b{color:var(--g,#fff)}.wl .on b{color:var(--ink)}
