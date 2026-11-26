@@ -37,6 +37,13 @@ try {
   // 글 요청이 주소와 상관없이 같은 응답을 주는 호스트(웹리스)용: 같은 내용을 `export default "<문자열>"` 모듈로도 올린다(jsDelivr가 자바스크립트로 내려줌)
   const mani = JSON.parse(fs.readFileSync(path.join(root, "addons/addons.json"), "utf8"));
   const held = heldAddons(mani.addons, pub, pubJs);
+  // 신고 #27: 유지하는 공개본이 새 본체가 더는 넘겨 주지 않는 코어 모듈을 쓰면, 켤 때 "Dusk 코어에 …가 없어요"로 멈춘다 → 배포를 막고 버전을 올리게 한다
+  const lib = fs.readFileSync(path.join(root, "src/addonlib.gen.js"), "utf8");
+  //   같은 버전으로 다시 빌드된 예전 공개본(history의 .mjs)이 기기에 깔려 있을 수 있으니 그것들도 본다
+  const histJ = hist ? JSON.parse(hist) : {};
+  const codesOf = (id) => [String(pubJs[id] ?? ""), ...(histJ[id] ?? []).map((f) => String(keep[f] ?? ""))];
+  const stale = held.flatMap((a) => [...new Set(codesOf(a.id).flatMap((c) => [...c.matchAll(/__duskLib\?\.\[\\?"(src\/[^"\\]+)\\?"\]/g)].map((m) => m[1])))].filter((p) => !lib.includes(JSON.stringify(p))).map((p) => `${a.id}: ${p}`));
+  if (stale.length) throw new Error(`버전을 그대로 둔 애드온의 공개본이 새 본체에 없는 모듈을 써요 — 그 애드온 버전을 올려 다시 빌드하세요\n${stale.join("\n")}`);
   for (const a of held) fs.writeFileSync(path.join(dir, "addons/dist", `${a.id}.js`), pubJs[a.id]);
   if (held.length) console.log(`버전이 그대로라 직전 공개본 유지: ${held.map((a) => a.id).join(", ")}`);
   fs.writeFileSync(pubPath, `${JSON.stringify(mani, null, 2)}\n`);
