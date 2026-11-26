@@ -21,6 +21,11 @@
 - #14: turninfo 표시 훅이 배경 HTML에도 불려 claimDice가 주사위를 줌 → 지금 채팅의 글인지 확인(inChat). 저장된 잘못된 기록도 안 보임.
 - #15~17: 신고자가 안 고쳐도 된다고 함(페르소나 없는 장면의 AI 오판) — 안 고침. 테스트 tests/report13-14.test.js.
 
+## fix/report-22-24 · 11-26 신고 #22·#23·#24 → v2.2.63 + 장기기억 0.3.70
+- #22: 모든 페르소나 이름을 나로 묶던 것 → engine/pastpersona.js liveUserNames(username·고른 페르소나만), data/liveusernames.js. 코어 usernames.js userNameList는 그대로. 이미 합쳐진 기록은 안 되돌림.
+- #23: 코드 버그 아님 — 보조 모델이 미성년 관련 성적 내용 거절. recorder ask()가 거절 문장·안전 필터 오류를 `검열:`로 알리고 재시도 안 함. 나이 판정 코드(people-metric-ai)는 사용자 결정대로 그대로 둠.
+- #24: nsfwcard 편집창(flex column)에서 textarea가 0px로 줄던 것 → styles.js #rb-nsfw-editor>*{flex-shrink:0}.
+
 ## fix/report-11-p2 · 11-24 신고 #11 남은 P2 → 장기기억 0.3.65(애드온만)
 - peekIndex(읽기 전용 — 고치면 안 됨) · scenes bySit · affhud 캐릭터 공유(3초) · cardoverlay 키 해제 · settings 숫자 조용히 저장 · personv2 acc 지연 부착 · relmap glow. 테스트 tests/report11-p2.test.js.
 - 보류: 요청 직전 위키 가드(다른 채팅 기록 위험, 호스트 범위 조회 API 확인 전), watch·위치 메타(호스트 API 필요), 훅 순서·Cellar·bridge(이득 미측정), mdetail 직렬, subtabs·icons 지연, 글꼴, scenes 점진 생성·레거시 해시. Android Firefox 두 번째 글자 재현 못 함.

@@ -8,14 +8,14 @@ import { readSeedOpt } from "./adultseed.js";
 import { rollAdult } from "../engine/adultseed.js";
 import { USER_NSFW_ID, userNsfwDoc, setUserNsfwNames } from "../engine/usernsfw.js";
 import { dbRead } from "./dbcache.js";
-import { userNameList, primaryUserName } from "./usernames.js";
-import { withoutPast } from "../engine/pastpersona.js";
+import { primaryUserName } from "./usernames.js";
+import { liveUserNames } from "../engine/pastpersona.js";
 
 // 지금 페르소나 이름·설명(유저 칸 성인 프로필·성별 짐작에 씀)
 // 채팅에 묶인 페르소나(chat.bindedPersona)가 있으면 그쪽이 먼저(기본 페르소나를 가져오던 문제)
 export async function personaInfo(api, chat = null) {
   let db = null; try { db = api ? await dbRead(api, ["username", "personas", "selectedPersona"]) : null; } catch { db = null; }
-  if (db) setUserNsfwNames(withoutPast(userNameList(db)));
+  if (db) setUserNsfwNames(liveUserNames(db));
   const list = Array.isArray(db?.personas) ? db.personas : [];
   const bound = chat?.bindedPersona ? list.find((x) => x?.id === chat.bindedPersona) : null;
   const p = bound ?? list[db?.selectedPersona ?? 0];
