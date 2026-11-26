@@ -1,3 +1,4 @@
+import { createFabHub } from "./data/fabhub.js";
 import { parseStatus as parseStoryStatus } from "./engine/storytime.js";
 import { createAddons } from "./data/addons.js";
 import { LIB as ADDON_LIB } from "./addonlib.gen.js";
@@ -272,6 +273,8 @@ async function start() {
     noticeOn().then((on) => { if (!on) return;
       toast.show({ title: "새 애드온이 나왔어요", text, action: "눌러서 보기", icon: "🧩", onClick: go, ms: 30e3, compact: true }).then((ok) => { if (!ok) app?.ctx?.toast?.(text, { seconds: 10 }); }).catch(() => app?.ctx?.toast?.(text, { seconds: 10 })); });
   };
+  // 2.2.66 떠 있는 버튼 막대: 애드온(장기기억·Dusk Saga)이 칸을 붙인다
+  const fabHub = createFabHub(api, { log: (...m) => console.log(`[${TITLE}]`, ...m) }); globalThis.__duskFab = fabHub; app.ctx.fab = fabHub;
   const addons = createAddons(api, { core: VERSION, onPendingRestart: askRefresh, onNewAddons: newAddons, ctx: { ext: app.ctx.ext, app: app.ctx, toast: (t, o) => { app.ctx.toast?.(t, o); }, openDusk: async (tab) => { await app.open(tab ? { tab } : undefined).catch(() => {}); } } });   // 반환값 없음: 애드온 콜백이 그대로 돌려주면 호스트로 복제가 안 돼요
   app.ctx.addons = addons;
   // Dusk 허브(2.2.46): 익명 사용 통계(하루 한 번, 끌 수 있음)와 버그 신고. 서버 주소는 data/hub.js의 HUB_URL
