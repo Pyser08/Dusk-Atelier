@@ -358,9 +358,22 @@ export function faceLines(folder, rel, limit = 3) {
   return Object.values(folder?.faces ?? {}).filter((x) => has(rel, x.who) && has(rel, x.to)).slice(-limit)
     .map((x) => `- ${x.who} toward ${x.to}: alone with ${x.to} → ${oneLine(x.alone)}; with others around → ${oneLine(x.public)}${crowd ? " (others are present now)" : ""}`);
 }
+// 신고 #32(2.2.68): 호칭 여러 개 — 쉼표로 나누고, "화날 때: 한유나"처럼 상황을 붙일 수 있다
+export function callForms(call) {
+  return String(call ?? "").split(/[,，、]/).map((x) => x.trim()).filter(Boolean).map((x) => {
+    const m = x.match(/^([^:：]{1,20})[:：]\s*(.+)$/);
+    return m ? { when: m[1].trim(), call: m[2].trim() } : { when: "", call: x };
+  });
+}
+export function callPhrase(call) {
+  const f = callForms(call);
+  if (f.length <= 1 && !f[0]?.when) return `calls them "${oneLine(call)}"`;
+  const plain = f.filter((x) => !x.when).map((x) => `"${oneLine(x.call)}"`), sit = f.filter((x) => x.when).map((x) => `"${oneLine(x.call)}" when ${oneLine(x.when)}`);
+  return `calls them ${[plain.length ? `${plain.join(" or ")}${plain.length > 1 ? " (varies naturally)" : ""}` : "", ...sit].filter(Boolean).join("; ")}`;
+}
 export function talkLines(folder, rel, limit = 4) {
   return Object.values(folder?.talk ?? {}).filter((t) => has(rel, t.from) && has(rel, t.to)).sort((a, b) => (b.at_ms ?? 0) - (a.at_ms ?? 0)).slice(0, limit)
-    .map((t) => `- ${t.from} → ${t.to}: calls them "${oneLine(t.call)}", ${t.tone} speech${t.prev ? ` (was "${oneLine(t.prev.call)}", ${t.prev.tone})` : ""}`);
+    .map((t) => `- ${t.from} → ${t.to}: ${callPhrase(t.call)}, ${t.tone} speech${t.prev ? ` (was "${oneLine(t.prev.call)}", ${t.prev.tone})` : ""}`);
 }
 // 장면에 함께 있는 쌍마다 추억 하나(시점에 따라 돌려 가며).
 export function bondLines(folder, rel, now, limit = 2) {
@@ -467,7 +480,7 @@ export function momentsOf(person, now, { limit = 6, forgetAfter = 150 } = {}) {
 export function setTalk(folder, from, to, { call, tone }, nowMs = Date.now()) {
   folder.talk ??= {};
   const k = key(from) + ">" + key(to), cur = folder.talk[k];
-  const c = cut(call, 20), t = TONES.has(tone) ? tone : "mixed";
+  const c = cut(call, 120), t = TONES.has(tone) ? tone : "mixed";   // 2.2.68: 여러 호칭·상황별 호칭을 적을 수 있게 20 → 120자
   if (!nk(c)) throw new Error("부르는 말을 적어 주세요.");
   folder.talk[k] = { from, to, call: c, tone: t, ...(cur && (cur.call !== c || cur.tone !== t) ? { prev: { call: cur.call, tone: cur.tone } } : cur?.prev ? { prev: cur.prev } : {}), lock: true, user: true, at: cur?.at ?? null, at_ms: nowMs };
   return folder.talk[k];

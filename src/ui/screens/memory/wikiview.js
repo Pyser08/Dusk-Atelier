@@ -296,9 +296,18 @@ function personPage(env, r, docs, commit) {
   // 2.2.22 성능: 기록 목록은 ‘기록’ 탭을 처음 열 때 만든다(인물을 고를 때마다 요소 천 개 넘게 미리 만들고 대부분 버렸다)
   let storyBuilt = false; const buildStory = () => { if (p && !storyBuilt) { storyBuilt = true; personDetail(env, story, r.pk, true); } };
 
+  // 신고 #32(2.2.68): 인물 삭제는 위키 문서와 이 채팅의 장기 기억 기록을 함께 지운다(기록이 남으면 ‘위키 없는 인물 만들기’로 다시 떠올랐다). 기록만 있는 인물도 지울 수 있다.
+  const delBtn = (doc ? ed : !!(p && r.pk)) ? btn("인물 삭제", { size: "sm", kind: "danger", onClick: async () => {
+    if (!(await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: `${doc ? "인물 문서·기본 성격과 " : ""}이 채팅의 장기 기억 기록이 함께 지워지고 되돌릴 수 없어요(기억 백업으로만). 합치기와 달리 다른 인물 기록은 건드리지 않아요.${doc ? " 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요." : ""}`, ok: "삭제", danger: true }))) return;
+    m.wkSel = "";
+    await ctx.memory.store.updateFolder(env.bot.id, env.chatItem.id, (f) => {
+      if (doc && f.wiki?.documents?.[doc.id]) f.wiki = removePerson(f.wiki, doc.id);
+      if (r.pk && f.people?.[r.pk]) delete f.people[r.pk];
+    }).then(() => { ctx.toast(`${r.name}을(를) 지웠어요.`); (env.redrawView ?? env.redraw)(); }).catch(fail(ctx));
+  } }) : null;
   // v1.8.3 개편: 탭(요약 / 관계 / 상세 정보 / 기록). 기존 블록은 상세 정보·기록 탭으로 그대로 옮긴다.
   const actions = ed ? h("span", { class: "rb-mem-rowact" }, btn("요약 정리", { size: "sm", onClick: () => aiOpen("refresh") }), btn("직접 지시하기", { size: "sm", onClick: () => aiOpen("command") }),
-    btn("인물 삭제", { size: "sm", onClick: async () => { if (await confirmDialog(ctx.win, { title: `${r.name} 인물을 지울까요?`, body: "인물 문서와 기본 성격이 함께 지워져요. 📌 고정한 항목이 남아 있으면 먼저 풀어야 해요.", ok: "삭제", danger: true })) { m.wkSel = ""; commit((w) => removePerson(w, doc.id), "지웠어요."); } } })) : null;
+    delBtn) : (p && r.pk ? h("span", { class: "rb-mem-rowact" }, delBtn) : null);
   const slotLabel = Object.fromEntries(METER_SLOTS.map(([s, l]) => [s, l]));
   const metrics = (doc?.metrics ?? []).map((x) => ({ label: slotLabel[x.slotId] ?? x.slotId, slot: x.slotId, value: x.value, min: x.minimum ?? 0, max: x.maximum ?? 100, stage: x.stageLabel ?? "", targets: (x.targetRefs ?? []).map(nameOf).filter(Boolean) }));
   // addon-rebuild 수동 고치기: 이름·별칭(별칭을 대표 이름으로 올리기 포함), 두 사람 사이 관계 지우기

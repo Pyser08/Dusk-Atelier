@@ -4,6 +4,7 @@
 - 신고 #29: memoryfile planRemap/listLocalChats — 다른 기기 파일을 봇·채팅 이름·채팅 ID로 맞춤, 여러 채팅 파일도 열린 채팅에 넣을 기억 고르기.
 - 신고 #30: 로어북 '여러 개 고르기' 버튼 노출, '규칙 한 번에 바꾸기'(ui/screens/lorebulk.js, engine bulkRule), 규칙 scanTag(태그 안만, JS·Lua 동일). enableRule/disableRule은 engine/lorerules.js로 옮기고 editor.js에서 다시 내보냄.
 - 버그 신고 → '버그 신고 · 기능 건의'(건의는 글 앞에 [기능 건의] 붙여 허브 형식 그대로).
+- 신고 #32: castfilter inCast 키는 이름 앞(startsWith)만, 인물 삭제가 people 기록도 지움(기록만 있는 인물도), 호칭 여러 개·상황별(callForms/callPhrase, setTalk 120자).
 - 신고 #31: Proton Drive 링크만 있어 내용 확인 못 함(링크는 브라우저 필요).
 - [ ] 실기기 확인: PocketRisu 1.18.0 권한 창, 순정 RisuAI 3일 재확인 타이머 갱신 여부
 
