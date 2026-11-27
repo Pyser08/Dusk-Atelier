@@ -1,3 +1,14 @@
+## 2026-11-27 · fix/report-29-31 (v2.2.68 + memory 0.3.72 · aibuild 0.1.12 · easylore 0.1.1, 미배포)
+- PocketRisu 1.18.0 dbWrite 임시 대응: `src/data/dbwrite.js`(main.js에서 모든 쓰기 감쌈) — 메뉴 등록 뒤·첫 쓰기 전 requestPluginPermission("dbWrite") 한 번(반환값 무시), 묻는 동안 읽기 대기, 같은 대상 쓰기 직렬화, 오류에 dbWrite 있으면 한 번 재시도(채팅은 메시지가 늘었으면 안 함), 최종 실패는 한국어 안내. 포켓리스가 규칙을 고치면 지워도 됨.
+- 호감도 HUD: 봇 쓰기 성공 뒤 설정 저장. 에셋 폴더 삭제/이동/삭제·모듈 '이 채팅에서 해제' 오류 처리.
+- 신고 #29: memoryfile planRemap/listLocalChats — 다른 기기 파일을 봇·채팅 이름·채팅 ID로 맞춤, 여러 채팅 파일도 열린 채팅에 넣을 기억 고르기.
+- 신고 #30: 로어북 '여러 개 고르기' 버튼 노출, '규칙 한 번에 바꾸기'(ui/screens/lorebulk.js, engine bulkRule), 규칙 scanTag(태그 안만, JS·Lua 동일). enableRule/disableRule은 engine/lorerules.js로 옮기고 editor.js에서 다시 내보냄.
+- 버그 신고 → '버그 신고 · 기능 건의'(건의는 글 앞에 [기능 건의] 붙여 허브 형식 그대로).
+- 사용자 요청(업데이트 로어 합치기): engine/textmerge.js mergeKeepMine(줄, 줄이 3개 이하면 문장 단위 LCS; 내 글만 있는 덩어리=유지, 새 글만=넣기, 둘 다 바뀐 자리=내 것). tideplan canMerge/mergedLore/applyMerges, legacy 비교 화면 choice "merge"·미리보기·'고친 로어북 모두 합치기'. 기준은 지문뿐이라 진짜 3-way는 아님(기준 글 저장은 남은 일).
+- 신고 #32: castfilter inCast 키는 이름 앞(startsWith)만, 인물 삭제가 people 기록도 지움(기록만 있는 인물도), 호칭 여러 개·상황별(callForms/callPhrase, setTalk 120자).
+- 신고 #31(Proton 문서, ~/.cache/ms-playwright 헤드리스 크롬 + /tmp/r5s playwright-core로 읽음): data/domlisten.js listen/runOffs — 상태창(cardoverlay: 이름 span 고유 ID·sweep, 스트리밍 중 안 닮, 열기 seq, 닫을 때 card-ov 모두 지움), aistopbtn·retrytoast·hostupdate·floatbtn·watch(캐릭터 추가 창) 리스너 떼기. duskbridge·애드온 업데이트 확인은 숨김 중 쉼. charimg 썸네일 80개 LRU, turninfo Set 정리.
+- [ ] 실기기 확인: PocketRisu 1.18.0 권한 창, 순정 RisuAI 3일 재확인 타이머 갱신 여부
+
 ## fix/report-20-21 · 11-25 신고 #20·#21 → v2.2.62 + 장기기억 0.3.69 + 인물 속마음 0.1.4
 - #20: innerthought assetEmotions(에셋 → 감정 낱말만)·cleanEmo(화면 이름표만, 저장 글은 그대로). #21: inject.wikiPosition → replaceWikiMarker 세 번째 인자(기본 afterSystem). 신고 창에 아카 #번호 안내. 테스트 tests/report20-21.test.js.
 

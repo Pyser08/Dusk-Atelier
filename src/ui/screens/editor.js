@@ -23,10 +23,11 @@ import { pickFix, clearFix } from '../aifix.js';
 import { segments, summarize } from '../../engine/regexview.js';
 import { parseVars, serializeVars, duplicateKeys } from '../../engine/vars.js';
 import { openLoreDusk } from './loredusk.js';
+import { bulkRuleDialog } from './lorebulk.js';
 import { referenceText } from '../../engine/loredusk.js';
 import { syncLoreTrigger, findLoreTrigger, isLoreTrigger, unsupportedRules, fixRegexKeys, loreTriggerStale } from '../../engine/lorelua.js';
 import { loadLoreSettings, LUA_OFF_KEY } from '../../data/lorerules.js';
-import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, VAR_OP_LABEL, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules } from '../../engine/lorerules.js';
+import { AFF_PREFIX, COND_TYPES, PLACE_PREFIX, SET_OPS, VAR_OPS, VAR_OP_LABEL, affName, affOf, affsOf, ancestorsOf, applySets, bodyOf, checkExpr, collectManaged, defaultAff, defaultRule, evaluate, folderIdOf, folderMap, gateVar, isAff, isDuskFolder, isFolder, isManaged, isPlace, nativeContent, parentOf, placeLinks, plainContent, ridOf, ruleOf, validateRules, enableRule, disableRule, bulkRule, BULK_RULE_KEYS } from '../../engine/lorerules.js';
 import { FOLDER_SWATCHES, folderTint } from '../theme.js';
 // 관리 항목의 내용 머리(@@activate·{{#if}})를 규칙에 맞춘다
 export function syncRuleContent(lorebook) {
@@ -67,27 +68,8 @@ export function syncRuleContent(lorebook) {
   }
 }
 
-// 항목에 Dusk 규칙을 켠다 (소속 구성원으로 넣을 때 등). 이미 켜져 있으면 식별자만 확인한다
-export function enableRule(l, lorebook) {
-  l.extentions = { ...(l.extentions ?? {}) };
-  l.extentions.da_rid ||= newId();
-  if ((lorebook ?? []).some((x) => x !== l && ridOf(x) === l.extentions.da_rid)) l.extentions.da_rid = newId();
-  if (isManaged(l)) return l.extentions.da_rid;
-  const nr = { ...(ruleOf(l) ?? defaultRule()), on: true };
-  if ((l.alwaysActive && !l.extentions?.da_aa) || l.mode === "constant") nr.cond = [];
-  l.extentions.da_rule = nr;
-  l.content = nativeContent(l.content, nr, l.extentions.da_rid);
-  return l.extentions.da_rid;
-}
-export function disableRule(l) {
-  l.extentions = { ...(l.extentions ?? {}) };
-  delete l.extentions.da_rule;
-  if (l.extentions.da_aa) {
-    l.alwaysActive = false;
-    delete l.extentions.da_aa;
-  }
-  l.content = plainContent(l.content);
-}
+// enableRule·disableRule·bulkRule은 engine/lorerules.js로 옮겼다(2.2.68, node 시험용). 예전 import 경로를 위해 다시 내보낸다
+export { enableRule, disableRule, bulkRule, BULK_RULE_KEYS };
 // 폴더 색: 정해 둔 색, 없으면 폴더 순서대로 자동
 export function folderColorOf(f, lorebook) {
   const c = f?.extentions?.da_folder?.color;
@@ -935,6 +917,11 @@ export async function openEditorCore(ctx, cfg) {
       isLore && list.length > 1 ? pcOnly(btn("이름순", { size: "sm", icon: "list", onClick: sortMenu })) : null,
       isLore && fmap.size ? pcOnly(btn(collapsedAll() ? "전체 펴기" : "전체 접기", { size: "sm", icon: "folder", onClick: toggleAllFolders })) : null,
       isLore && list.length > 1 ? pcOnly(btn("더스크화", { size: "sm", icon: "sparkle", onClick: () => duskify() })) : null,
+      isLore && !selecting && list.length > 1 ? btn("여러 개 고르기", { size: "sm", icon: "check", id: "rb-lore-multi", title: "여러 항목을 골라 규칙을 한 번에 바꾸거나 옮기고 지워요", onClick: () => {
+        es.selMode = true;
+        es.multi.clear();
+        render();
+      } }) : null,
       isLore && selecting ? btn("선택 끝", { size: "sm", kind: "primary", onClick: () => {
         es.selMode = false;
         es.multi.clear();
@@ -993,6 +980,15 @@ export async function openEditorCore(ctx, cfg) {
           changed();
           render();
           ctx.toast(`${leaves().length}개에 Dusk 규칙을 켰어요`);
+        } }),
+        btn("규칙 한 번에 바꾸기", { size: "sm", kind: "primary", icon: "edit", disabled: !leaves().length, onClick: async () => {
+          const patch = await bulkRuleDialog(ctx, leaves().length);
+          if (!patch) return;
+          const k = bulkRule(leaves(), patch, list);
+          syncRuleContent(list);
+          changed();
+          render();
+          ctx.toast(`${k}개의 규칙을 바꿨어요 (저장하면 적용돼요)`);
         } }),
         btn("규칙 끄기", { size: "sm", disabled: !n, onClick: () => {
           let k = 0;
@@ -1723,6 +1719,7 @@ export async function openEditorCore(ctx, cfg) {
         "div",
         { class: "rb-da-sub" },
         line(lab("찾는 범위"), h("span", { class: "rb-da-note" }, "최근"), numIn(r, "scan", { min: 1, w: "64px" }), h("span", { class: "rb-da-note" }, "개 메시지")),
+        line(lab("태그 안만"), h("div", { style: "flex:0 1 160px;min-width:110px" }, text(r, "scanTag", { placeholder: "예) status" })), h("span", { class: "rb-da-note" }, "적으면 응답의 <status>…</status> 같은 태그 안에서만 키·단어를 찾아요. 비우면 메시지 전체")),
         line(switchEl(!!r.whole, { label: "이름 경계", onChange: (v) => set("whole", v) }), h("span", null, "이름 경계"), h("span", { class: "rb-da-note" }, "'김민'이 '김민수'엔 안 걸리고 '김민이·김민에게'엔 걸려요. 한글 1~2글자 키는 설정 → 로어북 → 이름 경계에 따라 자동 적용돼요")),
         line(switchEl(!!r.common, { label: "흔한 낱말 이름", onChange: (v) => set("common", v) }), h("span", null, "흔한 낱말 이름"), h("span", { class: "rb-da-note" }, "'하늘·유리·보라'처럼 일반 낱말과 같은 이름이면 켜요. '하늘이 맑다'에는 안 켜지고, 부를 때(하늘아·하늘 씨), 확인 단어가 같이 나올 때, 최근 3턴 안에 켜졌을 때만 켜져요")),
         r.common ? h("div", { class: "rb-da-sub", style: "display:flex;flex-direction:column;gap:6px" },

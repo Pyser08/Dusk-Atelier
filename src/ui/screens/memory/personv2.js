@@ -219,9 +219,9 @@ export function personTabs(env, parts) {
   };
   const talkRow = (t, from, to) => {
     const write = () => run(modal(ctx.win, (done) => {
-      const call = h("input", { class: "rb-input", value: t?.call ?? "", placeholder: "예) 선배, 유나야", "aria-label": "부르는 말" });
+      const call = h("input", { class: "rb-input", value: t?.call ?? "", placeholder: "예) 유나야, 선배, 화날 때: 한유나", "aria-label": "부르는 말" });
       const tone = h("select", { class: "rb-input", "aria-label": "말투" }, Object.entries(TONE).map(([k, l]) => h("option", { value: k, selected: (t?.tone ?? "formal") === k }, l)));
-      return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(420px,94vw)" }, h("h3", null, `${subj(shown(from))} ${obj(shown(to))} 부르는 말`), h("p", { class: "rb-muted" }, "저장하면 잠겨서 AI가 바꾸지 않아요."),
+      return h("div", { class: "rb-dialog", role: "dialog", "aria-modal": "true", style: "width:min(420px,94vw)" }, h("h3", null, `${subj(shown(from))} ${obj(shown(to))} 부르는 말`), h("p", { class: "rb-muted" }, "저장하면 잠겨서 AI가 바꾸지 않아요. 여러 개는 쉼표로 나누고, ‘화날 때: 한유나’처럼 상황을 붙이면 그때만 그렇게 불러요."),
         h("label", { class: "rb-mem-field" }, h("span", null, "부르는 말"), call), h("label", { class: "rb-mem-field" }, h("span", null, "말투"), tone),
         h("div", { class: "rb-dialog-actions" }, btn("취소", { onClick: () => done(null) }), btn("저장", { kind: "primary", onClick: () => done({ call: call.value, tone: tone.value }) })));
     }).then((v) => v && save((fo) => { setTalk(fo, from, to, v); }, "호칭을 저장했어요.")));

@@ -12,6 +12,8 @@ export function affCard(ctx, t) {
     : { install: () => ctx.affhud.install(t.i), uninstall: () => ctx.affhud.uninstall(t.i), design: (r) => ctx.affhud.design(t.i, r), applyDesign: (html) => ctx.affhud.applyDesign(t.i, html), resetDesign: () => ctx.affhud.resetDesign(t.i) };
   const box = h("div", { class: "rb-card pad bordered", style: "display:flex;flex-direction:column;gap:10px" });
   const aff = ctx.affhud;
+  // 2.2.68: 설치·제거·디자인 적용이 실패해도(리스가 쓰기를 막는 등) 조용히 묻히지 않게 알린다
+  const tryDo = async (fn) => { try { await fn(); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); } };
   const draw = async () => {
     try {
       const ch = isMod ? await aff.getModule(t.id) : await ctx.api.getCharacterFromIndex(t.i), chaId = isMod ? "m:" + t.id : String(ch.chaId);
@@ -33,13 +35,13 @@ export function affCard(ctx, t) {
         note("info", "자체 보조모델은 모델 설정의 ‘자동 기록’ 모델을 써요. 호출은 응답마다 1회예요."),
         on ? designBox(ctx, X, cfg, draw) : null,
         h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
-          btn(on ? "다시 설치" : "설치", { kind: "primary", onClick: async () => { await X.install(); ctx.toast("호감도 HUD를 설치했어요"); draw(); } }),
+          btn(on ? "다시 설치" : "설치", { kind: "primary", onClick: () => tryDo(async () => { await X.install(); ctx.toast("호감도 HUD를 설치했어요"); draw(); }) }),
           on ? btn("지금 맞추기", { onClick: async () => {
             if ((await ctx.api.getCurrentCharacterIndex()) !== t.i) return ctx.toast("이 봇의 채팅을 연 상태에서 눌러 주세요");
             const ti = await ctx.api.getCurrentChatIndex(), r = await aff.syncAt(t.i, ti);
             ctx.toast({ pot: "리스폿 값으로 맞췄어요", own: "보조모델로 맞췄어요", same: "이미 최신이에요", noai: "아직 응답이 없어요", "parse-fail": "변화량을 읽지 못했어요" }[r] ?? r);
           } }) : null,
-          on ? btn("제거", { onClick: async () => { await X.uninstall(); ctx.toast("호감도 HUD를 제거했어요"); draw(); } }) : null
+          on ? btn("제거", { onClick: () => tryDo(async () => { await X.uninstall(); ctx.toast("호감도 HUD를 제거했어요"); draw(); }) }) : null
         )
       );
     } catch (e) { replace(box, note("err", e?.message ?? String(e))); }
@@ -64,13 +66,13 @@ function designBox(ctx, X, cfg, redraw) {
       replace(out,
         h("span", { class: "rb-muted" }, "미리보기 (샘플 값, 사진은 실제 채팅에서 보여요)"), frame,
         h("div", { style: "display:flex;gap:8px" },
-          btn("적용", { kind: "primary", onClick: async () => { await X.applyDesign(r.html); ctx.toast("새 디자인을 적용했어요"); redraw(); } }),
+          btn("적용", { kind: "primary", onClick: () => tryDo(async () => { await X.applyDesign(r.html); ctx.toast("새 디자인을 적용했어요"); redraw(); }) }),
           btn("취소", { onClick: () => replace(out) })));
     } catch (e) { replace(out, note("err", e?.message ?? String(e))); } finally { busy = false; }
   } });
   return h("div", { style: "display:flex;flex-direction:column;gap:8px" },
     h("span", { class: "rb-label" }, "디자인 변경 (AI)"), ta,
-    h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, make, cfg.html ? btn("기본 디자인으로", { onClick: async () => { await X.resetDesign(); ctx.toast("기본 디자인으로 되돌렸어요"); redraw(); } }) : null),
+    h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, make, cfg.html ? btn("기본 디자인으로", { onClick: () => tryDo(async () => { await X.resetDesign(); ctx.toast("기본 디자인으로 되돌렸어요"); redraw(); }) }) : null),
     out);
 }
 

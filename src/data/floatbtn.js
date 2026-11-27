@@ -1,3 +1,4 @@
+import { listen, removeWith, runOffs } from "./domlisten.js";
 // 2.2.25: 채팅 위 떠 있는 버튼(인물 관계도)을 Dusk가 리스 화면에 직접 그린다 — 동그랗고 반투명, 리스 테마 색을 따라감, 끌어서 옮김(모바일 포함).
 // 리스 registerButton(action)은 모양을 못 바꾸고 일반 리스 모바일에선 옮길 수 없었다. 리스 화면 권한(mainDom)이 없으면 쓰지 않는다(호출한 쪽이 예전 버튼으로).
 // 끌기는 리스가 넘겨주는 이벤트에 좌표가 있을 때. 좌표가 없는 판에서는 길게 누를 때마다 화면 가장자리 자리를 돌아가며 옮긴다.
@@ -34,6 +35,7 @@ export function createFloatButton(api, { ensureDoc, icon, title, open, log = () 
     try { const b = await (await d.querySelector("body"))?.getBoundingClientRect?.(); if (b?.width > 100) view = { w: b.width, h: Math.max(b.height, 300) }; } catch { /* 기본 크기 */ }
     try { const iw = await d.defaultView?.innerHeight; if (Number.isFinite(iw) && iw > 300) view.h = iw; } catch { /* 없음 */ }
   }
+  const elOffs = [];
   async function show() {
     const d = await ensureDoc(); if (!d) return false;
     if (el) return true;
@@ -42,6 +44,7 @@ export function createFloatButton(api, { ensureDoc, icon, title, open, log = () 
     pos = await load() ?? presetSpots(view.w, view.h, look.size)[0];
     pos = clampPos(pos[0], pos[1], view.w, view.h, look.size);
     const old = await d.querySelector('[x-dusk="fab"]'); if (old) await old.remove();
+    await runOffs(elOffs);   // 다시 만들기 전에 옛 버튼 리스너를 뗀다
     el = await d.createElement("div"); await el.setAttribute("x-dusk", "fab"); for (const [n, v] of [["data-dusk", "fab"], ["title", title], ["role", "button"], ["aria-label", title]]) { try { await el.setAttribute(n, v); } catch { /* 리스는 x- 속성만 허락 */ } }
     await place();
     try { await el.setInnerHTML(icon); } catch { await el.setInnerText("◎"); }
@@ -80,15 +83,16 @@ export function createFloatButton(api, { ensureDoc, icon, title, open, log = () 
       if (held >= LONG) { handled = true; cycleSpot(); return; }
       handled = true; Promise.resolve().then(open).catch((e) => log("버튼 열기 실패", e?.message ?? e));
     };
-    for (const t of ["pointerdown", "touchstart", "mousedown"]) { try { await el.addEventListener(t, start); } catch { /* 그 이벤트가 없는 판 */ } }
+    for (const t of ["pointerdown", "touchstart", "mousedown"]) { try { await listen(el, t, start, elOffs); } catch { /* 그 이벤트가 없는 판 */ } }
     const ends = bind(["pointerup", "touchend", "mouseup", "pointercancel", "touchcancel"], end); await Promise.all(ends);
     release = async () => { gone = true; t0 = 0; clearTimeout(longT); const list = [...ends, ...(armed ?? [])]; armed = null; if (typeof d.removeEventListener === "function") await unbind(list); };
     // 누르기 이벤트가 하나도 안 오는 판: click만 와도 열린다
-    await el.addEventListener("click", () => { setTimeout(() => { if (!handled && !t0) Promise.resolve().then(open).catch(() => {}); handled = false; }, 60); });
+    await listen(el, "click", () => { setTimeout(() => { if (!handled && !t0) Promise.resolve().then(open).catch(() => {}); handled = false; }, 60); }, elOffs);
     await (await d.querySelector("body")).appendChild(el);
     return true;
   }
-  async function hide() { const e = el, off = release; el = null; release = null; if (off) await off().catch(() => {}); if (e) { try { await e.remove(); } catch { /* 이미 없음 */ } } }
+  // 신고 #31: 버튼 자체의 pointerdown·mousedown·click도 떼고 지운다
+  async function hide() { const e = el, off = release; el = null; release = null; if (off) await off().catch(() => {}); if (e) await removeWith(e, elOffs); }
   // 크기·투명도를 바로 바꾼다(저장은 부른 쪽이 saveFabLook으로)
   async function setLook(next) { look = cleanLook(next); if (el && pos) { pos = clampPos(pos[0], pos[1], view.w, view.h, look.size); await place(); } return true; }
   return { show, hide, setLook, isOn: () => !!el };

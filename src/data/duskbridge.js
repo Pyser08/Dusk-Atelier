@@ -127,10 +127,12 @@ export function createDuskBridge(api, deps = {}) {
   let timer = null, on = false, gap = 1000;
   const loop = async (base) => {
     if (!on) return;
+    // 신고 #31(2.2.68): 화면이 숨겨진 동안에는 저장소를 아예 읽지 않는다(예전엔 15초마다 keys()). 다시 보이면 곧 이어서 확인
+    const hidden = typeof document !== "undefined" && document.hidden;
+    if (hidden) { if (on) timer = setTimeout(() => loop(base), 3000); return; }
     let n = 0; try { n = await tick(); } catch { /* 다음에 다시 */ }
     gap = n > 0 ? base : Math.min(5000, Math.round(gap * 1.5));
-    const hidden = typeof document !== "undefined" && document.hidden;
-    if (on) timer = setTimeout(() => loop(base), hidden ? Math.max(gap, 15000) : gap);
+    if (on) timer = setTimeout(() => loop(base), gap);
   };
   return {
     methods: methodList, tick, publish, handle,

@@ -22,7 +22,8 @@ export function inCast(cast, name, aliases = []) {
   for (const n of [name, ...(aliases ?? [])]) {
     const k = norm(n); if (k.length < 2) continue;
     if (cast.text.includes(k)) return true;                     // 로어북 글에 이름이 있음 ("민지", "민지의 오빠 민준")
-    if (cast.keys.some((key) => k.includes(key))) return true;  // 키워드가 이름 안에 있음 (키 "세라" → "세라 선배")
+    // 키워드로 시작하는 이름 (키 "세라" → "세라 선배"). 신고 #32: 예전엔 이름 어디에든 있으면 통과해 "박"+"하늘"로 지어낸 "박하늘"이 키 "하늘" 때문에 남았다
+    if (cast.keys.some((key) => k.startsWith(key))) return true;
   }
   return false;
 }

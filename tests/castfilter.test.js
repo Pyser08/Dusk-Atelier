@@ -73,3 +73,12 @@ test("지우기 후보: 로어북에 없는 위키 인물만(플레이어·로�
   assert.deepEqual(strangers(docs, cast, (n) => n === "철수").map((d) => d.id), ["b"]);
   assert.deepEqual(strangers(docs, loreCast({ entries: [] })), []);
 });
+
+test("신고 #32: 두 인물의 성·이름을 섞어 지어낸 인물은 로어북에 없는 인물로 본다", async () => {
+  const { loreCast, inCast, strangers } = await import("../src/engine/castfilter.js");
+  const cast = loreCast({ botName: "학원", entries: [{ key: "강하늘, 하늘", content: "강하늘은 검도부" }, { key: "박서준", content: "박서준은 반장" }] });
+  assert.equal(inCast(cast, "박하늘"), false);
+  assert.equal(inCast(cast, "하늘 선배"), true);
+  assert.equal(inCast(cast, "강하늘"), true);
+  assert.deepEqual(strangers([{ type: "Character", title: "박하늘" }, { type: "Character", title: "서준" }], cast).map((d) => d.title), ["박하늘"]);
+});

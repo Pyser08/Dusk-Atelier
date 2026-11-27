@@ -319,8 +319,9 @@ export async function openAssetsCore(ctx, src) {
           if (!await confirmDialog(ctx.win, { title: "이 폴더를 지울까요?", body: '하위 폴더도 함께 지워지고, 안의 에셋은 "미분류"로 가요.', ok: "삭제", danger: true })) return;
           const next = structuredClone(fd);
           deleteFolder(next, cur);
+          try { await saveFolders(next); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); return; }
           as.folder = null;
-          await saveFolders(next);
+          paint();
         } }
       ]) }) : null
     );
@@ -529,7 +530,7 @@ export async function openAssetsCore(ctx, src) {
     const next = structuredClone(fd);
     const names = selected().map((a) => a[0]);
     setAssetFolder(next, names, folderId);
-    await save(assets, next, "에셋 이동 전");
+    try { await save(assets, next, "에셋 이동 전"); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); return; }
     as.sel.clear();
     ctx.toast(`${names.length}개를 옮겼어요`);
     paint();
@@ -764,7 +765,7 @@ export async function openAssetsCore(ctx, src) {
     const gone = new Set(sel.map(keyOf3));
     const nextFd = structuredClone(fd);
     for (const a of sel) if (!assets.some((x) => !gone.has(keyOf3(x)) && x[0] === a[0])) delete nextFd._mapping[a[0]];
-    await save(assets.filter((a) => !gone.has(keyOf3(a))), nextFd, "에셋 삭제 전");
+    try { await save(assets.filter((a) => !gone.has(keyOf3(a))), nextFd, "에셋 삭제 전"); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); return; }
     as.sel.clear();
     as.focus = null;
     ctx.toast(`${sel.length}개를 지웠어요`, { action: { label: "되돌리기", run: async () => {
