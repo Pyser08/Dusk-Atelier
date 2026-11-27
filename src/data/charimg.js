@@ -40,10 +40,13 @@ export async function thumbOf(bytes, size = 72) {
 
 // 경로별 캐시(같은 세션)
 const cache = new Map();
+export const THUMB_MAX = 80;
+export const thumbCacheSize = () => cache.size;
 export async function charThumb(api, character, names) {
   const p = imagePathFor(character, names); if (!p) return null;
-  if (cache.has(p)) return cache.get(p);
+  if (cache.has(p)) { const j = cache.get(p); cache.delete(p); cache.set(p, j); return j; }   // 최근에 쓴 것을 뒤로
   const job = (async () => { try { const raw = await api.readImage?.(p); const u8 = raw ? (raw instanceof Uint8Array ? raw : new Uint8Array(raw)) : null; return u8 ? await thumbOf(u8) : null; } catch { return null; } })();
   cache.set(p, job);
+  while (cache.size > THUMB_MAX) cache.delete(cache.keys().next().value);   // 신고 #31: 끝없이 쌓이지 않게 최근 THUMB_MAX개만
   return job;
 }

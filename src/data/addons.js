@@ -209,7 +209,8 @@ export function createAddons(api, { core, ctx = {}, onPendingRestart = null, onN
     await bootCustom();
     emit();
     timers.setTimeout(() => { check().catch(() => {}); }, 3000);
-    if (!autoTimer) { autoTimer = timers.setInterval(() => check().catch(() => {}), CHECK_EVERY); autoTimer?.unref?.(); }
+    // 신고 #31(2.2.68): 화면이 숨겨진 동안에는 건너뛴다(다음 주기·창을 열 때 확인)
+    if (!autoTimer) { autoTimer = timers.setInterval(() => { if (typeof document !== "undefined" && document.hidden) return; return check().catch(() => {}); }, CHECK_EVERY); autoTimer?.unref?.(); }
   }
   let autoTimer = null;
   // Dusk 창을 열 때 부른다: 마지막 확인이 10분 넘었으면 확인

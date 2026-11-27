@@ -5,7 +5,7 @@
 - 신고 #30: 로어북 '여러 개 고르기' 버튼 노출, '규칙 한 번에 바꾸기'(ui/screens/lorebulk.js, engine bulkRule), 규칙 scanTag(태그 안만, JS·Lua 동일). enableRule/disableRule은 engine/lorerules.js로 옮기고 editor.js에서 다시 내보냄.
 - 버그 신고 → '버그 신고 · 기능 건의'(건의는 글 앞에 [기능 건의] 붙여 허브 형식 그대로).
 - 신고 #32: castfilter inCast 키는 이름 앞(startsWith)만, 인물 삭제가 people 기록도 지움(기록만 있는 인물도), 호칭 여러 개·상황별(callForms/callPhrase, setTalk 120자).
-- 신고 #31: Proton Drive 링크만 있어 내용 확인 못 함(링크는 브라우저 필요).
+- 신고 #31(Proton 문서, ~/.cache/ms-playwright 헤드리스 크롬 + /tmp/r5s playwright-core로 읽음): data/domlisten.js listen/runOffs — 상태창(cardoverlay: 이름 span 고유 ID·sweep, 스트리밍 중 안 닮, 열기 seq, 닫을 때 card-ov 모두 지움), aistopbtn·retrytoast·hostupdate·floatbtn·watch(캐릭터 추가 창) 리스너 떼기. duskbridge·애드온 업데이트 확인은 숨김 중 쉼. charimg 썸네일 80개 LRU, turninfo Set 정리.
 - [ ] 실기기 확인: PocketRisu 1.18.0 권한 창, 순정 RisuAI 3일 재확인 타이머 갱신 여부
 
 ## fix/report-20-21 · 11-25 신고 #20·#21 → v2.2.62 + 장기기억 0.3.69 + 인물 속마음 0.1.4

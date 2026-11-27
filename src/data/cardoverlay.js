@@ -1,3 +1,5 @@
+import { listen, runOffs } from "./domlisten.js";
+export { listen, runOffs };
 // 2.2.24: 캐릭터 상태창을 응답 안이 아니라 리스 화면 맨 위에 직접 띄운다.
 // 응답 안에 넣은 상태창은 리스가 메시지마다 만든 겹침 층에 갇혀 다른 UI가 뚫고 나오고, 바깥 막도 그 층만 덮어 닫히지 않았다.
 // 사진(data URL)도 응답 안에선 리스가 이미지 주소를 바꿔 깨졌다. 여기서는 createElement로 직접 만들어 소독기를 거치지 않는다.
@@ -56,13 +58,14 @@ export async function mountNodes(d, target, html, Parser = globalThis.DOMParser,
 }
 // 탭 켜기: 고른 탭만 내용 보이고 버튼 강조(원래 CSS [open]>summary 와 같은 모양)
 const ON = "color:#fff;border-color:transparent;background:linear-gradient(135deg,#8b6fe0,#a77bf0);box-shadow:0 4px 14px rgba(139,111,224,.35)", ON_N = "color:#fff;border-color:transparent;background:linear-gradient(135deg,#e8578e,#f07aa4);box-shadow:0 4px 14px rgba(232,87,142,.35)";
-export async function wireTabs(tabs) {
+const pageHidden = () => { try { return !!globalThis.document?.hidden; } catch { return false; } };
+export async function wireTabs(tabs, offs = null) {
   const groups = new Map(); for (const t of tabs) { if (!t.sum || !t.panel) continue; if (!groups.has(t.group)) groups.set(t.group, []); groups.get(t.group).push(t); }
   for (const list of groups.values()) {
     if (!list.some((t) => t.open)) list[0].open = true;
     const paint = async (on) => { for (const t of list) { const o = t === on; t.open = o; try { await t.sum.setStyleAttribute(`${t.sumStyle};${o ? (t.kind === "n" ? ON_N : ON) : ""}`); await t.panel.setStyleAttribute(`${t.panelStyle};display:${o ? "block" : "none"}`); } catch { /* 스타일 못 바꿈 */ } } };
     await paint(list.find((t) => t.open));
-    for (const t of list) { try { await t.sum.addEventListener("click", () => { paint(t).catch(() => {}); }); } catch { /* 클릭 못 받음 */ } }
+    for (const t of list) { try { await listen(t.sum, "click", () => { paint(t).catch(() => {}); }, offs); } catch { /* 클릭 못 받음 */ } }
   }
 }
 // 전역 CSS에 x- 선택자 짝을 붙인다: [data-a=b] → [x-a=b], .cls → [x-class~="cls"]
@@ -82,28 +85,42 @@ const attr = async (el, n, v) => { try { await el.setAttribute(n, v); } catch { 
 // cardOf(pid) → 상태창 안쪽 HTML(없으면 ""). ensureDoc() → 리스 화면 문서(권한 없으면 null)
 const HK = ":not([data-hk]):not([x-dusk-hk])";
 const ANY_NAME = `[data-pid]${HK}, [class*="dusk-pid-"]${HK}`;
-export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {}, onFail = () => {} }) {
-  let open = null, hooking = false, timers = [], keyHooked = false, keyOff = null, loop = null, gap = 2500, total = 0;
-  const close = async () => { const w = open; open = null; const off = keyOff; keyOff = null; if (off) { keyHooked = false; await off(); } if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } } };
+export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = () => {}, onFail = () => {}, busy = () => false }) {
+  let open = null, hooking = false, timers = [], keyHooked = false, keyOff = null, loop = null, gap = 2500, total = 0, seq = 0;
+  let openOffs = [];
+  // 신고 #31: 닫을 때 창의 리스너를 떼고, 혹시 남은 창([x-dusk="card-ov"])도 모두 지운다
+  const close = async () => {
+    const w = open; open = null; const off = keyOff; keyOff = null;
+    if (off) { keyHooked = false; await off(); }
+    await runOffs(openOffs);
+    if (w) { try { await w.remove(); } catch { /* 이미 없음 */ } }
+    try { const d = await ensureDoc(); const list = d ? await d.querySelectorAll('[x-dusk="card-ov"]') : null; const len = typeof list?.length === "function" ? await list.length() : list?.length ?? 0;
+      for (let i = len - 1; i >= 0; i--) { const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; await el?.remove?.(); } } catch { /* 못 찾음 */ }
+  };
   async function show(pid) {
+    const my = ++seq;   // 신고 #31: 여는 동안 다시 누르면 마지막 요청만 창을 띄운다(두 장 열리던 문제)
+    const stale = () => my !== seq;
     const d = await ensureDoc(); if (!d) return false;
-    await close();
+    await close(); if (stale()) return null;
     const html = await cardOf(pid); if (!html) return null;   // 그 인물 내용이 없을 뿐(다른 채팅 이름 등) — 창을 못 띄운 것이 아니다
+    if (stale()) return null;
     const body = await d.querySelector("body"); if (!body) return false;
+    const offs = [];
     const wrap = await d.createElement("div"); await wrap.setAttribute("x-dusk", "card-ov");
     await wrap.setStyleAttribute("position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:2147483000;");
     const bg = await d.createElement("div"); await bg.setStyleAttribute("position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.36);");
-    await bg.addEventListener("click", () => { close().catch(() => {}); });
+    await listen(bg, "click", () => { close().catch(() => {}); }, offs);
     const box = await d.createElement("div"); await attr(box, "data-dusk", "pcbox"); await box.setStyleAttribute(BOX);
     // 2.2.30: 그리다 실패해도(판마다 DOM 함수가 다름) 글자만이라도 띄운다
     let ctx = { tabs: [] };
-    try { ctx = await mountNodes(d, box, html + '<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">바깥을 누르면 닫혀요 · Dusk 캐릭터 상태창</span>', undefined, ctx); await wireTabs(ctx.tabs); } catch (e) { log("상태창 그리기 일부 실패", e?.message ?? e); try { await box.setInnerText(String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()); } catch { /* 빈 상자라도 */ } }
+    try { ctx = await mountNodes(d, box, html + '<span style="display:block;margin-top:10px;font-size:10.5px;opacity:.5;text-align:right">바깥을 누르면 닫혀요 · Dusk 캐릭터 상태창</span>', undefined, ctx); await wireTabs(ctx.tabs, offs); } catch (e) { log("상태창 그리기 일부 실패", e?.message ?? e); try { await box.setInnerText(String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()); } catch { /* 빈 상자라도 */ } }
     // 2.2.28: 닫기(×) — 바깥 누르기가 안 먹는 환경 대비
     const x = await d.createElement("div"); await attr(x, "role", "button"); await attr(x, "aria-label", "닫기");
     await x.setStyleAttribute("position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;line-height:1;background:rgba(127,127,127,.18);color:inherit;z-index:2;");
-    await x.setInnerText("×"); await x.addEventListener("click", () => { close().catch(() => {}); }); await box.appendChild(x);
+    await x.setInnerText("×"); await listen(x, "click", () => { close().catch(() => {}); }, offs); await box.appendChild(x);
+    if (stale()) { await runOffs(offs); return null; }
     await wrap.appendChild(bg); await wrap.appendChild(box); await body.appendChild(wrap);
-    open = wrap;
+    open = wrap; openOffs = offs;
     if (!keyHooked) { keyHooked = true; try { const kid = await d.addEventListener("keydown", (ev) => { if (open && (ev?.key === "Escape" || ev?.key === "Esc")) close().catch(() => {}); });
       // 신고 #11: 등록 번호를 주는 호스트면 닫을 때 뗀다(번호가 없으면 예전처럼 하나만 남겨 다시 쓴다)
       if (kid != null && typeof d.removeEventListener === "function") keyOff = async () => { try { await d.removeEventListener("keydown", kid); } catch { /* 이미 없음 */ } }; } catch { /* 키를 못 받아도 닫기 버튼 */ } }
@@ -116,10 +133,28 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
   }
   // 응답 안 이름(data-dusk="nm")에 클릭을 단다. 이미 단 것은 data-hk로 건너뛴다
   // 응답 안 이름에 클릭을 단다. 2.2.29: 속성을 읽지 않고(판에 따라 getAttribute가 없음) 인물마다 선택자로 찾는다 — data-pid, 클래스(리스가 x-risu- 를 붙이는 판 포함)
+  let hkSeq = 0;
+  const hooked = new Map(), fires = new Map();
+  function fireOf(d, pid, safe) {
+    if (fires.has(pid)) return fires.get(pid);
+    let last = 0;
+    const fire = () => { const t = Date.now(); if (t - last < 500) return; last = t; show(pid).then((ok) => { if (ok) hidePanels(d, safe).catch(() => {}); if (ok === false) { log("상태창을 열지 못했어요", pid); onFail(); } }).catch((e) => { log("상태창 열기 실패", e?.message ?? e); onFail(); }); };
+    fires.set(pid, fire);
+    return fire;
+  }
+  // 화면에서 사라진 이름(리스가 메시지를 다시 그림·채팅 전환·리롤)의 리스너를 뗀다
+  async function sweep(d) {
+    for (const [hid, offs] of [...hooked]) {
+      let el = null; try { el = await d.querySelector(`[x-dusk-hk="${hid}"], [data-hk="${hid}"]`); } catch { el = null; }
+      if (!el) { hooked.delete(hid); await runOffs(offs); }
+    }
+  }
   async function hook() {
     if (hooking) return 0; hooking = true; let n = 0;
     try {
       const d = await ensureDoc(); if (!d) return 0;
+      if (hooked.size) await sweep(d);
+      if (busy()) return 0;   // 신고 #31: 답장이 나오는 동안에는 리스가 청크마다 다시 그리므로 달지 않는다(끝난 뒤 soon()이 단다)
       // 신고 #5: 아직 클릭을 안 단 이름이 하나도 없으면 인물마다 찾지 않는다(34명이면 68번 → 2번)
       const any = await d.querySelectorAll(ANY_NAME), anyN = typeof any?.length === "function" ? await any.length() : any?.length ?? 0;
       if (!anyN) return 0;
@@ -130,10 +165,13 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
         const len = typeof list?.length === "function" ? await list.length() : list?.length ?? 0;
         for (let i = 0; i < len; i++) {
           const el = typeof list.at === "function" ? await list.at(i) : typeof list.item === "function" ? await list.item(i) : list[i]; if (!el) continue;
-          await attr(el, "x-dusk-hk", "1"); await attr(el, "data-hk", "1");
-          // 11-23: 판에 따라 click이 안 오고 pointerup만 오기도 한다 → 둘 다 받고 0.5초 안 두 번은 한 번으로
-          let last = 0; const fire = () => { const t = Date.now(); if (t - last < 500) return; last = t; show(pid).then((ok) => { if (ok) hidePanels(d, safe).catch(() => {}); if (!ok) { log("상태창을 열지 못했어요", pid); if (ok === false) onFail(); } }).catch((e) => { log("상태창 열기 실패", e?.message ?? e); onFail(); }); };
-          await el.addEventListener("click", fire); try { await el.addEventListener("pointerup", fire); } catch { /* click만 */ }
+          // 신고 #31: 이름마다 고유 ID를 달고 떼는 함수를 기억한다. 화면에서 빠지면 sweep()이 뗀다
+          const hid = `h${++hkSeq}`;
+          await attr(el, "x-dusk-hk", hid); await attr(el, "data-hk", hid);
+          // 11-23: 판에 따라 click이 안 오고 pointerup만 오기도 한다 → 둘 다 받고 0.5초 안 두 번은 한 번으로. 인물마다 함수 하나를 다시 쓴다
+          const fire = fireOf(d, pid, safe), offs = [];
+          await listen(el, "click", fire, offs); try { await listen(el, "pointerup", fire, offs); } catch { /* click만 */ }
+          hooked.set(hid, offs);
           n++; total++;
         }
       }
@@ -147,8 +185,9 @@ export function createCardOverlay({ ensureDoc, cardOf, pids = () => [], log = ()
     gap = 2500; arm();
   }
   // 새 이름이 없으면 간격을 조금씩 늘린다(2.5초 → 최대 5초). 응답이 다시 표시되면(soon) 처음 간격으로
+  // 신고 #31: 화면이 숨겨진 동안에는 찾지 않는다. 새 이름이 계속 없으면 30초까지 늘린다
   function arm() {
-    clearTimeout(loop); loop = setTimeout(async () => { const n = await hook().catch(() => 0); if (!loop) return; gap = n ? 2500 : Math.min(5000, gap * 1.4); arm(); }, gap); loop?.unref?.();
+    clearTimeout(loop); loop = setTimeout(async () => { if (!loop) return; if (pageHidden()) { gap = 5000; arm(); return; } const n = await hook().catch(() => 0); if (!loop) return; gap = n ? 2500 : Math.min(30000, gap * 1.4); arm(); }, gap); loop?.unref?.();
   }
   return { show, close, hook, soon, total: () => total, stop: () => { clearTimeout(loop); loop = null; for (const t of timers) clearTimeout(t); timers = []; } };
 }

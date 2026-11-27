@@ -1,3 +1,4 @@
+import { listen, removeWith } from "../data/domlisten.js";
 // 리스를 켤 때 새 버전이 있으면 메인 화면 오른쪽 위에 작은 알림을 잠깐 띄운다(설정 → 업데이트 설정 → 업데이트 알림으로 끔) (닫기 버튼 · 자동으로 내려감)
 const UPDATE_URL = "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/main/dusk_atelier.js";
 const SHOW_MS = 20000;
@@ -62,16 +63,17 @@ export async function showHostUpdateToast(api, v, { version }) {
   await wrap.appendChild(row);
   await host.appendChild(wrap);
   let closed = false;
+  const offs = [];
   const close = async () => {
     if (closed) return;
     closed = true;
     try {
       await wrap.setStyleAttribute("position:fixed;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:9999;width:min(300px,calc(100vw - 24px));box-sizing:border-box;padding:9px 10px 9px 12px;border-radius:12px;border:1px solid #6a43d6;background:#1b1930;color:#ecebf6;transform:translateY(-12px);opacity:0;transition:transform .35s ease,opacity .35s ease;pointer-events:none;");
-      setTimeout(() => wrap.remove().catch(() => {}), 450);
+      setTimeout(() => { removeWith(wrap, offs).catch(() => {}); }, 450);   // 신고 #31: click을 떼고 지운다
     } catch {}
   };
-  await x.addEventListener("click", close);
-  await wrap.addEventListener("click", close);
+  await listen(x, "click", close, offs);
+  await listen(wrap, "click", close, offs);
   setTimeout(() => wrap.setStyleAttribute("position:fixed;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:9999;width:min(300px,calc(100vw - 24px));box-sizing:border-box;padding:9px 10px 9px 12px;border-radius:12px;border:1px solid #6a43d6;background:linear-gradient(135deg,#1b1930,#26204a);box-shadow:0 8px 24px rgba(0,0,0,.45);color:#ecebf6;font-family:inherit;transform:none;opacity:1;transition:transform .35s ease,opacity .35s ease;").catch(() => {}), 60);
   setTimeout(close, SHOW_MS);
   return true;

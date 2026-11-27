@@ -164,7 +164,9 @@ export function createTurnInfo(api, { layout = null, onCacheAlert = null, diceSo
     rec.id = `${rec.at.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     rec.head = head; rec.tail = tailKey(text); rec.mid = midKey(text);
     const d = diceSource?.(); if (d && d.at >= rec.at - 2000) rec.dice = { rolls: d.rolls, cuts: d.cuts, mode: d.mode };
-    recs.push(rec); if (recs.length > MAX_RECS) recs.splice(0, recs.length - MAX_RECS);
+    recs.push(rec);
+    if (recs.length > MAX_RECS) { for (const old of recs.splice(0, recs.length - MAX_RECS)) trusted.delete(old); }   // 신고 #31: 잘려 나간 턴은 Set에서도 지운다
+    if (claimed.size > MAX_RECS * 2) { const keep = [...claimed].slice(-MAX_RECS); claimed.clear(); for (const k of keep) claimed.add(k); }
   }
   async function onOutput(text) {
     try {

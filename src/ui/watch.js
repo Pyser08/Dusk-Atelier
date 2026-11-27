@@ -8,6 +8,7 @@
 // - 모듈 목록도 무거워서 평소 5분마다, 가져오기 직후 몇 분만 20초마다 본다. 켠 직후 1분은 안 본다.
 // - 화면이 안 보일 때는 멈추고, 다시 보이면 가볍게 확인한다.
 // - 확인한 봇 ID를 저장해 두어, 플러그인이 꺼져 있던 동안 생긴 봇도 다음에 켤 때 확인한다.
+import { listen, runOffs } from "../data/domlisten.js";
 import { listUpdateCandidates } from '../tide/characterUpdateTargets.ts';
 import { charFields } from '../engine/tideplan.js';
 import { stableJson } from '../engine/util.js';
@@ -302,9 +303,13 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
   }
 
   // ---- + 메뉴(새 캐릭터 추가 창)에 버튼 넣기 ----
+  // 신고 #31: 창을 열 때마다 붙인 click 4개를, 창이 닫혀 우리 버튼이 사라지면 뗀다
+  const menuOffs = [];
+  let docOffs = [];
   async function decorateMenu() {
     if (!doc) return;
     try {
+      if (menuOffs.length && !(await doc.querySelector(`[x-dusk="${MENU_BTN_ID}"]`))) await runOffs(menuOffs);
       const boxes = await doc.querySelectorAll("div.w-2xl.flex.flex-col.max-w-full");
       const n = await boxes.length();
       for (let i = 0; i < n; i++) {
@@ -316,7 +321,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
         // 가져오기 버튼들(RisuRealm·캐릭터 임포트·패키지 임포트)을 누르면 잠깐 자주 확인
         for (const j of [0, 1, count - 2]) {
           const b = await kids.at(j);
-          await b?.addEventListener("click", () => burst());
+          if (b) await listen(b, "click", () => burst(), menuOffs);
         }
         const cancel = await kids.at(count - 1);
         const ref = await kids.at(1);
@@ -326,7 +331,7 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
         await btn.setAttribute("x-dusk", MENU_BTN_ID);
         await btn.setClassName(cls);
         await btn.setInnerHTML(`<div class="flex flex-col justify-start items-start"><span>Dusk Atelier로 업데이트</span><span class="text-textcolor2 text-sm">새 버전 파일로 기존 봇·모듈을 업데이트해요 (채팅·내 수정 유지)</span></div>`);
-        await btn.addEventListener("click", () => onOpenUpdater());
+        await listen(btn, "click", () => onOpenUpdater(), menuOffs);
         await cancel.remove();
         await box.appendChild(btn);
         await box.appendChild(cancel);
@@ -341,13 +346,13 @@ export function createWatcher(api, { onDetected, onModules, onOpenUpdater, onNew
       doc = await api.getRootDocument();
       if (!doc) throw new Error("no doc");
       // 리스 화면 아무 곳이나 눌러도 불리므로(호스트에 질의 여러 번) 눌러 둔 뒤 잠깐 기다렸다 한 번만, 2초에 한 번 이하로 확인한다
-      await doc.addEventListener("click", () => {
+      await listen(doc, "click", () => {
         clearTimeout(menuTimer);
         menuTimer = setTimeout(() => {   // 간격이 모자라면 남은 만큼 늦춰서 마지막 클릭 뒤에는 꼭 한 번 확인한다
           lastMenuAt = Date.now();
           decorateMenu();
         }, Math.max(250, 2e3 - (Date.now() - lastMenuAt)));
-      }, { capture: true });
+      }, docOffs, { capture: true });
       return true;
     } catch {
       doc = null;

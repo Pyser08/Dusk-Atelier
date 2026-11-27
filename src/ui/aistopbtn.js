@@ -1,6 +1,7 @@
 // '생성 중지' 버튼 (2.1.0): AI 호출(engine/aistop.js)이 하나라도 돌면 화면 오른쪽 아래에 뜬다.
 // Dusk 창이 열려 있으면 창 안에, 닫혀 있으면(기억 자동 기록처럼 뒤에서 돌 때) 리스 화면에 띄운다.
 // 리스 화면 쪽은 retrytoast.js와 같은 방식(mainDom 권한, 없으면 띄우지 않음).
+import { listen, removeWith } from "../data/domlisten.js";
 import { onAiChange, activeCount, activeTasks, stopAll } from "../engine/aistop.js";
 
 var ATTR = "x-dusk-ai-stop";
@@ -42,6 +43,7 @@ export function createAiStopButton(api, { getCtx = () => null, delayMs = 400, do
     if (!inWin.isConnected) doc.body.appendChild(inWin);
   };
   const hideWin = () => { inWin?.remove(); };
+  const hostOffs = [];
   const showHost = async () => {
     if (hostBusy || denied || typeof api?.getRootDocument !== "function") return;
     hostBusy = true;
@@ -56,7 +58,7 @@ export function createAiStopButton(api, { getCtx = () => null, delayMs = 400, do
         await b.setAttribute(ATTR, "1");
         await b.setAttribute("aria-label", "Dusk AI 생성 중지");
         await b.setStyleAttribute(STYLE);
-        await b.addEventListener("click", onStop);
+        await listen(b, "click", onStop, hostOffs);
         await body.appendChild(b);
         host = b;
       }
@@ -65,7 +67,7 @@ export function createAiStopButton(api, { getCtx = () => null, delayMs = 400, do
       try { await host.setAttribute("title", t.all ? `지금 하는 작업: ${t.all}` : ""); } catch { /* title 없이 */ }
     } catch { host = null; } finally { hostBusy = false; }
   };
-  const hideHost = async () => { const b = host; host = null; if (b) { try { await b.remove(); } catch { /* 이미 사라짐 */ } } };
+  const hideHost = async () => { const b = host; host = null; if (b) await removeWith(b, hostOffs); };   // 신고 #31: click을 떼고 지운다
   function sync() {
     const n = activeCount();
     if (!n) {
