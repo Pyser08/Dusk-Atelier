@@ -13,7 +13,7 @@ test("내보내기→불러오기: 기억 폴더와 erosync 키가 다른 저장
   assert.deepEqual(summarize(file), { chats: 1, people: 1, ero: 2 });
   const b = mkApi(), sb = createMemoryStore(b);
   const r = await applyMemoryFile(b, sb, readMemoryFile(JSON.stringify(file)));
-  assert.deepEqual(r, { chats: 1, ero: 2 });
+  assert.deepEqual(r, { chats: 1, ero: 2, moved: 0 });
   assert.ok((await sb.getFolder("c1", "t1")).people.민수);
   assert.equal(b.m.get("erosync_session_v3:s1"), "{}");
   assert.equal(b.m.has("erosync_local_config_v3"), false);

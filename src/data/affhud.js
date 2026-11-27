@@ -23,11 +23,12 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     await store.updateIndex((i) => { i.affhud ??= {}; i.affhud[chaId] = { ...(i.affhud[chaId] ?? {}), ...patch }; });
   }
 
+  // 2.2.68: 봇을 먼저 쓰고 성공한 뒤에 내부 설정을 저장한다(쓰기가 거절되면 설정만 켜져 둘이 어긋났다 — PocketRisu dbWrite)
   async function install(ci, patch = {}) {
     const ch = await api.getCharacterFromIndex(ci), chaId = String(ch.chaId);
-    await setCfg(chaId, { on: true, ...patch });
-    const c = await getCfg(chaId);
+    const c = { ...(await getCfg(chaId)), on: true, ...patch };
     await api.setCharacterToIndex(ci, installHud(ch, c));
+    await setCfg(chaId, { on: true, ...patch });
     return c;
   }
 
@@ -50,19 +51,15 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
   async function applyDesign(ci, html) {
     const v = validateHud(html);
     if (!v.ok) throw new Error(v.errors[0]);
-    const ch = await api.getCharacterFromIndex(ci);
-    await setCfg(String(ch.chaId), { html });
-    return install(ci);
+    return install(ci, { html });
   }
   async function resetDesign(ci) {
-    const ch = await api.getCharacterFromIndex(ci);
-    await setCfg(String(ch.chaId), { html: "" });
-    return install(ci);
+    return install(ci, { html: "" });
   }
   async function uninstall(ci) {
     const ch = await api.getCharacterFromIndex(ci);
-    await setCfg(String(ch.chaId), { on: false });
     await api.setCharacterToIndex(ci, uninstallHud(ch));
+    await setCfg(String(ch.chaId), { on: false });
   }
 
   // ── 모듈 판 (v1.6.9): 설정 키는 "m:<모듈 id>", HUD는 모듈 배경 HTML에 들어간다 ──
@@ -74,23 +71,22 @@ export function createAffHud(api, { store, link = null, ask = null, log = (...a)
     return m;
   }
   async function installMod(id, patch = {}) {
-    await setCfg(mkey(id), { on: true, ...patch });
-    const c = await getCfg(mkey(id)), m = await getModule(id);
+    const c = { ...(await getCfg(mkey(id))), on: true, ...patch }, m = await getModule(id);
     await moduleOps.update(api, id, { backgroundEmbedding: installHudModule(m, c).backgroundEmbedding });
+    await setCfg(mkey(id), { on: true, ...patch });
     return c;
   }
   const designMod = (id, request) => designFor(mkey(id), "캐릭터", request);
   async function applyDesignMod(id, html) {
     const v = validateHud(html);
     if (!v.ok) throw new Error(v.errors[0]);
-    await setCfg(mkey(id), { html });
-    return installMod(id);
+    return installMod(id, { html });
   }
-  async function resetDesignMod(id) { await setCfg(mkey(id), { html: "" }); return installMod(id); }
+  async function resetDesignMod(id) { return installMod(id, { html: "" }); }
   async function uninstallMod(id) {
-    await setCfg(mkey(id), { on: false });
     const m = await getModule(id);
     await moduleOps.update(api, id, { backgroundEmbedding: uninstallHudModule(m).backgroundEmbedding });
+    await setCfg(mkey(id), { on: false });
   }
   // 이 채팅에 쓰이는 HUD 주인: 봇 자신 → 켜진 모듈(전체·봇·채팅 모듈) 순
   async function ownerOf(character, chat) {

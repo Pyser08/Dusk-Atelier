@@ -100,7 +100,7 @@ export function moduleLinks(ctx, e, { refresh, refreshDetail } = {}) {
       { class: "rb-kv" },
       h("span", null, on ? "이 채팅에서 켜짐" : "이 채팅에는 따로 연결 안 됨", h("br"), h("small", { class: "rb-muted" }, "채팅 연결 추가는 RisuAI 채팅 화면에서 해요")),
       on ? btn("이 채팅에서 해제", { size: "sm", onClick: async () => {
-        await ctx.svc.run("unlinkChat", ci, chi, m.id);
+        try { await ctx.svc.run("unlinkChat", ci, chi, m.id); } catch (e) { ctx.toast(e?.message ?? String(e), { error: true }); return; }
         ctx.toast("이 채팅에서 해제했어요");
         refreshDetail?.();
       } }) : null

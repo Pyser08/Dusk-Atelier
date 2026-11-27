@@ -197,6 +197,18 @@ test("이름 경계: '마리'는 '히마리'에 안 걸리고 조사·호칭에�
   assert.ok(luaChat.scriptstate.$da_state);
 });
 
+test("찾는 범위 태그(scanTag): <status> 안에서만 키를 찾는다 (Lua = JS)", { skip }, async () => {
+  rc = 0;
+  const es = [E("유키", { scanTag: "status" }), E("소라", { scanTag: "status", cond: [{ t: "text", keys: "소라" }] }), E("나기", {})];
+  const { luaChat } = await runParity(es, { script: ["유키 소라 나기 본문", "본문\n<status>\n유키 · 소라\n</status>", "<Status class=\"x\">나기</Status> 유키"] });
+  const st = JSON.parse(luaChat.scriptstate.$da_state);
+  const turns = (rid) => st.f?.[rid] ?? [];
+  // 첫 턴은 본문에만 있어 안 켜진다. 셋째 턴은 최근 4개 안에 둘째 턴의 <status>가 남아 있어 켜진다
+  assert.deepEqual(turns("r1"), [2, 3], "유키는 <status> 안에 나온 뒤부터");
+  assert.deepEqual(turns("r2"), [2, 3]);
+  assert.equal(turns("r3").length, 3, "태그를 안 정한 나기는 매 턴");
+});
+
 // ---------- 트리거 넣기·빼기 ----------
 test("syncLoreTrigger: 넣기 → 같음 → 규칙 바뀌면 다시 만들기 → 관리 항목 없으면 빼기", () => {
   rc = 0;

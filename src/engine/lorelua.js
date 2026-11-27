@@ -21,7 +21,7 @@ function fnv(s) {
   return h.toString(16).padStart(8, "0");
 }
 
-const RULE_KEYS = ["mode", "cond", "prob", "once", "cool", "group", "scan", "hold", "set", "chain", "whole", "common", "commonKeys", "commonWords"];
+const RULE_KEYS = ["mode", "cond", "prob", "once", "cool", "group", "scan", "scanTag", "hold", "set", "chain", "whole", "common", "commonKeys", "commonWords"];
 
 function hasRandom(items) {
   return items.some((it) => {
@@ -501,18 +501,38 @@ local function evaluate(messages, turn, state, getv)
   local hist, trig = pick(state.f), pick(state.t)
   local byRid = {}
   for _, it in ipairs(ITEMS) do byRid[it.rid] = it end
-  local function textsFor(scan, who)
+  local function tagOnly(s, tag)
+    if type(tag) ~= "string" then return s end
+    tag = tag:gsub("[^%w_%-]", "")
+    if tag == "" then return s end
+    local pt = tag:gsub("%-", "%%-")
+    local low, out = s:lower(), {}
+    local open, close = "<" .. pt:lower() .. "[%s>]", "</" .. tag:lower() .. ">"
+    local pos = 1
+    while true do
+      local a = low:find(open, pos)
+      if not a then break end
+      local gt = s:find(">", a, true)
+      if not gt then break end
+      local b = low:find(close, gt + 1, true)
+      if not b then break end
+      out[#out + 1] = s:sub(gt + 1, b - 1)
+      pos = b + #close
+    end
+    return table.concat(out, "\n")
+  end
+  local function textsFor(scan, who, tag)
     who = who or "any"
     local out = {}
     if who == "input" then
-      for i = #messages, 1, -1 do if messages[i].role == "user" then return { messages[i].data or "" } end end
+      for i = #messages, 1, -1 do if messages[i].role == "user" then return { tagOnly(messages[i].data or "", tag) } end end
       return out
     end
     local n = math.max(1, math.floor(tonumber(scan) or 4))
     if not tonumber(scan) or tonumber(scan) == 0 then n = 4 end
     for i = math.max(1, #messages - n + 1), #messages do
       local m = messages[i]
-      if who == "any" or m.role == who then out[#out + 1] = m.data or "" end
+      if who == "any" or m.role == who then out[#out + 1] = tagOnly(m.data or "", tag) end
     end
     return out
   end
@@ -567,7 +587,7 @@ local function evaluate(messages, turn, state, getv)
   local function condOk(it, c)
     local t = c.t
     if t == "keys" then
-      local texts = textsFor(it.rule.scan)
+      local texts = textsFor(it.rule.scan, "any", it.rule.scanTag)
       local o = { regex = it.rx, whole = not not it.rule.whole, common = commonOf(it) }
       if not keyHit(splitKeys(it.key), texts, o) then return false end
       if it.sel and #splitKeys(it.sk) > 0 then return keyHit(splitKeys(it.sk), texts, o) end
@@ -575,7 +595,7 @@ local function evaluate(messages, turn, state, getv)
     elseif t == "notext" or t == "text" then
       local scan = c.scan
       if scan == nil then scan = it.rule.scan end
-      local hit = keyHit(splitKeys(c.keys), textsFor(scan, c["in"] or "any"), { regex = not not c.regex, all = not not c.all, whole = not not it.rule.whole })
+      local hit = keyHit(splitKeys(c.keys), textsFor(scan, c["in"] or "any", it.rule.scanTag), { regex = not not c.regex, all = not not c.all, whole = not not it.rule.whole })
       if t == "notext" then return not hit end
       return hit
     elseif t == "var" then

@@ -1,3 +1,12 @@
+## 2026-11-27 · fix/report-29-31 (v2.2.68 + memory 0.3.72 · aibuild 0.1.12 · easylore 0.1.1, 미배포)
+- PocketRisu 1.18.0 dbWrite 임시 대응: `src/data/dbwrite.js`(main.js에서 모든 쓰기 감쌈) — 메뉴 등록 뒤·첫 쓰기 전 requestPluginPermission("dbWrite") 한 번(반환값 무시), 묻는 동안 읽기 대기, 같은 대상 쓰기 직렬화, 오류에 dbWrite 있으면 한 번 재시도(채팅은 메시지가 늘었으면 안 함), 최종 실패는 한국어 안내. 포켓리스가 규칙을 고치면 지워도 됨.
+- 호감도 HUD: 봇 쓰기 성공 뒤 설정 저장. 에셋 폴더 삭제/이동/삭제·모듈 '이 채팅에서 해제' 오류 처리.
+- 신고 #29: memoryfile planRemap/listLocalChats — 다른 기기 파일을 봇·채팅 이름·채팅 ID로 맞춤, 여러 채팅 파일도 열린 채팅에 넣을 기억 고르기.
+- 신고 #30: 로어북 '여러 개 고르기' 버튼 노출, '규칙 한 번에 바꾸기'(ui/screens/lorebulk.js, engine bulkRule), 규칙 scanTag(태그 안만, JS·Lua 동일). enableRule/disableRule은 engine/lorerules.js로 옮기고 editor.js에서 다시 내보냄.
+- 버그 신고 → '버그 신고 · 기능 건의'(건의는 글 앞에 [기능 건의] 붙여 허브 형식 그대로).
+- 신고 #31: Proton Drive 링크만 있어 내용 확인 못 함(링크는 브라우저 필요).
+- [ ] 실기기 확인: PocketRisu 1.18.0 권한 창, 순정 RisuAI 3일 재확인 타이머 갱신 여부
+
 ## fix/report-20-21 · 11-25 신고 #20·#21 → v2.2.62 + 장기기억 0.3.69 + 인물 속마음 0.1.4
 - #20: innerthought assetEmotions(에셋 → 감정 낱말만)·cleanEmo(화면 이름표만, 저장 글은 그대로). #21: inject.wikiPosition → replaceWikiMarker 세 번째 인자(기본 afterSystem). 신고 창에 아카 #번호 안내. 테스트 tests/report20-21.test.js.
 

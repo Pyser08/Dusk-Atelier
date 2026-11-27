@@ -13,6 +13,8 @@
 //   그러면 리스가 평소처럼 CBS를 파싱하고 배치·토큰 계산까지 한다. 꺼진 항목은 빈 내용이라 토큰을 안 먹는다.
 //   플러그인이 없는 사용자에게는 변수가 비어 있어 이 항목들이 꺼진 것처럼 보일 뿐, 봇이 깨지지 않는다.
 
+import { newId } from "./util.js";
+
 export const RULE_VERSION = 1;
 export const DONT_ACTIVATE = "@@dont_activate";
 export const STATE_VAR = "da_state";
@@ -43,6 +45,16 @@ export function defaultRule() {
   return { v: RULE_VERSION, on: true, mode: "all", cond: [{ t: "keys" }], prob: 100, once: "none", cool: 3, group: "", at: "top", depth: 4, role: "system", scan: 4, hold: 0, set: [], chain: [] };
 }
 
+// 찾는 범위를 태그 안으로 좁히기(2.2.68, 신고 #30): scanTag가 "status"면 <status …>…</status> 안의 글에서만 키를 찾는다. 태그가 없는 메시지는 빈 글.
+export const cleanTag = (t) => String(t ?? "").trim().replace(/^<\/?|>$/g, "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40);
+export function tagOnly(text, tag) {
+  const t = cleanTag(tag);
+  if (!t) return String(text ?? "");
+  const re = new RegExp(`<${t}(?:\\s[^>]*)?>([\\s\\S]*?)</${t}>`, "gi");
+  const out = [];
+  for (const m of String(text ?? "").matchAll(re)) out.push(m[1]);
+  return out.join("\n");
+}
 export function ruleOf(entry) {
   const r = entry?.extentions?.da_rule;
   if (!r || typeof r !== "object") return null;
@@ -438,10 +450,10 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
   const trig = pick(state?.t);
   const byRid = new Map(items.map((x) => [x.rid, x]));
   const nameOf = (rid) => byRid.get(rid)?.entry.comment || rid || "?";
-  const textsFor = (scan, who = "any") => {
-    if (who === "input") { const last = messages.findLast((m) => m.role === "user"); return last ? [last.data ?? ""] : []; }  // 방금 입력: 가장 최근 내 말 하나
+  const textsFor = (scan, who = "any", tag = "") => {
+    if (who === "input") { const last = messages.findLast((m) => m.role === "user"); return last ? [tagOnly(last.data ?? "", tag)] : []; }  // 방금 입력: 가장 최근 내 말 하나
     const n = Math.max(1, Number(scan) || 4);
-    return messages.slice(-n).filter((m) => who === "any" || m.role === who).map((m) => m.data ?? "");
+    return messages.slice(-n).filter((m) => who === "any" || m.role === who).map((m) => tagOnly(m.data ?? "", tag));
   };
   const commonOf = (it) => {
     if (!it.rule.common) return null;
@@ -475,16 +487,16 @@ export function evaluate({ items, messages = [], turn = 0, state = {}, vars = {}
     switch (c.t) {
       case "keys": {
         const e = it.entry;
-        const texts = textsFor(it.rule.scan);
+        const texts = textsFor(it.rule.scan, "any", it.rule.scanTag);
         const o = { regex: !!e.useRegex, whole: !!it.rule.whole, common: commonOf(it) };
         if (!keyHit(splitKeys(e.key), texts, o)) return false;
         if (e.selective && splitKeys(e.secondkey).length) return keyHit(splitKeys(e.secondkey), texts, o);
         return true;
       }
       case "notext":
-        return !keyHit(splitKeys(c.keys), textsFor(c.scan ?? it.rule.scan, c.in || "any"), { regex: !!c.regex, all: !!c.all, whole: !!it.rule.whole });
+        return !keyHit(splitKeys(c.keys), textsFor(c.scan ?? it.rule.scan, c.in || "any", it.rule.scanTag), { regex: !!c.regex, all: !!c.all, whole: !!it.rule.whole });
       case "text":
-        return keyHit(splitKeys(c.keys), textsFor(c.scan ?? it.rule.scan, c.in || "any"), { regex: !!c.regex, all: !!c.all, whole: !!it.rule.whole });
+        return keyHit(splitKeys(c.keys), textsFor(c.scan ?? it.rule.scan, c.in || "any", it.rule.scanTag), { regex: !!c.regex, all: !!c.all, whole: !!it.rule.whole });
       case "var":
         return cmp(vars[c.name] ?? vars["$" + c.name], c.op || "=", c.val);
       case "turn":
@@ -784,4 +796,43 @@ export function validateRules(lorebook) {
     }
   });
   return out;
+}
+
+// 항목에 Dusk 규칙을 켠다 (소속 구성원으로 넣을 때 등). 이미 켜져 있으면 식별자만 확인한다
+export function enableRule(l, lorebook) {
+  l.extentions = { ...(l.extentions ?? {}) };
+  l.extentions.da_rid ||= newId();
+  if ((lorebook ?? []).some((x) => x !== l && ridOf(x) === l.extentions.da_rid)) l.extentions.da_rid = newId();
+  if (isManaged(l)) return l.extentions.da_rid;
+  const nr = { ...(ruleOf(l) ?? defaultRule()), on: true };
+  if ((l.alwaysActive && !l.extentions?.da_aa) || l.mode === "constant") nr.cond = [];
+  l.extentions.da_rule = nr;
+  l.content = nativeContent(l.content, nr, l.extentions.da_rid);
+  return l.extentions.da_rid;
+}
+// 여러 항목의 규칙을 한 번에 바꾼다(2.2.68, 신고 #30). patch에 있는 칸만 바꾸고, 규칙이 없던 항목은 켠 뒤 바꾼다.
+// 값이 null이면 그 칸을 지운다(태그·그룹 비우기). 반환: 바꾼 항목 수
+export const BULK_RULE_KEYS = ["prob", "once", "cool", "hold", "scan", "scanTag", "whole", "common", "group", "at", "depth", "role"];
+export function bulkRule(entries, patch, lorebook) {
+  const keys = BULK_RULE_KEYS.filter((k) => k in (patch ?? {}));
+  let n = 0;
+  for (const l of entries ?? []) {
+    if (!l || isFolder(l) && !isAff(l)) continue;
+    enableRule(l, lorebook);
+    const r = { ...l.extentions.da_rule };
+    for (const k of keys) { if (patch[k] === null) delete r[k]; else r[k] = patch[k]; }
+    l.extentions = { ...l.extentions, da_rule: r };
+    l.content = nativeContent(l.content, ruleOf(l), ridOf(l));
+    n++;
+  }
+  return n;
+}
+export function disableRule(l) {
+  l.extentions = { ...(l.extentions ?? {}) };
+  delete l.extentions.da_rule;
+  if (l.extentions.da_aa) {
+    l.alwaysActive = false;
+    delete l.extentions.da_aa;
+  }
+  l.content = plainContent(l.content);
 }

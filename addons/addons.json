@@ -72,11 +72,16 @@
       "id": "aibuild",
       "name": "AI로 봇·페르소나 만들기",
       "category": "make",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "minCore": "2.2.3",
       "hooks": true,
       "desc": "말로 요청해 봇·모듈을 만들고 고치는 AI 창·AI로 제작 탭, AI로 페르소나 만들기를 써요.",
       "notes": [
+        {
+          "v": "0.1.12",
+          "date": "",
+          "body": "- 로어북 규칙 ‘태그 안만’을 함께 알아들어요. 기능 변화는 없어요."
+        },
         {
           "v": "0.1.11",
           "date": "",
@@ -94,18 +99,23 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/aibuild.js",
-      "sha256": "098eeac23abb304daf2bfe1cb0eb183f69de2615bdbeb5008ba4d4516543024b",
-      "size": 229919
+      "sha256": "d1aaadbcde2d4d5cbf8587d04c44293dedf68309449f5e5cfd13eea600106082",
+      "size": 230077
     },
     {
       "id": "memory",
       "name": "장기기억·관계도",
       "category": "memory",
-      "version": "0.3.71",
+      "version": "0.3.72",
       "minCore": "2.2.45",
       "hooks": true,
       "desc": "응답마다 인물별 기억을 쌓아 다음 응답에 넣고, 리수폿 인물 위키·인물 관계도·회귀·호감도 HUD를 써요. 기억 데이터는 애드온을 지워도 남아요.",
       "notes": [
+        {
+          "v": "0.3.72",
+          "date": "",
+          "body": "- 다른 기기에서 내보낸 장기 기억 파일을 이 기기의 봇·채팅에 맞춰 불러와요(신고 #29, 위 본체 항목)."
+        },
         {
           "v": "0.3.71",
           "date": "",
@@ -120,16 +130,11 @@
           "v": "0.3.69",
           "date": "",
           "body": "- ‘인물 위키·디렉터 노트 위치’ 설정을 넣었어요(고급 → 기억 넣기). 마지막 사용자 메시지 앞이나 맨 뒤로 두면 위키가 바뀌어도 앞쪽 대화의 캐시가 덜 깨져요. 기본값은 예전 위치 그대로예요(신고 #21)."
-        },
-        {
-          "v": "0.3.68",
-          "date": "",
-          "body": "- 같은 장면이 길게 이어지면 장면 상태창(날씨 칸)의 시간이 멈추던 문제를 고쳤어요. ‘밤 9시 반’처럼 적은 시각도 읽어요(신고 #19)."
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/memory.js",
-      "sha256": "87850076f3119b27ff418046d04c82bb30de998538010b1ba2fdd5ab007f8749",
-      "size": 2450073
+      "sha256": "5592a9630fcc2d5b4d8f7810d7c83e3da8804533e5c94d53261e5da4b66a3a4a",
+      "size": 2453407
     },
     {
       "id": "cards",
@@ -261,7 +266,7 @@
       "id": "easylore",
       "name": "폴더 관리/쉬운 로어북",
       "category": "manage",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "minCore": "2.2.41",
       "hooks": false,
       "desc": "버튼 하나로 ‘마리’ 키가 ‘히마리’에도 걸리는 이름 겹침을 막아요. 겹치는 항목만 이름이 제대로 나올 때 켜지고, 흔한 낱말 이름은 부르거나 그 인물만의 단어가 나올 때만 켜져요. 언제든 원래대로 되돌릴 수 있어요. 봇을 장르·시뮬봇/단일봇별 폴더로 자동 정리하고, 폴더 만들기·옮기기도 해요.",
@@ -273,8 +278,8 @@
         }
       ],
       "url": "https://raw.githubusercontent.com/Pyser08/Dusk-Atelier/addons/addons/dist/easylore.js",
-      "sha256": "687a0ef88c2e0987e1eba52526ab84a6553a2890559ff0a8ba833965585c5338",
-      "size": 64759
+      "sha256": "5d322c138b1b9e98e61430ef410ef8600d02db9f8162eab8014962c0237ea31d",
+      "size": 64917
     },
     {
       "id": "innerthought",

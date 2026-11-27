@@ -6,6 +6,7 @@ import { startHostUpdateToast, clearStaleUpdateToast } from './ui/hostupdate.js'
 import { createDbCache, WRITE_RE } from './data/dbcache.js';
 import { createHookBus } from './data/hookbus.js';
 import { createHostGate } from './data/hostgate.js';
+import { createDbWriteGuard, DBREAD_FNS, DBWRITE_FNS, dbWriteMessage, isDbWriteError } from './data/dbwrite.js';
 import * as engine_exports from './engine/index.js';
 import { hostBlockedMessage, isHostBlocked } from './data/modules.js';
 import { createLegacy } from './ui/legacy.js';
@@ -54,6 +55,13 @@ async function start() {
     try {
       return await fn(...args);
     } catch (e) {
+      // PocketRisu 1.18.0: 다시 써도 거절되면 영어 원문 대신 알아볼 수 있는 안내로(2.2.68)
+      if (isDbWriteError(e) && !e?.dbWriteBlocked) {
+        const err = new Error(dbWriteMessage);
+        err.dbWriteBlocked = true;
+        err.cause = e;
+        throw err;
+      }
       if (isHostBlocked(e) && !e?.hostBlocked) {
         const err = new Error(hostBlockedMessage);
         err.hostBlocked = true;
@@ -63,7 +71,11 @@ async function start() {
       throw e;
     }
   };
-  const wrapped = { setCharacterToIndex: friendly((...a) => raw.setCharacterToIndex(...a)), setDatabaseLite: friendly((...a) => raw.setDatabaseLite(...a)) };
+  // dbWrite 권한(2.2.68, PocketRisu 1.18.0 임시 대응): 첫 쓰기 전에 한 번 묻고, 같은 대상은 차례대로, 거절되면 한 번 다시 쓴다(data/dbwrite.js)
+  const dbw = createDbWriteGuard(raw);
+  const wrapped = {};
+  for (const name of DBWRITE_FNS) if (typeof raw[name] === "function") wrapped[name] = friendly(dbw.wrapWrite(name, (...a) => raw[name](...a)));
+  for (const name of DBREAD_FNS) if (typeof raw[name] === "function") wrapped[name] = dbw.wrapRead((...a) => raw[name](...a));
   // 생성 중지(2.1.0): 플러그인·애드온이 직접 부르는 모델 호출도 세어 '생성 중지' 버튼으로 끊을 수 있게
   // Risu64 연동(2.2.11): Risu64가 DA Interop 'obfuscate' 동작을 등록해 두면 보내기 전에 메시지를 난독화(data/risu64link.js)
   if (typeof raw.runLLMModel === "function") wrapped.runLLMModel = trackedRunLLM(async (opts, ...a) => raw.runLLMModel(await r64Opts(raw, opts), ...a));
@@ -83,8 +95,9 @@ async function start() {
   wrapped.hasDbCache = (keys) => dbc.has(keys);
   wrapped.storeDbCache = (keys, value) => dbc.store(keys, value);
   wrapped.invalidateDbCache = (opts) => (opts?.soft ? dbc.soften(opts.maxAge) : dbc.invalidate());
-  for (const name of ["setCharacterToIndex", "setDatabaseLite"]) {
+  for (const name of DBWRITE_FNS) {
     const f = wrapped[name];
+    if (!f) continue;
     wrapped[name] = async (...a) => { dbc.invalidate(); try { return await f(...a); } finally { dbc.invalidate(); } };
   }
   const api = new Proxy(raw, {
@@ -120,6 +133,7 @@ async function start() {
     const legacy2 = await createLegacy(api);
     await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger" }, () => legacy2.open());
     await api.registerSetting(TITLE, () => legacy2.open(), ICON, "html");
+    dbw.ensure();   // 메뉴 등록 뒤 dbWrite를 미리 묻는다(PocketRisu 1.18.0, 2.2.68)
     return;
   }
   let app = null;
@@ -338,6 +352,7 @@ async function start() {
   const open = () => app.open().catch((e) => console.log(`[${TITLE}] 열기 실패: ${e?.message ?? e}`));
   await api.registerButton({ name: TITLE, icon: ICON, iconType: "html", location: "hamburger", id: "dusk-atelier-open" }, open);
   await api.registerSetting(TITLE, open, ICON, "html");
+  dbw.ensure();   // 메뉴 등록 뒤 dbWrite를 미리 묻는다(PocketRisu 1.18.0, 2.2.68). 결과는 보지 않는다 — 구버전 호스트는 false
 }
 if (typeof globalThis.__RBU_TEST__ !== "undefined") globalThis.__RBU_TEST__.RBU = { ...engine_exports };
 else start().catch((e) => console.log(`[${TITLE}] 초기화 실패: ${e?.message ?? e}`));
