@@ -6,6 +6,7 @@ import { KEPT_FIELDS, isCredentialKey, isUnsafeCardKey, sanitizeCardValue, summa
 import { applyUpdatePlan, assetContentId, fingerprintCard, isFingerprintV1, isLuaTrigger, planCharacterUpdate } from '../tide/characterUpdateMerge.ts';
 import { greetingRemap } from '../tide/characterUpdateGreetings.ts';
 import { wordDiff } from '../tide/characterMerge/wordDiff.ts';
+import { mergeKeepMine } from './textmerge.js';
 
 export { fingerprintCard, isFingerprintV1, summarizeCharacterUpdate, wordDiff };
 
@@ -205,4 +206,27 @@ export function safeDiff(a, b) {
   if (dy) parts.push({ op: "add", text: dy.slice(0, DIFF_MAX) });
   if (e > back) parts.push({ op: "same", text: x.slice(x.length - e, x.length - back) });
   return { parts, cut: from > 0 || back > 0 || dx.length > DIFF_MAX || dy.length > DIFF_MAX };
+}
+
+// ---- 로어북 글 합치기(2.2.68): '내 것 유지 + 새 버전에 새로 생긴 부분 넣기' ----
+// choices의 값 "merge": 새 버전 항목을 받되, 글(content)은 내 글에 새 부분만 끼운 것으로 바꾼다.
+const sj = (v) => JSON.stringify(v ?? null);
+export function canMerge(it) {
+  return !!it && it.unit === "lore" && !String(it.id).startsWith("order:") && typeof it.current?.content === "string" && typeof it.incoming?.content === "string" && it.current.content !== it.incoming.content;
+}
+export const mergedLore = (it) => (canMerge(it) ? mergeKeepMine(it.current.content, it.incoming.content) : null);
+export function applyMerges(fields, plan, choices) {
+  const list = fields?.globalLore;
+  if (!Array.isArray(list) || !choices) return { merged: 0, added: 0 };
+  let merged = 0, added = 0;
+  for (const it of plan.items) {
+    if (choices.get(it.id) !== "merge" || !canMerge(it)) continue;
+    const at = list.findIndex((e) => sj(e) === sj(it.incoming));
+    if (at < 0) continue;
+    const r = mergeKeepMine(it.current.content, it.incoming.content);
+    if (!r.ok) continue;
+    list[at] = { ...list[at], content: r.text };
+    merged++; added += r.added;
+  }
+  return { merged, added };
 }

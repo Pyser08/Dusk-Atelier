@@ -5,7 +5,7 @@ import { collectKnownKeys, planAssets } from '../engine/module.js';
 import { buildNewCharacter, characterAssetKeys, characterView, newCharacterBase, planCharacter, uniqueDisplayName, ensureCharacterInOrder } from '../engine/character.js';
 import { uploadAssets } from '../engine/upload.js';
 import { MOD_SPEC, applyView, charIncomingView, charSpec, modIncomingView, pickView } from '../engine/merge3.js';
-import { KIND_KO, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, regexAutoNote, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, VIEW_MAX, safeDiff, writeCharFields } from '../engine/tideplan.js';
+import { KIND_KO, applyMerges, canMerge, mergedLore, applyPlan, changeOf, charFields, fieldsToMod, fingerprintCard, groupOf, itemLabel, keepSet, makePlan, regexAutoNote, modFields, modFingerprint, remapGreetings, summarizeCharacterUpdate, textOf, VIEW_MAX, safeDiff, writeCharFields } from '../engine/tideplan.js';
 import { createStore } from '../engine/store.js';
 import { iconMarkup } from './icons.js';
 import { persistentWrites, queueTrash, readUi, trashCopy, watchDefaults } from './watch.js';
@@ -163,6 +163,8 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     #rbu-overlay .rv-seg button.on[data-ai-on="1"]{background:var(--rb-acc-grad,linear-gradient(135deg,#4f63e0,#7c4fe0));color:var(--rb-on-acc,#fff);font-weight:600}
     #rbu-overlay .rv-seg button.on[data-ai-on="0"]{background:var(--rb-hover,#20233a);color:var(--rb-text,#e9eaf6);font-weight:600;box-shadow:inset 0 0 0 1px var(--rb-line3,#343857)}
     #rbu-overlay .rv-seg button.on[data-bridge]{background:var(--rb-acc-grad,linear-gradient(135deg,#4f63e0,#7c4fe0));color:var(--rb-on-acc,#fff);font-weight:600}
+    #rbu-overlay .rv-seg button.on[data-pick=merge],#rbu-overlay .rv-mini button.on[data-v=merge]{background:var(--rb-ok-soft,rgba(90,200,140,.2));color:var(--rb-text,#e9eaf6);font-weight:600;box-shadow:inset 0 0 0 1px var(--rb-ok,#5ac88c)}
+    #rbu-overlay .rv-merge{white-space:pre-wrap;word-break:break-word;max-height:260px;overflow:auto;padding:8px 10px;border-radius:8px;background:rgba(90,200,140,.08);border:1px solid rgba(90,200,140,.3);font-size:12.5px}
     #rbu-overlay .rv-seg button.on[data-pick=cur]{background:var(--rb-acc2-soft,rgba(124,79,224,.3));color:var(--rb-text,#e9eaf6);font-weight:600;box-shadow:inset 0 0 0 1px var(--rb-acc2-text,#c4b1ff)}
     #rbu-overlay .rv-cap{font-size:12px;font-weight:600;color:var(--rb-sub,#a4a7c9);display:flex;gap:8px;align-items:center}
     #rbu-overlay .rv-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -554,7 +556,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
           <div class="rv-tools">
             <label class="rv-search">${ic("search", 15)}<input type="text" id="rvq" placeholder="이름·내용 검색" value="${esc(ui.q)}"></label>
             <div class="rv-chips">${chips}</div>
-            <div class="rv-bulk"><button id="rv-new">${ic("refresh", 13)} 보이는 것 모두 새 버전</button><button id="rv-mine">${ic("shield", 13)} 모두 내 것</button>${conflicts ? `<button id="rv-next">${ic("alert", 13)} 다음 충돌</button>` : ""}</div>
+            <div class="rv-bulk"><button id="rv-new">${ic("refresh", 13)} 보이는 것 모두 새 버전</button><button id="rv-mine">${ic("shield", 13)} 모두 내 것</button>${conflicts ? `<button id="rv-next">${ic("alert", 13)} 다음 충돌</button>` : ""}${plan.items.some(canMerge) ? `<button id="rv-merge" title="고친 로어북 항목마다 내 글은 두고 새 버전에 새로 생긴 부분만 넣어요">${ic("split", 13)} 고친 로어북 모두 합치기</button>` : ""}</div>
           </div>
           <div id="rv-list"></div>
         </div>
@@ -589,12 +591,14 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     const keepNow = () => keepSet(plan, choices, keepExistingOnly);
     const detail = (it) => {
       if (!it) return `<div class="rv-empty">${ic("split", 28)}<span>왼쪽에서 항목을 고르면 지금과 새 버전을 나란히 보여 드려요.</span></div>`;
-      const keep = keepNow(), mine = keep.has(it.id), g = groupOf(it);
+      const keep = keepNow(), merging = choices.get(it.id) === "merge" && canMerge(it), mine = keep.has(it.id) && !merging, g = groupOf(it);
+      const mg = canMerge(it) ? mergedLore(it) : null;
       const canDiff = it.current !== void 0 && it.incoming !== void 0 && (typeof it.current === "string" || typeof it.incoming === "string" || it.unit === "lore" || it.unit === "regex");
       const diff = canDiff ? diffHtml(textOf(it, it.current), textOf(it, it.incoming)) : "";
       return `<div class="rv-dh"><span class="ri big">${ic(it.id.startsWith("order:") ? "list" : UNIT_ICON[it.unit] ?? "text", 18)}</span>
           <div><b>${esc(itemLabel(it, fieldLabel))}</b><div class="rv-tags"><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : `<span class="tg">${CHANGE_KO[changeOf(it)]}</span>`}</div></div></div>
-        <div class="rv-seg"><button data-pick="inc" class="${mine ? "" : "on"}">${ic("refresh", 15)} 새 버전 적용</button><button data-pick="cur" class="${mine ? "on" : ""}">${ic("shield", 15)} 내 것 유지</button></div>
+        <div class="rv-seg"><button data-pick="inc" class="${mine || merging ? "" : "on"}">${ic("refresh", 15)} 새 버전 적용</button><button data-pick="cur" class="${mine ? "on" : ""}">${ic("shield", 15)} 내 것 유지</button>${mg?.ok ? `<button data-pick="merge" class="${merging ? "on" : ""}" title="내가 고친 글은 그대로 두고, 새 버전에 새로 생긴 부분만 넣어요">${ic("split", 15)} 합치기</button>` : ""}</div>
+        ${mg?.ok ? `<div class="rv-cap">합치면 <span class="muted">— 내 글 유지 · 새 부분 ${mg.added}곳 넣음${mg.skipped ? ` · 내가 고친 자리라 넣지 않은 새 버전 조각 ${mg.skipped}개` : ""}</span></div>${merging ? `<div class="rv-merge">${esc(mg.text)}</div>` : ""}` : ""}
         ${diff ? `<div class="rv-cap">바뀐 곳 <span class="muted">— <del>지운 글</del> <ins>새 글</ins></span></div><div class="rv-diffbox">${diff}</div>` : ""}
         <div class="rv-cols">
           <div class="rv-col${mine ? " pick" : ""}" data-pick="cur" role="button" tabindex="0" title="눌러서 지금 것 유지"><div class="rv-cap">지금 ${mine ? `<span class="tg mine">남김</span>` : ""}</div><div class="rv-text">${full(it, it.current)}</div></div>
@@ -618,11 +622,11 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
       const items = shown();
       if (!ui.sel || !plan.items.some((x) => x.id === ui.sel)) ui.sel = (plan.items.find((x) => groupOf(x) === "conflict") ?? plan.items[0])?.id ?? null;
       list.innerHTML = items.length ? items.slice(0, 300).map((it) => {
-        const i = plan.items.indexOf(it), g = groupOf(it), mine = keep.has(it.id);
+        const i = plan.items.indexOf(it), g = groupOf(it), merging = choices.get(it.id) === "merge" && canMerge(it), mine = keep.has(it.id) && !merging;
         return `<div class="rv-row ${g}${ui.sel === it.id ? " sel" : ""}" data-i="${i}" tabindex="0">
               <span class="ri">${ic(it.id.startsWith("order:") ? "list" : UNIT_ICON[it.unit] ?? "text", 15)}</span>
               <div class="rt"><b>${esc(itemLabel(it, fieldLabel))}</b><span><span class="tg ${g}">${KIND_KO[it.kind] ?? it.kind}</span>${it.id.startsWith("order:") ? "" : CHANGE_KO[changeOf(it)]}</span></div>
-              <span class="rv-mini" title="${mine ? "내 것 유지" : "새 버전 적용"}"><button data-v="inc" data-i="${i}" class="${mine ? "" : "on"}" aria-label="새 버전">${ic("refresh", 13)}</button><button data-v="cur" data-i="${i}" class="${mine ? "on" : ""}" aria-label="내 것 유지">${ic("shield", 13)}</button></span>
+              <span class="rv-mini" title="${mine ? "내 것 유지" : "새 버전 적용"}"><button data-v="inc" data-i="${i}" class="${mine || merging ? "" : "on"}" aria-label="새 버전">${ic("refresh", 13)}</button><button data-v="cur" data-i="${i}" class="${mine ? "on" : ""}" aria-label="내 것 유지">${ic("shield", 13)}</button>${canMerge(it) ? `<button data-v="merge" data-i="${i}" class="${merging ? "on" : ""}" aria-label="합치기" title="합치기: 내 글 유지 + 새 부분 넣기">${ic("split", 13)}</button>` : ""}</span>
             </div>`;
       }).join("") + (items.length > 300 ? `<div class="muted" style="padding:8px">앞쪽 300개만 보여요. 검색으로 좁혀 보세요.</div>` : "") : `<div class="muted" style="padding:12px">해당하는 항목이 없어요.</div>`;
       paintPane();
@@ -672,6 +676,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     };
     root.querySelector("#rv-new").addEventListener("click", () => bulk("inc"));
     root.querySelector("#rv-mine").addEventListener("click", () => bulk("cur"));
+    root.querySelector("#rv-merge")?.addEventListener("click", () => { for (const it of shown()) if (canMerge(it)) choices.set(it.id, "merge"); paint(); refreshSum(); });
     root.querySelector("#rv-next")?.addEventListener("click", () => {
       const cf = plan.items.filter((x) => groupOf(x) === "conflict");
       if (!cf.length) return;
@@ -737,7 +742,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
           const cur2 = modFields(pickView(cur, MOD_KEYS));
           const p2 = makePlan("m", cur2, inc2, base);
           const keep = keepSet(p2, choices, keepExistingOnly);
-          const fields = applyPlan(cur2, inc2, p2, keep);
+          const fields = applyPlan(cur2, inc2, p2, keep); applyMerges(fields, p2, choices);
           const sm = countPlan(p2, keep);
           summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`, uploaded.size && `에셋 ${uploaded.size}개 올림`].filter(Boolean).join(" · ");
           const sumText = `${file.name} → ${summary || "변화 없음"}`;
@@ -833,7 +838,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
     const cur2 = charFields(fresh);
     const p2 = makePlan("c", cur2, incFields, base);
     const keep = keepSet(p2, choices, keepExistingOnly);
-    const fields = applyPlan(cur2, incFields, p2, keep);
+    const fields = applyPlan(cur2, incFields, p2, keep); applyMerges(fields, p2, choices);
     const sm = countPlan(p2, keep);
     const merged = writeCharFields(fresh, cur2, fields);
     if (merged.vits && !merged.vits.id) merged.vits.id = fresh.vits?.id ?? newId().replace(/-/g, "");
@@ -1145,7 +1150,7 @@ export async function createLegacy(rawApi, { onExit, zIndex = 100, host, links, 
           const cur2 = modFields(pickView(cur, MOD_KEYS)), inc2 = modFields(pickView(ce.module, MOD_KEYS));
           const p2 = makePlan("m", cur2, inc2, base);
           const keep = keepSet(p2, choices, keepExistingOnly);
-          const fields = applyPlan(cur2, inc2, p2, keep);
+          const fields = applyPlan(cur2, inc2, p2, keep); applyMerges(fields, p2, choices);
           const sm = countPlan(p2, keep);
           summary = [sm.update && `제작자 수정 ${sm.update}`, sm.keptMine && `내 것 유지 ${sm.keptMine}`, sm.conflict && `충돌 ${sm.conflict}`, sm.added && `추가 ${sm.added}`, sm.removed && `삭제 ${sm.removed}`].filter(Boolean).join(" · ");
           backupRec = await store.addBackup({ kind: "module", target: cur.id, name: cur.name, snapshot: backupSnapshot("module", cur), note: "업데이트 전", summary: `가져온 모듈 '${ce.module.name}' → ${summary || "변화 없음"}` }).catch((err) => {

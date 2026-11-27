@@ -151,153 +151,154 @@ import * as m148 from "./engine/skillhook.js";
 import * as m149 from "./engine/skills.js";
 import * as m150 from "./engine/store.js";
 import * as m151 from "./engine/storytime.js";
-import * as m152 from "./engine/tideplan.js";
-import * as m153 from "./engine/tidestore.js";
-import * as m154 from "./engine/tokens.js";
-import * as m155 from "./engine/trackpreset.js";
-import * as m156 from "./engine/turninfo.js";
-import * as m157 from "./engine/upload.js";
-import * as m158 from "./engine/util.js";
-import * as m159 from "./engine/vars.js";
-import * as m160 from "./engine/webhook.js";
-import * as m161 from "./engine/websearch.js";
-import * as m162 from "./engine/workshop.js";
-import * as m163 from "./engine/zipwrite.js";
-import * as m164 from "./tide/characterMerge/characters.ts";
-import * as m165 from "./tide/characterMerge/collide.ts";
-import * as m166 from "./tide/characterMerge/composite.ts";
-import * as m167 from "./tide/characterMerge/floatingUI.ts";
-import * as m168 from "./tide/characterMerge/imageSystem.ts";
-import * as m169 from "./tide/characterMerge/importPlan.ts";
-import * as m170 from "./tide/characterMerge/license.ts";
-import * as m171 from "./tide/characterMerge/luaBundle.ts";
-import * as m172 from "./tide/characterMerge/mediaLabels.ts";
-import * as m173 from "./tide/characterMerge/moduleSource.ts";
-import * as m174 from "./tide/characterMerge/names.ts";
-import * as m175 from "./tide/characterMerge/partialUpdate.ts";
-import * as m176 from "./tide/characterMerge/parts.ts";
-import * as m177 from "./tide/characterMerge/plan.ts";
-import * as m178 from "./tide/characterMerge/provenance.ts";
-import * as m179 from "./tide/characterMerge/rewrite.ts";
-import * as m180 from "./tide/characterMerge/roles.ts";
-import * as m181 from "./tide/characterMerge/selfCheck.ts";
-import * as m182 from "./tide/characterMerge/sourceImages.ts";
-import * as m183 from "./tide/characterMerge/wordDiff.ts";
-import * as m184 from "./tide/characterUpdate.ts";
-import * as m185 from "./tide/characterUpdateGreetings.ts";
-import * as m186 from "./tide/characterUpdateMerge.ts";
-import * as m187 from "./tide/characterUpdateOnboarding.ts";
-import * as m188 from "./tide/characterUpdateTargets.ts";
-import * as m189 from "./tide/plugin/detach.ts";
-import * as m190 from "./tide/plugin/merge.ts";
-import * as m191 from "./ui/aifix.js";
-import * as m192 from "./ui/aistopbtn.js";
-import * as m193 from "./ui/app.js";
-import * as m194 from "./ui/assets.js";
-import * as m195 from "./ui/cbs.js";
-import * as m196 from "./ui/codeedit.js";
-import * as m197 from "./ui/color.js";
-import * as m198 from "./ui/dicedetail.js";
-import * as m199 from "./ui/discovercard.js";
-import * as m200 from "./ui/dom.js";
-import * as m201 from "./ui/entrypicker.js";
-import * as m202 from "./ui/ext.js";
-import * as m203 from "./ui/glasscss.js";
-import * as m204 from "./ui/glassthemes.js";
-import * as m205 from "./ui/homegrid.js";
-import * as m206 from "./ui/hostupdate.js";
-import * as m207 from "./ui/icons.js";
-import * as m208 from "./ui/kit.js";
-import * as m209 from "./ui/legacy.js";
-import * as m210 from "./ui/lookparts.js";
-import * as m211 from "./ui/mascot-data.js";
-import * as m212 from "./ui/mascot.js";
-import * as m213 from "./ui/memstate.js";
-import * as m214 from "./ui/multiselect.js";
-import * as m215 from "./ui/navcss.js";
-import * as m216 from "./ui/onboarding.js";
-import * as m217 from "./ui/placer.js";
-import * as m218 from "./ui/prefs.js";
-import * as m219 from "./ui/probpick.js";
-import * as m220 from "./ui/quickset.js";
-import * as m221 from "./ui/screens/about.js";
-import * as m222 from "./ui/screens/addonmaker.js";
-import * as m223 from "./ui/screens/addonsui.js";
-import * as m224 from "./ui/screens/aibot.js";
-import * as m225 from "./ui/screens/aibotsteps.js";
-import * as m226 from "./ui/screens/assetdupes.js";
-import * as m227 from "./ui/screens/assetfix.js";
-import * as m228 from "./ui/screens/assetmgr.js";
-import * as m229 from "./ui/screens/bugreport.js";
-import * as m230 from "./ui/screens/characters.js";
-import * as m231 from "./ui/screens/chareditor.js";
-import * as m232 from "./ui/screens/cocoa.js";
-import * as m233 from "./ui/screens/dev.js";
-import * as m234 from "./ui/screens/devaff.js";
-import * as m235 from "./ui/screens/devtools.js";
-import * as m236 from "./ui/screens/editor.js";
-import * as m237 from "./ui/screens/featurefind.js";
-import * as m238 from "./ui/screens/greetings.js";
-import * as m239 from "./ui/screens/history.js";
-import * as m240 from "./ui/screens/home.js";
-import * as m241 from "./ui/screens/homegridcss.js";
-import * as m242 from "./ui/screens/homegridui.js";
-import * as m243 from "./ui/screens/homestate.js";
-import * as m244 from "./ui/screens/infocard.js";
-import * as m245 from "./ui/screens/lorebulk.js";
-import * as m246 from "./ui/screens/loredusk.js";
-import * as m247 from "./ui/screens/lorelog.js";
-import * as m248 from "./ui/screens/managehubcss.js";
-import * as m249 from "./ui/screens/memhubcss.js";
-import * as m250 from "./ui/screens/memory/chatload.js";
-import * as m251 from "./ui/screens/memory/common.js";
-import * as m252 from "./ui/screens/memory/hypamodal.js";
-import * as m253 from "./ui/screens/memory/setup.js";
-import * as m254 from "./ui/screens/memory/skillchat.js";
-import * as m255 from "./ui/screens/memory/skills.js";
-import * as m256 from "./ui/screens/memory/username.js";
-import * as m257 from "./ui/screens/memthemecss.js";
-import * as m258 from "./ui/screens/modlinks.js";
-import * as m259 from "./ui/screens/modules.js";
-import * as m260 from "./ui/screens/newbot.js";
-import * as m261 from "./ui/screens/patchui.js";
-import * as m262 from "./ui/screens/placeholder.js";
-import * as m263 from "./ui/screens/presets.js";
-import * as m264 from "./ui/screens/promptstab.js";
-import * as m265 from "./ui/screens/provider/css.js";
-import * as m266 from "./ui/screens/provider/glance.js";
-import * as m267 from "./ui/screens/provider/ui.js";
-import * as m268 from "./ui/screens/reportbell.js";
-import * as m269 from "./ui/screens/roulettepop.js";
-import * as m270 from "./ui/screens/sectionhome.js";
-import * as m271 from "./ui/screens/settings.js";
-import * as m272 from "./ui/screens/settingstab.js";
-import * as m273 from "./ui/screens/sizemeter.js";
-import * as m274 from "./ui/screens/sizemeter/css.js";
-import * as m275 from "./ui/screens/tools.js";
-import * as m276 from "./ui/screens/updsettings.js";
-import * as m277 from "./ui/screens/workhome.js";
-import * as m278 from "./ui/screens/workhubcss.js";
-import * as m279 from "./ui/screens/workshoplink.js";
-import * as m280 from "./ui/screentours.js";
-import * as m281 from "./ui/scrollguard.js";
-import * as m282 from "./ui/sortable.js";
-import * as m283 from "./ui/staleguard.js";
-import * as m284 from "./ui/styles.js";
-import * as m285 from "./ui/tabs.js";
-import * as m286 from "./ui/theme.js";
-import * as m287 from "./ui/themekit.js";
-import * as m288 from "./ui/toast.js";
-import * as m289 from "./ui/tooltip.js";
-import * as m290 from "./ui/tour.js";
-import * as m291 from "./ui/undo.js";
-import * as m292 from "./ui/watch.js";
-import * as m293 from "./ui/whatsnew.js";
-import * as m294 from "./vendor/fflate-full.js";
-import * as m295 from "./vendor/fflate.js";
-import * as m296 from "./vendor/msgpackr.js";
-import * as m297 from "./vendor/noble.js";
-import * as m298 from "./vendor/re2js.js";
+import * as m152 from "./engine/textmerge.js";
+import * as m153 from "./engine/tideplan.js";
+import * as m154 from "./engine/tidestore.js";
+import * as m155 from "./engine/tokens.js";
+import * as m156 from "./engine/trackpreset.js";
+import * as m157 from "./engine/turninfo.js";
+import * as m158 from "./engine/upload.js";
+import * as m159 from "./engine/util.js";
+import * as m160 from "./engine/vars.js";
+import * as m161 from "./engine/webhook.js";
+import * as m162 from "./engine/websearch.js";
+import * as m163 from "./engine/workshop.js";
+import * as m164 from "./engine/zipwrite.js";
+import * as m165 from "./tide/characterMerge/characters.ts";
+import * as m166 from "./tide/characterMerge/collide.ts";
+import * as m167 from "./tide/characterMerge/composite.ts";
+import * as m168 from "./tide/characterMerge/floatingUI.ts";
+import * as m169 from "./tide/characterMerge/imageSystem.ts";
+import * as m170 from "./tide/characterMerge/importPlan.ts";
+import * as m171 from "./tide/characterMerge/license.ts";
+import * as m172 from "./tide/characterMerge/luaBundle.ts";
+import * as m173 from "./tide/characterMerge/mediaLabels.ts";
+import * as m174 from "./tide/characterMerge/moduleSource.ts";
+import * as m175 from "./tide/characterMerge/names.ts";
+import * as m176 from "./tide/characterMerge/partialUpdate.ts";
+import * as m177 from "./tide/characterMerge/parts.ts";
+import * as m178 from "./tide/characterMerge/plan.ts";
+import * as m179 from "./tide/characterMerge/provenance.ts";
+import * as m180 from "./tide/characterMerge/rewrite.ts";
+import * as m181 from "./tide/characterMerge/roles.ts";
+import * as m182 from "./tide/characterMerge/selfCheck.ts";
+import * as m183 from "./tide/characterMerge/sourceImages.ts";
+import * as m184 from "./tide/characterMerge/wordDiff.ts";
+import * as m185 from "./tide/characterUpdate.ts";
+import * as m186 from "./tide/characterUpdateGreetings.ts";
+import * as m187 from "./tide/characterUpdateMerge.ts";
+import * as m188 from "./tide/characterUpdateOnboarding.ts";
+import * as m189 from "./tide/characterUpdateTargets.ts";
+import * as m190 from "./tide/plugin/detach.ts";
+import * as m191 from "./tide/plugin/merge.ts";
+import * as m192 from "./ui/aifix.js";
+import * as m193 from "./ui/aistopbtn.js";
+import * as m194 from "./ui/app.js";
+import * as m195 from "./ui/assets.js";
+import * as m196 from "./ui/cbs.js";
+import * as m197 from "./ui/codeedit.js";
+import * as m198 from "./ui/color.js";
+import * as m199 from "./ui/dicedetail.js";
+import * as m200 from "./ui/discovercard.js";
+import * as m201 from "./ui/dom.js";
+import * as m202 from "./ui/entrypicker.js";
+import * as m203 from "./ui/ext.js";
+import * as m204 from "./ui/glasscss.js";
+import * as m205 from "./ui/glassthemes.js";
+import * as m206 from "./ui/homegrid.js";
+import * as m207 from "./ui/hostupdate.js";
+import * as m208 from "./ui/icons.js";
+import * as m209 from "./ui/kit.js";
+import * as m210 from "./ui/legacy.js";
+import * as m211 from "./ui/lookparts.js";
+import * as m212 from "./ui/mascot-data.js";
+import * as m213 from "./ui/mascot.js";
+import * as m214 from "./ui/memstate.js";
+import * as m215 from "./ui/multiselect.js";
+import * as m216 from "./ui/navcss.js";
+import * as m217 from "./ui/onboarding.js";
+import * as m218 from "./ui/placer.js";
+import * as m219 from "./ui/prefs.js";
+import * as m220 from "./ui/probpick.js";
+import * as m221 from "./ui/quickset.js";
+import * as m222 from "./ui/screens/about.js";
+import * as m223 from "./ui/screens/addonmaker.js";
+import * as m224 from "./ui/screens/addonsui.js";
+import * as m225 from "./ui/screens/aibot.js";
+import * as m226 from "./ui/screens/aibotsteps.js";
+import * as m227 from "./ui/screens/assetdupes.js";
+import * as m228 from "./ui/screens/assetfix.js";
+import * as m229 from "./ui/screens/assetmgr.js";
+import * as m230 from "./ui/screens/bugreport.js";
+import * as m231 from "./ui/screens/characters.js";
+import * as m232 from "./ui/screens/chareditor.js";
+import * as m233 from "./ui/screens/cocoa.js";
+import * as m234 from "./ui/screens/dev.js";
+import * as m235 from "./ui/screens/devaff.js";
+import * as m236 from "./ui/screens/devtools.js";
+import * as m237 from "./ui/screens/editor.js";
+import * as m238 from "./ui/screens/featurefind.js";
+import * as m239 from "./ui/screens/greetings.js";
+import * as m240 from "./ui/screens/history.js";
+import * as m241 from "./ui/screens/home.js";
+import * as m242 from "./ui/screens/homegridcss.js";
+import * as m243 from "./ui/screens/homegridui.js";
+import * as m244 from "./ui/screens/homestate.js";
+import * as m245 from "./ui/screens/infocard.js";
+import * as m246 from "./ui/screens/lorebulk.js";
+import * as m247 from "./ui/screens/loredusk.js";
+import * as m248 from "./ui/screens/lorelog.js";
+import * as m249 from "./ui/screens/managehubcss.js";
+import * as m250 from "./ui/screens/memhubcss.js";
+import * as m251 from "./ui/screens/memory/chatload.js";
+import * as m252 from "./ui/screens/memory/common.js";
+import * as m253 from "./ui/screens/memory/hypamodal.js";
+import * as m254 from "./ui/screens/memory/setup.js";
+import * as m255 from "./ui/screens/memory/skillchat.js";
+import * as m256 from "./ui/screens/memory/skills.js";
+import * as m257 from "./ui/screens/memory/username.js";
+import * as m258 from "./ui/screens/memthemecss.js";
+import * as m259 from "./ui/screens/modlinks.js";
+import * as m260 from "./ui/screens/modules.js";
+import * as m261 from "./ui/screens/newbot.js";
+import * as m262 from "./ui/screens/patchui.js";
+import * as m263 from "./ui/screens/placeholder.js";
+import * as m264 from "./ui/screens/presets.js";
+import * as m265 from "./ui/screens/promptstab.js";
+import * as m266 from "./ui/screens/provider/css.js";
+import * as m267 from "./ui/screens/provider/glance.js";
+import * as m268 from "./ui/screens/provider/ui.js";
+import * as m269 from "./ui/screens/reportbell.js";
+import * as m270 from "./ui/screens/roulettepop.js";
+import * as m271 from "./ui/screens/sectionhome.js";
+import * as m272 from "./ui/screens/settings.js";
+import * as m273 from "./ui/screens/settingstab.js";
+import * as m274 from "./ui/screens/sizemeter.js";
+import * as m275 from "./ui/screens/sizemeter/css.js";
+import * as m276 from "./ui/screens/tools.js";
+import * as m277 from "./ui/screens/updsettings.js";
+import * as m278 from "./ui/screens/workhome.js";
+import * as m279 from "./ui/screens/workhubcss.js";
+import * as m280 from "./ui/screens/workshoplink.js";
+import * as m281 from "./ui/screentours.js";
+import * as m282 from "./ui/scrollguard.js";
+import * as m283 from "./ui/sortable.js";
+import * as m284 from "./ui/staleguard.js";
+import * as m285 from "./ui/styles.js";
+import * as m286 from "./ui/tabs.js";
+import * as m287 from "./ui/theme.js";
+import * as m288 from "./ui/themekit.js";
+import * as m289 from "./ui/toast.js";
+import * as m290 from "./ui/tooltip.js";
+import * as m291 from "./ui/tour.js";
+import * as m292 from "./ui/undo.js";
+import * as m293 from "./ui/watch.js";
+import * as m294 from "./ui/whatsnew.js";
+import * as m295 from "./vendor/fflate-full.js";
+import * as m296 from "./vendor/fflate.js";
+import * as m297 from "./vendor/msgpackr.js";
+import * as m298 from "./vendor/noble.js";
+import * as m299 from "./vendor/re2js.js";
 export const LIB = {
   "src/data/addcharacter.js": m0,
   "src/data/addons.js": m1,
@@ -451,151 +452,152 @@ export const LIB = {
   "src/engine/skills.js": m149,
   "src/engine/store.js": m150,
   "src/engine/storytime.js": m151,
-  "src/engine/tideplan.js": m152,
-  "src/engine/tidestore.js": m153,
-  "src/engine/tokens.js": m154,
-  "src/engine/trackpreset.js": m155,
-  "src/engine/turninfo.js": m156,
-  "src/engine/upload.js": m157,
-  "src/engine/util.js": m158,
-  "src/engine/vars.js": m159,
-  "src/engine/webhook.js": m160,
-  "src/engine/websearch.js": m161,
-  "src/engine/workshop.js": m162,
-  "src/engine/zipwrite.js": m163,
-  "src/tide/characterMerge/characters.ts": m164,
-  "src/tide/characterMerge/collide.ts": m165,
-  "src/tide/characterMerge/composite.ts": m166,
-  "src/tide/characterMerge/floatingUI.ts": m167,
-  "src/tide/characterMerge/imageSystem.ts": m168,
-  "src/tide/characterMerge/importPlan.ts": m169,
-  "src/tide/characterMerge/license.ts": m170,
-  "src/tide/characterMerge/luaBundle.ts": m171,
-  "src/tide/characterMerge/mediaLabels.ts": m172,
-  "src/tide/characterMerge/moduleSource.ts": m173,
-  "src/tide/characterMerge/names.ts": m174,
-  "src/tide/characterMerge/partialUpdate.ts": m175,
-  "src/tide/characterMerge/parts.ts": m176,
-  "src/tide/characterMerge/plan.ts": m177,
-  "src/tide/characterMerge/provenance.ts": m178,
-  "src/tide/characterMerge/rewrite.ts": m179,
-  "src/tide/characterMerge/roles.ts": m180,
-  "src/tide/characterMerge/selfCheck.ts": m181,
-  "src/tide/characterMerge/sourceImages.ts": m182,
-  "src/tide/characterMerge/wordDiff.ts": m183,
-  "src/tide/characterUpdate.ts": m184,
-  "src/tide/characterUpdateGreetings.ts": m185,
-  "src/tide/characterUpdateMerge.ts": m186,
-  "src/tide/characterUpdateOnboarding.ts": m187,
-  "src/tide/characterUpdateTargets.ts": m188,
-  "src/tide/plugin/detach.ts": m189,
-  "src/tide/plugin/merge.ts": m190,
-  "src/ui/aifix.js": m191,
-  "src/ui/aistopbtn.js": m192,
-  "src/ui/app.js": m193,
-  "src/ui/assets.js": m194,
-  "src/ui/cbs.js": m195,
-  "src/ui/codeedit.js": m196,
-  "src/ui/color.js": m197,
-  "src/ui/dicedetail.js": m198,
-  "src/ui/discovercard.js": m199,
-  "src/ui/dom.js": m200,
-  "src/ui/entrypicker.js": m201,
-  "src/ui/ext.js": m202,
-  "src/ui/glasscss.js": m203,
-  "src/ui/glassthemes.js": m204,
-  "src/ui/homegrid.js": m205,
-  "src/ui/hostupdate.js": m206,
-  "src/ui/icons.js": m207,
-  "src/ui/kit.js": m208,
-  "src/ui/legacy.js": m209,
-  "src/ui/lookparts.js": m210,
-  "src/ui/mascot-data.js": m211,
-  "src/ui/mascot.js": m212,
-  "src/ui/memstate.js": m213,
-  "src/ui/multiselect.js": m214,
-  "src/ui/navcss.js": m215,
-  "src/ui/onboarding.js": m216,
-  "src/ui/placer.js": m217,
-  "src/ui/prefs.js": m218,
-  "src/ui/probpick.js": m219,
-  "src/ui/quickset.js": m220,
-  "src/ui/screens/about.js": m221,
-  "src/ui/screens/addonmaker.js": m222,
-  "src/ui/screens/addonsui.js": m223,
-  "src/ui/screens/aibot.js": m224,
-  "src/ui/screens/aibotsteps.js": m225,
-  "src/ui/screens/assetdupes.js": m226,
-  "src/ui/screens/assetfix.js": m227,
-  "src/ui/screens/assetmgr.js": m228,
-  "src/ui/screens/bugreport.js": m229,
-  "src/ui/screens/characters.js": m230,
-  "src/ui/screens/chareditor.js": m231,
-  "src/ui/screens/cocoa.js": m232,
-  "src/ui/screens/dev.js": m233,
-  "src/ui/screens/devaff.js": m234,
-  "src/ui/screens/devtools.js": m235,
-  "src/ui/screens/editor.js": m236,
-  "src/ui/screens/featurefind.js": m237,
-  "src/ui/screens/greetings.js": m238,
-  "src/ui/screens/history.js": m239,
-  "src/ui/screens/home.js": m240,
-  "src/ui/screens/homegridcss.js": m241,
-  "src/ui/screens/homegridui.js": m242,
-  "src/ui/screens/homestate.js": m243,
-  "src/ui/screens/infocard.js": m244,
-  "src/ui/screens/lorebulk.js": m245,
-  "src/ui/screens/loredusk.js": m246,
-  "src/ui/screens/lorelog.js": m247,
-  "src/ui/screens/managehubcss.js": m248,
-  "src/ui/screens/memhubcss.js": m249,
-  "src/ui/screens/memory/chatload.js": m250,
-  "src/ui/screens/memory/common.js": m251,
-  "src/ui/screens/memory/hypamodal.js": m252,
-  "src/ui/screens/memory/setup.js": m253,
-  "src/ui/screens/memory/skillchat.js": m254,
-  "src/ui/screens/memory/skills.js": m255,
-  "src/ui/screens/memory/username.js": m256,
-  "src/ui/screens/memthemecss.js": m257,
-  "src/ui/screens/modlinks.js": m258,
-  "src/ui/screens/modules.js": m259,
-  "src/ui/screens/newbot.js": m260,
-  "src/ui/screens/patchui.js": m261,
-  "src/ui/screens/placeholder.js": m262,
-  "src/ui/screens/presets.js": m263,
-  "src/ui/screens/promptstab.js": m264,
-  "src/ui/screens/provider/css.js": m265,
-  "src/ui/screens/provider/glance.js": m266,
-  "src/ui/screens/provider/ui.js": m267,
-  "src/ui/screens/reportbell.js": m268,
-  "src/ui/screens/roulettepop.js": m269,
-  "src/ui/screens/sectionhome.js": m270,
-  "src/ui/screens/settings.js": m271,
-  "src/ui/screens/settingstab.js": m272,
-  "src/ui/screens/sizemeter.js": m273,
-  "src/ui/screens/sizemeter/css.js": m274,
-  "src/ui/screens/tools.js": m275,
-  "src/ui/screens/updsettings.js": m276,
-  "src/ui/screens/workhome.js": m277,
-  "src/ui/screens/workhubcss.js": m278,
-  "src/ui/screens/workshoplink.js": m279,
-  "src/ui/screentours.js": m280,
-  "src/ui/scrollguard.js": m281,
-  "src/ui/sortable.js": m282,
-  "src/ui/staleguard.js": m283,
-  "src/ui/styles.js": m284,
-  "src/ui/tabs.js": m285,
-  "src/ui/theme.js": m286,
-  "src/ui/themekit.js": m287,
-  "src/ui/toast.js": m288,
-  "src/ui/tooltip.js": m289,
-  "src/ui/tour.js": m290,
-  "src/ui/undo.js": m291,
-  "src/ui/watch.js": m292,
-  "src/ui/whatsnew.js": m293,
-  "src/vendor/fflate-full.js": m294,
-  "src/vendor/fflate.js": m295,
-  "src/vendor/msgpackr.js": m296,
-  "src/vendor/noble.js": m297,
-  "src/vendor/re2js.js": m298
+  "src/engine/textmerge.js": m152,
+  "src/engine/tideplan.js": m153,
+  "src/engine/tidestore.js": m154,
+  "src/engine/tokens.js": m155,
+  "src/engine/trackpreset.js": m156,
+  "src/engine/turninfo.js": m157,
+  "src/engine/upload.js": m158,
+  "src/engine/util.js": m159,
+  "src/engine/vars.js": m160,
+  "src/engine/webhook.js": m161,
+  "src/engine/websearch.js": m162,
+  "src/engine/workshop.js": m163,
+  "src/engine/zipwrite.js": m164,
+  "src/tide/characterMerge/characters.ts": m165,
+  "src/tide/characterMerge/collide.ts": m166,
+  "src/tide/characterMerge/composite.ts": m167,
+  "src/tide/characterMerge/floatingUI.ts": m168,
+  "src/tide/characterMerge/imageSystem.ts": m169,
+  "src/tide/characterMerge/importPlan.ts": m170,
+  "src/tide/characterMerge/license.ts": m171,
+  "src/tide/characterMerge/luaBundle.ts": m172,
+  "src/tide/characterMerge/mediaLabels.ts": m173,
+  "src/tide/characterMerge/moduleSource.ts": m174,
+  "src/tide/characterMerge/names.ts": m175,
+  "src/tide/characterMerge/partialUpdate.ts": m176,
+  "src/tide/characterMerge/parts.ts": m177,
+  "src/tide/characterMerge/plan.ts": m178,
+  "src/tide/characterMerge/provenance.ts": m179,
+  "src/tide/characterMerge/rewrite.ts": m180,
+  "src/tide/characterMerge/roles.ts": m181,
+  "src/tide/characterMerge/selfCheck.ts": m182,
+  "src/tide/characterMerge/sourceImages.ts": m183,
+  "src/tide/characterMerge/wordDiff.ts": m184,
+  "src/tide/characterUpdate.ts": m185,
+  "src/tide/characterUpdateGreetings.ts": m186,
+  "src/tide/characterUpdateMerge.ts": m187,
+  "src/tide/characterUpdateOnboarding.ts": m188,
+  "src/tide/characterUpdateTargets.ts": m189,
+  "src/tide/plugin/detach.ts": m190,
+  "src/tide/plugin/merge.ts": m191,
+  "src/ui/aifix.js": m192,
+  "src/ui/aistopbtn.js": m193,
+  "src/ui/app.js": m194,
+  "src/ui/assets.js": m195,
+  "src/ui/cbs.js": m196,
+  "src/ui/codeedit.js": m197,
+  "src/ui/color.js": m198,
+  "src/ui/dicedetail.js": m199,
+  "src/ui/discovercard.js": m200,
+  "src/ui/dom.js": m201,
+  "src/ui/entrypicker.js": m202,
+  "src/ui/ext.js": m203,
+  "src/ui/glasscss.js": m204,
+  "src/ui/glassthemes.js": m205,
+  "src/ui/homegrid.js": m206,
+  "src/ui/hostupdate.js": m207,
+  "src/ui/icons.js": m208,
+  "src/ui/kit.js": m209,
+  "src/ui/legacy.js": m210,
+  "src/ui/lookparts.js": m211,
+  "src/ui/mascot-data.js": m212,
+  "src/ui/mascot.js": m213,
+  "src/ui/memstate.js": m214,
+  "src/ui/multiselect.js": m215,
+  "src/ui/navcss.js": m216,
+  "src/ui/onboarding.js": m217,
+  "src/ui/placer.js": m218,
+  "src/ui/prefs.js": m219,
+  "src/ui/probpick.js": m220,
+  "src/ui/quickset.js": m221,
+  "src/ui/screens/about.js": m222,
+  "src/ui/screens/addonmaker.js": m223,
+  "src/ui/screens/addonsui.js": m224,
+  "src/ui/screens/aibot.js": m225,
+  "src/ui/screens/aibotsteps.js": m226,
+  "src/ui/screens/assetdupes.js": m227,
+  "src/ui/screens/assetfix.js": m228,
+  "src/ui/screens/assetmgr.js": m229,
+  "src/ui/screens/bugreport.js": m230,
+  "src/ui/screens/characters.js": m231,
+  "src/ui/screens/chareditor.js": m232,
+  "src/ui/screens/cocoa.js": m233,
+  "src/ui/screens/dev.js": m234,
+  "src/ui/screens/devaff.js": m235,
+  "src/ui/screens/devtools.js": m236,
+  "src/ui/screens/editor.js": m237,
+  "src/ui/screens/featurefind.js": m238,
+  "src/ui/screens/greetings.js": m239,
+  "src/ui/screens/history.js": m240,
+  "src/ui/screens/home.js": m241,
+  "src/ui/screens/homegridcss.js": m242,
+  "src/ui/screens/homegridui.js": m243,
+  "src/ui/screens/homestate.js": m244,
+  "src/ui/screens/infocard.js": m245,
+  "src/ui/screens/lorebulk.js": m246,
+  "src/ui/screens/loredusk.js": m247,
+  "src/ui/screens/lorelog.js": m248,
+  "src/ui/screens/managehubcss.js": m249,
+  "src/ui/screens/memhubcss.js": m250,
+  "src/ui/screens/memory/chatload.js": m251,
+  "src/ui/screens/memory/common.js": m252,
+  "src/ui/screens/memory/hypamodal.js": m253,
+  "src/ui/screens/memory/setup.js": m254,
+  "src/ui/screens/memory/skillchat.js": m255,
+  "src/ui/screens/memory/skills.js": m256,
+  "src/ui/screens/memory/username.js": m257,
+  "src/ui/screens/memthemecss.js": m258,
+  "src/ui/screens/modlinks.js": m259,
+  "src/ui/screens/modules.js": m260,
+  "src/ui/screens/newbot.js": m261,
+  "src/ui/screens/patchui.js": m262,
+  "src/ui/screens/placeholder.js": m263,
+  "src/ui/screens/presets.js": m264,
+  "src/ui/screens/promptstab.js": m265,
+  "src/ui/screens/provider/css.js": m266,
+  "src/ui/screens/provider/glance.js": m267,
+  "src/ui/screens/provider/ui.js": m268,
+  "src/ui/screens/reportbell.js": m269,
+  "src/ui/screens/roulettepop.js": m270,
+  "src/ui/screens/sectionhome.js": m271,
+  "src/ui/screens/settings.js": m272,
+  "src/ui/screens/settingstab.js": m273,
+  "src/ui/screens/sizemeter.js": m274,
+  "src/ui/screens/sizemeter/css.js": m275,
+  "src/ui/screens/tools.js": m276,
+  "src/ui/screens/updsettings.js": m277,
+  "src/ui/screens/workhome.js": m278,
+  "src/ui/screens/workhubcss.js": m279,
+  "src/ui/screens/workshoplink.js": m280,
+  "src/ui/screentours.js": m281,
+  "src/ui/scrollguard.js": m282,
+  "src/ui/sortable.js": m283,
+  "src/ui/staleguard.js": m284,
+  "src/ui/styles.js": m285,
+  "src/ui/tabs.js": m286,
+  "src/ui/theme.js": m287,
+  "src/ui/themekit.js": m288,
+  "src/ui/toast.js": m289,
+  "src/ui/tooltip.js": m290,
+  "src/ui/tour.js": m291,
+  "src/ui/undo.js": m292,
+  "src/ui/watch.js": m293,
+  "src/ui/whatsnew.js": m294,
+  "src/vendor/fflate-full.js": m295,
+  "src/vendor/fflate.js": m296,
+  "src/vendor/msgpackr.js": m297,
+  "src/vendor/noble.js": m298,
+  "src/vendor/re2js.js": m299
 };
