@@ -12,6 +12,7 @@ function makeDef() {
   for (const [s, k] of [["R", -1], ["L", 1]]) addBone(d, "hwing" + s, "spine", V3(k * .7, d.p.h + .55, -.6), V3(k * 2.6, d.p.h + 1.4, -2)); // 뒷날개
   return d;
 }
+const PANES = []; // 늘어나는 막: { P,Q,R(꼭짓점), bones:[P뼈,Q뼈,R뼈] }
 function build(D) {
   const { J, T, p } = D, h = p.h, core = new Map(), cry = new Map();
   const put = (M, b, X, Y, Z, c) => { if (max(abs(X), abs(Y), abs(Z)) > 126) return; let m = M.get(b); if (!m) M.set(b, (m = new Map())); m.set((X + 128) + (Y + 128) * 256 + (Z + 128) * 65536, c); };
@@ -22,7 +23,7 @@ function build(D) {
   // 결정 가시: 단면 마름모로 가늘어지는 기둥. 밑동은 어두운 테
   const spike = (b, a, e, r, seam = true) => { const d = [e[0] - a[0], e[1] - a[1], e[2] - a[2]], L = d[0] ** 2 + d[1] ** 2 + d[2] ** 2, ci = floor(hash(a[0], a[1], a[2]) * XT.length); scan(cry, b, [min(a[0], e[0]) - r, min(a[1], e[1]) - r, min(a[2], e[2]) - r], [max(a[0], e[0]) + r, max(a[1], e[1]) + r, max(a[2], e[2]) + r], (x, y, z) => { const t = ((x - a[0]) * d[0] + (y - a[1]) * d[1] + (z - a[2]) * d[2]) / L; if (t < 0 || t > 1) return null; const q = [x - a[0] - d[0] * t, y - a[1] - d[1] * t, z - a[2] - d[2] * t], rr = r * (1 - t * .92); return abs(q[0]) + abs(q[1]) + abs(q[2]) <= rr * 1.3 ? XT[(ci + (q[0] > 0 ? 1 : 0)) % XT.length] : null; }); if (seam) cap(core, b, a, [a[0] + d[0] * .12, a[1] + d[1] * .12, a[2] + d[2] * .12], r * .9, r * .8, CW.SEAM); };
   // 결정판: 삼각형, 칸 경계와 테두리는 납선(불투명)
-  const pane = (b, P, Q, R, th, cells) => { const u = [Q[0] - P[0], Q[1] - P[1], Q[2] - P[2]], v = [R[0] - P[0], R[1] - P[1], R[2] - P[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], nl = hypot(...n), uu = u[0] ** 2 + u[1] ** 2 + u[2] ** 2, vv = v[0] ** 2 + v[1] ** 2 + v[2] ** 2, uv = u[0] * v[0] + u[1] * v[1] + u[2] * v[2], den = uu * vv - uv * uv;
+  const pane = (b0, P, Q, R, th, cells) => { let b = b0; if (Array.isArray(b0)) { b = "P#" + PANES.length; PANES.push({ P, Q, R, bones: b0 }); } const u = [Q[0] - P[0], Q[1] - P[1], Q[2] - P[2]], v = [R[0] - P[0], R[1] - P[1], R[2] - P[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], nl = hypot(...n), uu = u[0] ** 2 + u[1] ** 2 + u[2] ** 2, vv = v[0] ** 2 + v[1] ** 2 + v[2] ** 2, uv = u[0] * v[0] + u[1] * v[1] + u[2] * v[2], den = uu * vv - uv * uv;
     scan(cry, b, [min(P[0], Q[0], R[0]) - th, min(P[1], Q[1], R[1]) - th, min(P[2], Q[2], R[2]) - th], [max(P[0], Q[0], R[0]) + th, max(P[1], Q[1], R[1]) + th, max(P[2], Q[2], R[2]) + th], (x, y, z) => { const w = [x - P[0], y - P[1], z - P[2]]; if (abs((w[0] * n[0] + w[1] * n[1] + w[2] * n[2]) / nl) > th) return null; const wu = w[0] * u[0] + w[1] * u[1] + w[2] * u[2], wv = w[0] * v[0] + w[1] * v[1] + w[2] * v[2], s = (vv * wu - uv * wv) / den, t = (uu * wv - uv * wu) / den; if (s < 0 || t < 0 || s + t > 1) return null;
       let d1 = 9, d2 = 9, id = 0; for (let i = 0; i < cells.length; i++) { const d = hypot((s - cells[i][0]) * 1.4, t - cells[i][1]); if (d < d1) { d2 = d1; d1 = d; id = i; } else if (d < d2) d2 = d; }
       if (d2 - d1 < .035 || s < .025 || t < .025 || s + t > .965) { put(core, b, floor(x / VS), floor(y / VS), floor(z / VS), CW.SEAM); return null; }
@@ -55,15 +56,19 @@ function build(D) {
     for (let i = 1; i < 6; i++) { const t = i / 6, a = sh.map((v, j) => v + (el[j] - v) * t); spike("uarm" + s, a, [a[0] + k * .1, a[1] + .55, a[2] + .3], .14); }
     for (let i = 1; i < 5; i++) { const t = i / 5, a = el.map((v, j) => v + (wr[j] - v) * t); spike("farm" + s, a, [a[0], a[1] + .5, a[2] + .3], .12); }
     for (let i = 1; i <= 3; i++) bone("fing" + i + s, .12, .05, CW.SEAM);
-    pane("fing1" + s, wr, f[0], el, .07, cellsOf(5, 1 + k)); pane("fing2" + s, wr, f[0], f[1], .07, cellsOf(4, 3 + k)); pane("fing3" + s, wr, f[1], f[2], .07, cellsOf(4, 5 + k));
-    pane("fing3" + s, wr, f[2], mb, .07, cellsOf(5, 7 + k)); pane("uarm" + s, el, wr, mb, .07, cellsOf(5, 9 + k)); pane("uarm" + s, sh, el, mb, .07, cellsOf(4, 11 + k));
+    pane(["hand" + s, "fing1" + s, "farm" + s], wr, f[0], el, .07, cellsOf(5, 1 + k)); pane(["hand" + s, "fing1" + s, "fing2" + s], wr, f[0], f[1], .07, cellsOf(4, 3 + k)); pane(["hand" + s, "fing2" + s, "fing3" + s], wr, f[1], f[2], .07, cellsOf(4, 5 + k));
+    pane(["hand" + s, "fing3" + s, "pelvis"], wr, f[2], mb, .07, cellsOf(5, 7 + k)); pane(["farm" + s, "hand" + s, "pelvis"], el, wr, mb, .07, cellsOf(5, 9 + k)); pane(["uarm" + s, "farm" + s, "pelvis"], sh, el, mb, .07, cellsOf(4, 11 + k));
     // 뒷날개
     const hb = A(J["hwing" + s]), ht = A(T["hwing" + s]), h3 = [ht[0] * .72, hb[1] - .5, ht[2] - .6]; bone("hwing" + s, .16, .07, CW.SEAM); pane("hwing" + s, hb, ht, h3, .06, cellsOf(4, 13 + k)); pane("hwing" + s, hb, h3, [hb[0] * 1.2, hb[1] - .4, hb[2] - 1], .06, cellsOf(3, 15 + k));
   }
   return { core, cry };
 }
 const cryMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, emissive: 0x9fe8ff, emissiveIntensity: 0 });
-const geoOf = (V, BI) => { const out = { p: [], n: [], c: [], b: [], w: [], i: [], fx: [], pv: [], ax: [] }; for (const [bn, m] of V) mesh(m, 256, VS, (x, y, z) => [x, y, z], BI[bn], out); const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(out.p, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(out.n, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(out.c, 3)); g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(out.b, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(out.w, 4)); g.setAttribute("aFx", new THREE.Float32BufferAttribute(out.fx, 2)); g.setAttribute("aPv", new THREE.Float32BufferAttribute(out.pv, 3)); g.setAttribute("aAx", new THREE.Float32BufferAttribute(out.ax, 3)); g.setIndex(out.i); return [g, out.i.length / 3]; };
+// 막 정점: 삼각형 안의 위치(무게중심 좌표)만큼 세 뼈를 섞는다 → 손가락을 접으면 막이 접히고 펴면 늘어난다
+function blend(out, from, pn, BI) { const { P, Q, R, bones } = pn, u = [Q[0] - P[0], Q[1] - P[1], Q[2] - P[2]], v = [R[0] - P[0], R[1] - P[1], R[2] - P[2]], uu = u[0] ** 2 + u[1] ** 2 + u[2] ** 2, vv = v[0] ** 2 + v[1] ** 2 + v[2] ** 2, uv = u[0] * v[0] + u[1] * v[1] + u[2] * v[2], den = uu * vv - uv * uv;
+  for (let i = from; i < out.p.length / 3; i++) { const w = [out.p[i * 3] - P[0], out.p[i * 3 + 1] - P[1], out.p[i * 3 + 2] - P[2]], wu = w[0] * u[0] + w[1] * u[1] + w[2] * u[2], wv = w[0] * v[0] + w[1] * v[1] + w[2] * v[2]; let s = max(0, (vv * wu - uv * wv) / den), t = max(0, (uu * wv - uv * wu) / den); const k = s + t; if (k > 1) { s /= k; t /= k; }
+    out.b.splice(i * 4, 4, BI[bones[0]], BI[bones[1]], BI[bones[2]], 0); out.w.splice(i * 4, 4, 1 - s - t, s, t, 0); } }
+const geoOf = (V, BI) => { const out = { p: [], n: [], c: [], b: [], w: [], i: [], fx: [], pv: [], ax: [] }; for (const [bn, m] of V) { const from = out.p.length / 3; mesh(m, 256, VS, (x, y, z) => [x, y, z], bn.startsWith("P#") ? 0 : BI[bn], out); if (bn.startsWith("P#")) blend(out, from, PANES[+bn.slice(2)], BI); } const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(out.p, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(out.n, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(out.c, 3)); g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(out.b, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(out.w, 4)); g.setAttribute("aFx", new THREE.Float32BufferAttribute(out.fx, 2)); g.setAttribute("aPv", new THREE.Float32BufferAttribute(out.pv, 3)); g.setAttribute("aAx", new THREE.Float32BufferAttribute(out.ax, 3)); g.setIndex(out.i); return [g, out.i.length / 3]; };
 let GEO = null, DEF = null;
 /** 유리날개룡 하나 → { root, B, act(이름, t), setLight(0~1), tris } */
 export function makeCrystalWing() {
