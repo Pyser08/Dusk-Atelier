@@ -1,11 +1,14 @@
-// 대검 자세·장비 미리보기: /gs
-import * as THREE from "three"; import { makeHunter } from "./hunter.js"; import { makeGreatSword } from "./greatsword.js"; import { poseGS, GS_STANCE } from "./gsstance.js";
+// 대검 동작 미리보기: /gs  — 버튼으로 동작 재생. ?c=동작&t=초 로 한 장면 고정
+import * as THREE from "three"; import { makeHunter } from "./hunter.js"; import { makeGreatSword } from "./greatsword.js"; import { GSPlayer, CLIPS } from "./gsanim.js";
 const $ = (q) => document.querySelector(q), Q = new URLSearchParams(location.search), gl = new THREE.WebGLRenderer({ antialias: true }); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.shadowMap.enabled = true; $("#v").append(gl.domElement);
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0x3a3450); const cam = new THREE.PerspectiveCamera(30, 1, .1, 80);
 scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x6a5060, 1.9)); const sun = new THREE.DirectionalLight(0xffe2bd, 3.2); sun.position.set(-3, 7, 5); sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5 }); scene.add(sun);
 const fl = new THREE.Mesh(new THREE.CircleGeometry(12, 40), new THREE.MeshLambertMaterial({ color: 0x6a6078 })); fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true; scene.add(fl);
 const A = makeHunter({ sex: "m" }), Bh = makeHunter({ sex: "f", hair: 0x8a4f2a }), ga = makeGreatSword("iron"), gb = makeGreatSword("crystal"); A.root.add(ga.obj); Bh.root.add(gb.obj); A.root.position.x = -1.4; Bh.root.position.x = 1.4; scene.add(A.root, Bh.root);
-let st = Q.get("s") ?? "drawn", yaw = +(Q.get("yaw") ?? .5), drag = null; for (const k in GS_STANCE) { const b = document.createElement("button"); b.textContent = GS_STANCE[k].n; b.onclick = () => (st = k); $("#b").append(b); }
-gl.domElement.onpointerdown = (e) => (drag = e.clientX); onpointerup = () => (drag = null); onpointermove = (e) => { if (drag != null) { yaw += (e.clientX - drag) * .01; drag = e.clientX; } };
+const P = [new GSPlayer(A, ga), new GSPlayer(Bh, gb)], fix = Q.get("c"), fixT = +(Q.get("t") ?? 0); if (fix) for (const p of P) p.play(fix);
+const play = (n) => { for (const p of P) p.play(n); };
+for (const [n, l] of [["draw", "발도"], ["slash", "내려베기"], ["chargeIn", "모으기(누름)"], ["release", "모아 베기(뗌)"], ["guardIn", "가드"], ["guardOut", "가드 풀기"], ["sheathe", "납도"]]) { const b = document.createElement("button"); b.textContent = l; b.onclick = () => play(n); $("#b").append(b); }
+let yaw = +(Q.get("yaw") ?? .5), drag = null; gl.domElement.onpointerdown = (e) => (drag = e.clientX); onpointerup = () => (drag = null); onpointermove = (e) => { if (drag != null) { yaw += (e.clientX - drag) * .01; drag = e.clientX; } };
 const size = () => { const r = $("#v").getBoundingClientRect(); gl.setSize(r.width, r.height); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }; addEventListener("resize", size); size();
-const clock = new THREE.Clock(); gl.setAnimationLoop(() => { const t = clock.getElapsedTime(); for (const h of [A, Bh]) h.root.rotation.y = yaw; poseGS(A, ga, st, t); poseGS(Bh, gb, st, t); $("#i").textContent = `${GS_STANCE[st].n} · 왼쪽 ${ga.n} · 오른쪽 ${gb.n}`; cam.position.set(0, 2, 10); cam.lookAt(0, 1.2, 0); gl.render(scene, cam); });
+if (fix) { for (const h of [A, Bh]) h.root.rotation.y = yaw; let t = 0; while (t < fixT) { for (const p of P) { p.update(1 / 60, { t }); if (p.cur !== fix && !CLIPS[fix].loop) p.cur = fix; } t += 1 / 60; } }
+const clock = new THREE.Clock(); let el = fixT; gl.setAnimationLoop(() => { const dt = fix ? 0 : Math.min(.05, clock.getDelta()); el += dt; for (const h of [A, Bh]) h.root.rotation.y = yaw; if (!fix) for (const p of P) p.update(dt, { t: el }); $("#i").textContent = `${CLIPS[P[0].cur].n} · 왼쪽 ${ga.n} · 오른쪽 ${gb.n}`; cam.position.set(0, 2, 10); cam.lookAt(0, 1.2, 0); gl.render(scene, cam); });
