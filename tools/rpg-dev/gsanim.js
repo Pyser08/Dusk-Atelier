@@ -25,10 +25,10 @@ export const POSE = {
 export const CLIPS = {
   draw: { keys: [[0, "back"], [.16, "reach", "io"], [.42, "pull", "out"], [.62, "drawn", "back"], [.95, "drawn"]], next: "drawnIdle", n: "발도" },
   sheathe: { keys: [[0, "drawn"], [.3, "pull", "io"], [.55, "reach", "io"], [.8, "back", "out"]], next: "idle", n: "납도" },
-  slash: { keys: [[0, "drawn"], [.38, "wind", "out"], [.5, "wind", "lin", { shake: .3 }], [.6, "strike", "in"], [.66, "impact", "snap"], [.95, "impact", "lin", { drop: 4.4 }], [1.45, "drawn", "io"]], next: "drawnIdle", n: "내려베기", hit: .64 },
+  slash: { keys: [[0, "drawn"], [.55, "wind", "out"], [.72, "wind", "lin", { shake: .35, drop: 2.9 }], [.84, "strike", "in"], [.9, "impact", "snap"], [1.35, "impact", "lin", { drop: 4.7 }], [2.1, "drawn", "io"]], next: "drawnIdle", n: "내려베기", hit: .88 },
   chargeIn: { keys: [[0, "drawn"], [.4, "wind", "out"], [.75, "charge", "io"]], next: "chargeHold", n: "모으기" },
   chargeHold: { keys: [[0, "charge"], [1, "charge"]], loop: true, n: "모으는 중", shake: true },
-  release: { keys: [[0, "charge"], [.1, "strike", "in"], [.16, "impact", "snap"], [.6, "impact", "lin", { drop: 4.4 }], [1.15, "drawn", "io"]], next: "drawnIdle", n: "모아 베기", hit: .14 },
+  release: { keys: [[0, "charge"], [.12, "strike", "in"], [.18, "impact", "snap"], [.75, "impact", "lin", { drop: 4.8 }], [1.55, "drawn", "io"]], next: "drawnIdle", n: "모아 베기", hit: .16 },
   guardIn: { keys: [[0, "drawn"], [.14, "guard", "back"]], next: "guardHold", n: "가드" },
   guardHold: { keys: [[0, "guard"], [1, "guard"]], loop: true, n: "가드 중" },
   guardOut: { keys: [[0, "guard"], [.25, "drawn", "io"]], next: "drawnIdle", n: "가드 풀기" },
@@ -48,7 +48,7 @@ export function sampleClip(name, t, back) { const C = CLIPS[name], K = C.keys, e
   if (A.sword && !B.sword && back) B = { ...B, sword: k > .98 ? null : back };
   const S = mix(A, B, k); if (C.shake) S.shake = .35 + min(1, t / 2) * .9; return { S, done: !C.loop && t >= end, C }; }
 // ── 몸 스프링: 숙임·비틀기·낮춤이 목표를 살짝 넘었다 돌아온다 ──
-export class BodySpring { constructor() { this.v = {}; this.x = null; } step(S, dt, f = 9, z = .5) { if (!this.x) { this.x = { drop: S.drop, lean: S.lean, twist: S.twist }; for (const k in this.x) this.v[k] = 0; } const w = 2 * PI * f; for (const k in this.x) { const a = w * w * (S[k] - this.x[k]) - 2 * z * w * this.v[k]; this.v[k] += a * dt; this.x[k] += this.v[k] * dt; } return { ...S, ...this.x, raw: S }; } kick(k, v) { if (this.v[k] != null) this.v[k] += v; } }
+export class BodySpring { constructor() { this.v = {}; this.x = null; } step(S, dt, f = 9, z = .5) { if (!this.x) { this.x = { drop: S.drop, lean: S.lean, twist: S.twist }; for (const k in this.x) this.v[k] = 0; } const w = 2 * PI * f; const n = Math.ceil(dt * w / .25), h2 = dt / n; for (let i = 0; i < n; i++) for (const k in this.x) { const a = w * w * (S[k] - this.x[k]) - 2 * z * w * this.v[k]; this.v[k] += a * h2; this.x[k] += this.v[k] * h2; } return { ...S, ...this.x, raw: S }; } kick(k, v) { if (this.v[k] != null) this.v[k] += v; } }
 // ── 등에 멘 칼 자리(가슴 기준) ──
 const BACK = { grip: [-4.2, 7.8, -4.6], dir: [.42, -1, -.05], edge: [-1, -.42, 0] };
 function backPose(h) { const B = h.B; B.chest.updateMatrixWorld(true); const cq = B.chest.getWorldQuaternion(new THREE.Quaternion()), rq = h.root.getWorldQuaternion(new THREE.Quaternion()).invert(), g = h.root.worldToLocal(B.chest.localToWorld(V(...BACK.grip).multiplyScalar(HU))).divideScalar(HU), q = rq.multiply(cq).multiply(basis(BACK.dir, BACK.edge)); return { grip: g.toArray(), dir: V(0, 1, 0).applyQuaternion(q).toArray(), edge: V(1, 0, 0).applyQuaternion(q).toArray() }; }
@@ -71,17 +71,31 @@ export function applyPose(h, gs, S, o = {}) {
   for (const [s, i, k] of [["R", 0, -1], ["L", 1, 1]]) { const f = S.feet[i], ph = gt.phase + (i ? PI : 0), st = gt.amt ? [sin(ph) * 7 * gt.amt, max(0, cos(ph)) * 3.2 * gt.amt] : [0, 0], fx = gt.amt ? L(f[0], k * 2.6, gt.amt) : f[0], fz = gt.amt ? L(f[2], 0, gt.amt) + st[0] : f[2], tg = M(fx, f[1] + st[1], fz); const yaw = (f === rear ? .65 : .12) * still * k, kd = [Math.sin(yaw), Math.cos(yaw)]; ik2(r, "ul" + s, "ll" + s, tg, M(fx + kd[0] * 12, 14, fz + kd[1] * 12)); aim(r, "ft" + s, M(kd[0], -.4 - (gt.amt ? max(0, -cos(ph)) * .6 : 0), kd[1]).sub(M(0, 0, 0))); } // 뒷발은 바깥으로 벌린다
   const back = backPose(h), sw = S.sword ?? back; if (gs) place(h, gs, sw, sh);
   // 손
-  if (S.hands === "none" || !gs) { for (const [s, k] of [["R", -1], ["L", 1]]) { B["ua" + s].rotation.set(sin(t * 2 + k) * .03 - sin(gt.phase + (k < 0 ? PI : 0)) * .5 * gt.amt, 0, k * .1); B["la" + s].rotation.x = -.15 - gt.amt * .35; } h.root.updateMatrixWorld(true); return; }
-  const handTo = (s, k, p) => { const gp = gs.obj.localToWorld(p), so = B["ua" + s].getWorldPosition(V()), wr = gp.clone().addScaledVector(so.clone().sub(gp).normalize(), 1.7 * HU); ik2(r, "ua" + s, "la" + s, wr, M(k * (s === "R" ? 16 : 8), 14, s === "R" ? -2 : -6)); aim(r, "h" + s, gp.clone().sub(B["h" + s].getWorldPosition(V()))); };
-  handTo("R", -1, gs.pt("main")); if (S.hands === "both") handTo("L", 1, gs.pt("off")); else { B.uaL.rotation.set(-.2 + sin(t * 2) * .03, 0, .25); B.laL.rotation.x = -.5; h.root.updateMatrixWorld(true); }
+  if (S.hands === "none" || !gs) { for (const [s, k] of [["R", -1], ["L", 1]]) { B["ua" + s].rotation.set(sin(t * 2 + k) * .03 - sin(gt.phase + (k < 0 ? PI : 0)) * .5 * gt.amt, 0, k * .1); B["la" + s].rotation.x = -.15 - gt.amt * .35; B["fg" + s].rotation.z = -k * .4; } h.root.updateMatrixWorld(true); return; }
+  const ax = V(0, 1, 0).applyQuaternion(gs.obj.getWorldQuaternion(new THREE.Quaternion())); // 손잡이 축(월드)
+  const handTo = (s, k, p) => { const gp = gs.obj.localToWorld(p.clone()), cj = B["cl" + s].getWorldPosition(V()), cr = _r.copy(h.def.T["cl" + s]).sub(h.def.J["cl" + s]).normalize().applyQuaternion(B["cl" + s].parent.getWorldQuaternion(new THREE.Quaternion()));
+    aim(r, "cl" + s, cr.clone().lerp(gp.clone().sub(cj).normalize(), .22)); // 팔을 뻗으면 어깨가 따라 나간다
+    const so = B["ua" + s].getWorldPosition(V()), wr = gp.clone().addScaledVector(so.clone().sub(gp).normalize(), 1.9 * HU); ik2(r, "ua" + s, "la" + s, wr, M(k * (s === "R" ? 16 : 8), 14, s === "R" ? -2 : -6)); aim(r, "h" + s, gp.clone().sub(B["h" + s].getWorldPosition(V())));
+    roll(B["h" + s], h.def, "h" + s, ax); B["fg" + s].rotation.z = -k * 1.55; B["tb" + s].rotation.set(.6, 0, k * .5); };
+  handTo("R", -1, gs.pt("main")); if (S.hands === "both") handTo("L", 1, gs.pt("off")); else { B.uaL.rotation.set(-.2 + sin(t * 2) * .03, 0, .25); B.laL.rotation.x = -.5; B.fgL.rotation.z = -.4; h.root.updateMatrixWorld(true); }
+  h.root.updateMatrixWorld(true);
 }
+const _r = V();
+// 손을 긴 축으로 돌려 손바닥 폭(z축)이 손잡이 축과 나란하게
+function roll(b, def, n, axis) { const q = b.getWorldQuaternion(new THREE.Quaternion()), long = V().copy(def.T[n]).sub(def.J[n]).normalize().applyQuaternion(q), cz = V(0, 0, 1).applyQuaternion(q), want = axis.clone().addScaledVector(long, -axis.dot(long)).normalize(); if (want.lengthSq() < 1e-6) return; const ang = Math.atan2(cz.clone().cross(want).dot(long), cz.dot(want)), wq = new THREE.Quaternion().setFromAxisAngle(long, ang).multiply(q), pq = b.parent.getWorldQuaternion(new THREE.Quaternion()).invert(); b.quaternion.copy(pq.multiply(wq)); b.updateMatrixWorld(true); }
 function place(h, gs, sw, sh = 0) { gs.obj.position.set(...sw.grip).multiplyScalar(HU); gs.obj.position.x += sh; gs.obj.quaternion.copy(basis(sw.dir, sw.edge)); h.root.updateMatrixWorld(true); }
 /** 동작 재생기: play(이름) → update(dt) 가 자세를 돌려준다 */
 export class GSPlayer {
-  constructor(h, gs) { this.h = h; this.gs = gs; this.cur = "idle"; this.t = 0; this.spring = new BodySpring(); this.onHit = null; this.hitDone = false; }
+  constructor(h, gs) { this.h = h; this.gs = gs; this.cur = "idle"; this.t = 0; this.spring = new BodySpring(); this.onHit = null; this.hitDone = false; this.stop = 0; this.sg = null; this.sv = V(); this.sq = new THREE.Quaternion(); this.prev = null; }
   play(n) { if (!CLIPS[n]) return; this.cur = n; this.t = 0; this.hitDone = false; }
   get drawn() { return !/^(idle|sheathe)$/.test(this.cur) || (this.cur === "sheathe" && this.t < .55); }
   get busy() { const C = CLIPS[this.cur]; return !C.loop && this.t < C.keys[C.keys.length - 1][0] * .8; }
-  update(dt, o = {}) { this.t += dt; let { S, done, C } = sampleClip(this.cur, this.t, this.back); if (C.hit != null && !this.hitDone && this.t >= C.hit) { this.hitDone = true; this.spring.kick("drop", -18); this.spring.kick("lean", 3); this.onHit?.(this.cur); } if (done && C.next) { this.play(C.next); ({ S } = sampleClip(this.cur, 0, this.back)); }
-    const B = this.spring.step(S, dt); applyPose(this.h, this.gs, B, o); this.back = backPose(this.h); return B; }
+  update(dt, o = {}) {
+    const cdt = this.stop > 0 ? dt * .06 : dt; this.stop -= dt; this.t += cdt; // 히트스톱: 맞는 순간 시간이 거의 멈춘다
+    let { S, done, C } = sampleClip(this.cur, this.t, this.back); if (C.hit != null && !this.hitDone && this.t >= C.hit) { this.hitDone = true; this.stop = .1; this.spring.kick("drop", -26); this.spring.kick("lean", 4); this.onHit?.(this.cur); } if (done && C.next) { this.play(C.next); ({ S } = sampleClip(this.cur, 0, this.back)); }
+    // 칼 관성: 칼은 무거워서 목표를 늦게 따라가고 살짝 넘친다. 빠르게 휘두르는 구간만 단단히 붙는다
+    if (S.sword) { const tg = V(...S.sword.grip), tq = basis(S.sword.dir, S.sword.edge); if (!this.sg) { this.sg = tg.clone(); this.sv.set(0, 0, 0); this.sq.copy(tq); this.prev = tg.clone(); }
+      const sp = this.prev.distanceTo(tg) / Math.max(1e-4, dt); this.prev.copy(tg); const stiff = sp > 30 || (C.hit != null && this.t > C.hit - .08 && this.t < C.hit + .55), f = stiff ? 16 : 4.2, z = stiff ? .9 : .62, w = 2 * PI * f, n = Math.ceil(dt * w / .25), h2 = dt / n; for (let i = 0; i < n; i++) { const a = tg.clone().sub(this.sg).multiplyScalar(w * w).addScaledVector(this.sv, -2 * z * w); this.sv.addScaledVector(a, h2); this.sg.addScaledVector(this.sv, h2); } /* 잘게 나눠 계산(발산 방지) */ this.sq.slerp(tq, 1 - Math.exp(-dt * f * 1.4));
+      S = { ...S, sword: { grip: this.sg.toArray(), dir: V(0, 1, 0).applyQuaternion(this.sq).toArray(), edge: V(1, 0, 0).applyQuaternion(this.sq).toArray() } }; } else this.sg = null;
+    const Bd = this.spring.step(S, dt); applyPose(this.h, this.gs, Bd, o); this.back = backPose(this.h); return Bd; }
 }
