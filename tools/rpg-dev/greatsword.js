@@ -1,6 +1,6 @@
 // 대검: 공용 뼈대(치수 + 장착점) → 디자인별 복셀 → 메시 하나
 // 대검 자체 좌표: 원점 = 주 손잡이(가드 바로 아래), +y = 칼끝 방향, +x = 날 쪽, -x = 칼등, ±z = 칼면
-import * as THREE from "three"; import { mesh, mat } from "./voxkit.js";
+import * as THREE from "three"; import { mesh, mat } from "./voxkit.js"; import { GS_CUSTOM, VS as VSC } from "./gsdesigns.js";
 const VS = .022; const { abs, max, min, floor, sin, hypot } = Math;
 const hash = (x, y, z) => { const n = sin(x * 12.99 + y * 78.23 + z * 37.72) * 43758.55; return n - floor(n); };
 const dk = (c, k) => new THREE.Color(c).multiplyScalar(k).getHex();
@@ -44,7 +44,7 @@ function build(d, F = GS_FRAME) {
 }
 /** 대검 하나 → { obj(Group), pt(이름) → 대검 좌표 Vector3, n } */
 export function makeGreatSword(kind = "iron") {
-  const d = GS_DESIGNS[kind] ?? IRON, out = { p: [], n: [], c: [], b: [], w: [], i: [], fx: [], pv: [], ax: [] }; mesh(build(d), 256, VS, (x, y, z) => [x, y, z], 0, out);
+  const cu = GS_CUSTOM[kind], d = cu ? { n: cu.n } : GS_DESIGNS[kind] ?? IRON, out = { p: [], n: [], c: [], b: [], w: [], i: [], fx: [], pv: [], ax: [] }; mesh(cu ? cu.f() : build(d), 256, cu ? VSC : VS, (x, y, z) => [x, y, z], 0, out); // 몬스터 파생 디자인은 gsdesigns.js
   const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(out.p, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(out.n, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(out.c, 3)); g.setAttribute("aFx", new THREE.Float32BufferAttribute(out.fx, 2)); g.setAttribute("aPv", new THREE.Float32BufferAttribute(out.pv, 3)); g.setAttribute("aAx", new THREE.Float32BufferAttribute(out.ax, 3)); g.setIndex(out.i);
   const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true })); m.castShadow = true; const obj = new THREE.Group(); obj.add(m);
   return { obj, n: d.n, tris: out.i.length / 3, pt: (k) => new THREE.Vector3(...GS_FRAME.pts[k]) };
