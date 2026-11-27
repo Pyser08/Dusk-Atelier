@@ -4,7 +4,7 @@ export { normSkill, llmSkill, fitLevel, normUnit, normWeapon, importModule, PRE,
 export { alive, cells, covers, terr, uterr, unitAt, reach, pathTo, stops, threat, danger, standable, wr, ammo, canShoot, coverFrom, living, est, pairBonus, syncRears } from "./board.js";
 export { forecast, options, healAmount, actAttack, actHeal, actSupport, actWait, actSeize, canSeize, outcome, travel, actWatch, actReload, actItem, actGive, actPair, actSwitch, actDrop, actRetreat, mods, finish } from "./combat.js";
 export { allDone, endTurn, loadEncounter, spawn, unspawn } from "./phase.js";
-export { runTeam } from "./ai.js";
+export { runTeam, attackersAt, intentOf } from "./ai.js";
 export { planGrowth, applyGrowth, regen, expRate, reqLevel, rescale } from "./growth.js";
 export { context, storyNote, digest, resultLine, resultCard, resultFacts, plainResults, RES_RE, RESULT_BLOCK_RE, cardFromPlain } from "./digest.js";
 export { mapOf, loadMap, endReplay, snapshot, restart, mark, pulse, pulseMax, pulseReset, retro, rename } from "./saves.js";
@@ -36,3 +36,4 @@ export * from "./monmats.js";
 export * from "./armor.js";
 export * from "./world.js";
 export * from "./naming.js";
+export { groupOf } from "./armor.js";

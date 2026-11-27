@@ -101,3 +101,34 @@
 .bg-top,.bg-page,.bg-chips,.bg-inv{padding-left:max(14px,calc((100% - 760px) / 2))!important;padding-right:max(14px,calc((100% - 760px) / 2))!important}
 .bg-paper{grid-template-columns:minmax(0,1fr) 120px minmax(0,1fr)}
 @media (min-width:700px){.bg-paper{grid-template-columns:minmax(0,1fr) 170px minmax(0,1fr)}.bg-3d{max-height:340px}}
+
+/* ═══ 가방 v5: 전투 화면과 같은 톤(반투명 어두운 판 · 회백색 글자 · 바랜 금색 하나 · 둥근 모서리) ═══ */
+.bg{--tx:#f2ece0;--dm:#c4bcae;--ac:#c6ad78;--ln:rgba(236,226,206,.14);--p:rgba(22,20,27,.9);background:radial-gradient(ellipse at 50% -10%,#24202a 0%,#141217 60%,#0d0c10 100%);color:var(--tx)}
+.bg-top h2{font:500 20px "Noto Serif KR","Apple Myeongjo",serif;letter-spacing:.08em;color:var(--tx);text-shadow:none}
+.bg-x{border:0;background:rgba(236,226,206,.07);border-radius:50%;color:var(--tx)}
+.bg-tabs{background:rgba(236,226,206,.05);border:0;border-radius:999px;box-shadow:inset 0 0 0 1px var(--ln)}.bg-tabs button{color:var(--dm);font-weight:500}.bg-tabs button.on,.bg-tabs button[aria-selected=true]{color:var(--tx)}
+.bg-ind{background:rgba(198,173,120,.22);box-shadow:inset 0 0 0 1px rgba(198,173,120,.6);border-radius:999px}
+.bg-tables button,.bg-row button,.bg-acts button,.bg-chips button{border:0!important;background:rgba(236,226,206,.06)!important;box-shadow:inset 0 0 0 1px var(--ln);color:var(--tx);border-radius:999px;font-weight:500}
+.bg-tables button.on,.bg-acts button.on,.bg-chips button.on,.bg-tables [aria-pressed=true],.bg-chips [aria-pressed=true]{background:rgba(198,173,120,.2)!important;box-shadow:inset 0 0 0 1px rgba(198,173,120,.7);color:#f3e6c4}
+.bg-bench{background:var(--p);border:0;border-radius:14px;box-shadow:inset 0 1px 0 var(--ln),0 8px 24px rgba(0,0,0,.4)}
+.bg-grid{background:rgba(0,0,0,.35);border-radius:10px;box-shadow:inset 0 0 0 1px var(--ln)}
+.bg-cell{background:rgba(236,226,206,.05);box-shadow:inset 0 0 0 1px var(--ln);border-radius:8px}.bg-cell.f{background:rgba(236,226,206,.1)}
+.bg-out{background:rgba(0,0,0,.35);border-radius:12px;box-shadow:inset 0 0 0 1px var(--ln),0 0 0 2px var(--g,transparent)}
+.bg-arrow{color:var(--ac)}.bg-hint,.bg-empty{color:var(--dm)}
+.bg-card{background:var(--p);border:0;border-radius:14px;box-shadow:inset 0 1px 0 var(--ln)}
+.bg-slot{background:rgba(236,226,206,.04);border:0;border-left:3px solid var(--g,#555);border-radius:10px;box-shadow:inset 0 0 0 1px var(--ln)}.bg-slot.sel{box-shadow:inset 0 0 0 1px rgba(198,173,120,.7)}
+.bg-drawer{background:linear-gradient(180deg,#1f1c24,#16141a);border-radius:18px 18px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.45),inset 0 1px 0 var(--ln)}
+.bg-handle{background:rgba(236,226,206,.25)}
+.bg-it{border:0;border-bottom:2px solid var(--g);background:rgba(236,226,206,.05);border-radius:10px;box-shadow:inset 0 0 0 1px var(--ln)}.bg-it.sel{box-shadow:inset 0 0 0 1.5px var(--ac)}
+.bg-it b{color:var(--dm);font-weight:500}
+.bg-toast,.bg-pop{background:var(--p);border:0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);color:var(--tx)}
+/* 옷·머리 */
+.bg-ward{margin-top:10px;padding-top:8px;border-top:1px solid var(--ln)}
+.bg-wrow{display:flex;align-items:center;gap:6px;padding:4px 0}.bg-wrow small{width:64px;flex:none;color:var(--dm);font-size:12px}
+.bg-wrow select{flex:1;min-width:0;min-height:32px;border:0;border-radius:8px;background:rgba(236,226,206,.06);color:var(--tx);box-shadow:inset 0 0 0 1px var(--ln);padding:0 8px;font:inherit}
+.bg-wrow input[type=color]{width:28px;height:26px;border:0;background:none;padding:0}
+.bg-auto.on{box-shadow:inset 0 0 0 1px rgba(198,173,120,.7);color:#f3e6c4}
+.bg-wpre{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px}.bg-wpre button{min-height:30px;padding:0 10px;border:0;border-radius:15px;background:rgba(236,226,206,.07);box-shadow:inset 0 0 0 1px var(--ln);color:var(--tx);font:inherit;font-size:12.5px}
+.bg-look{display:grid;gap:6px;margin:4px 0 10px;padding:10px;border-radius:12px;background:rgba(236,226,206,.04);box-shadow:inset 0 0 0 1px var(--ln)}.bg-look small{color:var(--dm);font-size:12px;line-height:1.45}
+.bg-look textarea{resize:vertical;border:0;border-radius:8px;padding:8px;background:rgba(0,0,0,.25);color:var(--tx);font:inherit;font-size:13px;box-shadow:inset 0 0 0 1px var(--ln)}
+.bg-file{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}

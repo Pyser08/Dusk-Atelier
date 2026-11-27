@@ -1,5 +1,7 @@
 // Dusk Saga 가방 — 전투 화면과 따로 뜨는 독립 화면. [제작] ↔ [정비]는 옆으로 밀거나 눌러서 넘긴다.
 // 아래 서랍(가방 속 소재)은 끌어올리거나 손잡이를 눌러 펼친다. 바꾼 것은 곧바로 장부에 저장되고, 다음 답부터 ‘일행 장비’ 줄로 실린다.
+import { LOOK_PROMPT, parseLook, imagePalette, paletteLine, applyPalette } from "./lookread.js";
+import { PARTS as WP, SLOTS as WSLOTS, WEAR_PRESETS, DEFAULT_WEAR } from "./wear.js";
 import * as E from "../../src/rpg/engine/index.js";
 import { sfx } from "./sfx.js";
 
@@ -49,8 +51,22 @@ export async function mountBag(root, host) {
     try { if (!P3) { P3load ||= import("./bag3d.js").then((m) => (P3 = m.createPreview())); await P3load; } } catch (e) { console.log("[Dusk Saga] 3D 미리보기 실패", e); return; }
     const box2 = el.querySelector(".bg-3d"); if (!box2) return; box2.querySelector("svg")?.remove(); P3.mount(box2);
     const look = E.armorLook(d) || { outfit: d.outfit || "", dye: {} }, w = d.weapons.find((x) => x.type !== "item") || d.weapons[0];
-    P3.set({ outfit: look.outfit, dye: look.dye, hair: d.hair || 0, sex: d.sex, race: E.RACES[d.race]?.mem || "", w: w?.type || "", look: w ? E.lookOf(w) : {} });
+    P3.set({ outfit: look.outfit, dye: look.dye, hair: d.hair || 0, sex: d.sex, race: E.RACES[d.race]?.mem || "", w: w?.type || "", look: w ? E.lookOf(w) : {}, ...(d.wearOn && d.wear ? { wear: d.wear } : V.wardrobe && d.wear ? { wear: d.wear } : {}) });
   }
+  // 옷·머리: 슬롯마다 고르고(안 입음 = 벗기), 색 슬롯을 바꾼다. '전투에서도 보이기'를 켜면 판·초상에도 이 차림
+  function wardrobe(d) {
+    const hx = (n) => "#" + (n ?? 0).toString(16).padStart(6, "0"), sx = d.sex === "f" ? "f" : "m", W = d.wear || {};
+    return `<div class=bg-ward><div class=bg-acts><button data-g=wearon class="${d.wearOn ? "on" : ""}">${d.wearOn ? "전투에서도 보이기: 켬" : "전투에서도 보이기: 끔"}</button><button data-g=wearnaked>모두 벗기기</button></div>
+      <div class=bg-look><b>그림·설정으로 맞추기</b><small>로어북·봇 설명은 자동으로 읽어요. 설명을 더 붙이거나 전신 그림을 고르면(색만 이 기기에서 뽑음) 더 비슷해져요.</small><textarea data-look=txt rows=2 placeholder="예) 은발 포니테일, 검은 세일러복에 빨간 스카프, 니삭스">${esc(V.lookTxt || "")}</textarea><div class=bg-acts><label class=bg-file>${V.lookImg ? "그림: " + esc(V.lookImg.name).slice(0, 18) : "그림 고르기"}<input type=file accept="image/*" data-look=img hidden></label><button data-g=lookai ${host.ask ? "" : "disabled"}>${V.lookBusy ? "맞추는 중…" : "AI로 맞추기"}</button></div></div>
+      <div class=bg-wpre>${Object.keys(WEAR_PRESETS).map((k) => `<button data-g="wpre:${esc(k)}">${esc(k)}</button>`).join("")}</div>
+      ${WSLOTS.map(([k, name]) => { const w = W[k], p = w && WP[w.id], opts = Object.entries(WP).filter(([id, q]) => q.slot === k && (q.sx === "a" || q.sx === sx || q.sx === undefined || w?.id === id));
+        return `<div class=bg-wrow><small>${name}</small><select data-wslot=${k}><option value="">${k === "hair" ? "기본 머리" : "안 입음"}</option>${opts.map(([id, q]) => `<option value=${id} ${w?.id === id ? "selected" : ""}>${esc(q.n)}</option>`).join("")}</select>${p ? p.cn.map((cn, i) => `<label title="${esc(cn)}"><input type=color data-wslot=${k} data-wci=${i} value="${hx(w.c?.[i] ?? p.cd[i] ?? (i === 0 ? d.hair || 0x3a2a24 : i === 1 ? 0x7a5a4a : 0x2a2a34))}"></label>`).join("") : ""}</div>`; }).join("")}</div>`;
+  }
+  // 옷 고르기·색 바꾸기
+  el.addEventListener("change", (e) => { const t0 = e.target; if (t0.dataset?.look === "img") { V.lookImg = t0.files?.[0] || null; draw(); return; } if (t0.dataset?.look === "txt") { V.lookTxt = t0.value.slice(0, 600); return; } const t = e.target, k = t.dataset?.wslot; if (!k) return; const d = D(); if (!d) return; d.wear ||= {};
+    if (t.tagName === "SELECT") { if (t.value) d.wear[k] = { id: t.value }; else delete d.wear[k]; }
+    else { const w = d.wear[k]; if (!w) return; const p = WP[w.id]; w.c = p.cd.map((x, i) => w.c?.[i] ?? x ?? null); w.c[+t.dataset.wci] = parseInt(t.value.slice(1), 16); }
+    save(); draw(); });
   function gear() {
     const ds = Object.values(L.party.defs).filter((d) => d.name); if (ds.length && !D()) V.who = ds[0].id; const d = D(), pg = el.querySelector(".pg");
     if (!ds.length) { pg.innerHTML = `<div class=bg-empty><b>아직 동료가 없어요</b><p>전투를 한 번 하면 함께 싸운 동료가 여기에 생겨요.</p></div>`; return; }
@@ -69,7 +85,7 @@ export async function mountBag(root, host) {
     const sks = d.skills.map((k) => L.party.skills[k] || { name: k }).map((s, i) => `<button class="bg-sk ${s.flags?.area ? "area" : ""}" data-sk="${esc(d.skills[i])}">${esc(s.name)}${s.flags?.area ? " <small>범위</small>" : ""}</button>`).join("");
     const lib = (L.skillLib || []).filter((k) => !d.skills.includes(k) && L.party.skills[k]).map((k) => `<button class="bg-sk lib" data-learn="${esc(k)}">+ ${esc(L.party.skills[k].name)}</button>`).join("");
     pg.innerHTML = `<div class=bg-who>${ds.map((x) => `<button data-who="${esc(x.id)}" class="${x.id === V.who ? "on" : ""}"><i>${esc(x.name.slice(0, 1))}</i><span>${esc(x.name)}</span></button>`).join("")}</div>
-      <div class=bg-card><div class=bg-ch><b>${esc(d.name)}</b><small>Lv ${d.level} · ${esc(d.cls || d.job || "")} · <em class=bg-grp>${E.GROUPS[grp].n}</em>${d.injury ? ` · <em>${d.injury.k === "wound" ? "중상" : "부상"} ${d.injury.left}판</em>` : ""}</small><button class=bg-auto data-g=stats>${V.edit ? "능력치 닫기" : "능력치 고치기"}</button><button class=bg-auto data-g=auto>추천 장비</button></div>
+      <div class=bg-card><div class=bg-ch><b>${esc(d.name)}</b><small>Lv ${d.level} · ${esc(d.cls || d.job || "")} · <em class=bg-grp>${E.GROUPS[grp].n}</em>${d.injury ? ` · <em>${d.injury.k === "wound" ? "중상" : "부상"} ${d.injury.left}판</em>` : ""}</small><button class=bg-auto data-g=stats>${V.edit ? "능력치 닫기" : "능력치 고치기"}</button><button class=bg-auto data-g=auto>추천 장비</button><button class="bg-auto ${V.wardrobe ? "on" : ""}" data-g=wardrobe>옷·머리</button></div>${V.wardrobe ? wardrobe(d) : ""}
       <div class=bg-paper><div class=bg-acol>${["head", "body", "hands", "legs", "feet"].map(aslot).join("")}</div>${doll}<div class=bg-wcol>${d.weapons.map(w).join("")}${d.weapons.length < 5 ? `<div class="bg-slot none">무기 빈 칸 ${5 - d.weapons.length}</div>` : ""}${d.charm ? `<button class=bg-slot data-g=uncharm style="--g:${GC[gradeOf(d.charm)]}">${E.iconSvg({ shape: "charm", pal: d.charm.pal || "gold" }, 26)}<span><b>${esc(d.charm.name)}</b><small>${esc(skillName(d.charm.skill))} · 빼기</small></span></button>` : `<div class="bg-slot none">장신구 없음</div>`}</div></div>
       ${acts}
       ${V.edit ? `<div class=bg-sedit>${E.STATS.map((k) => { const mx = k === "hp" ? 120 : 60, v = st[k] ?? 0; return `<label class=bg-sr><span>${E.SL[k]}</span><input type=range min=${k === "hp" ? 1 : 0} max=${mx} value=${v} data-stat=${k} style="--p:${v / mx * 100}%"><b data-sv=${k}>${v}</b></label>`; }).join("")}<div class=bg-row><button data-g=statdone class=main>다 고쳤어요</button></div><p class=bg-hint>막대를 잡고 끌거나 눌러서 바꿔요. 바꾼 값은 다음 전투와 다음 답부터 반영돼요.</p></div>` : ""}
@@ -164,6 +180,17 @@ export async function mountBag(root, host) {
     else if (a === "uncharm") { E.unequipCharm(L, d.id); save(); }
     else if (a === "unarmor") { E.unequipArmor(L, d.id, V.aslot); V.aslot = null; save(); }
     else if (a === "stats") { V.edit = !V.edit; }
+    else if (a === "wardrobe") { V.wardrobe = !V.wardrobe; if (V.wardrobe && !d.wear) d.wear = DEFAULT_WEAR(d.sex === "f" ? "f" : "m"); }
+    else if (a === "wearon") { d.wearOn = !d.wearOn; save(); toast(d.wearOn ? "전투에서도 이 옷차림으로 보여요" : "전투에서는 방어구 차림으로 보여요"); }
+    else if (a === "lookai") { if (!host.ask || V.lookBusy) return; V.lookBusy = true; draw(); (async () => { try {
+        const pal = V.lookImg ? await imagePalette(V.lookImg).catch(() => null) : null, sx = d.sex === "f" ? "f" : "m";
+        const t = await host.ask(LOOK_PROMPT(sx), `[맞출 인물] ${d.name}${d.sex ? " (" + (sx === "f" ? "여" : "남") + ")" : ""}\n${V.lookTxt ? "[덧붙인 설명] " + V.lookTxt + "\n" : ""}${paletteLine(pal)}\n이 인물의 평소 차림을 정해진 줄 형식으로만.`, { stage: "옷차림 맞추기", n: 4 });
+        const r = parseLook(t); if (!Object.keys(r.wear).length) throw new Error("답에서 옷을 못 읽었어요");
+        if (!r.wear.underT && !r.wear.underB) { const base = DEFAULT_WEAR(sx); for (const k of ["underT", "underB"]) if (base[k]) r.wear[k] = base[k]; }
+        d.wear = applyPalette(r.wear, pal); if (r.skin != null) d.wear.skin = r.skin; save(); toast(`${d.name}의 차림을 맞췄어요 — 부위별로 더 고칠 수 있어요`);
+      } catch (e) { toast("맞추기 실패: " + (e?.message || e)); } finally { V.lookBusy = false; draw(); } })(); return; }
+    else if (a === "wearnaked") { d.wear = {}; save(); }
+    else if (a.startsWith("wpre:")) { const f0 = WEAR_PRESETS[a.slice(5)]; if (f0) { const keepHair = d.wear?.hair; d.wear = f0(d.sex === "f" ? "f" : "m"); if (keepHair) d.wear.hair = keepHair; save(); } }
     else if (a === "statdone") { V.edit = false; if (V.statDirty) { L.notes.push(`${d.name}: 능력치 조정 — ${E.STATS.map((k) => E.SL[k] + " " + d.stats[k]).join(", ")}`); V.statDirty = false; save(); } }
     else if (a === "auto") { const n = E.autoEquip(L, d.id); toast(n ? `${n}곳 바꿨어요` : "지금이 가장 좋아요"); if (n) save(); }
     else if (a === "mkskill") { const q = (k) => el.querySelector(`[data-k=${k}]`)?.value || ""; if (!q("skname").trim()) return toast("기술 이름을 적어 주세요"); const sk = E.createSkill(L, { name: q("skname"), desc: q("skdesc"), grade: +q("skgrade"), type: q("sktype") }, d.level || 10); if (sk) { E.learnSkill(L, d.id, sk.id); toast(`「${sk.name}」 만들었어요${d.skills.includes(sk.id) ? "" : " (칸이 가득해 목록에만)"}`); save(); } }

@@ -2,7 +2,7 @@ import { BODY } from "./env.js";
 import { ULT, spice } from "./ult3d.js";
 // 전장 안에서 벌어지는 3D 전투 연출: 카메라·돌진·투사체·타격 (규칙은 모름, 이벤트만 재생)
 export function fights({ THREE, scene, cam, ctl, view, units, vfx, vox }) {
-  let pair = [], on = false, skip = false, shot = null, home = null, kick = 0; const fx = new Set(), look = new THREE.Vector3(), tmp = new THREE.Vector3();
+  let lead = null, pair = [], on = false, skip = false, shot = null, home = null, kick = 0, cur = null, s0 = null, sT = 0, drift = 0, fovKick = 0; let fov0 = cam.fov; const fx = new Set(), look = new THREE.Vector3(), tmp = new THREE.Vector3();
   const hud = document.createElement("div"); hud.className = "fhud"; hud.hidden = true; view.append(hud); hud.onclick = () => { skip = true; };
   let rate = 1, slow = 1; const nap = (ms) => new Promise((r) => { if (skip) return r(); const t0 = performance.now(), q = setInterval(() => { if (skip || performance.now() - t0 >= ms / rate) { clearInterval(q); r(); } }, 8); });
   // 프레임마다 f(0..1). 건너뛰면 즉시 끝 상태
@@ -11,11 +11,11 @@ export function fights({ THREE, scene, cam, ctl, view, units, vfx, vox }) {
   const face = (a, b) => { a.g.rotation.y = Math.atan2(b.g.position.x - a.g.position.x, b.g.position.z - a.g.position.z); };
   // 두 사람을 옆에서 잡는다. 지금 카메라와 가까운 쪽 옆면을 골라 시점이 뒤집히지 않게
   function frame(a, b, zoom, lift) {
-    if (!home) { home = { p: cam.position.clone(), t: ctl.target.clone() }; look.copy(ctl.target); }
+    if (!home) { home = { p: cam.position.clone(), t: ctl.target.clone() }; look.copy(ctl.target); fov0 = cam.fov; }
     const p = a.g.position, q = b.g.position, mid = p.clone().add(q).multiplyScalar(.5); mid.y += zoom > 1.5 ? (cam.aspect < 1 ? -.35 : .1) : .45; const dx = q.x - p.x, dz = q.z - p.z, len = Math.hypot(dx, dz) || 1; let nx = -dz / len, nz = dx / len;
-    if (nx * (home.p.x - home.t.x) + nz * (home.p.z - home.t.z) < 0) { nx = -nx; nz = -nz; }
+    // 공격한 쪽(a)이 늘 화면 왼쪽·앞, 받는 쪽(b)이 오른쪽·뒤. (nx,nz)=(-dz,dx)면 a가 왼쪽에 온다
     const portrait = cam.aspect < 1, d = (2 + len * (portrait ? 1.25 : .8)) * zoom;
-    shot = { p: new THREE.Vector3(mid.x + nx * d - dx / len * .6, mid.y + lift * d * .6 + .4, mid.z + nz * d - dz / len * .6), t: mid };
+    const back = .6 + d * .42; mid.x += dx / len * .35; mid.z += dz / len * .35; shot = { p: new THREE.Vector3(mid.x + nx * d - dx / len * back, mid.y + lift * d * .6 + .4, mid.z + nz * d - dz / len * back), t: mid };
   }
   // 공격하는 사람 어깨 너머에서 상대를 본다
   function shoulder(a, b) {
@@ -23,7 +23,15 @@ export function fights({ THREE, scene, cam, ctl, view, units, vfx, vox }) {
     const p = a.g.position, d = b.g.position.clone().sub(p).setY(0).normalize(), back = cam.aspect < 1 ? 2.6 : 2.1, side = cam.aspect < 1 ? 1.5 : 1.25;
     shot = { p: new THREE.Vector3(p.x - d.x * back - d.z * -side, p.y + 1.75, p.z - d.z * back - d.x * side), t: b.g.position.clone().setY(b.g.position.y + .55) };
   }
-  function release() { if (!home) return; shot = { p: home.p, t: home.t, end: true }; }
+  // 이동 연출이 끝나 제자리에 설 때까지 기다린다(연달아 움직이고 치는 적 차례에서 옛 자리로 구도를 잡지 않게)
+  async function settle(list) { const t0 = performance.now(); while (performance.now() - t0 < 900) { if (list.every((o) => o.tx == null || Math.hypot(o.g.position.x - o.tx, o.g.position.z - o.ty) < .04)) break; await new Promise((r) => setTimeout(r, 16)); } for (const o of list) if (o.tx != null) { o.g.position.x = o.tx; o.g.position.z = o.ty; } }
+  function release() { if (!home || shot?.end) return; shot = { p: home.p, t: home.t, end: true, ms: 640, crane: .12, drift: 0 }; }
+  // 연출용 구도: 옆 두 사람 구도에 시간·흐름·화각을 붙인다
+  function two(a, b, zoom, lift, o = {}) { frame(a, b, zoom, lift); Object.assign(shot, o); }
+  // 맞는 순간: 잠깐 멈춤(히트스톱) + 맞는 쪽으로 확 다가붙는 줌
+  function impact(b, h) { if (skip || h.miss || h.guard) return; const t = chest(b); void t; fovKick = h.crit ? 3 : 1.2; if (!h.crit) { slow = .05; setTimeout(() => { slow = 1; }, 80 / rate); } }
+  // 쓰러뜨림: 느리게, 쓰러지는 쪽을 돈다
+  async function finisher(b) { if (skip) return; const t = chest(b), d = cam.position.clone().sub(t).setY(0).normalize(); void t; void d; slow = .3; await nap(650); slow = 1; }
   function spark(mesh, life, step) { scene.add(mesh); fx.add({ mesh, life, t: 0, step }); }
   const glow = (c, o = 1) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const G = { ring: new THREE.RingGeometry(.7, 1, 32), arc: new THREE.RingGeometry(.55, .72, 24, 1, 0, 2.4), bit: new THREE.TetrahedronGeometry(.07), orb: new THREE.IcosahedronGeometry(.13, 1), arrow: new THREE.CylinderGeometry(.02, .02, .6, 5), blade: new THREE.ConeGeometry(.06, .34, 4), disc: new THREE.CircleGeometry(.16, 5) };
@@ -91,7 +99,7 @@ export function fights({ THREE, scene, cam, ctl, view, units, vfx, vox }) {
   const tipOf = (o) => { const wg = o.g.userData.rig?.wg; if (o.vox && !o.vox.v.mon) { const s = o.vox.v.B.sR, L = Math.abs(o.vox.v.reachM || .4); return (lo, hi) => { s.updateWorldMatrix(true, false); s.localToWorld(lo.set(0, 0, L * .2)); s.localToWorld(hi.set(0, 0, L)); }; } return (lo, hi) => { if (!wg) { lo.copy(chest(o)); hi.copy(lo); return; } wg.updateWorldMatrix(true, false); wg.localToWorld(lo.set(0, .12, 0)); wg.localToWorld(hi.set(0, .82, 0)); }; };
   // 궁극기: 암전 → 컷인 → 기 모으기 → 속성별 한 편 → 폭발
   async function ultimate(a, b, w, u, h, apply, who) {
-    const V = THREE.Vector3, pal = vfx.pal(u.elem), hex = "#" + pal[1].toString(16).padStart(6, "0"), dir = b.g.position.clone().sub(a.g.position).setY(0), gap = dir.length() || 1; dir.normalize(); const side = new V(-dir.z, 0, dir.x); if (side.dot((home?.p ?? cam.position).clone().sub(home?.t ?? ctl.target)) < 0) side.negate();
+    const V = THREE.Vector3, pal = vfx.pal(u.elem), hex = "#" + pal[1].toString(16).padStart(6, "0"), dir = b.g.position.clone().sub(a.g.position).setY(0), gap = dir.length() || 1; dir.normalize(); const side = new V(-dir.z, 0, dir.x);
     const flash = (v) => { hud.style.setProperty("--fl", v); hud.classList.remove("flash"); void hud.offsetWidth; hud.classList.add("flash"); }, P0 = a.g.position.clone(); let landed = false, warped = null;
     const c = { A: a, T: b, t: chest(b), tf: foot(b), af: foot(a), dir, gap, pal, fx: vfx, V, nap, flash, kick: (v) => { kick = Math.max(kick, v); }, hush: () => { vfx.setDim(.9, 0x000000); hud.classList.add("hush"); },
       low: () => { shot = { p: c.tf.clone().addScaledVector(dir, -2.2).addScaledVector(side, 2.1).add(new V(0, .55, 0)), t: c.tf.clone().add(new V(0, 1.15, 0)) }; }, side: () => { shot = { p: c.t.clone().addScaledVector(side, 3.2).add(new V(0, .5, 0)), t: c.t.clone() }; },
@@ -111,13 +119,13 @@ export function fights({ THREE, scene, cam, ctl, view, units, vfx, vox }) {
   // 복셀 유닛의 공격: 다가가며 휘두르고, 맞는 순간 규칙 결과를 보여 준다
   async function strikeVox(a, b, w, h, apply) {
     const u = a.vox, gap = Math.hypot(a.g.position.x - b.g.position.x, a.g.position.z - b.g.position.z), n = vox.pick(u, gap, turn++), far = vox.isFar(u, n), an = u.v.mon ? u.p.constructor && null : null; void an; const col = h.crit ? 0xffd27a : w.glow ? new THREE.Color(w.glow).getHex() : w.magic ? 0xb58cff : 0xfff0d8;
-    face(a, b); if (!h.guard) face(b, a); if (h.crit) { hud.classList.add("crit"); frame(a, b, .68, .5); await nap(420); hud.classList.remove("crit"); }
+    face(a, b); if (!h.guard) face(b, a); if (h.crit) { hud.classList.add("crit");  await nap(420); hud.classList.remove("crit"); }
     const go = far ? .06 : Math.max(0, gap - vox.reach(u) - .06 * (b.g.userData.h ?? 1)); let landed = false, fin; const hitP = new Promise((r) => { fin = r; });
     const land = async () => {
       if (landed) return; landed = true; const at = chest(b);
       if (h.miss) { apply(h); const side = Math.random() < .5 ? -1 : 1; voxReact(b, "dodge"); if (!b.vox) setPose(b, P({ lean: -.2, roll: side * -.25 })); await tween(150, (k) => { b.dodge = side * Math.sin(k * Math.PI / 2) * .42; }); return fin(); }
       if (h.guard) { voxReact(b, "block"); if (!b.vox) setPose(b, P({ ra: [-1.6, 0, -.6], la: [-1.6, 0, .6], lean: -.1 })); shock(at, 0x7cc0ff, 1.3); kick = .06; apply(h); await nap(90); return fin(); }
-      vfx.ring(at, col, h.crit ? 1.9 : .9, .32, false); if (h.crit) { vfx.emit(at, { n: 60, pal: w.elem ? vfx.pal(w.elem) : vfx.pal("none"), speed: 6.5, up: .25, g: 6, life: .5, size: .2 }); vfx.crack(foot(b), 0xffa84a, 1, 1.1); vfx.ring(foot(b), 0xfff0c8, 2.6, .45); slow = .15; setTimeout(() => { slow = 1; }, 110 / rate); } else vfx.emit(at, { n: 14, pal: [col, 0xfff0d8, 0xffffff], speed: 4, up: .25, g: 6, life: .45, size: .12 });
+      impact(b, h); vfx.ring(at, col, h.crit ? 1.9 : .9, .32, false); if (h.crit) { vfx.emit(at, { n: 60, pal: w.elem ? vfx.pal(w.elem) : vfx.pal("none"), speed: 6.5, up: .25, g: 6, life: .5, size: .2 }); vfx.crack(foot(b), 0xffa84a, 1, 1.1); vfx.ring(foot(b), 0xfff0c8, 2.6, .45); slow = .15; setTimeout(() => { slow = 1; }, 110 / rate); } else vfx.emit(at, { n: 14, pal: [col, 0xfff0d8, 0xffffff], speed: 4, up: .25, g: 6, life: .45, size: .12 });
       kick = Math.max(kick, h.crit ? .22 : h.dmg ? .09 : .03); apply(h); voxReact(b, "hurt"); if (!b.vox) setPose(b, P({ ra: [.5, 0, .5], la: [.5, 0, -.5], lean: -.42, lunge: -.2, rl: [-.3, 0, 0] })); else tween(120, (k) => { b.lunge = -.16 * Math.sin(k * Math.PI / 2); }); await nap(h.crit ? 170 : 110); fin();
     };
     u.battle = { at: () => b.g.position.clone(), miss: !!h.miss, h: (b.g.userData.h ?? 1) * .5 / vox.K, land: () => { land(); } }; u.act = true; const done = u.p.play(n, { fade: .06 }); const T = vox.timing(u, n);
@@ -129,7 +137,7 @@ export function fights({ THREE, scene, cam, ctl, view, units, vfx, vox }) {
     if (a.vox) return strikeVox(a, b, w, h, apply);
     face(a, b); if (!h.guard) face(b, a); const gap = Math.hypot(a.g.position.x - b.g.position.x, a.g.position.z - b.g.position.z), shape = w.shape || { sword: "sword", lance: "lance", axe: "axe", bow: "bow", tome: "book", dagger: "dagger", staff: "staff", claw: "fist" }[w.type] || "sword";
     const near = gap < 1.2, mv = w.mon?.near ? (near ? w.mon.near : w.mon.far || "spit") : near ? NEAR[shape] ?? "slash" : FAR[shape] ?? (w.magic ? "cast" : "throw"), reach = Math.max(.1, gap - .42), seq = MOVES[mv](near ? reach : .15, turn++ % 2 === 1), hc = w.glow ? new THREE.Color(w.glow).getHex() : 0, col = h.crit ? 0xffd27a : hc || (w.magic ? 0xb58cff : 0xfff0d8);
-    if (h.crit) { hud.classList.add("crit"); frame(a, b, .68, .5); await nap(420); hud.classList.remove("crit"); }
+    if (h.crit) { hud.classList.add("crit");  await nap(420); hud.classList.remove("crit"); }
     const magicRing = /cast|staff|card|play/.test(mv); if (magicRing) { const f = a.g.position.clone(); f.y += .05; const m = new THREE.Mesh(G.ring, glow(col, .8)); m.position.copy(f); m.rotation.x = -Math.PI / 2; spark(m, .6, (o) => { m.scale.setScalar(.3 + o.t * 1.1); m.rotation.z += .08; m.material.opacity = .8 * (1 - o.t / o.life); }); }
     const pal = vfx.pal(w.elem), tr = near && !magicRing && !/punch|claw|bash|bite|pounce|slam|charge|sting|swipe|spit|breath/.test(mv) ? vfx.trail(tipOf(a), w.elem ? pal[1] : col, { len: h.crit ? 16 : 11 }) : null;
     let landed = false;
@@ -138,7 +146,7 @@ export function fights({ THREE, scene, cam, ctl, view, units, vfx, vox }) {
       if (h.miss) { apply(h); const side = Math.random() < .5 ? -1 : 1; setPose(b, P({ ra: [-.4, 0, .5], la: [-.4, 0, -.5], lean: -.2, roll: side * -.25 })); await tween(150, (k) => { b.dodge = side * Math.sin(k * Math.PI / 2) * .42; }); return; }
       if (h.guard) { setPose(b, P({ ra: [-1.6, 0, -.6], la: [-1.6, 0, .6], lean: -.1, ll: [-.3, 0, 0] })); shock(at, 0x7cc0ff, 1.3); kick = .06; apply(h); await nap(90); return; }
       if (near && !magicRing) { const tilt = { slash: turn % 2 ? 0 : 1.6, draw: .6, overhead: 1.1, thrust: 2.2, sweep: .2, spin: 0, twin: .5, claw: 1.3, flourish: 0, pounce: 1.1, swipe: .4 }[mv]; if (tilt != null) slash(at, col, h.crit || /overhead|sweep|draw|spin/.test(mv), tilt); if (mv === "claw" || mv === "pounce" || mv === "swipe") { slash(at, col, false, .9); slash(at, col, false, 1.7); } if (h.crit) slash(at, col, true, 2.2); if (mv === "overhead" || mv === "slam" || mv === "charge") { const g0 = b.g.position.clone(); g0.y += .05; const m = new THREE.Mesh(G.ring, glow(0xe8d8b8, .8)); m.position.copy(g0); m.rotation.x = -Math.PI / 2; spark(m, .4, (o) => { m.scale.setScalar(.2 + o.t * 3); m.material.opacity = .8 * (1 - o.t / o.life); }); } }
-      if (w.elem) spice(vfx, w.elem, at, foot(b), !!h.crit, THREE.Vector3); else { vfx.emit(at, { n: h.crit ? 70 : 26, pal: h.crit ? vfx.pal("none") : [col, 0xfff0d8, 0xffffff], speed: h.crit ? 6.5 : 4.2, up: .25, g: 6, life: .5, size: h.crit ? .2 : .14 }); if (h.crit) { vfx.crack(foot(b), 0xffa84a, 1, 1.1); vfx.ring(foot(b), 0xfff0c8, 2.6, .45); } } vfx.ring(at, col, h.crit ? 1.9 : .95, .32, false); if (h.crit) { slow = .15; setTimeout(() => { slow = 1; }, 90 / rate); } kick = h.crit ? .22 : h.dmg ? (mv === "overhead" || mv === "bash" ? .14 : .09) : .03; apply(h); await nap(h.crit ? 130 : 55);
+      impact(b, h); if (w.elem) spice(vfx, w.elem, at, foot(b), !!h.crit, THREE.Vector3); else { vfx.emit(at, { n: h.crit ? 70 : 26, pal: h.crit ? vfx.pal("none") : [col, 0xfff0d8, 0xffffff], speed: h.crit ? 6.5 : 4.2, up: .25, g: 6, life: .5, size: h.crit ? .2 : .14 }); if (h.crit) { vfx.crack(foot(b), 0xffa84a, 1, 1.1); vfx.ring(foot(b), 0xfff0c8, 2.6, .45); } } vfx.ring(at, col, h.crit ? 1.9 : .95, .32, false); if (h.crit) { slow = .15; setTimeout(() => { slow = 1; }, 90 / rate); } kick = h.crit ? .22 : h.dmg ? (mv === "overhead" || mv === "bash" ? .14 : .09) : .03; apply(h); await nap(h.crit ? 130 : 55);
       voxReact(b, "hurt"); setPose(b, P({ ra: [.5, 0, .5], la: [.5, 0, -.5], lean: -.42, lunge: -.2, rl: [-.3, 0, 0] })); await nap(60);
     };
     for (const [ms, pose, ev, hold] of seq) {
@@ -154,23 +162,35 @@ export function fights({ THREE, scene, cam, ctl, view, units, vfx, vox }) {
   async function fight(info, hits, host) {
     const A = units.get(info.a), T = units.get(info.d); if (!A || !T) { hits.forEach(host.hit); return; }
     if (host.fast()) { for (const h of hits) { const a = units.get(h.from); if (a && h.to !== h.from) { face(a, units.get(h.to) ?? T); a.lunge = .3; } host.hit(h); await new Promise((r) => setTimeout(r, 110)); if (a) a.lunge = 0; } return; }
-    on = true; pair = Object.keys(info.who); skip = false; ctl.enabled = false; const esc = (s) => { const n = document.createElement("i"); n.textContent = s; return n.innerHTML; }, hp = { [info.a]: info.who[info.a].hp, [info.d]: info.who[info.d].hp };
+    on = true; pair = [...new Set([...Object.keys(info.who), ...hits.map((h) => h.to)])]; /* 광역으로 맞는 이도 보이게 */ skip = false; ctl.enabled = false; const esc = (s) => { const n = document.createElement("i"); n.textContent = s; return n.innerHTML; }, hp = { [info.a]: info.who[info.a].hp, [info.d]: info.who[info.d].hp };
     const plate = (id) => { const w = info.who[id]; return `<div class="fp ${w.team}" data-id="${esc(id)}">${w.face ?? ""}<b>${esc(w.name)}</b><div class=fl><strong></strong><div class=fhp><i></i></div></div><small>${esc(w.weapon)}</small><div class=fn>${["위력", "명중", "필살"].map((t, i) => `<span><u>${t}</u>${w.nums?.[i] ?? "–"}</span>`).join("")}</div></div>`; };
     hud.innerHTML = `<div class=lb></div><div class=cutin>필살</div>${info.art ? `<div class=artn>${esc(info.art)}</div>` : ""}<div class=fps>${plate(info.a)}${plate(info.d)}</div>`; hud.hidden = false; BODY.classList.add("fighting"); bars(info.who, hp);
     try {
-      face(A, T); face(T, A); shoulder(A, T); await nap(620);
-      for (const h of hits) { const a = units.get(h.from), b = units.get(h.to); const apply = (x) => { hp[x.to] = x.hp; if (x.hpFrom != null) hp[x.from] = x.hpFrom; host.hit(x); bars(info.who, hp); }; if (a && b && info.ult && h.from === info.a && !info.ulted) { info.ulted = true; await ultimate(a, b, info.who[h.from], info.ult, h, apply, info.who[h.from]); } else if (a && b && info.who[h.from]) await strike(a, b, info.who[h.from], h, apply); else apply(h); frame(A, T, 1, .55); await nap(60); }
+      lead = [A, T]; await settle([A, T]); face(A, T); face(T, A); two(A, T, 1, .55, { ms: 480, drift: 0 }); await nap(520);
+      for (const h of hits) { const a = units.get(h.from), b = units.get(h.to); const apply = (x) => { hp[x.to] = x.hp; if (x.hpFrom != null) hp[x.from] = x.hpFrom; host.hit(x); bars(info.who, hp); }; if (b && (h.area || h.boom || h.push || !info.who[h.to])) { const at = chest(b); face(b, a ?? A); vfx.emit(at, { n: 18, pal: [0xffc890, 0xffffff, 0xff8a5a], speed: 4, up: .3, g: 6, life: .4, size: .13 }); vfx.ring(at, 0xffd0a0, .9, .26, false); kick = Math.max(kick, .12); apply(h); voxReact(b, "hurt"); await nap(260); } else if (a && b && info.ult && h.from === info.a && !info.ulted) { info.ulted = true; await ultimate(a, b, info.who[h.from], info.ult, h, apply, info.who[h.from]); } else if (a && b && info.who[h.from]) { await strike(a, b, info.who[h.from], h, apply); } else apply(h); if (b && h.hp != null && h.hp <= 0 && h.to !== h.from) await finisher(b); await nap(120); }
       await nap(220);
-    } finally { slow = 1; for (const o of units.values()) { o.lunge = o.twist = o.lean = o.dodge = o.hop = o.roll = 0; o.pose = null; if (o.vox) { o.vox.act = false; o.vox.battle = null; } } hud.hidden = true; BODY.classList.remove("fighting"); on = false; ctl.enabled = true; release(); }
+    } finally { slow = 1; for (const o of units.values()) { o.lunge = o.twist = o.lean = o.dodge = o.hop = o.roll = 0; o.pose = null; if (o.vox) { o.vox.act = false; o.vox.battle = null; } } hud.hidden = true; BODY.classList.remove("fighting"); on = false; lead = null; ctl.enabled = true; release(); }
   }
+  const sph = (p, t) => { const d = p.clone().sub(t), r = d.length() || 1e-3; return { r, az: Math.atan2(d.x, d.z), el: Math.asin(Math.max(-1, Math.min(1, d.y / r))) }; };
   // true면 카메라를 이쪽이 잡고 있다
   function tick(dt0) {
     const dt = dt0 * rate * slow; vfx.tick(dt);
     for (const o of fx) { o.t += dt; if (o.t >= o.life) { scene.remove(o.mesh); o.mesh.material.dispose(); fx.delete(o); } else o.step(o, dt); }
-    kick = Math.max(kick, on ? vox.fx.shake * 1.2 : 0); if (!shot) return false; const k = 1 - Math.exp(-dt0 * rate * 8); cam.position.lerp(shot.p, k); look.lerp(shot.t, k); cam.lookAt(look);
-    if (kick > .002) { cam.position.add(tmp.set(Math.random() - .5, Math.random() - .5, Math.random() - .5).multiplyScalar(kick)); kick *= Math.exp(-dt0 * rate * 9); }
-    if (shot.end && cam.position.distanceTo(shot.p) < .08) { cam.position.copy(home.p); ctl.target.copy(home.t); shot = home = null; kick = 0; }
+    kick = Math.max(kick, on ? vox.fx.shake * 1.2 : 0); if (!shot) return false;
+    // 구도 사이는 표적 둘레를 호로 돈다(거리·방위·높이를 따로 섞음). 도착한 뒤엔 천천히 흐른다
+    if (shot !== cur && cur && !shot.end === !cur.end && shot.p.distanceToSquared(cur.p) < 1e-4 && shot.t.distanceToSquared(cur.t) < 1e-4) shot = cur;   // 같은 구도를 매 프레임 다시 줘도 처음부터 다시 움직이지 않게
+    if (shot !== cur) { cur = shot; s0 = { p: cam.position.clone(), t: look.clone(), fov: cam.fov }; sT = 0; drift = 0; }
+    sT += dt0 * rate * Math.max(slow, .4); const dur = (shot.ms ?? 360) / 1000, k = shot.cut ? 1 : Math.min(1, sT / dur), e = k < .5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+    if (k >= 1) drift += dt0 * rate * Math.max(slow, .4) * (shot.drift ?? 0);
+    look.lerpVectors(s0.t, shot.t, e); const A0 = sph(s0.p, s0.t), B0 = sph(shot.p, shot.t); let daz = B0.az - A0.az; daz -= Math.round(daz / (2 * Math.PI)) * 2 * Math.PI;
+    const r = A0.r + (B0.r - A0.r) * e, az = A0.az + daz * e + drift, el = A0.el + (B0.el - A0.el) * e + Math.sin(Math.PI * e) * (shot.crane ?? 0);
+    cam.position.set(look.x + r * Math.cos(el) * Math.sin(az), look.y + r * Math.sin(el), look.z + r * Math.cos(el) * Math.cos(az));
+    const ft = shot.fov ?? fov0, fv = s0.fov + (ft - s0.fov) * e - fovKick; fovKick *= Math.exp(-dt0 * rate * 7); if (Math.abs(cam.fov - fv) > .01) { cam.fov = fv; cam.updateProjectionMatrix(); } cam.lookAt(look);
+    if (kick > .002) { cam.position.add(tmp.set(Math.random() - .5, Math.random() - .5, Math.random() - .5).multiplyScalar(kick * .45)); kick *= Math.exp(-dt0 * rate * 9); }
+    if (shot.end && k >= 1) { cam.fov = fov0; cam.updateProjectionMatrix(); fovKick = 0; cam.position.copy(home.p); ctl.target.copy(home.t); shot = home = null; kick = 0; }
     return true;
   }
-  return { speed: () => rate * slow, fight, frame, face, release, tick, active: () => on, has: (id) => pair.includes(id), setRate: (v) => { rate = v; }, hot: () => on || vfx.busy(), moves: MOVES, near: NEAR, far: FAR };
+  // 처음 쓸 때 셰이더를 만드느라 멈추지 않게, 연출에 쓰는 재질을 미리 한 번씩 장면에 넣어 둔다
+  function warm() { const at = new THREE.Vector3(0, -40, 0), ms = [new THREE.Mesh(G.ring, glow(0xffffff)), new THREE.Mesh(G.arrow, new THREE.MeshStandardMaterial({ color: 0xe8dcc8 })), new THREE.Mesh(G.orb, glow(0xffffff))]; for (const m of ms) { m.position.copy(at); scene.add(m); } try { for (const e of ["none", "fire", "ice", "thunder"]) vfx.emit(at, { n: 2, pal: vfx.pal(e), speed: .1, life: .05, size: .1 }); vfx.ring(at, 0xffffff, 1, .05, false); vfx.crack(at, 0xffffff, 1, .05); vfx.column(at, vfx.pal("none"), .1, .1, .05); } catch { /* 없는 효과 */ } return () => { for (const m of ms) { scene.remove(m); m.material.dispose(); } }; }
+  return { warm, speed: () => rate * slow, fight, frame, face, release, tick, active: () => on, has: (id) => pair.includes(id), setRate: (v) => { rate = v; }, hot: () => on || vfx.busy(), moves: MOVES, near: NEAR, far: FAR };
 }

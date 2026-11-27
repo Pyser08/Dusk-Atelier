@@ -24,7 +24,7 @@ export function createPreview() {
     set(info) {
       const k = JSON.stringify(info); if (k === sig) return; sig = k; if (fig) scene.remove(fig);
       const ro = raceOpt(info.race || "human"), gear = gearOf(info.look || {}, info.w || "");
-      const v = makeVox({ outfit: info.outfit || "under", sex: info.sex === "f" ? "f" : "m", gear, tier: info.look?.tier ?? 1, elem: info.look?.elem ?? "", race: ro.race, skin: ro.skin, hair: info.hair || ro.hair, dye: info.dye || {} });
+      const v = makeVox({ outfit: info.outfit || "under", sex: info.sex === "f" ? "f" : "m", gear, tier: info.look?.tier ?? 1, elem: info.look?.elem ?? "", race: ro.race, skin: ro.skin, hair: info.hair || ro.hair, dye: info.dye || {}, ...(info.wear ? { wear: info.wear } : {}) });
       fig = v.root; const sc = info.race ? SIZE(info.race) : 1; fig.scale.setScalar(sc); scene.add(fig); player = new Player(v, { stance: stanceOf(gear) }); fig.updateMatrixWorld(true); const bb = new THREE.Box3(); v.mesh.geometry.computeBoundingBox(); bb.copy(v.mesh.geometry.boundingBox).applyMatrix4(v.mesh.matrixWorld); h = Math.max(0.5, bb.max.y - Math.min(0, bb.min.y)) * 1.08; floor.scale.setScalar(h / 1.9); ring.scale.setScalar(h / 1.9);
     },
     resize: size,

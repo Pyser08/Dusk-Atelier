@@ -21,20 +21,7 @@ export function aiAct(S, u, ev) {
     if (bh && (bh.miss * 2 >= S.defs[bh.z.ref].stats.hp || !d.weapons.some(arm))) { if (moveUnit(S, u, bh.x, bh.y, R, ev)) heal(S, u, bh.z, ev); return; }
     u.wi = owi;
   }
-  let best = null; const hunt0 = S.hunt; if (hunt0 && diffOf(S) === 0) S.hunt = false; // 쉬움: 방향·부위를 모르는 채로 고른다
-  try { for (const k of cand) {
-    const [x, y] = unK(k); u.x = x; u.y = y; const cover = uterr(S, u).avo / 10 - R.get(k).c * 0.01 - (uterr(S, u).burn && elemOfUnit(d) !== 'fire' ? 12 : 0) + (S.xcom ? coverAt(S, u, foes) / 10 : 0);
-    d.weapons.forEach((w, i) => {
-      if (!arm(w) || !canUse(d, w)) return; u.wi = i;
-      for (const f of foes) {
-        if (!canShoot(S, u, w, f, x !== ox || y !== oy)) continue;
-        const fc = forecast(S, u, f, null);
-        const sc = Math.min(f.hp, fc.a.total) * fc.a.hit / 100 * 2 + (fc.a.dual ? fc.a.dual.dmg * fc.a.dual.hit / 100 : 0) - (fc.d.dual ? fc.d.dual.dmg * fc.d.dual.hit / 100 : 0) + (fc.a.total >= f.hp ? 40 * fc.a.hit / 100 : 0) + (S.hunt && diffOf(S) === 2 ? (fc.a.flank === 'back' ? 6 : fc.a.flank === 'side' ? 3 : 0) + (f.hp <= fc.a.total * 2 ? 4 : 0) : 0) - (fc.d.can ? Math.min(u.hp, fc.d.total) * fc.d.hit / 100 : 0) + cover;
-        if (!best || sc > best.sc) best = { sc, x, y, wi: i, f };
-      }
-    });
-  }
-  } finally { S.hunt = hunt0; }
+  const best = bestStrike(S, u, R, cand, foes);
   u.x = ox; u.y = oy; u.wi = owi;
   if (best) { u.wi = best.wi; if (moveUnit(S, u, best.x, best.y, R, ev)) resolve(S, u, best.f, null, ev); return; }
   if (S.xcom) { const gi = d.weapons.findIndex(w => gun(S, w) && ammo(S, u, w) <= 0); if (gi >= 0) { actReload(S, u, gi); return; } }
@@ -65,6 +52,39 @@ export function aiAct(S, u, ev) {
     }
     if (dest) moveUnit(S, u, dest.x, dest.y, R, ev);
   }
+}
+// 적 AI가 고를 공격(자리·무기·상대). 상태를 바꾸지 않는다(위치·무기는 되돌림)
+function bestStrike(S, u, R, cand, foes) {
+  const ox = u.x, oy = u.y, owi = u.wi, d = S.defs[u.ref];
+  let best = null; const hunt0 = S.hunt; if (hunt0 && diffOf(S) === 0) S.hunt = false; // 쉬움: 방향·부위를 모르는 채로 고른다
+  try { for (const k of cand) {
+    const [x, y] = unK(k); u.x = x; u.y = y; const cover = uterr(S, u).avo / 10 - R.get(k).c * 0.01 - (uterr(S, u).burn && elemOfUnit(d) !== 'fire' ? 12 : 0) + (S.xcom ? coverAt(S, u, foes) / 10 : 0);
+    d.weapons.forEach((w, i) => {
+      if (!arm(w) || !canUse(d, w)) return; u.wi = i;
+      for (const f of foes) {
+        if (!canShoot(S, u, w, f, x !== ox || y !== oy)) continue;
+        const fc = forecast(S, u, f, null);
+        const sc = Math.min(f.hp, fc.a.total) * fc.a.hit / 100 * 2 + (fc.a.dual ? fc.a.dual.dmg * fc.a.dual.hit / 100 : 0) - (fc.d.dual ? fc.d.dual.dmg * fc.d.dual.hit / 100 : 0) + (fc.a.total >= f.hp ? 40 * fc.a.hit / 100 : 0) + (S.hunt && diffOf(S) === 2 ? (fc.a.flank === 'back' ? 6 : fc.a.flank === 'side' ? 3 : 0) + (f.hp <= fc.a.total * 2 ? 4 : 0) : 0) - (fc.d.can ? Math.min(u.hp, fc.d.total) * fc.d.hit / 100 : 0) + cover;
+        if (!best || sc > best.sc) best = { sc, x, y, wi: i, f };
+      }
+    });
+  }
+  } finally { S.hunt = hunt0; }
+  u.x = ox; u.y = oy; u.wi = owi; return best;
+}
+// 미리보기: 아군 a가 (x,y)에 서 있다면 다음 적 차례에 a를 공격할 적들. [{ id, x, y }] (x,y = 공격하러 설 자리)
+export function attackersAt(S, a, x, y) {
+  const B = S.battle, ox = a.x, oy = a.y, out = []; a.x = x; a.y = y;
+  try { for (const u of alive(B)) { if (!foe(u, a) || u.team === 'ally' || u.team === 'friend') continue; const foes = alive(B).filter(z => foe(z, u)); if (!foes.includes(a)) continue; const R = reach(S, u), cand = (u.ai || 'charge') === 'guard' ? [K(u.x, u.y)] : stops(S, u, R); const b = bestStrike(S, u, R, cand, foes); if (b && b.f === a) out.push({ id: u.id, x: b.x, y: b.y }); } }
+  finally { a.x = ox; a.y = oy; }
+  return out;
+}
+
+// 적 정보 카드용: 이 유닛이 지금 자리에서 다음 차례에 칠 상대. { f, x, y } 또는 null (상태를 바꾸지 않는다)
+export function intentOf(S, u) {
+  const B = S.battle; if (!u || u.hp <= 0) return null; const foes = alive(B).filter(z => foe(z, u)); if (!foes.length) return null;
+  const R = reach(S, u), cand = (u.ai || 'charge') === 'guard' ? [K(u.x, u.y)] : stops(S, u, R), b = bestStrike(S, u, R, cand, foes);
+  return b ? { f: b.f, x: b.x, y: b.y } : null;
 }
 export function runTeam(S, team, ev) { for (const u of alive(S.battle).filter(u => u.team === team).sort((a, b) => a.id < b.id ? -1 : 1)) { if (S.battle.status !== 'active') break; if (u.hp > 0 && !u.done) { const d = S.defs[u.ref]; if (u.down && downed(S, u, d)) continue; if (u.stun && stunned(S, u, d)) continue; if (u.tcd) u.tcd--; if (u.tele) { blast(S, u, ev); continue; } if (S.hunt && pattern(S, u, ev)) { delete u.mv; continue; } aiAct(S, u, ev); delete u.mv; if (S.hunt && (u.sz || 1) > 1 && u.hp > 0 && !u.tcd && !(u.parts && u.parts.head && u.parts.head.broken) && S.battle.status === 'active') { const c = aimTele(S, u); if (c.length) { u.tele = { cells: c, n: teleName(d) }; log(S, d.name + ': ' + u.tele.n + ' 준비 — 다음 턴에 앞쪽 ' + c.length + '칸을 덮친다', 'tele'); ev.push({ t: 'tele', id: u.id, cells: c }); } } } } }
 
