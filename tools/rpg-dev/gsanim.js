@@ -14,10 +14,13 @@ export const POSE = {
   // 발도: 오른팔은 앞으로 쭉 뻗어 가드 밑을, 왼팔은 굽혀 손잡이 끝을 가슴 앞에서. 칼끝은 앞으로, 오른발 앞
   drawn: { sword: { grip: [-3, 26, 15.5], dir: [-.4, .12, .9], edge: [0, -1, .13] }, hands: "both", drop: 3, lean: .25, twist: .05, feet: FEETW },
   rest: { sword: { grip: [-3.2, 25.2, 15], dir: [-.42, .04, .9], edge: [0, -1, .05] }, hands: "both", drop: 2.7, lean: .22, twist: .04, feet: FEETW }, // 숨 고르기
-  wind: { sword: { grip: [-1.6, 41.5, 1.5], dir: [.06, .62, -1], edge: [0, 1, .5] }, hands: "both", drop: 2.6, lean: -.14, twist: .1, feet: [[-3.2, 2.4, 4.2], [3.8, 2.4, -4.6]] },   // 머리 위로 들기(예비동작)
-  charge: { sword: { grip: [-1.8, 40.5, -.5], dir: [.1, .45, -1], edge: [0, 1, .4] }, hands: "both", drop: 4, lean: -.12, twist: .15, feet: [[-3.6, 2.4, 5], [4.2, 2.4, -5]] },
-  strike: { sword: { grip: [-.8, 28, 14], dir: [-.05, -.1, 1], edge: [0, -1, -.1] }, hands: "both", drop: 3.4, lean: .4, twist: 0, feet: [[-3.2, 2.4, 6], [3.8, 2.4, -4.6]] },     // 내려치는 중간
-  impact: { sword: { grip: [-.6, 19, 15.5], dir: [-.05, -.55, 1], edge: [0, -1, -.55] }, hands: "both", drop: 5, lean: .6, twist: -.05, feet: [[-3.2, 2.4, 7], [3.8, 2.4, -4.8]] }, // 땅에 박힘
+  // 머리 위로 들기: 몸을 뒤로 젖혀 칼을 머리 너머로 넘긴다(칼끝이 등 뒤로 늘어짐). 앞발을 내딛을 준비
+  wind: { sword: { grip: [-1.2, 44.5, 1.5], dir: [.05, -.3, -1], edge: [0, 1, -.3] }, hands: "both", drop: 1.6, lean: -.38, twist: .12, feet: [[-3.2, 2.4, 3], [3.8, 2.4, -4.8]] },
+  charge: { sword: { grip: [-1.4, 43.5, .5], dir: [.06, -.15, -1], edge: [0, 1, -.15] }, hands: "both", drop: 3.2, lean: -.32, twist: .18, feet: [[-3.6, 2.4, 5], [4.2, 2.4, -5.6]] },
+  // 내리치는 중간: 상체를 접으며 오른발을 크게 내딛는다
+  strike: { sword: { grip: [-.8, 33, 12.5], dir: [-.02, .25, 1], edge: [0, -1, .25] }, hands: "both", drop: 4.5, lean: .45, twist: 0, feet: [[-3.2, 2.4, 8.5], [3.8, 2.4, -7]] },
+  // 타격: 깊은 런지, 뒷다리는 뻗고, 상체는 칼을 따라 접힌다. 칼끝이 땅에 살짝 박힌다
+  impact: { sword: { grip: [-0.83, 15.31, 6.58], dir: [-.02, -.5, .86], edge: [0, -1, -.58] }, hands: "both", drop: 7.5, lean: .82, twist: -.05, feet: [[-3.2, 2.4, 10], [3.8, 2.4, -8.5]] },
   // 가드: 칼을 몸 앞에 세워 칼면이 정면을 본다(칼끝 아래, 손잡이 위)
   guard: { sword: { grip: [-.8, 30, 7.5], dir: [.12, -.98, .08], edge: [1, .12, 0] }, hands: "both", drop: 3, lean: .18, twist: 0, feet: [[-3, 2.4, 3], [3.8, 2.4, -3.6]] },
 };
