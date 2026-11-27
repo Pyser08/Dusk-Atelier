@@ -59,7 +59,11 @@ export function makeHunter(opt = {}) {
   const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(out.p, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(out.n, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(out.c, 3)); g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(out.b, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(out.w, 4)); g.setAttribute("aFx", new THREE.Float32BufferAttribute(out.fx, 2)); g.setAttribute("aPv", new THREE.Float32BufferAttribute(out.pv, 3)); g.setAttribute("aAx", new THREE.Float32BufferAttribute(out.ax, 3)); g.setIndex(out.i);
   const bones = BONES.map(([n]) => Object.assign(new THREE.Bone(), { name: n })); BONES.forEach(([, p, x, y, z], i) => { const q = p ? BONES[BI[p]] : [0, 0, 0, 0, 0]; bones[i].position.set((x - q[2]) * HU, (y - q[3]) * HU, (z - q[4]) * HU); if (p) bones[BI[p]].add(bones[i]); });
   const root = new THREE.Group(), m = new THREE.SkinnedMesh(g, mat), k = new THREE.SkinnedMesh(g, ink); root.add(bones[0], m, k); root.updateMatrixWorld(true); const sk = new THREE.Skeleton(bones); m.bind(sk); k.bind(sk); m.frustumCulled = k.frustumCulled = false; m.castShadow = true;
-  return { root, mesh: m, B: Object.fromEntries(bones.map((b) => [b.name, b])), rest: bones[0].position.clone(), h: 45.5 * HU, tris: out.i.length / 3 };
+  // IK용 정의: 관절(J)과 끝점(T), 단위는 월드
+  const J = {}, T = {}, TIP = { hR: [-7.15, 18, .5], hL: [7.15, 18, .5], ftR: [-2.6, 0, 3.6], ftL: [2.6, 0, 3.6], head: [0, 45.5, 0] };
+  for (const [n, , x, y, z] of BONES) J[n] = new THREE.Vector3(x, y, z).multiplyScalar(HU); for (const [n, p] of BONES) if (p && !T[p]) T[p] = J[n].clone(); for (const n in TIP) T[n] = new THREE.Vector3(...TIP[n]).multiplyScalar(HU); for (const n in J) T[n] ??= J[n].clone().add(new THREE.Vector3(0, -HU, 0));
+  T.uaR = J.laR.clone(); T.laR = J.hR.clone(); T.uaL = J.laL.clone(); T.laL = J.hL.clone(); T.ulR = J.llR.clone(); T.llR = J.ftR.clone(); T.ulL = J.llL.clone(); T.llL = J.ftL.clone();
+  return { root, mesh: m, B: Object.fromEntries(bones.map((b) => [b.name, b])), bones, def: { J, T }, rest: bones[0].position.clone(), h: 45.5 * HU, tris: out.i.length / 3 };
 }
 // 간단한 동작(확인용): 서 있기 · 걷기
 export function poseHunter(h, act, t) {

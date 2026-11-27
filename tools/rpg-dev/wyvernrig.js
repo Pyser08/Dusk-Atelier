@@ -46,14 +46,14 @@ export function wyvernBones(def) {
 // ── 자세 도구 ──
 const _q = new THREE.Quaternion(), _p = new THREE.Quaternion(), _a = V3(), _b = V3(), _c = V3();
 /** 뼈를 월드 방향 dir로 겨눈다(쉬는 방향 = 끝점 - 관절) */
-function aim(r, n, dir) { const b = r.B[n], rest = _a.copy(r.def.T[n]).sub(r.def.J[n]).normalize(); b.parent.getWorldQuaternion(_p); _q.setFromUnitVectors(rest, _b.copy(dir).normalize()); b.quaternion.copy(_p.invert().multiply(_q)); b.updateMatrixWorld(true); }
+export function aim(r, n, dir) { const b = r.B[n], rest = _a.copy(r.def.T[n]).sub(r.def.J[n]).normalize(); b.parent.getWorldQuaternion(_p); _q.setFromUnitVectors(rest, _b.copy(dir).normalize()); b.quaternion.copy(_p.invert().multiply(_q)); b.updateMatrixWorld(true); }
 /** 두 마디 IK: a(위)·b(아래)의 끝을 target에, 굽는 쪽은 pole */
-function ik2(r, a, b, target, pole) {
+export function ik2(r, a, b, target, pole) {
   const A = r.B[a].getWorldPosition(V3()), l1 = r.def.T[a].distanceTo(r.def.J[a]), l2 = r.def.T[b].distanceTo(r.def.J[b]);
   const to = target.clone().sub(A), d = min(max(to.length(), abs(l1 - l2) + 1e-3), l1 + l2 - 1e-3); to.normalize();
   const ca = (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), ang = Math.acos(min(1, max(-1, ca))), side = pole.clone().sub(A), n = to.clone().cross(side).normalize();
   if (n.lengthSq() < 1e-6) n.set(1, 0, 0);
-  const dirA = to.clone().applyAxisAngle(n, -ang); aim(r, a, dirA); const Bp = A.clone().addScaledVector(dirA, l1); aim(r, b, target.clone().sub(Bp));
+  const dirA = to.clone().applyAxisAngle(n, ang); aim(r, a, dirA); const Bp = A.clone().addScaledVector(dirA, l1); aim(r, b, target.clone().sub(Bp));
 }
 const world = (r, x, y, z) => r.root.localToWorld(V3(x, y, z)); // 몬스터 기준 좌표 → 월드
 function reset(r) { for (const b of r.bones) b.quaternion.identity(); r.B.pelvis.position.copy(r.def.J.pelvis); r.root.updateMatrixWorld(true); }
