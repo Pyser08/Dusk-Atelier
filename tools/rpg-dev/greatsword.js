@@ -11,7 +11,7 @@ export const GS_FRAME = {
   blade: [.1, 1.78],    // 칼날 구간
   width: [.4, .34],     // 칼날 폭(밑동 → 끝)
   thick: .05,           // 칼날 두께(반)
-  pts: { main: [0, -.08, 0], off: [0, -.33, 0], back: [0, .55, 0], tip: [0, 1.78, 0] }, // 오른손 · 왼손 · 등에 거는 점 · 칼끝
+  pts: { main: [0, -.06, 0], off: [0, -.4, 0], back: [0, .55, 0], tip: [0, 1.78, 0] }, // 오른손 · 왼손 · 등에 거는 점 · 칼끝
 };
 // ── 디자인 ── 각 디자인은 칼날 단면(edge·spine 위치), 색, 장식만 정한다
 const IRON = { n: "철 대검", metal: 0x9aa0ac, edge: 0xd6dbe4, dark: 0x5a5f6a, grip: 0x5a3e2c, wrap: 0x8a6448, trim: 0x8f7448 };

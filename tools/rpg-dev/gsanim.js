@@ -12,8 +12,9 @@ export const POSE = {
   reach: { sword: null, hands: "R", drop: .6, lean: .1, twist: -.25, feet: FEET0 },        // 오른손을 등 뒤 손잡이로
   pull: { sword: { grip: [-3, 42, -2], dir: [.2, .35, -1], edge: [0, 1, .3] }, hands: "R", drop: 1, lean: -.05, twist: .35, feet: [[-3, 2.4, .6], [2.8, 2.4, -1]] }, // 어깨 위로 뽑아 올림
   // 발도: 양손으로 배꼽 높이에서 쥐고 칼끝은 앞 위로. 왼발 앞, 오른발 뒤, 무릎을 굽혀 버틴다
-  drawn: { sword: { grip: [-1.8, 25.5, 6.2], dir: [-.08, .62, 1], edge: [0, .2, -1] }, hands: "both", drop: 2.6, lean: .16, twist: .32, feet: FEETW },
-  rest: { sword: { grip: [-1.9, 25, 6], dir: [-.1, .55, 1], edge: [0, .25, -1] }, hands: "both", drop: 2.3, lean: .14, twist: .3, feet: FEETW }, // 숨 고르기
+  // 발도: 오른팔은 앞으로 쭉 뻗어 가드 밑을, 왼팔은 굽혀 손잡이 끝을 몸 가까이서 받친다. 칼은 오른팔을 따라 앞으로
+  drawn: { sword: { grip: [-3, 28, 12.5], dir: [-.35, .25, 1], edge: [0, -1, .25] }, hands: "both", drop: 2.6, lean: .2, twist: -.08, feet: FEETW },
+  rest: { sword: { grip: [-3.2, 27, 12], dir: [-.36, .16, 1], edge: [0, -1, .16] }, hands: "both", drop: 2.3, lean: .17, twist: -.06, feet: FEETW }, // 숨 고르기
   wind: { sword: { grip: [-2.2, 41, .5], dir: [.08, .62, -1], edge: [0, 1, .5] }, hands: "both", drop: 2.4, lean: -.12, twist: .38, feet: [[-3.8, 2.4, -.6], [3.4, 2.4, 2.4]] },   // 머리 위로 들기(예비동작)
   charge: { sword: { grip: [-2.6, 40.5, -1.2], dir: [.12, .45, -1], edge: [0, 1, .4] }, hands: "both", drop: 3.6, lean: -.1, twist: .5, feet: [[-4.2, 2.4, -1.5], [3.6, 2.4, 3]] },
   strike: { sword: { grip: [-.8, 27, 8.5], dir: [-.05, -.15, 1], edge: [0, -1, -.1] }, hands: "both", drop: 3, lean: .35, twist: 0, feet: [[-3, 2.4, 3], [3.4, 2.4, -2.6]] },     // 내려치는 중간
