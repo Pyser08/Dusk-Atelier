@@ -529,3 +529,28 @@ function tk3Asym() {
 }
 Object.assign(GS_CUSTOM, { tk3_one: { n: "겹비늘대검 · 외끝", f: tk3One }, tk3_asym: { n: "겹비늘대검 · 비대칭", f: tk3Asym } });
 Object.assign(GS_CUSTOM, { tk3_scale: { n: "겹비늘대검", f: tk3Scale } });
+// ── 외끝 겹비늘대검 가드 비교 3종 ──
+function tkOneBlade(K, shard) {
+  shard({ p: [.02, .06], a: .03, L: 1.8, W: .13, T: .04, al: .3, clear: true, peak: .3, z: -.004, bend: -.025 });
+  shard({ p: [-.1, .05], a: .06, L: 1.85, W: .16, T: .06, edge: "n", bend: -.04 });
+  for (let k = 0; k < 7; k++) { const y = .1 + k * .22, w = .26 - k * .018; shard({ p: [-.14, y], a: .62 - k * .03, L: .5 - k * .02, W: w * .5, T: .045, z: (7 - k) * .006, ar: 1.2, al: .5, edge: "r", kr: .1, peak: .25 }); }
+  shard({ p: [-.07, 1.38], a: .1, L: .68, W: .1, T: .05, edge: "b", kr: .075, peak: .15 });
+}
+/** 가드 A 날개어깨: 칼등 쪽으로 크게 휘어 내려가는 비늘 파편 하나(날개 어깨), 날 쪽은 짧은 가시. 비대칭 */
+function tkGuardA() { const K = kit(), { shard, grip } = shards(K); tkOneBlade(K, shard);
+  K.ell([-.02, .03, 0], [.09, .07, .07], OB.B);
+  shard({ p: [-.04, .08], a: -1.9, L: .5, W: .1, T: .06, bend: .35, edge: "l", kr: .03, al: .6, peak: .2 }); shard({ p: [-.06, .02], a: -2.2, L: .32, W: .06, T: .045, bend: .3, z: .02, edge: "n" });
+  shard({ p: [.05, .06], a: 1.7, L: .2, W: .05, T: .045, bend: -.2, edge: "r", kr: .02 });
+  for (const sz of [-1, 1]) shard({ p: [-.12, -.02], a: -.9, L: .28, W: .07, T: .02, z: sz * .16, edge: "b", kr: .022 });
+  grip(); return K.V; }
+/** 가드 B 떠도는 비늘 고리: 실체 가드 없이 밑동 둘레에 광린 테 비늘 여섯 장이 떠서 둘러쌈 */
+function tkGuardB() { const K = kit(), { shard, grip } = shards(K); tkOneBlade(K, shard);
+  K.ell([0, .02, 0], [.07, .05, .06], OB.B);
+  for (let i = 0; i < 6; i++) { const ang = i / 6 * PI * 2 + .3, r = .2, cx = Math.cos(ang) * r, cz = Math.sin(ang) * r; shard({ p: [cx * .9, -.06 + (i & 1) * .05], a: Math.sign(cx || 1) * (.5 + (i & 1) * .3), L: .24, W: .06, T: .02, z: cz, edge: "b", kr: .02 }); }
+  grip(); return K.V; }
+/** 가드 C 겹비늘 깃: 칼날의 비늘이 아래로 이어져 손잡이 머리를 깃처럼 감쌈(아래로 향한 비늘 3겹, 칼등 쪽이 더 길게) */
+function tkGuardC() { const K = kit(), { shard, grip } = shards(K); tkOneBlade(K, shard);
+  for (let k = 0; k < 3; k++) for (const sx of [-1, 1]) shard({ p: [sx * .03, .1 - k * .04], a: PI - sx * (.55 + k * .25), L: (sx < 0 ? .34 : .24) - k * .05, W: .07, T: .05, z: (k - 1) * .02, edge: k === 2 ? "b" : "n", kr: .02, peak: .25 });
+  for (const sz of [-1, 1]) shard({ p: [.0, -.12], a: PI + .3, L: .22, W: .06, T: .02, z: sz * .13, edge: "b", kr: .02 });
+  grip(); return K.V; }
+Object.assign(GS_CUSTOM, { tkg_a: { n: "가드 A · 날개어깨", f: tkGuardA }, tkg_b: { n: "가드 B · 떠도는 비늘", f: tkGuardB }, tkg_c: { n: "가드 C · 겹비늘 깃", f: tkGuardC } });
