@@ -1,11 +1,11 @@
 // 몬스터 파생 대검 견본(유리날개룡). 대검 공용 뼈대(GS_FRAME) 치수 안에서 칼날 자체를 몬스터 부위로 빚는다
 // 대검 좌표: 원점 = 주 손잡이, +y 칼끝, +x 날 쪽, -x 칼등, ±z 칼면. 복셀 한 칸 = VS
 import * as THREE from "three";
-export const VS = .022; const { abs, max, min, floor, sin, cos, hypot, atan2, PI } = Math;
+export const VS = .015; const { abs, max, min, floor, sin, cos, hypot, atan2, PI } = Math;
 const hash = (x, y, z) => { const n = sin(x * 12.99 + y * 78.23 + z * 37.72) * 43758.55; return n - floor(n); };
 const C = { HIDE: 0x34324a, HIDE2: 0x48455f, BELLY: 0x6a6480, SEAM: 0x1e2236, EYE: 0xbff4ff, BONE: 0x5a5672, XT: [0xa8e4fa, 0xc8dcff, 0xdcd0ff, 0xeef9ff, 0x9ad6f0] };
 function kit() {
-  const V = new Map(), put = (X, Y, Z, c) => V.set((X + 128) + (Y + 128) * 256 + (Z + 128) * 65536, c);
+  const V = new Map(), put = (X, Y, Z, c) => { if (X < -127 || X > 126 || Y < -127 || Y > 126 || Z < -127 || Z > 126) return; V.set((X + 128) + (Y + 128) * 256 + (Z + 128) * 65536, c); };
   const scan = (lo, hi, f) => { for (let X = floor(lo[0] / VS); X <= hi[0] / VS; X++) for (let Y = floor(lo[1] / VS); Y <= hi[1] / VS; Y++) for (let Z = floor(lo[2] / VS); Z <= hi[2] / VS; Z++) { const c = f((X + .5) * VS, (Y + .5) * VS, (Z + .5) * VS, X, Y, Z); if (c != null) put(X, Y, Z, c); } };
   const ell = (c, r, col) => scan([c[0] - r[0], c[1] - r[1], c[2] - r[2]], [c[0] + r[0], c[1] + r[1], c[2] + r[2]], (x, y, z) => (((x - c[0]) / r[0]) ** 2 + ((y - c[1]) / r[1]) ** 2 + ((z - c[2]) / r[2]) ** 2 <= 1 ? (typeof col === "function" ? col(x, y, z) : col) : null));
   const cap = (a, e, r0, r1, col) => { const R = max(r0, r1), d = [e[0] - a[0], e[1] - a[1], e[2] - a[2]], L = d[0] ** 2 + d[1] ** 2 + d[2] ** 2; scan([min(a[0], e[0]) - R, min(a[1], e[1]) - R, min(a[2], e[2]) - R], [max(a[0], e[0]) + R, max(a[1], e[1]) + R, max(a[2], e[2]) + R], (x, y, z) => { const t = max(0, min(1, ((x - a[0]) * d[0] + (y - a[1]) * d[1] + (z - a[2]) * d[2]) / L)); return hypot(x - a[0] - d[0] * t, y - a[1] - d[1] * t, z - a[2] - d[2] * t) <= r0 + (r1 - r0) * t ? (typeof col === "function" ? col(x, y, z, t) : col) : null; }); };
@@ -93,8 +93,8 @@ function wingArm2() {
   const ribs = [[.3, .62], [.7, 1.02], [1.08, 1.4]], ends = [.1, .62, 1.02, 1.4, top + .02];
   const edgeAt = (y) => { let sc = 0; for (let i = 1; i < ends.length; i++) if (y >= ends[i - 1] && y <= ends[i]) sc = sin((y - ends[i - 1]) / (ends[i] - ends[i - 1]) * PI) * .06; const k = max(0, (y - top + .3) / .32); return bend(y) + .38 + (y - .1) * .03 - sc - .4 * (1 - Math.sqrt(max(0, 1 - k * k))); }; // 칼끝: 둥글게 깎인 곡선 // 날 끝: 손가락 사이 막처럼 오목, 끝은 비스듬히 잘림
   // 칼날: 겹비늘 결정판(위에서 아래로 겹친 판 줄). 날 쪽 4cm는 맑고 얇은 벼림
-  K.scan([sp, .1, -T], [.3, top + .02, T], (x, y, z) => { const e = edgeAt(y); if (x < bend(y) + .04 || x > e) return null; const de = e - x, th = de < .07 ? T * (.25 + de / .07 * .75) : T; if (abs(z) > th) return null;
-    if (de < .045) return de < .012 ? 0xeef9ff : 0xc8ecff; const row = floor((y - .1) / .11), xo = (row % 2) * .05, col = floor((x - sp + xo) / .1), v = (y - .1) % .11; if (v < .014) return C.SEAM; // 판 줄 경계
+  K.scan([sp, .1, -T], [.3, top + .02, T], (x, y, z) => { const e = edgeAt(y); if (x < bend(y) + .04 || x > e) return null; const de = e - x, u = (x - bend(y)) / (e - bend(y)), th = T * (.42 + .58 * Math.sin(Math.min(1, u * 1.15) * PI) ** .6) * (de < .07 ? .3 + de / .07 * .7 : 1); if (abs(z) > th) return null;
+    if (de < .045) return de < .012 ? 0xeef9ff : 0xc8ecff; const row = floor((y - .1) / .11), xo = (row % 2) * .05, cxf = (x - sp + xo) / .1, col = floor(cxf), cl = cxf - col, v = (y - .1) % .11, scal = .01 + .045 * ((cl - .5) * 2) ** 2; if (v < scal) return v < scal - .012 ? 0x6fa8cc : 0x3a5a78; // 비늘 아래 가장자리는 U자 곡선(겹친 비늘)
     const sh = v / .11; return abs(z) > th - .012 ? (sh > .75 ? 0x6fa8cc : C.XT[(row * 2 + col) % 5]) : 0x6fa8cc; }); // 판 아래쪽은 그늘(겹친 느낌)
   // 손가락 뼈: 칼등에서 날 끝 돌기로 비스듬히 가로지르는 굵은 뼈, 금속을 덧대 리벳
   for (const [ya, yb] of ribs) { K.cap([bend(ya) + .03, ya, 0], [edgeAt(yb) + .015, yb, 0], .038, .02, C.SEAM); K.cap([sp + .03, ya, 0], [sp + .16, ya + (yb - ya) * .36, 0], .044, .04, M.DARK); S.rivet(sp + .1, ya + (yb - ya) * .2, T + .03); S.rivet(sp + .1, ya + (yb - ya) * .2, -T - .03); K.spike([edgeAt(yb) + .01, yb, 0], [edgeAt(yb) + .1, yb + .06, 0], .03, 2); }
@@ -109,7 +109,7 @@ function wingArm2() {
   S.band(top - .06, .07, sp - .08, sp + .08, .06); K.spike([sp, top, 0], [sp + .12, top + .2, 0], .07, 2); K.spike([sp + .11, top + .19, 0], [sp + .26, top + .12, 0], .045, 3);
   // 밑동 가죽끈 + 가드: 두꺼운 단조 깃(날개 관절을 감싼 판금), 양옆 뼈돌기
   S.strap(.24, sp, .55, .035, sp - .06, .16, T + .015); S.strap(.4, sp, .55, .035, sp - .06, .16, T + .015);
-  K.scan([-.32, -.06, -.1], [.32, .16, .1], (x, y, z) => { const u = abs(x) / .3; if (u > 1) return null; const top = .12 - u * u * .1 + (1 - u) * .01, bot = -.035 + u * u * .09; if (y > top || y < bot) return null; const tk = .085 * (1 - u * .7) * (1 - abs(y - (top + bot) / 2) / ((top - bot) / 2 + .001) * .35); if (abs(z) > tk) return null; return y > top - .022 ? M.HI : u < .2 ? M.BRASS : M.STEEL; });
+  K.scan([-.32, -.06, -.1], [.32, .16, .1], (x, y, z) => { const u = abs(x) / .3; if (u > 1) return null; const top = .12 - u * u * .1 + (1 - u) * .01, bot = -.035 + u * u * .09; if (y > top || y < bot) return null; const tk = .085 * (1 - u * .7) * (1 - abs(y - (top + bot) / 2) / ((top - bot) / 2 + .001) * .35); if (abs(z) > tk) return null; return y > top - .022 ? M.HI : hypot(x / .065, (y - .04) / .05) < 1 ? M.BRASS : M.STEEL; });
   K.ell([sp + .02, .02, 0], [.11, .09, .11], C.BONE); for (const k of [-1, 1]) K.spike([k * .24, .04, 0], [k * .34, .14, 0], .035, k > 0 ? 1 : 4);
   // 손잡이: 가죽을 촘촘히 감고 금속 고리 둘, 끝은 발톱 셋을 금속 캡에 박음
   K.scan([-.05, -.44, -.05], [.05, -.04, .05], (x, y, z) => (hypot(x, z) <= .048 ? (floor((y + 2) / .035 + x * 20) % 2 ? M.LEATH : M.LEATH2) : null)); for (const y of [-.06, -.42]) K.cap([0, y, 0], [0, y - .025, 0], .056, .056, M.STEEL);
@@ -126,7 +126,7 @@ function tailSeg2() {
   // 끝: 금속 관 + 프리즘 덩어리
   const tp = [.02, y1 + .03, 0]; S.band(y1 - .04, .07, -.08, .1, .06); for (const [dx, dy, dz, L] of [[0, 1, 0, .38], [.5, .8, .15, .27], [-.5, .8, -.15, .25], [.8, .35, -.1, .2], [-.75, .4, .12, .2], [.2, .9, -.4, .24]]) K.spike(tp, [tp[0] + dx * L, tp[1] + dy * L, tp[2] + dz * L], .065, floor((dx + 1) * 3));
   // 가드: 단조 깃 + 뒷날개 결정판 한 쌍을 금속 틀에 끼움
-  K.scan([-.32, -.06, -.1], [.32, .16, .1], (x, y, z) => { const u = abs(x) / .3; if (u > 1) return null; const top = .12 - u * u * .1 + (1 - u) * .01, bot = -.035 + u * u * .09; if (y > top || y < bot) return null; const tk = .085 * (1 - u * .7) * (1 - abs(y - (top + bot) / 2) / ((top - bot) / 2 + .001) * .35); if (abs(z) > tk) return null; return y > top - .022 ? M.HI : u < .2 ? M.BRASS : M.STEEL; });
+  K.scan([-.32, -.06, -.1], [.32, .16, .1], (x, y, z) => { const u = abs(x) / .3; if (u > 1) return null; const top = .12 - u * u * .1 + (1 - u) * .01, bot = -.035 + u * u * .09; if (y > top || y < bot) return null; const tk = .085 * (1 - u * .7) * (1 - abs(y - (top + bot) / 2) / ((top - bot) / 2 + .001) * .35); if (abs(z) > tk) return null; return y > top - .022 ? M.HI : hypot(x / .065, (y - .04) / .05) < 1 ? M.BRASS : M.STEEL; });
   for (const k of [-1, 1]) { const pts = [[k * .2, .12], [k * .28, .17], [k * .33, .1]], cell = K.cells(pts); K.scan([min(0, k * .42), -.04, -.02], [max(0, k * .42), .28, .02], (x, y) => { const u = (k * x - .16) / .24; if (u < 0 || u > 1) return null; const mid = .07 + u * .12, half = .07 * Math.sin(u * PI) ** .7 + .004; if (abs(y - mid) > half) return null; return abs(y - mid) > half - .018 || u > .95 ? M.DARK : cell(x, y); }); }
   // 손잡이
   K.scan([-.05, -.44, -.05], [.05, -.04, .05], (x, y, z) => (hypot(x, z) <= .048 ? (floor((y + 2) / .035 + x * 20) % 2 ? M.LEATH : M.LEATH2) : null)); for (const y of [-.06, -.42]) K.cap([0, y, 0], [0, y - .025, 0], .056, .056, M.STEEL); K.ell([0, -.49, 0], [.065, .05, .065], M.BRASS);
