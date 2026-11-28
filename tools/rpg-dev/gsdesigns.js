@@ -133,3 +133,61 @@ function tailSeg2() {
   return K.V;
 }
 Object.assign(GS_CUSTOM, { cw_wing2: { n: "익완대검 (2차)", f: wingArm2 }, cw_tail2: { n: "꼬리마디대검 (2차)", f: tailSeg2 } });
+/** D. 날개깃대검(스케치안): 곧은 칼등 + 밑동에서 넓게 뻗어 칼끝으로 날카롭게 좁아지는 날. 밑동 아래 날 쪽엔 뒤로 꺾인 갈고리.
+ *  장식은 줄이고 실루엣을 크게: 큰 결정판 몇 장(깃 방향 납선), 굵은 뼈 칼등, 둥근 금속 깃 둘 */
+function finBlade() {
+  const K = kit(), S = smith(K), sp = -.13, b0 = .1, tip = 1.84, T = .05;
+  const spineX = (y) => sp + Math.sin((y - b0) / (tip - b0) * PI * .5) * .05; // 끝으로 갈수록 날 쪽으로 살짝 휨
+  // 날 끝선: 밑동(y .18 근처)에서 가장 넓고, 칼끝까지 살짝 오목하게 좁아진다. 맨 아래는 안으로 말려 들어감
+  const edgeX = (y) => { if (y < b0) return null; const t = (y - b0) / (tip - b0), w = .5 * (1 - t) ** 1.12 + .004, under = y < .2 ? Math.sqrt(max(0, (y - b0) / .1)) : 1; return spineX(y) + .07 + w * under; };
+  // 칼날: 깃 방향(날 끝선과 나란히 비스듬히) 납선으로 나뉜 큰 판 다섯 장. 가운데 볼록, 날 쪽은 맑게 벼림
+  K.scan([sp, b0, -T], [.5, tip, T], (x, y, z) => { const e = edgeX(y), s0 = spineX(y) + .05; if (e == null || x < s0 || x > e) return null; const u = (x - s0) / max(.001, e - s0), de = e - x, th = T * (.35 + .65 * Math.sin(Math.min(1, u * 1.1 + .05) * PI) ** .55) * (de < .05 ? .25 + de / .05 * .75 : 1); if (abs(z) > th) return null;
+    if (de < .035) return de < .01 ? 0xf2fbff : 0xcdeeff; // 벼린 날
+    const vane = (y - b0) + (x - s0) * 2.2, k = floor(vane / .34), f = vane / .34 - k; if (f < .05) return 0x2e4560; // 깃 방향 납선
+    return abs(z) > th - .01 ? [0x9ad6f0, 0xb8dcff, 0xa8e4fa, 0xd0d4ff, 0x8ccbe8][k % 5] : 0x6fa8cc; });
+  // 칼등: 굵은 뼈(가죽 감김), 칼끝으로 가늘어져 칼날과 한 점에서 만난다
+  K.scan([sp - .08, b0 - .06, -.08], [.12, tip, .08], (x, y, z) => { const t = (y - b0) / (tip - b0), r = .068 * (1 - t * .75) + .008; if (hypot((x - spineX(y)) / 1.1, z) > r) return null; return x < spineX(y) - r * .45 ? C.BONE : hash(floor(y * 50), 1, floor(z * 50)) > .75 ? C.HIDE2 : C.HIDE; });
+  // 둥근 금속 깃 둘(칼등과 날 뿌리를 묶음) — 장식은 이것뿐
+  for (const y of [.26, .9]) S.band(y, .06, spineX(y) - .08, spineX(y) + .16, T + .02);
+  // 밑동 아래 갈고리: 날 쪽 뿌리에서 아래 바깥으로 뒤로 꺾인 굵은 결정 돌기
+  K.spike([spineX(.12) + .1, .12, 0], [.36, -.08, 0], .07, 2); K.spike([.34, -.06, 0], [.42, -.17, 0], .04, 3);
+  K.cap([spineX(.12) + .02, .1, 0], [.3, -.03, 0], .05, .03, C.HIDE); // 갈고리를 받치는 뼈
+  // 가드: 작은 초승달 단조 깃 + 둥근 놋쇠
+  K.scan([-.24, -.06, -.09], [.24, .13, .09], (x, y, z) => { const u = abs(x) / .22; if (u > 1) return null; const top = .1 - u * u * .08, bot = -.03 + u * u * .07; if (y > top || y < bot) return null; if (abs(z) > .075 * (1 - u * .6)) return null; return y > top - .02 ? M.HI : hypot(x / .055, (y - .035) / .045) < 1 ? M.BRASS : M.STEEL; });
+  // 손잡이: 가죽 감기, 끝은 둥근 금속 + 작은 발톱
+  K.scan([-.05, -.44, -.05], [.05, -.04, .05], (x, y, z) => (hypot(x, z) <= .047 ? (floor((y + 2) / .03 + x * 25) % 2 ? M.LEATH : M.LEATH2) : null)); K.ell([0, -.47, 0], [.06, .045, .06], M.DARK); K.spike([0, -.5, 0], [0, -.6, 0], .03, 1);
+  return K.V;
+}
+Object.assign(GS_CUSTOM, { cw_fin: { n: "날개깃대검", f: finBlade } });
+/** E. 3겹 날개대검(사용자 스케치): 손잡이가 곧은 칼등 기둥으로 칼끝까지 이어지고, 칼날은 칼등에서 바깥 위로 비스듬히 뻗은 판 세 장이 겹친다.
+ *  밑동은 V자 지지대(검날 연결)로 칼날을 칼등에 잇고 그 사이는 삼각 틈 */
+function tripleWing() {
+  const K = kit(), S = smith(K), T = .05;
+  const inPoly = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
+  // 칼날 외곽: 칼끝(칼등 위) → 가장 넓은 곳(중간) → 아래 바깥 모서리 → 칼등 밑동. 바깥 날은 살짝 볼록
+  const OUT = [[.03, 1.84], [.2, 1.5], [.38, 1.16], [.47, .98], [.45, .7], [.41, .42], [.34, .22], [.03, .02]];
+  const HOLE = [[.05, .1], [.16, .3], [.05, .5]]; // 검날 연결: V자 지지대 사이 삼각 틈
+  // 판 경계: 칼등에서 바깥 위로 비스듬한 선 둘 → 판 세 장(아래·가운데·위)
+  const seamY = (x, k) => [.42, .9][k] + x * [.72, .68][k]; // 칼등 높이 + 기울기
+  const plateOf = (x, y) => (y > seamY(x, 1) ? 2 : y > seamY(x, 0) ? 1 : 0);
+  const near = (x, y) => min(...[0, 1].map((k) => abs(y - seamY(x, k)) / Math.hypot(1, [.72, .68][k])));
+  K.scan([0, 0, -T - .03], [.5, 1.86, T + .03], (x, y, z) => { if (!inPoly(OUT, x, y) || inPoly(HOLE, x, y)) return null; const p = plateOf(x, y);
+    // 겹: 위 판일수록 앞(+z)으로 조금 나와 아래 판 위에 얹힌다. 날 쪽으로 얇아지는 볼록 단면
+    let de = 9; for (let i = 0; i < OUT.length - 1; i++) { const [ax, ay] = OUT[i], [bx, by] = OUT[i + 1], L = (bx - ax) ** 2 + (by - ay) ** 2, t = max(0, min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / L)); de = min(de, hypot(x - ax - (bx - ax) * t, y - ay - (by - ay) * t)); }
+    const off = (p - 1) * .012, th = T * (.45 + .55 * min(1, x / .2)) * (de < .05 ? .25 + de / .05 * .75 : 1); if (z < off - th || z > off + th) return null;
+    const sd = near(x, y); if (sd < .014) return 0x2a3e58; // 판 경계 납선
+    if (sd < .03 && y > seamY(x, 0) - .03) return 0x5d8fb5; // 위 판이 아래 판에 드리운 그늘
+    if (de < .032) return de < .01 ? 0xf2fbff : 0xcdeeff; // 벼린 날
+    if (abs(z - off) > th - .01) { const vane = floor((y - x * .7) / .085); return [[0x9ad6f0, 0xa8e4fa], [0xb8dcff, 0xc8dcff], [0xd0d4ff, 0xdcd0ff]][p][vane & 1]; } // 판마다 색 결, 깃 방향 줄
+    return 0x6fa8cc; });
+  // V자 지지대 테두리(검날 연결): 뼈대가 칼날을 받친다
+  K.cap([.04, .08, 0], [.17, .31, 0], .035, .03, C.BONE); K.cap([.17, .31, 0], [.04, .52, 0], .03, .035, C.BONE); K.ell([.17, .31, 0], [.045, .045, .045], C.HIDE2);
+  // 칼등 기둥 = 손잡이의 연장: 굵게 시작해 칼끝으로 가늘어지고, 끝은 뾰족
+  K.scan([-.08, -.02, -.08], [.08, 1.9, .08], (x, y, z) => { const t = y / 1.86, r = .062 * (1 - t * .7) * (y > 1.72 ? max(0, 1 - (y - 1.72) / .16) : 1) + .006; if (hypot(x / 1.05, z) > r) return null; return x < -r * .4 ? C.BONE : hash(floor(y * 50), 2, floor(z * 50)) > .78 ? C.HIDE2 : C.HIDE; });
+  // 둥근 금속 깃: 칼날이 칼등에 붙는 밑동에 하나
+  S.band(.02, .07, -.07, .1, .065);
+  // 손잡이: 칼등과 같은 축으로 곧게(가죽 감기), 끝은 둥근 금속
+  K.scan([-.05, -.46, -.05], [.05, -.02, .05], (x, y, z) => (hypot(x, z) <= .048 ? (floor((y + 2) / .03 + x * 25) % 2 ? M.LEATH : M.LEATH2) : null)); K.ell([0, -.49, 0], [.06, .045, .06], M.DARK);
+  return K.V;
+}
+Object.assign(GS_CUSTOM, { cw_triple: { n: "3겹 날개대검", f: tripleWing } });
