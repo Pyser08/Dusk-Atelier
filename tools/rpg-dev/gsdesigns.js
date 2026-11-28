@@ -341,3 +341,84 @@ function tailScales() {
   guard(); grip(); return K.V;
 }
 Object.assign(GS_CUSTOM, { n_pane: { n: "판창대검", f: paneFrame }, n_finger: { n: "익지대검", f: fingerRibs }, n_wedge: { n: "볏쐐기대검", f: crestWedge }, n_sac: { n: "광낭대검", f: lightSac }, n_tails: { n: "꼬리비늘대검", f: tailScales } });
+// ════ 투익룡 대검 견본 6종: 날 = 광린(맑게 반짝임), 그 외 = 묵은 검은 비늘·갑각(흑요석빛), 보옥 = 용속성 코어 ════
+const OB = { D: 0x121018, A: 0x1f1c27, B: 0x2b2736, C: 0x3c374b, H: 0x5a5470 }, KR = { D: 0x6aa8d0, A: 0xa6daf4, B: 0xcbeeff, C: 0xf0fbff }, BO = { D: 0x5a1020, A: 0x9a2236, B: 0xd8404c, C: 0xff9a84 };
+function tuik(K) {
+  const S = smith(K);
+  // 겹비늘: 칼끝 쪽으로 기와처럼 겹친 비늘. 비늘마다 자유단(칼끝 쪽)이 도드라지고 밝게 번들거림
+  const sh = (x, y, s = .075) => { const row = floor(y / s), xo = x / (s * .85) + (row & 1) * .5, ci = floor(xo), u = xo - ci, v = y / s - row, top = .92 - .4 * (2 * u - 1) ** 2, h = hash(ci, row, 3);
+    if (v > top) return { b: 0, c: OB.D }; return { b: v / top * .009, c: v / top > .78 ? (h > .5 ? OB.H : OB.C) : v / top > .35 ? OB.B : OB.A }; };
+  // 칼날 판: lim(y) → [칼등 x, 날 x], 두께는 가운데 두껍고 날로 얇아짐 + 겹비늘 요철. kr: 날에서 광린 폭
+  const slab = (y0, y1, lim, { T = .05, kr = .06, s = .075, surf } = {}) => K.scan([-.5, y0, -T - .03], [.6, y1, T + .03], (x, y, z) => { const L = lim(y); if (!L || x < L[0] || x > L[1]) return null; const u = (x - L[0]) / max(.001, L[1] - L[0]), de = L[1] - x;
+    let th = T * (.5 + .5 * Math.sin(min(1, u * 1.05 + .1) * PI) ** .5) * (de < kr ? .3 + de / kr * .7 : 1); const sc = de >= kr ? (surf ? surf(x, y, u, de) : sh(x, y, s)) : null; if (sc) th += sc.b; if (abs(z) > th) return null;
+    if (de < kr) { if (de < kr * .22) return KR.C; const r = floor(y / .055 + (de / kr) * 1.3); return abs(z) > th - .01 ? (r & 1 ? KR.B : KR.A) : KR.D; } // 광린 날: 작은 비늘이 날을 따라 줄지음
+    if (de < kr + .012) return OB.D; // 광린과 검은 비늘 경계
+    return abs(z) > th - .012 ? sc.c : OB.D; });
+  // 둥근 끝 윤곽: 폭 w0에서 칼끝 y1까지 곡선으로 모임(직각 없음)
+  const round = (sp, y0, y1, w0, w1, ys = y1 - .38) => (y) => { if (y < y0 || y > y1) return null; const t = (y - y0) / (ys - y0), w = y < ys ? w0 + (w1 - w0) * t : w1 * Math.sqrt(max(0, 1 - ((y - ys) / (y1 - ys)) ** 2)); return [sp(y), sp(y) + w]; };
+  // 갑각 칼등: 굵은 검은 판, 마디마다 겹친 턱
+  const back = (sp, y0, y1, r0, r1, seg = .2) => K.scan([-.5, y0, -.1], [.3, y1, .1], (x, y, z) => { const t = (y - y0) / (y1 - y0), v = ((y - y0) % seg) / seg, r = (r0 + (r1 - r0) * t) * (1 + v * .18) * (y > y1 - .1 ? max(.2, (y1 - y) / .1) : 1), c = sp(y); if (hypot((x - c) / 1.2, z) > r) return null; return v > .85 ? OB.D : x < c - r * .5 ? OB.C : v > .55 ? OB.B : OB.A; });
+  // 보옥: 금속 소켓에 박힌 붉은 결정 덩어리
+  const orb = (c, r = .06) => { for (let i = 0; i < 12; i++) { const a = i / 12 * PI * 2; K.ell([c[0] + Math.cos(a) * r * 1.3, c[1] + Math.sin(a) * r * 1.3, c[2]], [.02, .02, .03], i % 3 ? M.STEEL : M.HI); } K.ell(c, [r, r, r * .7], (x, y, z) => (hypot(x - c[0] + r * .3, y - c[1] - r * .3) < r * .35 ? BO.C : z * Math.sign(c[2] || 1) > c[2] * 0 + r * .3 ? BO.B : BO.A)); K.ell([c[0], c[1], -c[2]], [r * .8, r * .8, r * .5], BO.A); };
+  // 가드: 갑각 덩어리 두 겹(검은 판이 겹친 둥근 턱)
+  const guard = (w = .26) => { K.ell([0, .05, 0], [w, .075, .085], (x, y, z) => (y > .09 ? OB.C : abs(x) > w * .75 ? OB.D : OB.B)); K.ell([-.04, .0, 0], [w * .7, .05, .07], OB.A); };
+  // 손잡이: 검은 비늘 가죽 감개 + 금속 띠, 폼멜은 묵은 비늘 덩어리
+  const grip = (pom = true) => { K.scan([-.05, -.46, -.05], [.05, -.02, .05], (x, y, z) => (hypot(x, z) <= .046 ? (floor((y + 2) / .03 + x * 20) % 2 ? OB.B : OB.A) : null)); S.band(-.08, .04, -.05, .05, .05); if (pom) { K.ell([0, -.5, 0], [.065, .055, .065], OB.B); K.ell([0, -.53, 0], [.04, .03, .04], OB.C); } };
+  const claw = (p, a, n, r0, da = .3, len = .055, k = .006, z = 0) => { for (let i = 0; i < n; i++) { const q = [p[0] + Math.sin(a) * len, p[1] + Math.cos(a) * len, z]; K.cap(p, q, max(.006, r0 - i * k), max(.004, r0 - (i + 1) * k), i > n - 3 ? OB.H : i > n - 5 ? OB.C : OB.B); p = q; a += da; } return p; };
+  return { S, sh, slab, round, back, orb, guard, grip, claw };
+}
+/** 1. 겹비늘대검(기본형): 갑각 판 위에 검은 비늘을 칼끝 쪽으로 기와처럼 겹치고, 날에만 광린을 한 줄로 */
+function tkScale() {
+  const K = kit(), { S, slab, round, back, guard, grip } = tuik(K), sp = (y) => -.2 + sin(y / 1.8 * PI) * .02;
+  slab(.08, 1.76, round(sp, .08, 1.76, .5, .4), { T: .055, kr: .07 });
+  back(sp, .04, 1.62, .06, .035); for (const y of [.18, .3]) S.band(y, .045, -.27, .3, .06); guard(); grip(); return K.V;
+}
+/** 2. 날개창대검: 돌진 때 모인 날개. 날개 뼈 셋이 칼끝 한 점으로 모이고 그 사이를 광린이 채운다. 밑동은 두꺼운 갑각 */
+function tkSpear() {
+  const K = kit(), { S, back, guard, grip, claw } = tuik(K), tip = [.06, 1.82], roots = [[-.2, .12], [.04, .1], [.28, .14]];
+  const bx = (i, y) => { const [x0, y0] = roots[i], t = max(0, (y - y0) / (tip[1] - y0)); return x0 + (tip[0] - x0) * t ** .8 + sin(t * PI) * (i - 1) * .06; };
+  // 뼈 사이 광린 막(두꺼운 비늘판, 뼈 쪽 검게 물듦)
+  K.scan([-.3, .1, -.04], [.4, 1.82, .04], (x, y, z) => { const a = bx(0, y), b = bx(2, y); if (x < a || x > b) return null; const m = bx(1, y), d = min(abs(x - a), abs(x - b), abs(x - m)), th = .022 + d * .12; if (abs(z) > th) return null; if (d < .03) return OB.B; const r = floor(y / .07 + d * 8); return abs(z) > th - .008 ? (d > .08 ? KR.C : r & 1 ? KR.B : KR.A) : KR.D; });
+  for (let i = 0; i < 3; i++) K.scan([-.4, .05, -.08], [.5, 1.84, .08], (x, y, z) => { const c = bx(i, y), t = (y - roots[i][1]) / (tip[1] - roots[i][1]); if (t < 0 || t > 1) return null; const r = .05 * (1 - t * .75); if (hypot((x - c) / 1.1, z) > r) return null; return floor(y / .2) !== floor((y - .015) / .2) ? OB.D : x < c - r * .4 ? OB.C : OB.A; });
+  // 밑동 갑각: 날개 뿌리를 감싸는 두꺼운 검은 판 세 겹 → 대검의 무게
+  for (let k = 0; k < 3; k++) K.ell([.04, .2 + k * .11, 0], [.36 - k * .07, .09, .085 - k * .012], (x, y, z) => (y > .24 + k * .11 ? OB.C : abs(z) > .05 ? OB.B : OB.A));
+  claw([tip[0], tip[1] - .04, 0], .1, 4, .03, .05, .04, .006); S.band(.04, .04, -.25, .3, .07); guard(.3); grip(); return K.V;
+}
+/** 3. 응광대검(빔형): 칼날 가운데 렌즈 홈. 양쪽 날개판이 안쪽으로 오므라들고, 밑동 보옥에서 칼끝까지 빛이 흐른다 */
+function tkLens() {
+  const K = kit(), { S, slab, round, back, orb, guard, grip } = tuik(K), sp = (y) => -.22, L = round(sp, .08, 1.76, .52, .44), mid = (y) => { const l = L(y); return l ? l[0] + (l[1] - l[0]) * .42 : 0; };
+  slab(.08, 1.76, L, { T: .058, kr: .07, surf: (x, y, u, de) => { const m = abs(x - mid(y)); if (y > .26 && y < 1.6 && m < .05) return { b: -.04 + m * .4, c: m < .022 ? (floor(y * 14 + el0) % 3 ? BO.B : BO.C) : KR.B }; return tuikSh(x, y); } });
+  back(sp, .04, 1.62, .07, .04); // 갑각 칼등(홈이 갈라 놓은 판을 받침)
+  for (const y of [.55, 1.0, 1.4]) K.scan([-.4, y - .025, -.07], [.4, y + .025, .07], (x, yy, z) => { const l = L(yy); if (!l || abs(x - mid(yy)) > .07 || abs(z) > .06) return null; return abs(z) > .045 ? OB.C : null; }); // 홈 가로대(판을 잇는 검은 비늘 턱)
+  orb([mid(.18), .18, .055], .065); S.band(.06, .04, -.29, .32, .07); guard(.3); grip(); return K.V;
+}
+let el0 = 0, tuikSh = null;
+/** 4. 꼬리추대검(둔기형): 칼끝 쪽이 꼬리 끝 비늘 덩어리처럼 두툼하게 뭉쳐 무게가 앞으로 쏠림. 날은 짧은 구간만 광린 */
+function tkClub() {
+  const K = kit(), { S, slab, back, guard, grip } = tuik(K), sp = (y) => -.18;
+  const lim = (y) => { if (y < .08 || y > 1.78) return null; const t = (y - .08) / 1.7, w = .36 + .22 * Math.sin(min(1, t * 1.15) * PI * .5) ** 2 - (t > .86 ? .58 * (1 - Math.sqrt(max(0, 1 - ((t - .86) / .14) ** 2))) : 0); return [sp(y), sp(y) + w]; };
+  slab(.08, 1.78, lim, { T: .05, kr: .065, s: .09, surf: (x, y, u, de) => { const r = tuikSh(x, y, .09); if (y > 1.05) r.b += (y - 1.05) * .05 * (1 - u * .4); if (y > .95 && de < .07) return { b: r.b + .01, c: OB.C }; return r; } }); // 칼끝 쪽 비늘이 굵게 부풀어 둔한 면
+  for (let i = 0; i < 9; i++) { const y = 1.12 + i * .07, x = sp(y) + .08 + hash(i, 2, 1) * .3; K.ell([x, y, (i & 1 ? 1 : -1) * .05], [.08, .06, .045], (xx, yy) => (yy > y + .03 ? OB.H : OB.B)); } // 뭉친 비늘 덩어리
+  back(sp, .04, 1.7, .065, .07, .16); S.band(.2, .05, -.25, .26, .065); guard(); grip(); return K.V;
+}
+/** 5. 발톱대검: 칼끝에 손목 발톱 갈고리, 칼등에 뒷발 발톱 셋이 뒤로 누움. 손잡이는 꼬리를 깎은 굵은 자루 */
+function tkClaw() {
+  const K = kit(), { S, slab, round, back, guard, claw } = tuik(K), sp = (y) => -.2 + sin(y / 1.7 * PI) * .03;
+  slab(.08, 1.66, round(sp, .08, 1.66, .48, .38, 1.4), { T: .052, kr: .07 });
+  back(sp, .04, 1.6, .06, .04);
+  claw([sp(1.58), 1.58, 0], .15, 8, .055, .3, .055, .006); // 손목 발톱: 앞(날 쪽)으로 휘어 걸림
+  for (const y of [.55, .9, 1.22]) claw([sp(y) - .04, y, 0], -2.3, 5, .04, -.22, .045, .007); // 뒷발 발톱: 칼등에서 손잡이 쪽으로 누움
+  // 꼬리 자루: 마디진 굵은 검은 자루, 끝은 꼬리 끝 비늘 덩어리
+  for (let i = 0; i < 6; i++) { const a = -.46 + i * .075; K.scan([-.07, a, -.07], [.07, a + .075, .07], (x, y, z) => { const t = (y - a) / .075, r = .05 + sin(t * PI) * .008; return hypot(x, z) <= r ? (t < .15 ? OB.D : floor((y + 2) / .025 + x * 20) % 2 ? OB.B : OB.A) : null; }); }
+  for (let i = 0; i < 5; i++) { const a = i / 5 * PI * 2; K.ell([Math.cos(a) * .035, -.53, Math.sin(a) * .035], [.045, .05, .045], i & 1 ? OB.C : OB.B); } K.ell([0, -.58, 0], [.04, .035, .04], OB.H);
+  guard(); return K.V;
+}
+/** 6. 탈피대검: 맑은 광린 칼날 위를 검은 묵은 비늘 껍질이 덮고, 깨져 나간 틈으로 속비늘이 드러난다. 밑동에 보옥 */
+function tkMolt() {
+  const K = kit(), { S, slab, round, back, orb, guard, grip } = tuik(K), sp = (y) => -.2;
+  const crack = (x, y) => { const n = sin(x * 9 + sin(y * 5) * 2) + sin(y * 6.5 + x * 3) * .9 + sin(y * 13 - x * 7) * .35; return n - (y - .9) * 1.1; }; // >0 껍질 남음, 칼끝 쪽일수록 많이 벗겨짐
+  slab(.08, 1.76, round(sp, .08, 1.76, .5, .42), { T: .05, kr: .07, surf: (x, y, u, de) => { const c = crack(x, y); if (c > .18) { const r = tuikSh(x, y); r.b += .012; return r; } if (c > .0) return { b: .012 * c / .18, c: c > .12 ? OB.H : KR.C }; const r = floor(y / .06 + u * 2); return { b: -.004, c: r % 3 ? KR.B : KR.A }; } });
+  back(sp, .04, 1.62, .06, .035); orb([sp(.2) + .16, .2, .055], .06); S.band(.08, .04, -.27, .3, .065); guard(); grip(); return K.V;
+}
+{ const K0 = kit(); tuikSh = tuik(K0).sh; }
+Object.assign(GS_CUSTOM, { tk_scale: { n: "겹비늘대검", f: tkScale }, tk_spear: { n: "날개창대검", f: tkSpear }, tk_lens: { n: "응광대검", f: tkLens }, tk_club: { n: "꼬리추대검", f: tkClub }, tk_claw: { n: "발톱대검", f: tkClaw }, tk_molt: { n: "탈피대검", f: tkMolt } });
