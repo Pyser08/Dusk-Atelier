@@ -422,3 +422,68 @@ function tkMolt() {
 }
 { const K0 = kit(); tuikSh = tuik(K0).sh; }
 Object.assign(GS_CUSTOM, { tk_scale: { n: "겹비늘대검", f: tkScale }, tk_spear: { n: "날개창대검", f: tkSpear }, tk_lens: { n: "응광대검", f: tkLens }, tk_club: { n: "꼬리추대검", f: tkClub }, tk_claw: { n: "발톱대검", f: tkClaw }, tk_molt: { n: "탈피대검", f: tkMolt } });
+// ════ 투익룡 대검 2차: 틀에 박힌 판 칼날 대신 흑요석 파편(마름모 단면, 끝이 뾰족)을 쌓아 실루엣을 만든다 ════
+function shards(K) {
+  const T0 = tuik(K);
+  // 파편: p 뿌리, a 방향(0=+y, +면 날 쪽으로 기움), L 길이, W 폭, T 두께, bend 휨, al/ar 좌우 폭 비율, kr 광린 날 폭, edge "l"|"r"|"b"|"n"
+  const shard = ({ p, a = 0, L, W, T = .04, bend = 0, al = 1, ar = 1, z = 0, kr = .045, edge = "r", peak = .3, clear = false }) => { const R = L + W + .05, sa = sin(a), ca = cos(a);
+    K.scan([p[0] - R, p[1] - R, z - T - .02], [p[0] + R, p[1] + R, z + T + .02], (x, y, zz) => { const dx = x - p[0], dy = y - p[1], s = dx * sa + dy * ca; let n = dx * ca - dy * sa; const t = s / L; if (t < 0 || t > 1) return null; n -= bend * L * t * t;
+      const f = t < peak ? .55 + .45 * t / peak : ((1 - t) / (1 - peak)) ** .75, wl = W * al * f, wr = W * ar * f, ws = n < 0 ? wl : wr; if (ws <= .002 || abs(n) > ws) return null;
+      const e = ws - abs(n), th = T * (.25 + .75 * (e / ws) ** .6) * (t > .85 ? .4 + (1 - t) / .15 * .6 : 1); if (abs(zz - z) > th) return null;
+      const side = n < 0 ? "l" : "r", isKr = clear || edge === "b" || edge === side;
+      if (isKr && (clear || e < kr)) { if (e < .012) return KR.C; return abs(zz - z) > th - .01 ? (floor(s / .05 + e * 20) & 1 ? KR.B : KR.A) : KR.D; }
+      if (abs(zz - z) < th - .012) return OB.D; if (abs(n) < ws * .1) return OB.H; // 등줄(능선)이 번들거림
+      const fc = floor(s * 9 + abs(n) * 14 + hash(floor(s * 9), 1, 2) * 2); return fc % 4 === 0 ? OB.C : fc % 4 === 1 ? OB.A : OB.B; }); };
+  return { ...T0, shard };
+}
+/** 1'. 겹비늘대검: 큰 검은 비늘 파편 일곱 장이 칼끝 쪽으로 누워 겹친다. 파편 끝이 날 밖으로 튀어나와 톱날 실루엣, 끝마다 광린 */
+function tk2Scale() {
+  const K = kit(), { shard, guard, grip, S } = shards(K);
+  shard({ p: [-.1, .05], a: .06, L: 1.85, W: .16, T: .06, edge: "n", bend: -.04 }); // 심(갑각 등줄)
+  for (let k = 0; k < 7; k++) { const y = .1 + k * .22, w = .26 - k * .018; shard({ p: [-.14, y], a: .62 - k * .03, L: .5 - k * .02, W: w * .5, T: .045, z: (7 - k) * .006, ar: 1.2, al: .5, edge: "r", kr: .06, peak: .25 }); }
+  shard({ p: [-.06, 1.5], a: .18, L: .45, W: .1, T: .05, edge: "b", kr: .05 }); // 칼끝 파편
+  S.band(.1, .05, -.28, .2, .07); guard(.3); grip(); return K.V;
+}
+/** 2'. 날개창대검: 모은 날개 세 장이 엇갈려 길이가 다른 세 갈래 끝을 만든다. 뿌리에는 뒤로 꺾인 갑각 미늘 */
+function tk2Spear() {
+  const K = kit(), { shard, guard, grip, S } = shards(K);
+  shard({ p: [-.24, .06], a: .16, L: 1.55, W: .17, T: .05, bend: -.06, edge: "r", kr: .08, al: .6 });
+  shard({ p: [.24, .06], a: -.12, L: 1.45, W: .17, T: .05, bend: .07, edge: "l", kr: .08, ar: .6, z: .01 });
+  shard({ p: [0, .02], a: 0, L: 1.9, W: .19, T: .065, edge: "b", kr: .07, z: -.008, peak: .2 });
+  for (const sx of [-1, 1]) for (let k = 0; k < 2; k++) shard({ p: [sx * (.16 + k * .07), .3 - k * .1], a: sx * (2.4 - k * .2), L: .32 - k * .06, W: .07, T: .045, edge: "n" }); // 뒤로 꺾인 미늘
+  S.band(.06, .05, -.3, .3, .075); guard(.32); grip(); return K.V;
+}
+/** 3'. 응광대검: 날개판 두 장이 마주 보고 휘어 끝이 서로를 향해 오므라든다(빔을 모으는 자세). 사이 틈 아래 보옥 */
+function tk2Lens() {
+  const K = kit(), { shard, orb, guard, grip, S } = shards(K);
+  shard({ p: [-.16, .06], a: -.05, L: 1.7, W: .2, T: .055, bend: .1, edge: "r", kr: .07, al: 1.2, ar: .7 }); // 왼판: 안쪽(오른) 날이 광린
+  shard({ p: [.16, .06], a: .05, L: 1.6, W: .2, T: .055, bend: -.1, edge: "l", kr: .07, al: .7, ar: 1.2, z: .004 });
+  for (const y of [.5, .95]) K.scan([-.25, y - .03, -.05], [.25, y + .03, .05], (x, yy, z) => (abs(x) < .2 && abs(z) < .04 ? (abs(x) < .03 ? BO.B : OB.B) : null)); // 판을 잇는 검은 비늘 가로대(가운데로 빛)
+  K.scan([-.05, .25, -.02], [.05, 1.5, .02], (x, y, z) => (abs(x) < .012 * (1.4 - y / 1.5) ? (floor(y * 12) % 3 ? BO.B : BO.C) : null)); // 틈을 흐르는 빛
+  orb([0, .16, .04], .07); S.band(.04, .05, -.3, .3, .075); guard(.32); grip(); return K.V;
+}
+/** 4'. 꼬리추대검: 가는 목에서 칼끝 쪽 비늘 덩어리가 방사형 파편으로 터져 나온 머리. 무게가 앞에 쏠림 */
+function tk2Club() {
+  const K = kit(), { shard, guard, grip, S } = shards(K);
+  shard({ p: [-.04, .04], a: .03, L: 1.2, W: .14, T: .06, edge: "r", kr: .05, peak: .7 }); // 목: 날 쪽 광린 짧게
+  K.ell([.02, 1.3, 0], [.2, .24, .1], (x, y, z) => (abs(z) > .07 ? OB.C : OB.B)); // 뭉친 비늘 덩어리 심
+  for (let k = 0; k < 9; k++) { const a = -1.5 + k * .37, sh = .3 + hash(k, 4, 1) * .15; shard({ p: [.02 + sin(a) * .1, 1.3 + cos(a) * .12], a, L: sh, W: .08, T: .05, edge: k % 3 === 1 ? "b" : "n", kr: .03, z: (k & 1) * .03 - .015 }); }
+  S.band(1.0, .06, -.15, .2, .07); S.band(.1, .05, -.25, .25, .07); guard(.28); grip(); return K.V;
+}
+/** 5'. 발톱대검: 칼날 전체가 하나의 거대한 손목 발톱처럼 앞으로 휜 낫 모양. 칼등엔 뒷발 발톱이 뒤로 누움, 자루는 꼬리 */
+function tk2Claw() {
+  const K = kit(), { shard, guard, S } = shards(K);
+  shard({ p: [-.08, .04], a: -.05, L: 1.85, W: .26, T: .06, bend: .32, edge: "r", kr: .075, al: .55, peak: .25 }); // 휜 발톱 칼날
+  for (const [y, x] of [[.45, -.2], [.85, -.12], [1.2, .02]]) shard({ p: [x, y], a: -2.5, L: .3, W: .06, T: .045, bend: -.15, edge: "n" });
+  for (let i = 0; i < 6; i++) { const a = -.46 + i * .075; K.scan([-.07, a, -.07], [.07, a + .075, .07], (x, y, z) => { const t = (y - a) / .075, r = .05 + sin(t * PI) * .009; return hypot(x, z) <= r ? (t < .15 ? OB.D : OB.B) : null; }); }
+  for (let k = 0; k < 4; k++) shard({ p: [0, -.48], a: PI + (k - 1.5) * .45, L: .16, W: .05, T: .04, edge: "n" }); // 꼬리 끝 폼멜(뒤로 뻗친 비늘)
+  S.band(.04, .05, -.3, .3, .075); guard(.3); return K.V;
+}
+/** 6'. 탈피대검: 맑은 광린 칼날(통째로 반짝)을 검은 껍질 파편이 비스듬히 감싸다 깨져 들려 있다. 들린 파편 끝이 밖으로 뾰족 */
+function tk2Molt() {
+  const K = kit(), { shard, orb, guard, grip, S } = shards(K);
+  shard({ p: [0, .04], a: .04, L: 1.85, W: .24, T: .05, clear: true, peak: .35, al: .8 }); // 속: 광린 칼날
+  for (let k = 0; k < 6; k++) { const y = .12 + k * .23, side = k & 1 ? 1 : -1; shard({ p: [side * .14, y], a: side * (.5 + k * .04), L: .42 - k * .03, W: .09, T: .035, z: .05 * side * 0 + .045, edge: "n", peak: .2 }); shard({ p: [side * .12, y + .08], a: side * (.6 + k * .04), L: .3, W: .07, T: .035, z: -.045, edge: "n" }); } // 들린 껍질 파편(양면)
+  orb([0, .2, .06], .06); S.band(.06, .05, -.28, .28, .07); guard(.3); grip(); return K.V;
+}
+Object.assign(GS_CUSTOM, { tk2_scale: { n: "겹비늘대검", f: tk2Scale }, tk2_spear: { n: "날개창대검", f: tk2Spear }, tk2_lens: { n: "응광대검", f: tk2Lens }, tk2_club: { n: "꼬리추대검", f: tk2Club }, tk2_claw: { n: "발톱대검", f: tk2Claw }, tk2_molt: { n: "탈피대검", f: tk2Molt } });
