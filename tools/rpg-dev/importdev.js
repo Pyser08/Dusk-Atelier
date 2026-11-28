@@ -1,0 +1,16 @@
+// 모델 불러오기: /import — .vox + 표시점 .json을 넣으면 규격 검사 후 사냥꾼이 들고 대검 동작을 해 본다
+import * as THREE from "three"; import { makeHunter } from "./hunter.js"; import { GSPlayer, CLIPS } from "./gsanim.js"; import { parseVox, checkModel, makeImportedSword, stash } from "./modelimport.js";
+const $ = (q) => document.querySelector(q), gl = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); gl.toneMapping = THREE.ACESFilmicToneMapping; gl.shadowMap.enabled = true; $("#v").append(gl.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x3a3450); const cam = new THREE.PerspectiveCamera(30, 1, .1, 80); scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x6a5060, 1.9)); const sun = new THREE.DirectionalLight(0xffe2bd, 3); sun.position.set(-3, 7, 5); sun.castShadow = true; scene.add(sun);
+const fl = new THREE.Mesh(new THREE.CircleGeometry(12, 40), new THREE.MeshLambertMaterial({ color: 0x6a6078 })); fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true; scene.add(fl);
+const h = makeHunter({}); scene.add(h.root); let gs = null, P = null, ab = null, json = null, name = "";
+function build() { if (!ab) return; try { const vox = parseVox(ab), pts = json?.points ?? {}, rep = checkModel(vox, pts); if (gs) h.root.remove(gs.obj); gs = makeImportedSword(vox, pts, name); h.root.add(gs.obj); P = new GSPlayer(h, gs); P.play("drawnIdle");
+  $("#rep").innerHTML = `<b>${name}</b> · ${rep.size.join("×")}칸 · 복셀 ${rep.count} · 면 ${rep.tris} · 표시점 ${Object.keys(pts).join(", ") || "없음"}${rep.warn.map((w) => `<div class=w>⚠ ${w}</div>`).join("")}`; $("#use").disabled = false; } catch (e) { $("#rep").innerHTML = `<div class=w>⚠ ${e.message}</div>`; } }
+$("#fv").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; ab = await f.arrayBuffer(); name = f.name.replace(/\.vox$/, ""); build(); };
+$("#fj").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; json = JSON.parse(await f.text()); build(); };
+$("#use").onclick = () => { stash.save(ab, json, name); location.href = "/hunt?gs=import"; };
+for (const [n, l] of [["draw", "발도"], ["vslash", "세로베기"], ["wide", "베어넘기기"], ["upswing", "베어올리기"], ["guardIn", "가드"], ["sheathe", "납도"]]) { const b = document.createElement("button"); b.textContent = l; b.onclick = () => P?.play(n); $("#b").append(b); }
+let yaw = .9, drag = null; gl.domElement.onpointerdown = (e) => (drag = e.clientX); onpointerup = () => (drag = null); onpointermove = (e) => { if (drag != null) { yaw += (e.clientX - drag) * .01; drag = e.clientX; } };
+const size = () => { const r = $("#v").getBoundingClientRect(); gl.setSize(r.width, r.height); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }; addEventListener("resize", size); size();
+const clock = new THREE.Clock(); let el = 0; gl.setAnimationLoop(() => { const dt = Math.min(.05, clock.getDelta()); el += dt; h.root.rotation.y = yaw; if (P) P.update(dt, { t: el }); cam.position.set(0, 2, 8); cam.lookAt(0, 1.2, 0); gl.render(scene, cam); });
+window.__import = { load: (a, j, n) => { ab = a; json = j; name = n; build(); }, step: (s) => { for (let t = 0; t < s; t += 1 / 60) P?.update(1 / 60, { t }); h.root.rotation.y = yaw; gl.render(scene, cam); return gl.domElement.toDataURL("image/png"); }, play: (n) => P?.play(n) };
