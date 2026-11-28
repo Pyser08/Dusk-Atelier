@@ -249,3 +249,41 @@ function wingBible() {
   return K.V;
 }
 Object.assign(GS_CUSTOM, { cw_bible: { n: "익완대검 · 상위형", f: wingBible } });
+/** H. 꼬리마디대검(바이블판): 꼬리뼈마디를 금속 축에 꿰어 칼 심으로, 마디마다 소켓에 등결정가시 밑동을 박아 톱날. 칼끝 = 프리즘추 */
+function tailBible() {
+  const K = kit(), S = smith(K), BONE = 0x8a8496, BONE2 = 0x6e6a7c, BONE3 = 0xa8a2b4, N = 7, y0 = .1, y1 = 1.5, sl = (y1 - y0) / N;
+  const cx = (y) => -.04 - Math.sin((y - y0) / (y1 - y0) * PI) * .035, sc = (y) => 1 - (y - y0) / (y1 - y0) * .4;
+  // 금속 축: 마디를 꿰는 심(마디 사이로 살짝 드러남)
+  K.cap([cx(y0), y0 - .02, 0], [cx(y1), y1 + .04, 0], .022, .016, M.DARK);
+  for (let i = 0; i < N; i++) { const a = y0 + i * sl, m = a + sl / 2, s = sc(m);
+    // 꼬리뼈마디: 가운데가 둥글게 부푼 짧고 굵은 마디. 뒤쪽은 결
+    K.scan([-.25, a, -.1], [.15, a + sl, .1], (x, y, z) => { const t = (y - a) / sl; if (t < .06 || t > .94) return null; const r = (.085 + Math.sin(t * PI) * .025) * s, d = hypot((x - cx(y)) / 1.25, z / .95); if (d > r) return null; return x < cx(y) - r * .7 ? (floor(y * 80) % 4 === 0 ? BONE2 : BONE3) : t < .18 || t > .82 ? BONE2 : BONE; });
+    // 소켓: 마디 앞쪽(날 쪽)에 가시 밑동을 무는 금속 받침 + 리벳 둘
+    const sx = cx(m) + .09 * s; K.ell([sx, m, 0], [.035 * s, .055, .045], M.STEEL); K.ell([sx + .01, m + .045, 0], [.03 * s, .012, .04], M.HI); S.rivet(sx, m - .03, .045); S.rivet(sx, m - .03, -.045);
+    // 등결정가시: 밑동이 넓은 쐐기, 칼끝 쪽으로 누움. 크기가 물결친다. 사이에 작은 가시
+    const big = (.2 + Math.sin(i * .9 + .5) * .05) * s; K.spike([sx + .02, m - .02, 0], [sx + .02 + big, m + big * .75, 0], .065 * s, i); K.spike([sx + .01, a + sl * .95, 0], [sx + .01 + big * .5, a + sl * .95 + big * .4, 0], .035 * s, i + 2); }
+  // 칼끝: 금속 관에 박은 프리즘추
+  const tp = [cx(y1), y1 + .06, 0]; S.band(y1 - .01, .07, cx(y1) - .05, cx(y1) + .05, .045); for (const [dx, dy, dz, L] of [[0, 1, 0, .3], [.5, .8, .2, .2], [-.4, .85, -.2, .2], [.7, .45, -.15, .16], [-.6, .5, .15, .15]]) K.spike(tp, [tp[0] + dx * L, tp[1] + dy * L, tp[2] + dz * L], .06, floor((dx + 1) * 3));
+  // 가드: 꼬리 밑동 마디(큰 뼈) + 초승달 금속 깃 / 손잡이
+  K.ell([cx(.06), .05, 0], [.13, .08, .1], BONE); K.scan([-.28, -.06, -.09], [.26, .12, .09], (x, y, z) => { const u = abs(x + .02) / .24; if (u > 1) return null; const top = .08 - u * u * .08, bot = -.045 + u * u * .06; if (y > top || y < bot || abs(z) > .07 * (1 - u * .6)) return null; return y > top - .018 ? M.HI : M.STEEL; });
+  K.scan([-.05, -.46, -.05], [.05, -.04, .05], (x, y, z) => (hypot(x, z) <= .046 ? (floor((y + 2) / .028 + x * 22) % 2 ? C.HIDE : C.HIDE2) : null)); K.ell([0, -.49, 0], [.06, .05, .06], BONE);
+  return K.V;
+}
+/** I. 부채볏대검(바이블판): 볏결정을 결 방향으로 쪼갠 쐐기 판을 익완골 칼등에 부채처럼 엇갈려 박고, 판 사이를 금속 꺾쇠로 잇는다. 판마다 방사형 결 */
+function crestBible() {
+  const K = kit(), S = smith(K), BONE = 0x8a8496, BONE2 = 0x6e6a7c, sp = -.16;
+  // 익완골 칼등(곧게), 끝으로 가늘어짐
+  K.scan([-.3, .02, -.08], [0, 1.72, .08], (x, y, z) => { const r = .06 * (1 - y / 1.72 * .5) * (y > 1.6 ? max(0, 1 - (y - 1.6) / .12) : 1); return hypot((x - sp) / 1.1, z) <= r ? (x < sp - r * .5 ? BONE2 : BONE) : null; });
+  // 볏결정 쐐기 판 5장: 칼등에 뿌리를 박고 바깥 위로 부채처럼. 엇갈려 앞뒤로 겹침. 판 안쪽엔 뿌리에서 퍼지는 결
+  const N = 5; for (let k = 0; k < N; k++) { const ry = .14 + k * .3, ang = .62 - k * .07, len = .5 - k * .045 + (k === N - 1 ? .12 : 0), wd = .2 - k * .014, zo = (k % 2 ? .012 : -.006);
+    const dx = Math.sin(ang), dy = Math.cos(ang); K.scan([sp, ry - .05, -.06], [.5, ry + len + .2, .06], (x, y, z) => { const px = x - sp - .03, py = y - ry, s = px * dx + py * dy, n = px * dy - py * dx; if (s < 0 || s > len) return null; const k2 = s / len, half = wd * (1 - k2 * .55) * (k2 > .85 ? (1 - k2) / .15 : 1); if (n < -half * .25 || n > half) return null;
+      const th = .034 * (1 - k2 * .5), de = half - n; if (abs(z - zo) > th) return null; if (de < .006 || s < .015) return 0x24364e; if (de < .03) return 0xe6f6ff; // 테두리 납선 · 연마 날
+      const grain = floor(Math.atan2(n, s + .05) * 30); return abs(z - zo) > th - .009 ? (grain & 1 ? 0xb8dcff : 0xa8e4fa) : 0x6fa8cc; }); // 방사형 결
+    // 금속 꺾쇠: 판 뿌리를 칼등에 물림
+    const by = ry + .04; K.cap([sp - .05, by, 0], [sp + .07, by + .03, 0], .022, .02, M.STEEL); S.rivet(sp + .05, by + .02, zo + .035); }
+  // 가드: 볏 밑동 뼈(넓은 판 뼈) + 금속 깃 / 손잡이
+  K.ell([sp + .06, .05, 0], [.15, .07, .09], BONE); K.scan([-.28, -.06, -.09], [.26, .11, .09], (x, y, z) => { const u = abs(x + .02) / .24; if (u > 1) return null; const top = .075 - u * u * .07, bot = -.045 + u * u * .06; if (y > top || y < bot || abs(z) > .07 * (1 - u * .6)) return null; return y > top - .018 ? M.HI : M.STEEL; });
+  K.scan([-.05, -.46, -.05], [.05, -.04, .05], (x, y, z) => (hypot(x, z) <= .046 ? (floor((y + 2) / .028 + x * 22) % 2 ? C.HIDE : C.HIDE2) : null)); K.ell([0, -.49, 0], [.06, .05, .06], BONE);
+  return K.V;
+}
+Object.assign(GS_CUSTOM, { cw_tailb: { n: "꼬리마디대검 · 상위형", f: tailBible }, cw_crestb: { n: "부채볏대검 · 상위형", f: crestBible } });
