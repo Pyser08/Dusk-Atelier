@@ -1,0 +1,23 @@
+<!doctype html><html lang=ko><meta charset=utf-8><title>복셀 미리보기</title>
+<style>body{margin:0;height:100vh;background:#1b1724;color:#eee;font:14px sans-serif;overflow:hidden}#v{position:fixed;inset:0}#ui{position:fixed;left:10px;top:10px;background:#0008;padding:8px 10px;border-radius:6px}</style>
+<div id=v></div><div id=ui><input type=file id=f accept=".vox"> <span id=i>.vox 파일을 고르세요 · 끌어서 회전 · 휠 확대</span></div>
+<script type=importmap>{"imports":{"three":"https://unpkg.com/three@0.170.0/build/three.module.js"}}</script>
+<script type=module>
+import * as THREE from "three"; import { greedy } from "./mesh.mjs";
+// 브라우저용 .vox 읽기(vox.mjs와 같은 규칙: y 위, z 앞)
+function readVox(ab) { const dv = new DataView(ab), s = (p) => String.fromCharCode(...new Uint8Array(ab, p, 4)); let p = 20, size, xyzi, pal;
+  while (p < ab.byteLength) { const id = s(p), n = dv.getUint32(p + 4, true), m = dv.getUint32(p + 8, true), d = p + 12;
+    if (id === "SIZE" && !size) size = [dv.getUint32(d, true), dv.getUint32(d + 4, true), dv.getUint32(d + 8, true)]; else if (id === "XYZI" && !xyzi) { const k = dv.getUint32(d, true); xyzi = []; for (let i = 0; i < k; i++) xyzi.push([0, 1, 2, 3].map((j) => dv.getUint8(d + 4 + i * 4 + j))); } else if (id === "RGBA") { pal = []; for (let i = 0; i < 256; i++) pal.push([0, 1, 2].map((j) => dv.getUint8(d + i * 4 + j))); }
+    p = id === "MAIN" ? d + n : d + n + m; }
+  return xyzi.map(([x, y, z, i]) => ({ x, y: z, z: size[1] - 1 - y, c: pal ? pal[(i - 1) & 255] : [200, 200, 200] })); }
+const gl = new THREE.WebGLRenderer({ antialias: true }); document.getElementById("v").append(gl.domElement); const sc = new THREE.Scene(); sc.background = new THREE.Color(0x2a2438); sc.add(new THREE.HemisphereLight(0xffffff, 0x554466, 2.2)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(3, 5, 4); sc.add(sun);
+const cam = new THREE.PerspectiveCamera(35, 1, .1, 5000); let obj = null, yaw = .6, pit = .3, R = 200, drag = null;
+const size = () => { gl.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); }; addEventListener("resize", size); size();
+function show(vox) { if (obj) sc.remove(obj); const m = greedy(vox), g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(m.position, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(m.normal, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(m.color, 3)); g.setIndex(m.index); g.computeBoundingBox(); const c = g.boundingBox.getCenter(new THREE.Vector3()); g.translate(-c.x, -c.y, -c.z); R = g.boundingBox.getSize(new THREE.Vector3()).length() * 1.4;
+  obj = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); sc.add(obj); document.getElementById("i").textContent = `복셀 ${vox.length}개 · 면 ${m.tris}`; }
+document.getElementById("f").onchange = async (e) => show(readVox(await e.target.files[0].arrayBuffer()));
+const q = new URLSearchParams(location.search); if (q.get("f")) fetch(q.get("f")).then((r) => r.arrayBuffer()).then((b) => show(readVox(b)));
+onpointerdown = (e) => (drag = [e.clientX, e.clientY]); onpointerup = () => (drag = null); onpointermove = (e) => { if (drag) { yaw -= (e.clientX - drag[0]) * .01; pit = Math.max(-1.4, Math.min(1.4, pit + (e.clientY - drag[1]) * .01)); drag = [e.clientX, e.clientY]; } }; onwheel = (e) => (R *= e.deltaY > 0 ? 1.1 : .9);
+gl.setAnimationLoop(() => { cam.position.set(Math.sin(yaw) * Math.cos(pit) * R, Math.sin(pit) * R, Math.cos(yaw) * Math.cos(pit) * R); cam.lookAt(0, 0, 0); gl.render(sc, cam); });
+window.__show = show;
+</script>
