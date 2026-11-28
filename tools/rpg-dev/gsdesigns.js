@@ -191,3 +191,61 @@ function tripleWing() {
   return K.V;
 }
 Object.assign(GS_CUSTOM, { cw_triple: { n: "3겹 날개대검", f: tripleWing } });
+/** F. 결정깃대검: 가는 칼등 막대에서 깃 모양 결정판 여러 장이 비늘처럼 겹쳐 한쪽으로 뻗는다. 판 끝은 칼끝 쪽으로 누워 톱니 날을 이루고,
+ *  뿌리는 어두운 가죽색 → 끝은 맑은 결정으로 밝아진다(유리날개룡 날개 결) */
+function plume() {
+  const K = kit(), S = smith(K);
+  // 칼등: 가늘고 긴 막대(손잡이와 같은 축), 칼끝까지
+  K.scan([-.05, -.02, -.05], [.05, 1.88, .05], (x, y, z) => { const r = .036 * (1 - y / 1.88 * .55) * (y > 1.76 ? max(0, 1 - (y - 1.76) / .12) : 1) + .006; return hypot(x, z) <= r ? (hash(floor(y * 60), 3, 0) > .8 ? C.HIDE2 : C.HIDE) : null; });
+  // 깃 판: 뿌리(칼등) → 끝(바깥 위). 아래에서 위로 갈수록 판이 길어졌다가 칼끝 근처에서 짧아짐. 위 판이 아래 판 위에 겹친다
+  const N = 9; for (let i = 0; i < N; i++) {
+    const t = i / (N - 1), by = .1 + t * 1.5, L = .5 + Math.sin(t * PI * .85 + .25) * .42 - t * t * .25, ang = .5 - t * .22, w = .085 + (1 - t) * .03; // 뿌리 높이, 길이, 기울기(세로 기준), 폭
+    const dx = Math.sin(ang), dy = Math.cos(ang), zo = (i % 2 ? .012 : -.004) + i * .002; // 겹: 번갈아 앞뒤, 위로 갈수록 앞
+    K.scan([0, by - .1, -.05], [.62, by + L + .05, .05], (x, y, z) => { const px = x - .02, py = y - by, s = px * dx + py * dy, n = px * dy - py * dx; if (s < 0 || s > L) return null; const k = s / L, half = w * Math.sin(min(1, k * 1.25 + .08) * PI) ** .6 * (1 - k * .35); if (n < -half * .55 || n > half) return null; // 칼등 쪽은 좁게, 바깥 쪽은 넓게(비대칭 깃)
+      const th = .028 * (1 - k * .6), zc = zo + n * .08; if (abs(z - zc) > th) return null;
+      if (n > half - .016 || s > L - .02) return k > .7 ? 0xf2fbff : 0xcdeeff; // 판 가장자리 벼림
+      if (abs(n) < .009 && k < .85) return C.SEAM; // 깃대(가운데 선)
+      return k < .22 ? C.HIDE : k < .4 ? 0x3e5878 : k < .62 ? 0x6fa8cc : k < .82 ? C.XT[i % 5] : 0xe6f6ff; }); // 뿌리 어둡게 → 끝 밝게
+  }
+  // 밑동: 깃 뿌리를 묶은 둥근 금속 깃, 손잡이
+  S.band(.02, .08, -.06, .12, .06); S.band(.95, .05, -.05, .05, .045);
+  K.scan([-.05, -.46, -.05], [.05, -.02, .05], (x, y, z) => (hypot(x, z) <= .046 ? (floor((y + 2) / .03 + x * 25) % 2 ? M.LEATH : M.LEATH2) : null)); K.ell([0, -.49, 0], [.055, .04, .055], M.DARK);
+  return K.V;
+}
+Object.assign(GS_CUSTOM, { cw_plume: { n: "결정깃대검", f: plume } });
+/** G. 익완대검 상위형(design-bible · crystalwing-spec C 기준)
+ *  칼등 = 익완골(관절 마디 둘), 칼날 = 익막결정판 6장이 지붕처럼 겹쳐 날 쪽으로 계단, 판마다 금속 소켓이 뼈에 물림,
+ *  칼끝 = 손목갈고리, 밑동 = 프리즘추 코어(모으기 발광 자리), 가드 = 어깨 관절 + 금속 깃, 손잡이 = 청회가죽 + 뼈 폼멜 */
+function wingBible() {
+  const K = kit(), S = smith(K), BONE = 0x8a8496, BONE2 = 0x6e6a7c, BONE3 = 0xa8a2b4;
+  const spine = (y) => -.17 + Math.sin(min(1, y / 1.7) * PI * .5) * .03; // 뼈대가 칼끝 쪽으로 살짝 휨
+  const W = (y) => .43 * (1 - max(0, (y - .1) / 1.62) ** 1.7) + .03;     // 칼날 폭 외곽
+  // 익막결정판: 밑동 판일수록 위(앞)에 얹혀 지붕처럼 겹친다. 판 끝은 칼끝 쪽으로 뾰족, 날 쪽이 계단
+  const N = 6, y0s = Array.from({ length: N }, (_, k) => .1 + k * .245), H = .44;
+  for (let k = 0; k < N; k++) { const y0 = y0s[k], y1 = min(1.66, y0 + H), zo = (N - k) * .007, tint = [[0x8ccbe8, 0x9ad6f0], [0x9ad6f0, 0xa8e4fa], [0xa8e4fa, 0xb8dcff], [0xb8dcff, 0xc8dcff], [0xc8dcff, 0xd0d4ff], [0xd0d4ff, 0xdcd0ff]][k];
+    const xe = (y) => { const t = (y - y0) / (y1 - y0), w = W(y) * (.72 + .28 * min(1, t / .8)); return t > .82 ? spine(y) + .05 + w * (1 - (t - .82) / .18 * .55) : spine(y) + .05 + w; };
+    K.scan([-.2, y0, -.06], [.5, y1, .06], (x, y, z) => { const s0 = spine(y) + .03, e = xe(y); if (x < s0 || x > e) return null; const t = (y - y0) / (y1 - y0), u = (x - s0) / max(.001, e - s0), de = e - x;
+      const th = .03 * (.5 + .5 * Math.sin(min(1, u * 1.1 + .1) * PI) ** .6) * (de < .045 ? .3 + de / .045 * .7 : 1) * (t < .06 ? .6 + t / .06 * .4 : 1); if (abs(z - zo) > th) return null;
+      if (t < .035 || de < .007) return 0x24364e; // 판 테두리 납선
+      if (de < .035) return de < .014 ? 0xf2fbff : 0xd6f0ff; // 연마한 날
+      return abs(z - zo) > th - .009 ? tint[(t > .5) | 0] : 0x6fa8cc; }); // 판 안: 아래→위로 밝아짐
+    // 금속 소켓: 뼈 뒤에서 감아 판 뿌리를 집는 휜 집게 + 리벳
+    const ys = y0 + .07, sx = spine(ys); for (let i = 0; i <= 6; i++) { const a = -PI * .55 + i / 6 * PI * 1.05, r = .085; K.ell([sx + Math.cos(a) * r * .8, ys + Math.sin(a) * .025, Math.sin(a) * r * .6], [.022, .02, .022], i === 6 ? M.HI : M.STEEL); } S.rivet(sx + .07, ys, zo + .028);
+  }
+  // 익완골 칼등: 치밀한 긴 뼈, 관절 마디 둘은 깎지 않고 남김. 뒤쪽 면은 결(홈)
+  K.scan([-.3, .02, -.09], [0, 1.7, .09], (x, y, z) => { const c = spine(y), r = .066 * (1 - y / 1.7 * .4) * (y > 1.58 ? max(0, 1 - (y - 1.58) / .14) : 1); if (hypot((x - c) / 1.15, z) > r) return null; return x < c - r * .55 ? (floor(y * 70) % 5 === 0 ? BONE2 : BONE3) : BONE; });
+  for (const y of [.62, 1.16]) { K.ell([spine(y) - .01, y, 0], [.088, .07, .08], BONE); K.ell([spine(y) - .05, y + .01, 0], [.05, .03, .06], BONE2); }
+  // 손목갈고리: 칼끝에서 날 쪽 앞으로 휘어 걸리는 결정 발톱
+  { let p = [spine(1.6), 1.6, 0], a = .15; for (let i = 0; i < 7; i++) { const n = [p[0] + Math.sin(a) * .055, p[1] + Math.cos(a) * .055, 0]; K.cap(p, n, .05 - i * .006, .046 - i * .006, i < 2 ? BONE : 0xc8ecff); p = n; a += .32; } }
+  // 프리즘추 코어: 밑동, 금속 고리 틀에 박힌 렌즈 덩어리(모으기 단계마다 밝아질 자리)
+  const cx = spine(.2) + .14, cy = .2; for (let i = 0; i < 10; i++) { const a = i / 10 * PI * 2; K.ell([cx + Math.cos(a) * .07, cy + Math.sin(a) * .07, .05], [.018, .018, .02], M.STEEL); }
+  K.ell([cx, cy, .05], [.055, .055, .035], 0xe6f6ff); for (const [dx, dy] of [[.03, .03], [-.03, .02], [0, -.035]]) K.spike([cx, cy, .05], [cx + dx, cy + dy, .1], .025, 0);
+  // 가드: 날개 어깨 관절 뼈 + 초승달 금속 깃
+  K.ell([spine(.04) + .02, .04, 0], [.12, .085, .1], BONE); K.ell([spine(.04) - .04, .02, 0], [.06, .05, .07], BONE2);
+  K.scan([-.3, -.06, -.09], [.26, .12, .09], (x, y, z) => { const u = abs(x + .02) / .24; if (u > 1) return null; const top = .085 - u * u * .08, bot = -.04 + u * u * .06; if (y > top || y < bot || abs(z) > .07 * (1 - u * .6)) return null; return y > top - .018 ? M.HI : M.STEEL; });
+  // 손잡이: 청회가죽 감개, 뼈 폼멜
+  K.scan([-.05, -.46, -.05], [.05, -.04, .05], (x, y, z) => (hypot(x, z) <= .046 ? (floor((y + 2) / .028 + x * 22) % 2 ? C.HIDE : C.HIDE2) : null));
+  K.ell([0, -.49, 0], [.06, .05, .06], BONE); K.ell([0, -.53, 0], [.035, .025, .035], BONE2);
+  return K.V;
+}
+Object.assign(GS_CUSTOM, { cw_bible: { n: "익완대검 · 상위형", f: wingBible } });
