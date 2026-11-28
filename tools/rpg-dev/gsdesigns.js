@@ -501,4 +501,31 @@ function tk3Scale() {
   for (const sz of [-1, 1]) for (const sx of [-1, 1]) shard({ p: [sx * .09, -.04], a: sx * .7, L: .3, W: .075, T: .02, z: sz * .17, edge: "b", kr: .022, peak: .3 });
   grip(); return K.V;
 }
+function tk3One() {
+  const K = kit(), { shard, grip, S } = shards(K);
+  shard({ p: [.02, .06], a: .03, L: 1.8, W: .13, T: .04, al: .3, clear: true, peak: .3, z: -.004, bend: -.025 }); // 날을 따라 이어진 광린 띠(비늘 밑에서 드러남)
+  shard({ p: [-.1, .05], a: .06, L: 1.85, W: .16, T: .06, edge: "n", bend: -.04 });
+  for (let k = 0; k < 7; k++) { const y = .1 + k * .22, w = .26 - k * .018; shard({ p: [-.14, y], a: .62 - k * .03, L: .5 - k * .02, W: w * .5, T: .045, z: (7 - k) * .006, ar: 1.2, al: .5, edge: "r", kr: .1, peak: .25 }); }
+  shard({ p: [-.07, 1.38], a: .1, L: .68, W: .1, T: .05, edge: "b", kr: .075, peak: .15 });
+  // 가드: 칼 밑동에서 좌우 아래로 휘어 뻗은 비늘 파편 초승달(겹쳐 쌓임) + 가운데 갑각 덩어리
+  K.ell([0, .03, 0], [.11, .08, .075], (x, y, z) => (y > .07 ? OB.C : OB.B));
+  for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) shard({ p: [sx * (.05 + k * .05), .08 - k * .035], a: sx * (1.25 + k * .3), L: .4 - k * .07, W: .07, T: .055 - k * .008, z: (k & 1 ? .012 : -.012), edge: k === 0 ? "n" : sx > 0 ? "l" : "r", kr: .025, bend: -sx * .25 });
+  // 떠 있는 비늘: 가드 앞뒤(칼면 쪽)에 닿지 않고 뜬 광린 테 비늘 두 장씩
+  for (const sz of [-1, 1]) for (const sx of [-1, 1]) shard({ p: [sx * .09, -.04], a: sx * .7, L: .3, W: .075, T: .02, z: sz * .17, edge: "b", kr: .022, peak: .3 });
+  grip(); return K.V;
+}
+function tk3Asym() {
+  const K = kit(), { shard, grip, S } = shards(K);
+  shard({ p: [.02, .06], a: .13, L: 1.95, W: .13, T: .04, al: .25, clear: true, peak: .3, z: -.004, bend: .03 }); // 날을 따라 이어진 광린 띠(비늘 밑에서 드러남)
+  shard({ p: [-.1, .05], a: .06, L: 1.85, W: .16, T: .06, edge: "n", bend: -.04 });
+  for (let k = 0; k < 7; k++) { const y = .1 + k * .22, w = .26 - k * .018; shard({ p: [-.14, y], a: .62 - k * .03, L: .5 - k * .02, W: w * .5, T: .045, z: (7 - k) * .006, ar: 1.2, al: .5, edge: "r", kr: .1, peak: .25 }); }
+  shard({ p: [-.08, 1.42], a: -.05, L: .34, W: .09, T: .05, edge: "b", kr: .05 });
+  // 가드: 칼 밑동에서 좌우 아래로 휘어 뻗은 비늘 파편 초승달(겹쳐 쌓임) + 가운데 갑각 덩어리
+  K.ell([0, .03, 0], [.11, .08, .075], (x, y, z) => (y > .07 ? OB.C : OB.B));
+  for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) shard({ p: [sx * (.05 + k * .05), .08 - k * .035], a: sx * (1.25 + k * .3), L: .4 - k * .07, W: .07, T: .055 - k * .008, z: (k & 1 ? .012 : -.012), edge: k === 0 ? "n" : sx > 0 ? "l" : "r", kr: .025, bend: -sx * .25 });
+  // 떠 있는 비늘: 가드 앞뒤(칼면 쪽)에 닿지 않고 뜬 광린 테 비늘 두 장씩
+  for (const sz of [-1, 1]) for (const sx of [-1, 1]) shard({ p: [sx * .09, -.04], a: sx * .7, L: .3, W: .075, T: .02, z: sz * .17, edge: "b", kr: .022, peak: .3 });
+  grip(); return K.V;
+}
+Object.assign(GS_CUSTOM, { tk3_one: { n: "겹비늘대검 · 외끝", f: tk3One }, tk3_asym: { n: "겹비늘대검 · 비대칭", f: tk3Asym } });
 Object.assign(GS_CUSTOM, { tk3_scale: { n: "겹비늘대검", f: tk3Scale } });
