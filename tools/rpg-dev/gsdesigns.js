@@ -287,3 +287,57 @@ function crestBible() {
   return K.V;
 }
 Object.assign(GS_CUSTOM, { cw_tailb: { n: "꼬리마디대검 · 상위형", f: tailBible }, cw_crestb: { n: "부채볏대검 · 상위형", f: crestBible } });
+// ════ 바이블판 새 견본 5종 ════
+const BN = { A: 0x8a8496, B: 0x6e6a7c, C: 0xa8a2b4 };
+function common(K) {
+  const S = smith(K);
+  // 칼날 채우기: lim(y) → [안쪽 x, 바깥 x] | null, col(x,y,u,de,t) → 색. 가운데 두껍고 날 쪽으로 얇아짐
+  const blade = (y0, y1, lim, col, T = .045, zo = 0) => K.scan([-.4, y0, -T - .01], [.55, y1, T + .01], (x, y, z) => { const L = lim(y); if (!L || x < L[0] || x > L[1]) return null; const u = (x - L[0]) / max(.001, L[1] - L[0]), de = L[1] - x, th = T * (.45 + .55 * Math.sin(min(1, u * 1.1 + .08) * PI) ** .6) * (de < .05 ? .28 + de / .05 * .72 : 1); if (abs(z - zo) > th) return null; return col(x, y, u, de, abs(z - zo) > th - .009); });
+  const guard = (w = .24) => K.scan([-.3, -.06, -.09], [.3, .12, .09], (x, y, z) => { const u = abs(x + .02) / w; if (u > 1) return null; const top = .08 - u * u * .075, bot = -.045 + u * u * .06; if (y > top || y < bot || abs(z) > .07 * (1 - u * .6)) return null; return y > top - .018 ? M.HI : M.STEEL; });
+  const grip = (pom = BN.A) => { K.scan([-.05, -.46, -.05], [.05, -.04, .05], (x, y, z) => (hypot(x, z) <= .046 ? (floor((y + 2) / .028 + x * 22) % 2 ? C.HIDE : C.HIDE2) : null)); K.ell([0, -.49, 0], [.06, .05, .06], pom); };
+  const bone = (xf, y0, y1, r0, r1) => K.scan([-.4, y0, -.1], [.3, y1, .1], (x, y, z) => { const t = (y - y0) / (y1 - y0), r = r0 + (r1 - r0) * t, c = xf(y); return hypot((x - c) / 1.12, z) <= r ? (x < c - r * .55 ? (floor(y * 70) % 5 === 0 ? BN.B : BN.C) : BN.A) : null; });
+  return { S, blade, guard, grip, bone };
+}
+/** 1. 판창대검: 가장 큰 익막결정판 한 장을 익완골 테두리 틀에 끼웠다. 날 쪽만 틀이 열려 결정 날이 드러난다 */
+function paneFrame() {
+  const K = kit(), { S, blade, guard, grip } = common(K), lim = (y) => (y < .08 || y > 1.66 ? null : [-.18, -.18 + .5 * (1 - ((y - .08) / 1.58) ** 2.2) + .04 * Math.sin(y * 3)]);
+  const pts = []; for (let i = 0; i < 9; i++) pts.push([-.1 + hash(i, 7, 1) * .4, .2 + hash(i, 8, 2) * 1.3]); const cell = K.cells(pts);
+  blade(.08, 1.68, lim, (x, y, u, de, sf) => (de < .035 ? (de < .013 ? 0xf2fbff : 0xd6f0ff) : sf ? (cell(x, y) === C.SEAM ? 0x2a3e58 : C.XT[floor(hash(floor(x * 6), floor(y * 6), 0) * 5)]) : 0x6fa8cc), .04);
+  // 뼈 틀: 칼등 · 밑동 · 칼끝을 감싸는 굵은 테(날 쪽은 열림)
+  const frame = (y) => lim(y); K.scan([-.3, .02, -.075], [.5, 1.74, .075], (x, y, z) => { const L = frame(y); if (!L) return null; const inBack = abs(x - L[0]) < .055, inTop = y > 1.56 && x < L[1] + .02, inBase = y < .16 && x < L[1] - .06; if (!(inBack || inTop || inBase) || abs(z) > .062) return null; return x < L[0] - .02 ? BN.B : BN.A; });
+  for (const y of [.5, 1.05]) S.band(y, .06, -.25, -.1, .07); guard(); grip(); return K.V;
+}
+/** 2. 익지대검: 날개 손가락 뼈 셋이 칼날을 세로로 지나고, 사이에 결정막. 날 끝은 손가락 끝마다 물결 */
+function fingerRibs() {
+  const K = kit(), { S, blade, guard, grip, bone } = common(K), sp = -.17, ribs = [.12, .25, .36];
+  const edge = (y) => { const t = (y - .08) / 1.6, base = .52 * (1 - t ** 1.8); return sp + base - Math.abs(Math.sin(t * PI * 3)) * .05; };
+  blade(.08, 1.68, (y) => (y < .08 || y > 1.68 ? null : [sp, edge(y)]), (x, y, u, de, sf) => { if (de < .032) return de < .012 ? 0xf2fbff : 0xd6f0ff; for (const r of ribs) if (abs(x - (sp + r * (1 - (y - .08) / 1.6 * .6))) < .022) return 0x2a3e58; return sf ? [0x9ad6f0, 0xb8dcff, 0xc8dcff, 0xa8e4fa][floor((x - sp) / .12) % 4] : 0x6fa8cc; }, .04);
+  for (const r of ribs) bone((y) => sp + r * (1 - (y - .08) / 1.6 * .6), .1, 1.5 - r, .028, .014); // 손가락 뼈(칼날 위로 도드라짐)
+  bone(() => sp, .02, 1.72, .065, .03); K.ell([sp, .9, 0], [.085, .07, .08], BN.A); // 칼등 = 손목뼈, 관절
+  S.band(.18, .06, sp - .08, sp + .42, .06); guard(); grip(); return K.V;
+}
+/** 3. 볏쐐기대검: 볏결정 한 덩이를 결 방향으로 쪼갠 두꺼운 끌 모양. 방사형 결, 칼등은 금속 띠 셋으로 감음 */
+function crestWedge() {
+  const K = kit(), { S, blade, guard, grip } = common(K), lim = (y) => (y < .08 || y > 1.62 ? null : [-.16, -.16 + .42 + (y > 1.3 ? -(y - 1.3) * 1.25 : 0) + (y < .3 ? -(.3 - y) * .6 : 0)]);
+  blade(.08, 1.64, lim, (x, y, u, de, sf) => { if (de < .04) return de < .014 ? 0xf2fbff : 0xd6f0ff; const g = floor(Math.atan2(y - .02, x + .3) * 40); return sf ? (g % 3 === 0 ? 0x8ccbe8 : g % 3 === 1 ? 0xb8dcff : 0xa8e4fa) : 0x6fa8cc; }, .06); // 두꺼운 쐐기
+  K.scan([-.26, .06, -.08], [-.08, 1.62, .08], (x, y, z) => (x < -.13 && abs(z) < .07 - (x + .26) * .1 ? BN.B : null)); // 쪼갠 면(칼등 쪽 거친 단면)
+  for (const y of [.35, .8, 1.25]) S.band(y, .07, -.24, .05, .075); guard(.26); grip(); return K.V;
+}
+/** 4. 광낭대검(최종형 콘셉트): 칼날 가운데 홈에 광낭막 띠가 빛을 머금고, 양옆을 결정판이 감싼다. 칼등 익완골 */
+function lightSac() {
+  const K = kit(), { S, blade, guard, grip, bone } = common(K), sp = -.17, lim = (y) => (y < .08 || y > 1.7 ? null : [sp + .02, sp + .48 * (1 - ((y - .08) / 1.62) ** 1.6) + .03]);
+  blade(.08, 1.72, lim, (x, y, u, de, sf) => { if (de < .032) return de < .012 ? 0xf2fbff : 0xd6f0ff; if (abs(u - .42) < .07 && y < 1.45) return abs(u - .42) < .045 ? 0xfff6dc : 0x3a4a66; return sf ? (floor((y + u * .4) / .16) % 2 ? 0xb8dcff : 0xa8e4fa) : 0x6fa8cc; }, .045); // 가운데 광낭막 띠
+  bone(() => sp, .02, 1.74, .064, .028); for (const y of [.3, .75, 1.2]) S.band(y, .045, sp - .07, sp + .3, .055);
+  const cx = sp + .2; K.ell([cx, .18, 0], [.07, .07, .055], 0xfff6dc); for (let i = 0; i < 12; i++) { const a = i / 12 * PI * 2; K.ell([cx + Math.cos(a) * .085, .18 + Math.sin(a) * .085, 0], [.02, .02, .05], M.STEEL); } // 코어
+  guard(); grip(); return K.V;
+}
+/** 5. 꼬리비늘대검: 꼬리 아래 비늘판이 겹겹이 쌓여 넓은 칼날, 칼등은 꼬리뼈 마디, 칼끝은 프리즘 */
+function tailScales() {
+  const K = kit(), { S, blade, guard, grip } = common(K), sp = -.15, N = 8;
+  for (let k = 0; k < N; k++) { const y0 = .08 + k * .18, y1 = y0 + .3, w = .44 * (1 - (k / N) ** 1.6) + .05, zo = (N - k) * .006;
+    blade(y0, y1, (y) => { const t = (y - y0) / (y1 - y0); return t < 0 || t > 1 ? null : [sp, sp + w * (t < .7 ? 1 : 1 - (t - .7) / .3 * .6) * (.85 + .15 * Math.sin(t * PI))]; }, (x, y, u, de, sf) => { const t = (y - y0) / (y1 - y0); if (t < .05) return 0x24364e; if (de < .03) return de < .012 ? 0xf2fbff : 0xd6f0ff; return sf ? (t > .6 ? 0xc8dcff : 0x9ad6f0) : 0x6fa8cc; }, .036, zo); }
+  for (let i = 0; i < 9; i++) { const a = .04 + i * .17; K.scan([-.3, a, -.1], [0, a + .17, .1], (x, y, z) => { const t = (y - a) / .17; if (t < .07 || t > .93) return null; const r = (.075 + Math.sin(t * PI) * .02) * (1 - i * .05); return hypot((x - sp) / 1.2, z) <= r ? (t < .2 || t > .8 ? BN.B : BN.A) : null; }); } // 꼬리뼈 마디 칼등
+  const tp = [sp + .03, 1.62, 0]; S.band(1.56, .06, sp - .05, sp + .08, .045); for (const [dx, dy, L] of [[.1, 1, .26], [.55, .8, .18], [-.4, .85, .16], [.75, .4, .14]]) K.spike(tp, [tp[0] + dx * L, tp[1] + dy * L, 0], .055, floor((dx + 1) * 3));
+  guard(); grip(); return K.V;
+}
+Object.assign(GS_CUSTOM, { n_pane: { n: "판창대검", f: paneFrame }, n_finger: { n: "익지대검", f: fingerRibs }, n_wedge: { n: "볏쐐기대검", f: crestWedge }, n_sac: { n: "광낭대검", f: lightSac }, n_tails: { n: "꼬리비늘대검", f: tailScales } });
